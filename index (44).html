@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TackPath — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #010e21;
+      --card:    #071828;
+      --border:  rgba(25,183,239,.12);
+      --blue:    #19b7ef;
+      --green:   #53ff88;
+      --text:    #e8f4fd;
+      --muted:   #4a6a84;
+      --error:   #ff5a5a;
+      --font:    'DM Sans', sans-serif;
+      --mono:    'DM Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(25,183,239,.06) 0%, transparent 65%);
+    }
+
+    /* WORDMARK */
+    .wordmark {
+      display: flex;
+      align-items: baseline;
+      gap: 0;
+      margin-bottom: 40px;
+      text-decoration: none;
+      letter-spacing: .04em;
+    }
+    .wordmark-tack {
+      font-family: var(--font);
+      font-weight: 600;
+      font-size: 20px;
+      color: var(--text);
+    }
+    .wordmark-path {
+      font-family: var(--font);
+      font-weight: 300;
+      font-size: 20px;
+      color: var(--blue);
+    }
+
+    /* CARD */
+    .card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px 36px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.4), 0 1px 0 rgba(25,183,239,.08) inset;
+    }
+
+    .card-eyebrow {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 28px;
+      line-height: 1.2;
+    }
+
+    /* FORM */
+    .field {
+      margin-bottom: 18px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-family: var(--mono);
+    }
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(25,183,239,.14);
+      border-radius: 9px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-family: var(--font);
+      color: var(--text);
+      outline: none;
+      transition: border-color .18s, background .18s;
+    }
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-color: rgba(25,183,239,.45);
+      background: rgba(25,183,239,.03);
+    }
+    input::placeholder { color: rgba(90,122,148,.6); }
+
+    .btn {
+      width: 100%;
+      margin-top: 6px;
+      padding: 13px;
+      background: var(--blue);
+      color: #010e21;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 9px;
+      cursor: pointer;
+      letter-spacing: .03em;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn:active { transform: scale(.99); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    .error-msg {
+      display: none;
+      margin-top: 16px;
+      padding: 11px 14px;
+      background: rgba(255,90,90,.06);
+      border: 1px solid rgba(255,90,90,.18);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--error);
+      font-family: var(--mono);
+      line-height: 1.5;
+    }
+    .error-msg.show { display: block; }
+
+    /* DIVIDER */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 28px 0 20px;
+    }
+
+    /* STATUS */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .status-pip {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+    .status-text {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--muted);
+    }
+
+    /* SPINNER */
+    .spinner {
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      border: 2px solid rgba(1,14,33,.25);
+      border-top-color: #010e21;
+      border-radius: 50%;
+      animation: spin .55s linear infinite;
+      vertical-align: middle;
+      margin-right: 7px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* FOOTER */
+    .footer {
+      margin-top: 24px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--muted);
+      text-align: center;
+    }
+    .footer a {
+      color: rgba(25,183,239,.7);
+      text-decoration: none;
+    }
+    .footer a:hover { color: var(--blue); }
+  </style>
+</head>
+<body>
+
+  <a class="wordmark" href="https://tackpath.com">
+    <span class="wordmark-tack">TACK</span><span class="wordmark-path">PATH</span>
+  </a>
+
+  <div class="card">
+    <div class="card-eyebrow">Operations Platform</div>
+    <div class="card-title">Sign in to your account</div>
+
+    <div class="field">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="you@company.com" autocomplete="email" />
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <button class="btn" id="signin-btn" onclick="handleSignIn()">Sign in</button>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <div class="divider"></div>
+
+    <div class="status-row">
+      <div class="status-pip"></div>
+      <span class="status-text">All systems operational</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    Need access? <a href="mailto:support@tackpath.com">Contact support</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://ochxeoapyjvsopmyumqg.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_QLvy3O5CD7oXCgYCCbYZaA_GYbuMWmy';
+
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) redirectByRole(session.user);
+    });
+
+    async function handleSignIn() {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const btn      = document.getElementById('signin-btn');
+      const errEl    = document.getElementById('error-msg');
+
+      errEl.classList.remove('show');
+
+      if (!email || !password) {
+        showError('Enter your email and password.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Signing in...';
+
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+        showError(error.message === 'Invalid login credentials'
+          ? 'Incorrect email or password.'
+          : error.message);
+        return;
+      }
+
+      redirectByRole(data.user);
+    }
+
+    async function redirectByRole(user) {
+      const role = user.user_metadata?.role;
+      if (role === 'dispatcher') {
+        window.location.href = '/dispatcher';
+      } else if (role === 'driver') {
+        window.location.href = '/driver';
+      } else if (role === 'customer') {
+        window.location.href = '/customer';
+      } else {
+        window.location.href = '/pending';
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleSignIn();
+    });
+  </script>
+</body>
+</html>
