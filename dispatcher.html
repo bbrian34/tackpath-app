@@ -181,7 +181,7 @@ body::after{content:'';position:fixed;inset:0;
 .kpi-r::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
 .kpi-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.13em;
   color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
-.kpi-val{font-family:var(--cond);font-size:28px;font-weight:700;line-height:1;letter-spacing:-.3px;}
+.kpi-val{font-family:var(--cond);font-size:26px;font-weight:600;line-height:1;letter-spacing:-.2px;}
 .kpi-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:5px;}
 .up{color:var(--green);}.dn{color:var(--red);}
 
@@ -394,7 +394,7 @@ body::after{content:'';position:fixed;inset:0;
 .sla-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .sla-cell{padding:12px;border-radius:9px;background:var(--card2);text-align:center;}
 .sla-tier{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
-.sla-val{font-family:var(--cond);font-size:24px;font-weight:900;letter-spacing:-1px;}
+.sla-val{font-family:var(--cond);font-size:22px;font-weight:600;letter-spacing:-0.5px;}
 .sla-note{font-size:9px;color:var(--muted);margin-top:3px;}
 .loc-panel{padding:10px 12px;border-radius:9px;background:var(--card2);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
@@ -408,7 +408,7 @@ body::after{content:'';position:fixed;inset:0;
 .spark-box{padding:14px 16px;border-radius:11px;background:var(--card);border:1px solid var(--border);}
 .spark-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.13em;
   color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
-.spark-val{font-family:var(--cond);font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;}
+.spark-val{font-family:var(--cond);font-size:24px;font-weight:600;letter-spacing:-0.5px;margin-bottom:6px;}
 .bar-w{height:3px;background:rgba(255,255,255,.05);border-radius:2px;}
 .bar-f{height:3px;border-radius:2px;}
 .vol-chart{display:flex;align-items:flex-end;gap:5px;height:80px;margin-bottom:6px;}
@@ -435,7 +435,7 @@ body::after{content:'';position:fixed;inset:0;
   color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .dr-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.2em;
   color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
-.dr-title{font-family:var(--sans);font-size:16px;font-weight:600;letter-spacing:0;margin-bottom:18px;line-height:1.3;color:var(--muted);}
+.dr-title{font-family:var(--sans);font-size:15px;font-weight:500;letter-spacing:0;margin-bottom:18px;line-height:1.3;color:var(--muted);}
 .dr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
 .dr-field{padding:11px 13px;border-radius:9px;background:var(--card);border:1px solid var(--border);}
 .df-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.1em;
@@ -1038,6 +1038,13 @@ function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey=
 async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbDelete(p){const r=await fetch(sbUrl(p),{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());return true;}
+async function sbPostMsg(jobId,body,role){
+  return sbPost('messages',{job_id:jobId,sender:'Dispatcher',sender_role:role||'dispatcher',body});
+}
+async function getMessages(jobId){
+  const r=await fetch(sbUrl('messages?job_id=eq.'+jobId+'&order=created_at.asc'),{headers:H});
+  return r.json();
+}
 
 // ── STATE ──
 let jobs=[], currentJobId=null, pollInterval=null;
@@ -1050,6 +1057,7 @@ function doLogin(){
     ls.style.display='none';
     document.getElementById('shell').style.display='flex';
     document.getElementById('chatFab').style.display='flex';
+    const db=document.querySelector('.demo-badge');if(db)db.style.display='none';
     startClock();loadJobs();
     pollInterval=setInterval(loadJobs,10000);
   },500);
@@ -1087,9 +1095,18 @@ async function loadJobs(){
   const ps=document.getElementById('pollStatus');
   ring.style.display='block';ps.textContent='Polling...';
   try{
+    const prevStatuses={};
+    if(jobs.length) jobs.forEach(j=>prevStatuses[j.id]=j.status);
     jobs=await sbGet('jobs?select=*&order=created_at.desc');
     ring.style.display='none';ps.textContent='Live';
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    // Detect status changes and log to intel feed
+    jobs.forEach(j=>{
+      if(prevStatuses[j.id]&&prevStatuses[j.id]!==j.status){
+        const colors={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
+        addIntelEvent('<strong>'+j.title+'</strong> status changed: <strong>'+j.status.replace('_',' ')+'</strong>'+(j.driver_name?' · Driver: '+j.driver_name:''),colors[j.status]||'var(--blue)');
+      }
+    });
     renderAll();
     addIntelEvent('Database synced — '+jobs.length+' job'+(jobs.length===1?'':'s')+' loaded from Supabase.','var(--blue)');
   }catch(e){
@@ -1288,7 +1305,7 @@ function renderAnalytics(){
   document.getElementById('statusBreakdown').innerHTML=Object.entries(counts).map(([s,c])=>`
     <div style="padding:14px;border-radius:10px;background:var(--card2);border:1px solid var(--border);text-align:center;">
       <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">${s.replace('_',' ')}</div>
-      <div style="font-family:var(--cond);font-size:26px;font-weight:900;color:${colors[s]||'var(--text)'};">${c}</div>
+      <div style="font-family:var(--cond);font-size:24px;font-weight:600;color:${colors[s]||'var(--text)'};">${c}</div>
     </div>
   `).join('');
   // Recent log
@@ -1342,7 +1359,7 @@ function openDrawer(id){
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${j.dropoff_address||'—'}</div></div>
   `;
   // Load map
-  document.getElementById('drMap').src='https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d106544.32!2d-84.4677!3d33.8760!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x88f5045d6993098d%3A0x66fede2f990b630b!2sMidtown%20Atlanta%2C%20Atlanta%2C%20GA!3m2!1d33.7841!2d-84.3838!4m5!1s0x88f508ef74cc9b23%3A0xb5b9ff8de2f2a6f1!2sMarietta%2C%20GA!3m2!1d33.9526!2d-84.5499!5e0!3m2!1sen!2sus!4v1680000000000!5m2!1sen!2sus';
+  document.getElementById('drMap').src='https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d106544.32!2d-84.4677!3d33.8760!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x88f5045d6993098d%3A0x66fede2f990b630b!2sMidtown%20Atlanta%2C%20Atlanta%2C%20GA!3m2!1d33.7841!2d-84.3838!4m5!1s0x88f508ef74cc9b23%3A0xb5b9ff8de2f2a6f1!2sMarietta%2C%20GA!3m2!1d33.9526!2d-84.5499!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus';
   document.getElementById('drawer').classList.add('open');
 }
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');currentJobId=null;}
@@ -1390,6 +1407,9 @@ function addIntelEvent(text,color){
 }
 
 // ── COMMS HUB ──
+let activeCommsJob=null;
+let commsLoadInterval=null;
+
 function switchCommsTab(ch,btn){
   document.querySelectorAll('.oc-tab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.oc-channel').forEach(c=>c.classList.remove('on'));
@@ -1398,38 +1418,59 @@ function switchCommsTab(ch,btn){
   const badge=document.getElementById('badge-'+ch);
   if(badge) badge.style.display='none';
   updateUnreadCount();
+  if(ch==='drivers') loadDriverMessages();
 }
-function sendComms(channel){
+
+async function loadDriverMessages(){
+  // Find most recent active job
+  const activeJob=jobs.find(j=>j.status==='assigned'||j.status==='in_transit')||jobs[0];
+  if(!activeJob) return;
+  activeCommsJob=activeJob;
+  const msgs=await getMessages(activeJob.id);
+  const container=document.getElementById('msgs-drivers');
+  if(!msgs||!msgs.length) return;
+  container.innerHTML='<div class="msg-bubble msg-system">Driver channel · '+activeJob.title+'</div>';
+  msgs.forEach(m=>{
+    const isDispatch=m.sender_role==='dispatcher';
+    const wrap=document.createElement('div');wrap.className='oc-msg-wrap';
+    const meta=document.createElement('div');meta.className='oc-msg-meta'+(isDispatch?' right':'');
+    meta.textContent=(isDispatch?'You':'Driver')+' · '+new Date(m.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+    const bubble=document.createElement('div');bubble.className='oc-msg '+(isDispatch?'oc-outbound':'oc-driver');
+    if(isDispatch) bubble.style.alignSelf='flex-end';
+    bubble.textContent=m.body;
+    wrap.appendChild(meta);wrap.appendChild(bubble);
+    container.appendChild(wrap);
+  });
+  container.scrollTop=container.scrollHeight;
+  // Poll for new messages
+  if(commsLoadInterval) clearInterval(commsLoadInterval);
+  commsLoadInterval=setInterval(loadDriverMessages,5000);
+}
+
+async function sendComms(channel){
   const ids={customers:'ocInput',drivers:'ocInputDriver',internal:'ocInputInternal'};
   const input=document.getElementById(ids[channel]);
   if(!input) return;
   const text=input.value.trim();
-  if(!text)return;
+  if(!text) return;
+  input.value='';
   const msgs=document.getElementById('msgs-'+channel);
   const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
-  const wrap=document.createElement('div');
-  wrap.className='oc-msg-wrap';
-  const div1=document.createElement('div');div1.className='oc-msg-meta right';div1.textContent='Dispatcher · '+now;
-  const div2=document.createElement('div');div2.className='oc-msg oc-outbound';div2.style.alignSelf='flex-end';div2.textContent=text;
-  wrap.appendChild(div1);wrap.appendChild(div2);
-  msgs.appendChild(wrap);
-  input.value='';msgs.scrollTop=msgs.scrollHeight;
-  toast(channel==='customers'?'Message sent to customer':channel==='drivers'?'Message sent to driver':'Internal message sent');
-  if(channel==='customers'||channel==='drivers'){
-    setTimeout(()=>{
-      const rw=document.createElement('div');rw.className='oc-msg-wrap';
-      const cls=channel==='customers'?'oc-customer':'oc-driver';
-      const sender=channel==='customers'?'Customer':'Driver';
-      const m1=document.createElement('div');m1.className='oc-msg-meta';m1.textContent=sender+' · now';
-      const m2=document.createElement('div');m2.className='oc-msg '+cls;m2.textContent='Message received. Thank you for the update.';
-      rw.appendChild(m1);rw.appendChild(m2);
-      msgs.appendChild(rw);msgs.scrollTop=msgs.scrollHeight;
-      const b=document.getElementById('badge-'+channel);
-      if(b&&!document.getElementById('ch-'+channel).classList.contains('on')){
-        b.style.display='flex';b.textContent='1';updateUnreadCount();
-      }
-    },2000);
+  const wrap=document.createElement('div');wrap.className='oc-msg-wrap';
+  const meta=document.createElement('div');meta.className='oc-msg-meta right';meta.textContent='You · '+now;
+  const bubble=document.createElement('div');bubble.className='oc-msg oc-outbound';bubble.style.alignSelf='flex-end';bubble.textContent=text;
+  wrap.appendChild(meta);wrap.appendChild(bubble);
+  msgs.appendChild(wrap);msgs.scrollTop=msgs.scrollHeight;
+  // Save to Supabase if driver channel and active job
+  if(channel==='drivers'&&activeCommsJob){
+    await sbPostMsg(activeCommsJob.id,text,'dispatcher');
+    // Show badge on driver side
+    const b=document.getElementById('badge-drivers');
+    if(b&&!document.getElementById('ch-drivers').classList.contains('on')){
+      b.style.display='flex';b.textContent='1';updateUnreadCount();
+    }
   }
+  toast(channel==='drivers'?'Message sent to driver':channel==='customers'?'Message sent to customer':'Internal message sent');
 }
 function updateUnreadCount(){
   let total=0;
