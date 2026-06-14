@@ -1,4 +1,4 @@
-A<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -1136,7 +1136,11 @@ if(savedDriver){
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js')
+    // Unregister old service workers first to clear cache
+    navigator.serviceWorker.getRegistrations().then(regs=>{
+      regs.forEach(r=>r.unregister());
+    });
+    navigator.serviceWorker.register('sw.js?v=3')
       .then(r=>console.log('SW registered'))
       .catch(e=>console.log('SW failed:',e));
   });
