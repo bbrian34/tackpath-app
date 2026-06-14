@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+A<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -1141,6 +1141,31 @@ if('serviceWorker' in navigator){
       .catch(e=>console.log('SW failed:',e));
   });
 }
+// Failsafe auto-poll — runs every 5s no matter what
+setInterval(async function(){
+  try{
+    if(typeof currentJob !== 'undefined' && currentJob) return;
+    if(typeof pendingJob !== 'undefined' && pendingJob) return;
+    const el = document.getElementById('jobAlert');
+    if(el && el.classList.contains('on')) return;
+    const url='https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?select=*&status=eq.pending&order=created_at.desc&limit=1&apikey=sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+    const r=await fetch(url);
+    const jobs=await r.json();
+    const scanEl=document.getElementById('scanStatus');
+    if(jobs.length){
+      if(scanEl) scanEl.textContent='1 signal in queue...';
+      const rejected = typeof rejectedJobIds !== 'undefined' ? rejectedJobIds : new Set();
+      if(!rejected.has(jobs[0].id)){
+        if(typeof showIncomingJobFromDB === 'function'){
+          pendingJob=jobs[0];
+          showIncomingJobFromDB(jobs[0]);
+        }
+      }
+    } else {
+      if(scanEl) scanEl.textContent='Scanning for nearby signals...';
+    }
+  }catch(err){}
+}, 5000);
 </script>
 </body>
 </html>
