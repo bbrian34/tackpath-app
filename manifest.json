@@ -1,0 +1,32 @@
+{
+  "name": "TackPath Driver",
+  "short_name": "TackPath",
+  "description": "TackPath Driver App — Atlanta Metro Delivery",
+  "start_url": "/tackpath-app/driver.html",
+  "display": "standalone",
+  "background_color": "#02060e",
+  "theme_color": "#02060e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["logistics", "productivity"],
+  "shortcuts": [
+    {
+      "name": "My Jobs",
+      "url": "/tackpath-app/driver.html",
+      "description": "View active jobs"
+    }
+  ]
+}
