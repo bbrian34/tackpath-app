@@ -804,7 +804,7 @@ function startStatusPolling(q){
       lastStatus=s;
       handleStatusChange(s, job, q);
     }catch(e){console.warn('Poll error:',e);}
-  },4000);
+  },3000);
 }
 
 function handleStatusChange(s, job, q){
@@ -851,12 +851,12 @@ function handleStatusChange(s, job, q){
 // CONFIRM DELIVERY (modal button)
 function confirmDelivery(){
   document.getElementById('confirmModal').style.display='none';
-  showStatus('rocket','Driver dispatched','Your driver is heading to collect your package now.',false);
-  document.getElementById('autoStatus').textContent='Driver Dispatched';
-  document.getElementById('statusSub').textContent='Live tracking active — waiting for pickup confirmation';
-  document.getElementById('sbStatusText').textContent='driver dispatched';
-  setProgress(4);
-  toast('Confirmed — driver dispatched','success');
+  showStatus('rocket','Driver on the way','Your driver has been dispatched and is heading to you.',false);
+  document.getElementById('autoStatus').textContent='Driver En Route';
+  document.getElementById('statusSub').textContent='Waiting for driver to start delivery...';
+  document.getElementById('sbStatusText').textContent='driver en route';
+  setProgress(3);
+  toast('Confirmed! Driver is on the way.','success');
   // Polling continues — real in_transit update will come from driver app
 }
 
