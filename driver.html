@@ -866,15 +866,15 @@ function renderActiveJob(){
   var mapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destAddr);
   var mapFallback = 'https://maps.google.com/maps?q=' + encodeURIComponent(destAddr) + '&output=embed';
   var steps = ['Accepted','At Pickup','In Transit','Delivered'];
-  var stepIdx = s==='assigned'?0:s==='at_pickup'?1:s==='in_transit'?2:3;
+  var stepIdx = s==='assigned'?0:s==='in_transit'?2:3;
   var statusColor = s==='assigned'?'var(--blue)':s==='at_pickup'?'var(--yellow)':s==='in_transit'?'var(--green)':'var(--green)';
-  var statusLabel = s==='assigned'?'Head to Pickup':s==='at_pickup'?'Collect Package':s==='in_transit'?'In Transit':'Delivered';
+  var statusLabel = s==='assigned'?'Head to Pickup':s==='in_transit'?'In Transit':'Delivered';
 
   var actionBtn = '';
   if(s==='assigned'){
-    actionBtn = '<button class="fab-action abt-blue" id="mainActionBtn">&#128205; I\'m at Pickup</button>';
+    actionBtn = '<button class="fab-action abt-purple" id="mainActionBtn">&#128230; Start Delivery</button>';
   } else if(s==='at_pickup'){
-    actionBtn = '<button class="fab-action abt-purple" id="mainActionBtn">&#128230; Package Collected</button>';
+    actionBtn = '<button class="fab-action abt-green" id="mainActionBtn">&#10003; Confirm Delivery</button>';
   } else if(s==='in_transit'){
     actionBtn = '<button class="fab-action abt-green" id="mainActionBtn">&#10003; Confirm Delivery</button>';
   } else {
@@ -935,8 +935,7 @@ function renderActiveJob(){
   var btn = document.getElementById('mainActionBtn');
   if(btn){
     btn.addEventListener('click', function(){
-      if(_jobStatus==='assigned') updateJobStatus('at_pickup');
-      else if(_jobStatus==='at_pickup') updateJobStatus('in_transit');
+      if(_jobStatus==='assigned') updateJobStatus('in_transit');
       else if(_jobStatus==='in_transit') openPOD();
     });
   }
