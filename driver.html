@@ -829,6 +829,7 @@ async function acceptJob(){
   document.getElementById('jobAlert').classList.remove('on');
   if(!pendingJob) return;
   currentJob=pendingJob;pendingJob=null;
+  currentJob.status='assigned'; // Set in memory immediately
   // Update Supabase with driver name
   try{
     await sbPatch('jobs?id=eq.'+currentJob.id,{status:'assigned',driver_name:driver?driver.name:'Driver'});
@@ -836,8 +837,9 @@ async function acceptJob(){
   jobCount++;
   renderActiveJob();
   toast('Job accepted! Head to pickup.','success');
-  addCommsMessage('dispatcher','SmartPath confirmed — Jordan, you\'re assigned to '+currentJob.title+'. Navigate to pickup now.');
+  addCommsMessage('dispatcher','SmartPath confirmed — you are assigned to '+currentJob.title+'. Navigate to pickup now.');
   document.getElementById('commsBadge').style.display='block';
+
 }
 
 function rejectJob(){
@@ -918,6 +920,8 @@ function renderActiveJob(){
   html += '<div style="padding:6px 14px;border-radius:20px;background:rgba(2,6,14,.85);border:1px solid rgba(25,183,239,.3);font-family:var(--mono);font-size:10px;font-weight:600;color:#fff;">TP-'+shortId+'</div>';
   html += '<div style="padding:6px 14px;border-radius:20px;background:rgba(2,6,14,.85);border:1px solid rgba(25,183,239,.2);font-family:var(--mono);font-size:10px;font-weight:700;color:'+statusColor+';">'+statusLabel+'</div>';
   html += '</div>';
+  // Navigate button on map
+  html += '<a href="'+mapsUrl+'" target="_blank" style="position:absolute;bottom:12px;right:12px;padding:12px 20px;border-radius:24px;background:var(--blue);color:#fff;font-size:14px;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:7px;box-shadow:0 4px 16px rgba(25,183,239,.4);">&#9194; Navigate</a>';
   html += '</div>';
 
   // BOTTOM SHEET
@@ -937,6 +941,7 @@ function renderActiveJob(){
   html += '<a href="'+mapsUrl+'" target="_blank" style="padding:13px;border-radius:12px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-size:13px;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">&#9194; Navigate</a>';
   html += '<button id="dispatchBtn" style="padding:13px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(216,238,255,.5);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">&#128172; Dispatch</button>';
   html += '</div>';
+
   html += '</div>';
 
   html += '</div>';
