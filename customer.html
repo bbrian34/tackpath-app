@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath — Customer Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;
+  --bg:#010e21;--card:#071828;--border:rgba(255,255,255,.07);
+  --text:#eef4ff;--muted:rgba(238,244,255,.45);--faint:rgba(238,244,255,.18);
+  --mono:'DM Mono','Courier New',monospace;
+  --display:'DM Sans',-apple-system,sans-serif;
+  --serif:'Playfair Display',Georgia,serif;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',-apple-system,sans-serif;color:var(--text);background:var(--bg);overflow-x:hidden;line-height:1.6;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;
+  background:linear-gradient(rgba(25,183,239,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(25,183,239,.018) 1px,transparent 1px);
+  background-size:80px 80px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 70% -10%,rgba(25,183,239,.11) 0%,transparent 50%),
+    radial-gradient(ellipse at 0% 60%,rgba(83,255,136,.045) 0%,transparent 40%);
+  pointer-events:none;z-index:0;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:9999;padding:0 40px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(1,14,33,.97);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);}
+.nav-wm{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.3px;text-decoration:none;display:flex;align-items:center;}
+.nav-wm .t{color:#fff;}.nav-wm .p{color:var(--blue);}
+.nav-div{width:1px;height:22px;background:var(--border);margin:0 16px;}
+.nav-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;}
+.nav-r{display:flex;align-items:center;gap:12px;}
+.nav-avatar{width:32px;height:32px;border-radius:50%;background:rgba(25,183,239,.15);border:1px solid rgba(25,183,239,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--blue);}
+.nav-user-name{font-size:13px;font-weight:600;color:var(--muted);}
+.btn-sm{padding:6px 14px;border-radius:8px;background:transparent;color:var(--muted);font-size:12px;font-weight:600;border:1px solid var(--border);cursor:pointer;text-decoration:none;transition:all .15s;}
+.btn-sm:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+
+/* LOGIN */
+#loginScreen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(ellipse at 20% 50%,rgba(25,183,239,.08),transparent 60%),
+    radial-gradient(ellipse at 80% 20%,rgba(25,183,239,.06),transparent 50%),var(--bg);}
+.login-box{width:min(460px,96vw);border-radius:24px;background:rgba(7,24,40,.95);
+  border:1px solid rgba(25,183,239,.12);box-shadow:0 40px 80px rgba(0,0,0,.6);overflow:hidden;
+  animation:fadeUp .5s ease both;position:relative;}
+.login-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.login-top{padding:40px 40px 24px;text-align:center;border-bottom:1px solid var(--border);}
+.login-wm{font-family:var(--display);font-size:30px;font-weight:800;letter-spacing:-.5px;}
+.login-wm .t{color:#fff;}.login-wm .p{color:var(--blue);}
+.login-sub{font-size:13px;color:var(--muted);margin-top:6px;}
+.login-social{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:22px 40px 0;}
+.soc-btn{padding:12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+  color:var(--text);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;}
+.soc-btn:hover{background:rgba(255,255,255,.08);}
+.login-divider{display:flex;align-items:center;gap:12px;padding:16px 40px 0;font-size:11px;color:var(--faint);}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.login-form{padding:16px 40px 32px;}
+.fl{display:block;font-family:var(--mono);font-size:9px;font-weight:500;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px;}
+.fi{width:100%;padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;margin-bottom:14px;}
+.fi:focus{border-color:rgba(25,183,239,.4);}
+.fi::placeholder{color:var(--faint);}
+.remember{display:flex;align-items:center;gap:9px;margin-bottom:20px;cursor:pointer;}
+.remember input{width:15px;height:15px;accent-color:var(--blue);}
+.remember span{font-size:12px;color:var(--muted);}
+.btn-login{width:100%;padding:13px;border-radius:11px;background:var(--blue);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:all .15s;box-shadow:0 8px 26px rgba(25,183,239,.25);}
+.btn-login:hover{background:#22ccff;}
+.login-footer{text-align:center;padding:16px 40px 24px;font-size:13px;color:var(--muted);border-top:1px solid var(--border);}
+.login-footer a{color:var(--blue);text-decoration:none;font-weight:700;}
+.demo-note{position:fixed;top:20px;right:20px;padding:8px 16px;border-radius:20px;
+  background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);
+  color:var(--blue);font-size:12px;font-weight:700;letter-spacing:.04em;z-index:100000;}
+
+/* PORTAL */
+#portal{display:none;padding-top:64px;position:relative;z-index:1;}
+.wrap{max-width:960px;margin:0 auto;padding:48px 40px;}
+
+/* WELCOME */
+.welcome{display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;flex-wrap:wrap;gap:14px;}
+.welcome-tag{font-family:var(--mono);font-size:9px;color:var(--blue);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.welcome-tag::before{content:'';display:block;width:20px;height:1px;background:var(--blue);}
+.welcome h1{font-family:var(--display);font-size:28px;font-weight:800;letter-spacing:-.3px;}
+.welcome h1 span{color:var(--blue);}
+.btn-primary{padding:12px 24px;border-radius:11px;background:var(--blue);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s;box-shadow:0 8px 26px rgba(25,183,239,.25);}
+.btn-primary:hover{background:#22ccff;transform:translateY(-1px);}
+.btn-ghost{padding:12px 24px;border-radius:11px;background:transparent;color:var(--text);font-size:14px;font-weight:600;border:1px solid var(--border);cursor:pointer;transition:all .15s;}
+.btn-ghost:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.04);}
+
+/* STATUS BAR */
+#statusBar{display:none;align-items:center;gap:10px;padding:13px 20px;border-radius:12px;background:var(--card);border:1px solid var(--border);margin-bottom:28px;}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pdot 2s infinite;}
+@keyframes pdot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(83,255,136,.5);}50%{opacity:.7;box-shadow:0 0 0 5px rgba(83,255,136,0);}}
+.sb-text{font-size:13px;color:var(--muted);}
+.sb-text strong{color:var(--text);}
+
+/* ORDER CARD */
+.order-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:28px;position:relative;}
+.order-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.card-hdr{padding:24px 28px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.card-hdr h2{font-family:var(--display);font-size:17px;font-weight:800;}
+.card-hdr p{font-size:12px;color:var(--muted);margin-top:3px;}
+.use-saved{padding:7px 14px;border-radius:8px;background:rgba(25,183,239,.07);border:1px solid rgba(25,183,239,.18);color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;display:none;transition:all .15s;}
+.use-saved:hover{background:rgba(25,183,239,.13);}
+.card-body{padding:28px;}
+.sec-div{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin:22px 0 14px;display:flex;align-items:center;gap:10px;}
+.sec-div::after{content:'';flex:1;height:1px;background:var(--border);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg{margin-bottom:16px;}
+label.fl2{display:block;font-family:var(--mono);font-size:9px;font-weight:500;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px;}
+input.fi2,select.fi2{width:100%;padding:11px 14px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;cursor:pointer;}
+input.fi2:focus,select.fi2:focus{border-color:rgba(25,183,239,.4);}
+input.fi2::placeholder{color:var(--faint);}
+select.fi2 option{background:#071828;}
+
+/* PRIORITY */
+.priority-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.po{padding:16px;border-radius:12px;border:1px solid var(--border);cursor:pointer;transition:all .15s;text-align:center;}
+.po:hover{border-color:rgba(25,183,239,.2);}
+.po.sel{border-color:rgba(25,183,239,.4);background:rgba(25,183,239,.07);}
+.po.sel.pp{border-color:rgba(255,150,30,.4);background:rgba(255,150,30,.07);}
+.po.sel.pc{border-color:rgba(141,92,255,.4);background:rgba(141,92,255,.07);}
+.po-icon{font-size:22px;margin-bottom:6px;}
+.po-name{font-size:13px;font-weight:700;margin-bottom:2px;}
+.po-desc{font-size:10px;color:var(--muted);}
+.po-price{font-family:var(--mono);font-size:10px;color:var(--blue);margin-top:5px;}
+.po.sel.pp .po-price{color:var(--orange);}
+.po.sel.pc .po-price{color:var(--purple);}
+
+/* FORM ACTIONS */
+.form-actions{display:flex;gap:12px;margin-top:24px;}
+
+/* QUOTE */
+#quotePanel{display:none;margin-bottom:28px;}
+.quote-card{background:var(--card);border:1px solid rgba(25,183,239,.2);border-radius:20px;overflow:hidden;position:relative;}
+.quote-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.quote-inner{padding:28px;}
+.quote-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.quote-tag{font-family:var(--mono);font-size:9px;color:var(--blue);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px;}
+.quote-title{font-family:var(--display);font-size:22px;font-weight:800;}
+.quote-price-val{font-family:var(--display);font-size:46px;font-weight:800;color:var(--blue);letter-spacing:-.5px;line-height:1;text-align:right;}
+.quote-price-note{font-size:11px;color:var(--muted);text-align:right;margin-top:3px;}
+.quote-route{padding:14px 18px;border-radius:11px;background:rgba(25,183,239,.04);border:1px solid rgba(25,183,239,.1);display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.qr-city{font-size:14px;font-weight:700;}
+.qr-arrow{color:var(--blue);font-size:20px;}
+.quote-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.qs-box{padding:14px;border-radius:11px;background:rgba(255,255,255,.02);border:1px solid var(--border);text-align:center;}
+.qs-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
+.qs-val{font-size:15px;font-weight:700;}
+.quote-breakdown{font-size:12px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap;margin-bottom:22px;}
+.qb{display:flex;gap:5px;}
+.qb-l{color:var(--faint);}
+.quote-actions{display:flex;gap:12px;}
+.btn-confirm{padding:13px 28px;border-radius:11px;background:var(--green);color:#010e21;font-size:14px;font-weight:800;border:none;cursor:pointer;transition:all .15s;box-shadow:0 8px 26px rgba(83,255,136,.2);}
+.btn-confirm:hover{background:#6fffaa;box-shadow:0 12px 36px rgba(83,255,136,.35);}
+
+/* STATUS DISPLAY */
+#statusSection{display:none;margin-bottom:28px;}
+.status-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;position:relative;}
+.status-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+
+/* PROGRESS BAR */
+#progressBar{display:none;padding:16px 24px;border-bottom:1px solid var(--border);background:rgba(1,14,33,.6);}
+.pb-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.12em;font-weight:500;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
+.pb-steps{display:flex;align-items:flex-start;}
+.pb-step{flex:1;text-align:center;position:relative;}
+.pb-step:not(:last-child)::after{content:'';position:absolute;top:11px;left:50%;width:100%;height:2px;background:rgba(255,255,255,.07);z-index:0;transition:background .5s;}
+.pb-step.done:not(:last-child)::after{background:var(--green);}
+.pb-dot{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.12);background:var(--bg);margin:0 auto 7px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;transition:all .4s;}
+.pb-step.done .pb-dot{border-color:var(--green);background:var(--green);color:#010e21;}
+.pb-step.active .pb-dot{border-color:var(--blue);box-shadow:0 0 12px rgba(25,183,239,.55);color:var(--blue);}
+.pb-step-label{font-size:9px;color:var(--muted);font-family:var(--mono);}
+.pb-step.done .pb-step-label,.pb-step.active .pb-step-label{color:var(--text);}
+
+/* STATUS DISPLAY CENTER */
+#statusDisplay{min-height:240px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:48px 24px;}
+#statusIcon{margin-bottom:20px;width:80px;height:80px;display:flex;align-items:center;justify-content:center;}
+#statusMainText{font-size:clamp(26px,3.5vw,42px);font-weight:800;letter-spacing:-1px;line-height:1.1;margin-bottom:12px;font-family:var(--display);}
+#statusSubText{font-size:15px;color:var(--muted);font-weight:300;max-width:480px;line-height:1.7;}
+#statusDots{margin-top:22px;display:none;gap:8px;justify-content:center;}
+@keyframes dotPulse{0%,80%,100%{opacity:.2;transform:scale(.8);}40%{opacity:1;transform:scale(1.15);}}
+
+/* AUTONOMOUS PANEL */
+#autonomousPanel{display:none;padding:24px 28px;border-top:1px solid var(--border);}
+.ap-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;}
+#autoStatus{font-family:var(--display);font-size:24px;font-weight:800;margin-bottom:4px;}
+#statusSub{font-size:13px;color:var(--muted);}
+.ap-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;}
+.ap-box{padding:16px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid var(--border);}
+.ap-lbl2{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+.ap-val{font-size:28px;font-weight:800;font-family:var(--display);letter-spacing:-.5px;}
+
+/* COMMAND CENTER */
+#commandCenterPanel{display:none;padding:24px 28px;border-top:1px solid var(--border);}
+.cc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.cc-title{font-family:var(--display);font-size:22px;font-weight:800;}
+.live-badge{padding:8px 16px;border-radius:12px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.28);color:var(--blue);font-weight:700;font-size:12px;animation:pulseBorderBlue 1.8s infinite;}
+@keyframes pulseBorderBlue{0%,100%{box-shadow:0 0 8px rgba(25,183,239,.1);}50%{box-shadow:0 0 22px rgba(25,183,239,.42);border-color:rgba(25,183,239,.7);}}
+.map-wrap{height:360px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.08);position:relative;margin-bottom:16px;}
+.map-wrap iframe{width:100%;height:100%;border:0;display:block;filter:hue-rotate(195deg) saturate(0.9) brightness(0.82);}
+.map-label-overlay{position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:6px 16px;border-radius:20px;background:rgba(1,14,33,.88);border:1px solid rgba(25,183,239,.35);font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;backdrop-filter:blur(4px);white-space:nowrap;}
+#commandDriver{position:absolute;left:22%;bottom:38%;width:18px;height:18px;border-radius:50%;background:var(--blue);border:3px solid #fff;z-index:20;transition:all 7s ease-in-out;box-shadow:0 0 18px rgba(25,183,239,.8);}
+.cc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.cc-box{padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid var(--border);}
+.cc-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;}
+.cc-val{font-size:18px;font-weight:800;font-family:var(--display);}
+
+/* APPROACHING ALERT */
+#customerAlerts{display:none;padding:24px 28px;border-top:1px solid var(--border);}
+#customerAlerts .ap-lbl{color:var(--orange);}
+
+/* OPERATIONAL FEED */
+#operationalFeed{display:none;padding:24px 28px;border-top:1px solid var(--border);}
+.timeline{display:grid;gap:10px;padding:18px 20px;border-radius:14px;background:rgba(255,255,255,.015);border:1px solid var(--border);margin-top:16px;}
+.tl-item{font-size:13px;line-height:1.6;color:var(--muted);opacity:0;transition:opacity .6s;}
+.tl-item.visible{opacity:1;color:var(--text);}
+.tl-item.visible::before{content:"✓  ";color:var(--blue);}
+
+/* PROOF OF DELIVERY */
+#proofDelivery{display:none;padding:24px 28px;border-top:1px solid rgba(83,255,136,.12);}
+.proof-inner{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-top:14px;}
+.proof-img{height:200px;border-radius:16px;background:linear-gradient(135deg,rgba(83,255,136,.06),rgba(83,255,136,.02)),var(--card);border:1px solid rgba(83,255,136,.12);display:flex;align-items:center;justify-content:center;font-size:56px;}
+.proof-details .ap-lbl{color:var(--green);}
+.proof-title{font-family:var(--display);font-size:22px;font-weight:800;margin-bottom:12px;}
+.proof-sig{font-size:32px;font-family:Georgia,serif;font-style:italic;color:var(--green);margin-bottom:10px;}
+.proof-note{font-size:13px;color:var(--muted);line-height:1.7;}
+
+/* DELIVERY COMPLETED SUMMARY */
+#feedSummary{display:none;padding:24px 28px;border-top:1px solid var(--border);}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+.sg-box{padding:16px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid var(--border);}
+.sg-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;}
+.sg-val{font-size:16px;font-weight:700;}
+
+/* SMS NOTIFICATION */
+#smsModal{display:none;position:fixed;top:76px;left:50%;transform:translateX(-50%);width:320px;z-index:99999;animation:smsDropIn .5s cubic-bezier(.32,1.15,.6,1) both;}
+@keyframes smsDropIn{from{opacity:0;transform:translateX(-50%) translateY(-20px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.sms-shell{border-radius:20px;background:rgba(8,17,28,.97);border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px rgba(0,0,0,.6);overflow:hidden;backdrop-filter:blur(20px);}
+.sms-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px 10px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(135deg,rgba(83,255,136,.07),transparent);}
+.sms-icon{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#53ff88,#2acc66);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sms-from{font-size:12px;font-weight:800;}
+.sms-from-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+.sms-now{margin-left:auto;font-size:10px;color:var(--faint);}
+.sms-body{padding:14px 16px;}
+.sms-bubble{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:4px 16px 16px 16px;padding:12px 14px;font-size:13px;line-height:1.6;color:var(--text);margin-bottom:12px;}
+.sms-bubble strong{color:var(--green);}
+.sms-actions{display:flex;gap:8px;}
+.sms-btn{flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.sms-btn-p{background:var(--green);color:#000;}
+.sms-btn-s{background:rgba(255,255,255,.07);color:var(--muted);border:1px solid rgba(255,255,255,.1);}
+
+/* CONFIRMATION MODAL */
+#confirmModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);z-index:99000;align-items:center;justify-content:center;padding:20px;}
+.confirm-box{width:min(540px,94vw);border-radius:28px;background:linear-gradient(145deg,#0d1d2e,#08111c);border:1px solid rgba(25,183,239,.35);box-shadow:0 0 60px rgba(25,183,239,.15),0 32px 80px rgba(0,0,0,.6);padding:36px;animation:fadeUp .45s ease both;}
+.confirm-eyebrow{font-size:11px;letter-spacing:.16em;font-weight:700;color:rgba(25,183,239,.7);text-transform:uppercase;margin-bottom:10px;font-family:var(--mono);}
+.confirm-title{font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:8px;font-family:var(--display);}
+.confirm-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.confirm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.conf-box{padding:16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
+.conf-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(238,244,255,.4);margin-bottom:5px;}
+.conf-val{font-size:16px;font-weight:800;}
+.confirm-cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:26px;}
+.cost-box{padding:20px;border-radius:16px;background:rgba(25,183,239,.07);border:1px solid rgba(25,183,239,.28);text-align:center;}
+.cost-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(25,183,239,.7);margin-bottom:8px;}
+.cost-val{font-size:42px;font-weight:800;letter-spacing:-1.5px;color:var(--blue);font-family:var(--display);}
+.btn-confirm-modal{width:100%;padding:17px;border-radius:16px;background:linear-gradient(135deg,#0aa8ff,#0077cc);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:17px;font-weight:800;cursor:pointer;letter-spacing:.3px;box-shadow:0 12px 36px rgba(10,168,255,.32);font-family:'DM Sans',sans-serif;}
+.confirm-fine{text-align:center;margin-top:12px;font-size:12px;color:rgba(238,244,255,.28);}
+
+/* ORDER HISTORY */
+.history-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-top:28px;}
+.hist-hdr{padding:18px 24px;border-bottom:1px solid var(--border);}
+.hist-hdr h3{font-size:16px;font-weight:700;}
+.hist-empty{padding:36px;text-align:center;color:var(--faint);font-size:13px;}
+.hist-row{display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,.04);}
+.hist-row:last-child{border-bottom:none;}
+.hist-signal{font-family:var(--mono);font-size:11px;color:var(--blue);min-width:76px;}
+.hist-route{flex:1;font-size:13px;font-weight:600;color:var(--text);}
+.hist-route span{color:var(--muted);font-weight:400;}
+.hist-date{font-size:11px;color:var(--muted);}
+.badge{display:inline-flex;padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;}
+.badge-delivered{background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:28px;right:28px;z-index:20000;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:12px 18px;border-radius:11px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;animation:toastIn .25s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.toast-success{background:#071828;border:1px solid rgba(83,255,136,.25);color:var(--green);}
+.toast-info{background:#071828;border:1px solid rgba(25,183,239,.25);color:var(--blue);}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+
+@media(max-width:768px){
+  nav{padding:0 20px;}
+  .wrap{padding:28px 16px;}
+  .g2,.confirm-grid,.confirm-cost-grid,.quote-stats,.ap-stats,.cc-stats,.proof-inner,.summary-grid{grid-template-columns:1fr;}
+  .priority-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="demo-note">&#9889; Demo — any credentials work</div>
+
+<!-- NAV -->
+<nav>
+  <div style="display:flex;align-items:center;">
+    <a href="index.html" class="nav-wm"><span class="t">TACK</span><span class="p">PATH</span></a>
+    <div class="nav-div"></div>
+    <span class="nav-lbl">Customer Portal</span>
+  </div>
+  <div class="nav-r">
+    <div id="navUser" style="display:none;display:flex;align-items:center;gap:8px;">
+      <div class="nav-avatar" id="navAvatar">?</div>
+      <span class="nav-user-name" id="navName"></span>
+    </div>
+    <button class="btn-sm" id="btnLogout" style="display:none;" onclick="logout()">Sign Out</button>
+    <a href="index.html" class="btn-sm">&#8592; Back to Site</a>
+  </div>
+</nav>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-top">
+      <div class="login-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
+      <div class="login-sub">Sign in to your delivery account</div>
+    </div>
+    <div class="login-social">
+      <button class="soc-btn" onclick="doLogin()">
+        <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Google
+      </button>
+      <button class="soc-btn" onclick="doLogin()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Apple
+      </button>
+    </div>
+    <div class="login-divider">or continue with email</div>
+    <div class="login-form">
+      <label class="fl">Email Address</label>
+      <input type="email" class="fi" id="loginEmail" placeholder="you@company.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <label class="fl">Password</label>
+      <input type="password" class="fi" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <label class="remember">
+        <input type="checkbox" id="rememberMe" checked/>
+        <span>Remember my delivery information</span>
+      </label>
+      <button class="btn-login" onclick="doLogin()">Sign In</button>
+    </div>
+    <div class="login-footer">New to TackPath? <a href="#" onclick="doLogin()">Create an account &#8594;</a></div>
+  </div>
+</div>
+
+<!-- PORTAL -->
+<div id="portal">
+  <div class="wrap">
+
+    <!-- WELCOME -->
+    <div class="welcome">
+      <div>
+        <div class="welcome-tag">Customer Portal</div>
+        <h1>Welcome back, <span id="welcomeName">there</span></h1>
+      </div>
+      <button class="btn-primary" onclick="scrollToOrder()">+ New Delivery</button>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div id="statusBar">
+      <div class="sb-dot"></div>
+      <div class="sb-text"><strong id="sbSignalId"></strong> — <span id="sbStatusText">processing your order</span></div>
+    </div>
+
+    <!-- ORDER FORM -->
+    <div class="order-card" id="orderSection">
+      <div class="card-hdr">
+        <div>
+          <h2>New Delivery</h2>
+          <p>Enter pickup and delivery details to get an instant quote.</p>
+        </div>
+        <button class="use-saved" id="useSavedBtn" onclick="useSaved()">Use saved addresses</button>
+      </div>
+      <div class="card-body">
+        <div class="sec-div">Recipient</div>
+        <div class="g2">
+          <div class="fg"><label class="fl2">Recipient Name</label><input type="text" class="fi2" id="recipient" placeholder="Full name"/></div>
+          <div class="fg"><label class="fl2">Package Type</label>
+            <select class="fi2" id="packageType">
+              <option>Standard Package</option><option>Medical Documents</option>
+              <option>Fragile Items</option><option>Legal Documents</option>
+              <option>Electronics</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="sec-div">Pickup Location</div>
+        <div class="g2">
+          <div class="fg"><label class="fl2">Pickup Address</label><input type="text" class="fi2" id="pickupAddress" placeholder="1200 Peachtree St NE"/></div>
+          <div class="fg"><label class="fl2">Pickup City</label>
+            <select class="fi2" id="pickupCity">
+              <option>Midtown Atlanta</option><option>Atlanta</option><option>Buckhead</option>
+              <option>Sandy Springs</option><option>Smyrna</option><option>Norcross</option>
+              <option>Decatur</option><option>Marietta</option><option>Roswell</option>
+            </select>
+          </div>
+        </div>
+        <div class="sec-div">Delivery Location</div>
+        <div class="g2">
+          <div class="fg"><label class="fl2">Delivery Address</label><input type="text" class="fi2" id="deliveryAddress" placeholder="455 Cobb Parkway"/></div>
+          <div class="fg"><label class="fl2">Delivery City</label>
+            <select class="fi2" id="deliveryCity">
+              <option>Marietta</option><option>Atlanta</option><option>Sandy Springs</option>
+              <option>Smyrna</option><option>Norcross</option><option>Buckhead</option>
+              <option>Decatur</option><option>Midtown Atlanta</option><option>Roswell</option>
+            </select>
+          </div>
+        </div>
+        <div class="sec-div">Priority</div>
+        <div class="priority-grid">
+          <div class="po sel" id="po-standard" onclick="selectPriority('standard')">
+            <div class="po-icon">&#128666;</div><div class="po-name">Standard</div>
+            <div class="po-desc">Same-day delivery</div><div class="po-price">Base rate</div>
+          </div>
+          <div class="po pp" id="po-priority" onclick="selectPriority('priority')">
+            <div class="po-icon">&#9889;</div><div class="po-name">Priority</div>
+            <div class="po-desc">2-4 hour window</div><div class="po-price">+$12 surcharge</div>
+          </div>
+          <div class="po pc" id="po-critical" onclick="selectPriority('critical')">
+            <div class="po-icon">&#9763;</div><div class="po-name">Critical Medical</div>
+            <div class="po-desc">Immediate dispatch</div><div class="po-price">+$28 surcharge</div>
+          </div>
+        </div>
+        <div class="sec-div">Notes</div>
+        <div class="fg"><label class="fl2">Special Instructions (optional)</label><input type="text" class="fi2" id="notes" placeholder="e.g. Temperature sensitive, call on arrival"/></div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="confirmOrder()">Request Quote &#8594;</button>
+          <button class="btn-ghost" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS SECTION -->
+    <div id="statusSection">
+      <div class="status-card">
+
+        <!-- PROGRESS BAR -->
+        <div id="progressBar">
+          <div class="pb-lbl">Delivery Progress</div>
+          <div class="pb-steps">
+            <div class="pb-step active" id="ps0"><div class="pb-dot">1</div><div class="pb-step-label">Signal</div></div>
+            <div class="pb-step" id="ps1"><div class="pb-dot">2</div><div class="pb-step-label">SmartPath</div></div>
+            <div class="pb-step" id="ps2"><div class="pb-dot">3</div><div class="pb-step-label">Dispatch</div></div>
+            <div class="pb-step" id="ps3"><div class="pb-dot">4</div><div class="pb-step-label">SmartTrack</div></div>
+            <div class="pb-step" id="ps4"><div class="pb-dot">5</div><div class="pb-step-label">Command</div></div>
+            <div class="pb-step" id="ps5"><div class="pb-dot">&#10003;</div><div class="pb-step-label">Delivered</div></div>
+          </div>
+        </div>
+
+        <!-- STATUS DISPLAY -->
+        <div id="statusDisplay">
+          <div id="statusIcon">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="36" stroke="rgba(25,183,239,.12)" stroke-width="1.5"/>
+              <circle cx="40" cy="40" r="26" stroke="rgba(25,183,239,.18)" stroke-width="1.5"/>
+              <circle cx="40" cy="40" r="6" fill="#19b7ef">
+                <animate attributeName="r" values="6;7.5;6" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="1;0.7;1" dur="2s" repeatCount="indefinite"/>
+              </circle>
+              <circle cx="40" cy="40" r="14" stroke="#19b7ef" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.5">
+                <animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="8s" repeatCount="indefinite"/>
+              </circle>
+              <circle cx="40" cy="40" r="36" fill="transparent" stroke="#19b7ef" stroke-width="2" opacity="0">
+                <animate attributeName="r" values="10;44" dur="2.4s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.6;0" dur="2.4s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+          </div>
+          <div id="statusMainText"><span style="color:var(--blue)">Ready</span> when you are</div>
+          <div id="statusSubText"></div>
+          <div id="statusDots">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--blue);animation:dotPulse 1.4s 0s infinite both;display:inline-block;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--blue);animation:dotPulse 1.4s .2s infinite both;display:inline-block;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--blue);animation:dotPulse 1.4s .4s infinite both;display:inline-block;"></span>
+          </div>
+        </div>
+
+        <!-- AUTONOMOUS PANEL -->
+        <div id="autonomousPanel">
+          <div class="ap-lbl">Autonomous Dispatch Flow</div>
+          <div id="autoStatus" style="font-family:var(--display);font-size:24px;font-weight:800;margin-bottom:4px;">Waiting For Delivery Signal</div>
+          <div id="statusSub" style="font-size:13px;color:var(--muted);">Autonomous systems standing by</div>
+          <div class="ap-stats">
+            <div class="ap-box"><div class="ap-lbl2">Estimated Cost</div><div class="ap-val" id="signalCost">—</div></div>
+            <div class="ap-box"><div class="ap-lbl2">ETA</div><div class="ap-val" id="signalEta">—</div></div>
+            <div class="ap-box"><div class="ap-lbl2">Signal ID</div><div class="ap-val" style="font-size:18px;" id="signalIdDisplay">—</div></div>
+          </div>
+          <div id="signalSummary" style="margin-top:14px;font-size:14px;line-height:1.7;color:var(--muted);"></div>
+        </div>
+
+        <!-- COMMAND CENTER -->
+        <div id="commandCenterPanel">
+          <div class="cc-hdr">
+            <div>
+              <div class="ap-lbl" style="margin-bottom:4px;">On Its Way</div>
+              <div class="cc-title">Your Delivery is Live</div>
+            </div>
+            <div class="live-badge">LIVE OPERATIONS</div>
+          </div>
+          <div class="map-wrap">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d106544.32!2d-84.4677!3d33.8760!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x88f5045d6993098d%3A0x66fede2f990b630b!2sMidtown%20Atlanta%2C%20Atlanta%2C%20GA!3m2!1d33.7841!2d-84.3838!4m5!1s0x88f508ef74cc9b23%3A0xb5b9ff8de2f2a6f1!2sMarietta%2C%20GA!3m2!1d33.9526!2d-84.5499!5e0!3m2!1sen!2sus!4v1680000000000!5m2!1sen!2sus" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <div class="map-label-overlay">SmartTrack</div>
+            <div id="commandDriver"></div>
+          </div>
+          <div class="cc-stats">
+            <div class="cc-box"><div class="cc-lbl">Signal</div><div class="cc-val" id="ccSignal">—</div></div>
+            <div class="cc-box"><div class="cc-lbl">Route</div><div class="cc-val" id="ccRoute" style="font-size:13px;">—</div></div>
+            <div class="cc-box"><div class="cc-lbl">Driver Status</div><div class="cc-val" id="ccDriver" style="font-size:14px;">Standby</div></div>
+            <div class="cc-box"><div class="cc-lbl">ETA</div><div class="cc-val" style="color:var(--green);" id="ccEta">—</div></div>
+          </div>
+        </div>
+
+        <!-- APPROACHING ALERT -->
+        <div id="customerAlerts">
+          <div class="ap-lbl" style="color:var(--orange);">Customer Notification</div>
+          <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:8px;">Driver Approaching</div>
+          <div style="font-size:14px;color:var(--muted);line-height:1.7;">Your delivery driver is approaching the destination. SmartTrack telemetry indicates arrival within minutes.</div>
+        </div>
+
+        <!-- OPERATIONAL FEED -->
+        <div id="operationalFeed">
+          <div class="ap-lbl">Order Summary</div>
+          <div style="font-family:var(--display);font-size:22px;font-weight:800;margin-bottom:4px;">Delivery Completed &#10003;</div>
+          <div class="summary-grid">
+            <div class="sg-box"><div class="sg-lbl">Recipient</div><div class="sg-val" id="feedRecipient">—</div></div>
+            <div class="sg-box"><div class="sg-lbl">Signal ID</div><div class="sg-val" id="feedSignal">—</div></div>
+            <div class="sg-box"><div class="sg-lbl">Pickup</div><div class="sg-val" id="feedPickup">—</div></div>
+            <div class="sg-box"><div class="sg-lbl">Destination</div><div class="sg-val" id="feedDestination">—</div></div>
+          </div>
+          <div class="timeline">
+            <div class="tl-item" id="tl0">Delivery Signal created successfully</div>
+            <div class="tl-item" id="tl1">SmartPath optimized delivery route</div>
+            <div class="tl-item" id="tl2">Autonomous dispatch initiated — driver assigned</div>
+            <div class="tl-item" id="tl3">Command Center monitoring engaged</div>
+            <div class="tl-item" id="tl4">Driver reached pickup location</div>
+            <div class="tl-item" id="tl5">Package marked in transit</div>
+            <div class="tl-item" id="tl6">Driver arrived at destination</div>
+            <div class="tl-item" id="tl7">Delivery confirmed and archived</div>
+          </div>
+        </div>
+
+        <!-- PROOF OF DELIVERY -->
+        <div id="proofDelivery">
+          <div class="ap-lbl" style="color:var(--green);">Proof of Delivery</div>
+          <div style="font-family:var(--display);font-size:22px;font-weight:800;margin-bottom:14px;">Delivery Confirmed &#10003;</div>
+          <div class="proof-inner">
+            <div class="proof-img">&#128230;</div>
+            <div>
+              <div class="proof-sig" id="proofSig">—</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.7;">Your order was delivered successfully. A record of this delivery has been saved to your account.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ORDER HISTORY -->
+    <div class="history-card">
+      <div class="hist-hdr"><h3>Recent Orders</h3></div>
+      <div id="historyBody"><div class="hist-empty">No previous orders. Place your first delivery above.</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div id="confirmModal">
+  <div class="confirm-box">
+    <div class="confirm-eyebrow">Awaiting Customer Confirmation</div>
+    <div class="confirm-title">Confirm Your Delivery</div>
+    <div class="confirm-sub">Please review the details below before we dispatch your driver.</div>
+    <div class="confirm-grid">
+      <div class="conf-box"><div class="conf-lbl">Recipient</div><div class="conf-val" id="confRecipient">—</div></div>
+      <div class="conf-box"><div class="conf-lbl">Signal ID</div><div class="conf-val" id="confSignal">—</div></div>
+      <div class="conf-box"><div class="conf-lbl">Route</div><div class="conf-val" id="confRoute">—</div></div>
+      <div class="conf-box"><div class="conf-lbl">Priority</div><div class="conf-val" id="confPriority">Standard</div></div>
+    </div>
+    <div class="confirm-cost-grid">
+      <div class="cost-box"><div class="cost-lbl">Estimated Cost</div><div class="cost-val" id="confCost">—</div></div>
+      <div class="cost-box"><div class="cost-lbl">Estimated ETA</div><div class="cost-val" id="confEta">—</div></div>
+    </div>
+    <button class="btn-confirm-modal" onclick="confirmDelivery()">&#10003; &nbsp; Confirm Order</button>
+    <div class="confirm-fine">By confirming, you agree to the quoted price and authorize TackPath to pick up and deliver your order.</div>
+  </div>
+</div>
+
+<!-- SMS NOTIFICATION -->
+<div id="smsModal">
+  <div class="sms-shell">
+    <div class="sms-hdr">
+      <div class="sms-icon">&#128172;</div>
+      <div><div class="sms-from">TackPath</div><div class="sms-from-sub">Text Message</div></div>
+      <div class="sms-now">now</div>
+    </div>
+    <div class="sms-body">
+      <div class="sms-bubble"><strong>Your delivery is almost here!</strong> Driver Jordan is 2 minutes away from <span id="smsDeliveryAddr">your destination</span>. Signal: <span id="smsSignalId">—</span>. Please be ready to receive. — TackPath</div>
+      <div class="sms-actions">
+        <button class="sms-btn sms-btn-p" onclick="dismissSms()">&#10003; Ready</button>
+        <button class="sms-btn sms-btn-s" onclick="dismissSms()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const SUPABASE_URL = 'https://hofijsiphyjpdvujjzfi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const hdrs = {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+function sbUrl(p){return SUPABASE_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SUPABASE_KEY;}
+async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:hdrs,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbGet(p){const r=await fetch(sbUrl(p),{headers:hdrs});if(!r.ok)throw new Error(await r.text());return r.json();}
+
+// STATE
+let currentUser=null, selectedPriority='standard', currentSignalId=null, currentQuote=null;
+let demoTimers=[], orderHistory=[], currentEta=30, etaInterval=null, commandReady=false;
+let currentJobId=null, statusPollInterval=null;
+
+// LOGIN
+function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim()||'demo@tackpath.com';
+  const name=email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  currentUser={email,name};
+  if(document.getElementById('rememberMe').checked) localStorage.setItem('tp_user',JSON.stringify(currentUser));
+  showPortal();
+}
+function showPortal(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('portal').style.display='block';
+  document.querySelector('.demo-note').style.display='none';
+  document.getElementById('welcomeName').textContent=currentUser.name.split(' ')[0];
+  document.getElementById('navUser').style.display='flex';
+  document.getElementById('navName').textContent=currentUser.name;
+  document.getElementById('navAvatar').textContent=currentUser.name[0].toUpperCase();
+  document.getElementById('btnLogout').style.display='block';
+  loadSaved(); loadHistory();
+}
+function logout(){localStorage.removeItem('tp_user');location.reload();}
+
+// SAVED ADDRESSES
+function loadSaved(){
+  if(localStorage.getItem('tp_saved')) document.getElementById('useSavedBtn').style.display='block';
+}
+function useSaved(){
+  const s=JSON.parse(localStorage.getItem('tp_saved')||'{}');
+  if(s.recipient) document.getElementById('recipient').value=s.recipient;
+  if(s.pickupAddress) document.getElementById('pickupAddress').value=s.pickupAddress;
+  if(s.pickupCity) document.getElementById('pickupCity').value=s.pickupCity;
+  if(s.deliveryAddress) document.getElementById('deliveryAddress').value=s.deliveryAddress;
+  if(s.deliveryCity) document.getElementById('deliveryCity').value=s.deliveryCity;
+  toast('Saved addresses loaded.','info');
+}
+function saveAddresses(){
+  localStorage.setItem('tp_saved',JSON.stringify({
+    recipient:document.getElementById('recipient').value,
+    pickupAddress:document.getElementById('pickupAddress').value,
+    pickupCity:document.getElementById('pickupCity').value,
+    deliveryAddress:document.getElementById('deliveryAddress').value,
+    deliveryCity:document.getElementById('deliveryCity').value
+  }));
+  document.getElementById('useSavedBtn').style.display='block';
+}
+
+// PRIORITY
+function selectPriority(p){
+  selectedPriority=p;
+  ['standard','priority','critical'].forEach(id=>document.getElementById('po-'+id).classList.remove('sel'));
+  document.getElementById('po-'+p).classList.add('sel');
+}
+
+// QUOTE
+function getQuote(){
+  const recipient=document.getElementById('recipient').value.trim();
+  const pickupCity=document.getElementById('pickupCity').value;
+  const deliveryCity=document.getElementById('deliveryCity').value;
+  const pickupAddress=document.getElementById('pickupAddress').value.trim();
+  const deliveryAddress=document.getElementById('deliveryAddress').value.trim();
+  if(!recipient){toast('Recipient name is required.','error');return;}
+  if(!pickupAddress){toast('Pickup address is required.','error');return;}
+  if(!deliveryAddress){toast('Delivery address is required.','error');return;}
+  const base=18, distFee=Math.floor(Math.random()*20)+14;
+  const surcharge={standard:0,priority:12,critical:28}[selectedPriority];
+  const total=base+distFee+surcharge;
+  const eta=Math.floor(Math.random()*18)+20;
+  const dist=(Math.random()*12+3).toFixed(1);
+  const priorityLabel={standard:'Standard',priority:'Priority',critical:'Critical Medical'}[selectedPriority];
+  currentQuote={total,base,distFee,surcharge,eta,dist,recipient,pickupCity,pickupAddress,deliveryCity,deliveryAddress,priorityLabel};
+  currentEta=eta;
+  document.getElementById('quotePrice').textContent='$'+total;
+  document.getElementById('quoteFrom').textContent=pickupAddress+', '+pickupCity;
+  document.getElementById('quoteTo').textContent=deliveryAddress+', '+deliveryCity;
+  document.getElementById('quoteEta').textContent=eta+' min';
+  document.getElementById('quoteDist').textContent=dist+' mi';
+  document.getElementById('quotePriority').textContent=priorityLabel;
+  document.getElementById('quotePackage').textContent=document.getElementById('packageType').value;
+  document.getElementById('qbBase').textContent='$'+base;
+  document.getElementById('qbDist').textContent='$'+distFee;
+  document.getElementById('qbSurcharge').textContent=surcharge>0?'+$'+surcharge:'$0';
+  document.getElementById('quotePanel').style.display='block';
+  saveAddresses();
+  setTimeout(()=>document.getElementById('quotePanel').scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+function scrollToOrder(){document.getElementById('orderSection').scrollIntoView({behavior:'smooth',block:'start'});}
+
+// CONFIRM ORDER
+async function confirmOrder(){
+  const recipient=document.getElementById('recipient').value.trim();
+  const pickupCity=document.getElementById('pickupCity').value;
+  const deliveryCity=document.getElementById('deliveryCity').value;
+  const pickupAddress=document.getElementById('pickupAddress').value.trim();
+  const deliveryAddress=document.getElementById('deliveryAddress').value.trim();
+  if(!recipient){toast('Recipient name is required.','error');return;}
+  if(!pickupAddress){toast('Pickup address is required.','error');return;}
+  if(!deliveryAddress){toast('Delivery address is required.','error');return;}
+  const base=18, distFee=Math.floor(Math.random()*20)+14;
+  const surcharge={standard:0,priority:12,critical:28}[selectedPriority];
+  const total=base+distFee+surcharge;
+  const eta=Math.floor(Math.random()*18)+20;
+  const priorityLabel={standard:'Standard',priority:'Priority',critical:'Critical Medical'}[selectedPriority];
+  currentQuote={total,base,distFee,surcharge,eta,recipient,pickupCity,pickupAddress,deliveryCity,deliveryAddress,priorityLabel};
+  currentEta=eta;
+  saveAddresses();
+  const q=currentQuote;
+  currentSignalId='TP-'+Math.floor(Math.random()*9000+1000);
+  document.getElementById('confRecipient').textContent=q.recipient;
+  document.getElementById('confSignal').textContent=currentSignalId;
+  document.getElementById('confRoute').textContent=q.pickupCity+' → '+q.deliveryCity;
+  document.getElementById('confPriority').textContent=q.priorityLabel;
+  document.getElementById('confCost').textContent='$'+q.total;
+  document.getElementById('confEta').textContent=q.eta+'m';
+  document.getElementById('statusSection').style.display='block';
+  document.getElementById('progressBar').style.display='block';
+  document.getElementById('statusBar').style.display='flex';
+  document.getElementById('sbSignalId').textContent=currentSignalId;
+  document.getElementById('sbStatusText').textContent='awaiting your confirmation';
+  showStatus('<span style="color:var(--blue)">You\'re in</span> the queue','We\'ve got it — hang tight while we get everything lined up.',false);
+  document.getElementById('autonomousPanel').style.display='block';
+  document.getElementById('signalCost').textContent='$'+q.total;
+  document.getElementById('signalEta').textContent=q.eta+'m';
+  document.getElementById('signalIdDisplay').textContent=currentSignalId;
+  document.getElementById('signalSummary').innerHTML='<strong>'+q.recipient+'</strong> delivery routed from <strong>'+q.pickupCity+'</strong> to <strong>'+q.deliveryCity+'</strong>. SmartPath optimization and autonomous dispatch initiated.';
+  document.getElementById('ccSignal').textContent=currentSignalId;
+  document.getElementById('ccRoute').textContent=q.pickupCity.split(' ')[0]+' → '+q.deliveryCity;
+  document.getElementById('ccEta').textContent=q.eta+'m';
+  document.getElementById('feedRecipient').textContent=q.recipient;
+  document.getElementById('feedSignal').textContent=currentSignalId;
+  document.getElementById('feedPickup').textContent=q.pickupCity;
+  document.getElementById('feedDestination').textContent=q.deliveryCity;
+  document.getElementById('proofSig').textContent=q.recipient;
+  setProgress(0);
+  document.getElementById('statusSection').scrollIntoView({behavior:'smooth',block:'start'});
+  toast('Delivery Signal created — '+currentSignalId,'success');
+
+  // Create job in Supabase
+  try{
+    const created=await sbPost('jobs',{title:q.recipient+' — '+q.pickupCity+' to '+q.deliveryCity,pickup_address:q.pickupAddress+', '+q.pickupCity,dropoff_address:q.deliveryAddress+', '+q.deliveryCity,status:'pending'});
+    if(created&&created[0]) currentJobId=created[0].id;
+  }catch(e){console.error(e);}
+
+  // Route building animation (cosmetic only — 6s)
+  let t=setTimeout(()=>{
+    showStatus('route','Building <span style="color:var(--blue)">your</span> route','SmartPath is mapping the fastest path from '+q.pickupCity+' to '+q.deliveryCity+'.',false);
+    document.getElementById('autoStatus').textContent='SmartPath Calculating Route';
+    document.getElementById('statusSub').textContent='Optimal route via I-75 / I-285 identified';
+    setProgress(1);
+    document.getElementById('sbStatusText').textContent='building your route';
+  },6000);demoTimers.push(t);
+
+  // Finding driver animation (12s)
+  t=setTimeout(()=>{
+    showStatus('driver','Finding <span style="color:var(--blue)">your</span> driver','Matching you with the closest available driver.',false);
+    setProgress(2);
+    document.getElementById('sbStatusText').textContent='assigning driver';
+  },12000);demoTimers.push(t);
+
+  // Start polling Supabase immediately — don't wait for animation
+  startStatusPolling(q);
+}
+
+// REAL STATUS POLLING
+function startStatusPolling(q){
+  if(statusPollInterval) clearInterval(statusPollInterval);
+  let lastStatus='pending';
+  statusPollInterval=setInterval(async()=>{
+    if(!currentJobId) return;
+    try{
+      const jobs=await sbGet('jobs?id=eq.'+currentJobId+'&select=*');
+      if(!jobs||!jobs[0]) return;
+      const job=jobs[0];
+      const s=job.status;
+      if(s===lastStatus) return;
+      lastStatus=s;
+      handleStatusChange(s, job, q);
+    }catch(e){console.warn('Poll error:',e);}
+  },4000);
+}
+
+function handleStatusChange(s, job, q){
+  const driverName=job.driver_name||'Your driver';
+  if(s==='assigned'){
+    showStatus('wave','Driver assigned',''+driverName+' is heading to pick up your order. Please confirm to dispatch.',false);
+    document.getElementById('autoStatus').textContent='Awaiting Your Confirmation';
+    document.getElementById('statusSub').textContent='Confirm your order to dispatch '+driverName;
+    document.getElementById('ccDriver').textContent=driverName;
+    setProgress(3);
+    toast('Driver assigned — tap confirm to dispatch','info');
+    setTimeout(()=>document.getElementById('confirmModal').style.display='flex',800);
+  } else if(s==='in_transit'){
+    document.getElementById('confirmModal').style.display='none';
+    showStatus('pin','<span style="color:var(--green)">Your</span> delivery is live',''+driverName+' has collected your package and is on the way.',false);
+    document.getElementById('autoStatus').textContent='In Transit';
+    document.getElementById('statusSub').textContent=driverName+' is en route to '+q.deliveryCity;
+    document.getElementById('ccDriver').textContent=driverName+' — En Route';
+    setProgress(4);
+    document.getElementById('commandCenterPanel').style.display='block';
+    animateDriver();
+    startEtaCountdown();
+    document.getElementById('sbStatusText').textContent='in transit';
+    toast(driverName+' is on the way!','success');
+    setTimeout(()=>document.getElementById('commandCenterPanel').scrollIntoView({behavior:'smooth',block:'start'}),800);
+  } else if(s==='delivered'){
+    clearInterval(statusPollInterval);
+    showStatus('check','<span style="color:var(--green)">Delivered!</span>','Your order has been delivered. Thank you for using TackPath.',false);
+    document.getElementById('autoStatus').textContent='Delivery Confirmed ✓';
+    document.getElementById('statusSub').textContent='Your order has been delivered successfully!';
+    document.getElementById('ccDriver').textContent='Delivered ✓';
+    document.getElementById('ccEta').textContent='0m';
+    setProgress(6);
+    document.getElementById('operationalFeed').style.display='block';
+    document.getElementById('proofDelivery').style.display='block';
+    document.getElementById('sbStatusText').textContent='delivered';
+    revealTimeline();
+    toast('Delivery confirmed — '+currentSignalId+' archived','success');
+    saveHistory();
+    setTimeout(()=>document.getElementById('proofDelivery').scrollIntoView({behavior:'smooth',block:'start'}),600);
+  }
+}
+
+// CONFIRM DELIVERY (modal button)
+function confirmDelivery(){
+  document.getElementById('confirmModal').style.display='none';
+  showStatus('rocket','Driver dispatched','Your driver is heading to collect your package now.',false);
+  document.getElementById('autoStatus').textContent='Driver Dispatched';
+  document.getElementById('statusSub').textContent='Live tracking active — waiting for pickup confirmation';
+  document.getElementById('sbStatusText').textContent='driver dispatched';
+  setProgress(4);
+  toast('Confirmed — driver dispatched','success');
+  // Polling continues — real in_transit update will come from driver app
+}
+
+// STATUS ICONS
+const statusIcons = {
+  signal: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="36" stroke="rgba(25,183,239,.12)" stroke-width="1.5"/><circle cx="40" cy="40" r="26" stroke="rgba(25,183,239,.18)" stroke-width="1.5"/><circle cx="40" cy="40" r="6" fill="#19b7ef"><animate attributeName="r" values="6;7.5;6" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.7;1" dur="2s" repeatCount="indefinite"/></circle><circle cx="40" cy="40" r="14" stroke="#19b7ef" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.5"><animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="8s" repeatCount="indefinite"/></circle><circle cx="40" cy="40" r="36" fill="transparent" stroke="#19b7ef" stroke-width="2" opacity="0"><animate attributeName="r" values="10;44" dur="2.4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0" dur="2.4s" repeatCount="indefinite"/></circle></svg>`,
+  check: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="34" stroke="rgba(83,255,136,.18)" stroke-width="1.5"/><circle cx="40" cy="40" r="34" fill="transparent" stroke="#53ff88" stroke-width="2" opacity="0"><animate attributeName="r" values="10;42" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0" dur="2s" repeatCount="indefinite"/></circle><polyline points="24,40 35,52 56,28" stroke="#53ff88" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  route: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="34" stroke="rgba(25,183,239,.12)" stroke-width="1.5"/><path d="M22 52 Q28 28 40 28 Q52 28 58 52" stroke="#19b7ef" stroke-width="2.5" stroke-linecap="round" fill="none" stroke-dasharray="60" stroke-dashoffset="60"><animate attributeName="stroke-dashoffset" values="60;0" dur="1.5s" fill="freeze"/></path><circle cx="22" cy="52" r="4" fill="#ffd23d"/><circle cx="58" cy="52" r="4" fill="#53ff88"/><circle cx="40" cy="28" r="3" fill="#19b7ef"><animate attributeName="cy" values="28;32;28" dur="1.2s" repeatCount="indefinite"/></circle></svg>`,
+  driver: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="34" stroke="rgba(25,183,239,.12)" stroke-width="1.5"/><circle cx="40" cy="36" r="10" stroke="#19b7ef" stroke-width="2.5"/><path d="M22 60 C22 48 58 48 58 60" stroke="#19b7ef" stroke-width="2.5" stroke-linecap="round"/><circle cx="40" cy="40" r="34" fill="transparent" stroke="#19b7ef" stroke-width="1.5" opacity="0"><animate attributeName="r" values="14;42" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.4;0" dur="2s" repeatCount="indefinite"/></circle></svg>`,
+  wave: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="34" stroke="rgba(25,183,239,.12)" stroke-width="1.5"/><path d="M28 40 Q34 32 40 40 Q46 48 52 40" stroke="#19b7ef" stroke-width="2.5" stroke-linecap="round" fill="none"><animate attributeName="d" values="M28 40 Q34 32 40 40 Q46 48 52 40;M28 40 Q34 48 40 40 Q46 32 52 40;M28 40 Q34 32 40 40 Q46 48 52 40" dur="1.6s" repeatCount="indefinite"/></path></svg>`,
+  rocket: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="34" stroke="rgba(25,183,239,.12)" stroke-width="1.5"/><path d="M40 20 L46 36 L52 38 L46 44 L46 54 L40 50 L34 54 L34 44 L28 38 L34 36 Z" stroke="#19b7ef" stroke-width="2" stroke-linejoin="round" fill="rgba(25,183,239,.1)"/><circle cx="40" cy="37" r="4" fill="#19b7ef" opacity="0.8"><animate attributeName="opacity" values="0.8;0.4;0.8" dur="1s" repeatCount="indefinite"/></circle></svg>`,
+  pin: `<svg width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="34" stroke="rgba(83,255,136,.12)" stroke-width="1.5"/><path d="M40 18 C30 18 22 26 22 36 C22 50 40 62 40 62 C40 62 58 50 58 36 C58 26 50 18 40 18Z" stroke="#53ff88" stroke-width="2.5" fill="rgba(83,255,136,.08)"/><circle cx="40" cy="36" r="6" fill="#53ff88"><animate attributeName="r" values="6;7.5;6" dur="1.4s" repeatCount="indefinite"/></circle></svg>`
+};
+
+// STATUS DISPLAY
+function showStatus(iconKey,main,sub,dots){
+  const sd=document.getElementById('statusDisplay');
+  sd.style.opacity='0';sd.style.transition='opacity .3s ease';
+  setTimeout(()=>{
+    document.getElementById('statusIcon').innerHTML=statusIcons[iconKey]||statusIcons.signal;
+    document.getElementById('statusMainText').innerHTML=main;
+    document.getElementById('statusSubText').innerHTML=sub;
+    document.getElementById('statusDots').style.display=dots?'flex':'none';
+    sd.style.opacity='1';
+  },300);
+}
+
+// PROGRESS
+function setProgress(step){
+  for(let i=0;i<6;i++){
+    const el=document.getElementById('ps'+i);if(!el)continue;
+    el.classList.remove('done','active');
+    if(i<step)el.classList.add('done');
+    else if(i===step)el.classList.add('active');
+  }
+  if(step>=6)for(let i=0;i<6;i++)document.getElementById('ps'+i).classList.add('done');
+}
+
+// DRIVER ANIMATION
+function animateDriver(){
+  const d=document.getElementById('commandDriver');
+  const pos=[{left:'10%',bottom:'22%'},{left:'22%',bottom:'30%'},{left:'35%',bottom:'38%'},{left:'49%',bottom:'46%'},{left:'62%',bottom:'54%'},{left:'74%',bottom:'62%'},{left:'84%',bottom:'68%'}];
+  let i=0;
+  const mv=setInterval(()=>{i++;if(i<pos.length){d.style.left=pos[i].left;d.style.bottom=pos[i].bottom;}else clearInterval(mv);},7000);
+  demoTimers.push(mv);
+}
+
+// ETA COUNTDOWN
+function startEtaCountdown(){
+  if(etaInterval)clearInterval(etaInterval);
+  let eta=currentEta;
+  etaInterval=setInterval(()=>{
+    eta=Math.max(0,eta-1);
+    document.getElementById('ccEta').textContent=eta+'m';
+    document.getElementById('signalEta').textContent=eta+'m';
+    if(eta<=0)clearInterval(etaInterval);
+  },6000);
+  demoTimers.push(etaInterval);
+}
+
+// TIMELINE REVEAL
+function revealTimeline(){
+  for(let i=0;i<=7;i++){
+    ((idx)=>setTimeout(()=>{const el=document.getElementById('tl'+idx);if(el)el.classList.add('visible');},idx*600))(i);
+  }
+}
+
+// SMS DISMISS
+function dismissSms(){
+  const el=document.getElementById('smsModal');
+  el.style.opacity='0';el.style.transition='all .3s ease';
+  setTimeout(()=>{el.style.display='none';el.style.opacity='';el.style.transition='';},320);
+}
+
+// HISTORY
+function saveHistory(){
+  const q=currentQuote;
+  const order={signalId:currentSignalId,from:q.pickupCity,to:q.deliveryCity,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),status:'delivered'};
+  orderHistory.unshift(order);
+  localStorage.setItem('tp_history_'+currentUser.email,JSON.stringify(orderHistory));
+  loadHistory();
+}
+function loadHistory(){
+  if(!currentUser)return;
+  const stored=localStorage.getItem('tp_history_'+currentUser.email);
+  orderHistory=stored?JSON.parse(stored):[];
+  const body=document.getElementById('historyBody');
+  if(!orderHistory.length){body.innerHTML='<div class="hist-empty">No previous orders. Place your first delivery above.</div>';return;}
+  body.innerHTML=orderHistory.slice(0,8).map(o=>`<div class="hist-row"><div class="hist-signal">${o.signalId}</div><div class="hist-route">${o.from} <span>&#8594; ${o.to}</span></div><span class="badge badge-delivered">${o.status}</span><div class="hist-date">${o.date}</div></div>`).join('');
+}
+
+// TOAST
+function toast(msg,type='success'){
+  const wrap=document.getElementById('toastWrap');
+  const el=document.createElement('div');
+  el.className='toast toast-'+(type==='error'?'success':type);
+  if(type==='error')el.style.borderColor='rgba(255,80,80,.25)';
+  el.innerHTML=(type==='success'?'&#10003;':type==='info'?'&#8635;':'&#9888;')+' '+msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(),4000);
+}
+
+// INIT
+const saved=localStorage.getItem('tp_user');
+if(saved){currentUser=JSON.parse(saved);showPortal();}
+</script>
+</body>
+</html>
