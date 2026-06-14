@@ -668,10 +668,40 @@ async function sbGet(p){
   return data;
 }
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbGetMsg(jobId){
+  const url=SB_URL+'/rest/v1/messages?job_id=eq.'+jobId+'&order=created_at.asc&apikey='+SB_KEY;
+  const r=await fetch(url,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  return r.json();
+}
+async function sbSendMsg(jobId,body,role){
+  return sbPost('messages',{job_id:jobId,sender:driver?driver.name:'Driver',sender_role:role||'driver',body});
+}
 
 // ── STATE ──
 let driver=null, currentJob=null, pendingJob=null;
 let rejectedJobIds=new Set();
+
+// ── SOUND ALERT ──
+function playAlert(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    function beep(freq,start,dur){
+      const o=ctx.createOscillator();
+      const g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=freq;
+      o.type='sine';
+      g.gain.setValueAtTime(0,ctx.currentTime+start);
+      g.gain.linearRampToValueAtTime(0.4,ctx.currentTime+start+0.01);
+      g.gain.linearRampToValueAtTime(0,ctx.currentTime+start+dur);
+      o.start(ctx.currentTime+start);
+      o.stop(ctx.currentTime+start+dur+0.1);
+    }
+    beep(880,0,0.15);beep(1100,0.2,0.15);beep(880,0.4,0.15);beep(1100,0.6,0.25);
+  }catch(e){}
+  if(navigator.vibrate) navigator.vibrate([300,100,300,100,500]);
+}
 let alertTimerInterval=null, pollInterval=null;
 let completedJobs=[], earnings=0, jobCount=0;
 let isOnline=true, sigCtx=null, sigDrawing=false;
@@ -698,13 +728,17 @@ document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.getElementById(id).classList.add('on');
-  // Update bottom nav
   document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('on'));
   if(id==='scHome') document.querySelectorAll('.bnav-item')[0].classList.add('on');
   if(id==='scComms'){
     document.querySelectorAll('.bnav-item')[1].classList.add('on');
     const cb=document.getElementById('commsBadge');if(cb)cb.style.display='none';
     const cb2=document.getElementById('commsBadge2');if(cb2)cb2.style.display='none';
+    loadCommsMessages();
+    if(commsInterval) clearInterval(commsInterval);
+    commsInterval=setInterval(loadCommsMessages,5000);
+  } else {
+    if(commsInterval){clearInterval(commsInterval);commsInterval=null;}
   }
   if(id==='scPOD') initSigPad();
   if(id==='scMore') refreshMoreScreen();
@@ -820,8 +854,8 @@ function showIncomingJobFromDB(job){
     document.getElementById('alertTimer').textContent='0:'+(secs<10?'0':'')+secs;
     if(secs<=0){clearInterval(alertTimerInterval);rejectJob();}
   },1000);
-  // Vibrate if supported
-  if(navigator.vibrate) navigator.vibrate([200,100,200]);
+  // Sound + vibrate
+  playAlert();
 }
 
 async function acceptJob(){
@@ -829,7 +863,7 @@ async function acceptJob(){
   document.getElementById('jobAlert').classList.remove('on');
   if(!pendingJob) return;
   currentJob=pendingJob;pendingJob=null;
-  currentJob.status='assigned'; // Set in memory immediately
+  currentJob.status='assigned';
   // Update Supabase with driver name
   try{
     await sbPatch('jobs?id=eq.'+currentJob.id,{status:'assigned',driver_name:driver?driver.name:'Driver'});
@@ -1035,6 +1069,7 @@ async function submitPOD(){
   try{
     if(currentJob&&currentJob.id&&!currentJob.id.startsWith('demo')){
       await sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver?driver.name:'Driver'});
+    await sbSendMsg(currentJob.id,'Delivery confirmed — POD submitted.','driver');
     }
     currentJob.status='delivered';
     const pay=currentJob._pay||Math.floor(Math.random()*35+45);
