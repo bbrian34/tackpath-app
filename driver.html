@@ -855,6 +855,8 @@ function renderActiveJob(){
   if(!currentJob){
     document.getElementById('activeJobSection').style.display='none';
     document.getElementById('waitingState').style.display='flex';
+    const bnav2 = document.querySelector('.bottom-nav');
+    if(bnav2) bnav2.style.display='flex';
     return;
   }
   document.getElementById('waitingState').style.display='none';
@@ -903,6 +905,9 @@ function renderActiveJob(){
   var shortId = currentJob.id ? currentJob.id.slice(0,8) : '—';
 
   var _jobStatus = s;
+  // Hide bottom nav so it doesn't cover the action button
+  const bnav = document.querySelector('.bottom-nav');
+  if(bnav) bnav.style.display='none';
   document.getElementById('activeJobSection').innerHTML =
     '<div style="position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;">' +
 
@@ -917,7 +922,7 @@ function renderActiveJob(){
         '<a href="' + mapsUrl + '" target="_blank" style="position:absolute;bottom:16px;right:14px;padding:14px 20px;border-radius:28px;background:var(--blue);color:#fff;font-size:14px;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(25,183,239,.5);border:1px solid rgba(255,255,255,.15);">&#9194; Navigate</a>' +
       '</div>' +
 
-      '<div style="background:rgba(7,16,30,.98);border-top:1px solid rgba(25,183,239,.12);padding:14px 16px calc(14px + var(--safe-bottom));flex-shrink:0;backdrop-filter:blur(20px);">' +
+      '<div style="background:rgba(7,16,30,.99);border-top:2px solid rgba(25,183,239,.3);padding:16px 16px calc(16px + var(--safe-bottom));flex-shrink:0;">' +
         '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;">' + progressDots + '</div>' +
         '<div style="margin-bottom:12px;">' +
           '<div style="font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">' + (isTransit?'DELIVERING TO':'PICKUP FROM') + '</div>' +
@@ -947,21 +952,26 @@ function renderActiveJob(){
 
 
 async function updateJobStatus(newStatus){
-  if(!currentJob)return;
+  if(!currentJob){alert('No active job');return;}
+  toast('Updating to '+newStatus+'...','info');
   try{
-    await sbPatch('jobs?id=eq.'+currentJob.id,{status:newStatus,driver_name:driver?driver.name:'Driver'});
+    const url=SB_URL+'/rest/v1/jobs?id=eq.'+currentJob.id+'&apikey='+SB_KEY;
+    const r=await fetch(url,{
+      method:'PATCH',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({status:newStatus,driver_name:driver?driver.name:'Driver'})
+    });
+    if(!r.ok){
+      const err=await r.text();
+      alert('Supabase error: '+err);
+      return;
+    }
     currentJob.status=newStatus;
     renderActiveJob();
-    const msgs={
-      at_pickup:'At pickup location. Collecting package.',
-      in_transit:'Package collected. En route to delivery.',
-    };
-    toast(msgs[newStatus]||'Status updated','success');
-    if(newStatus==='in_transit'){
-      addCommsMessage('dispatcher','SmartTrack confirms '+driver.firstName+' is in transit. ETA tracking active.');
-      document.getElementById('commsBadge').style.display='block';
-    }
-  }catch(e){toast('Update failed — check connection','warn');console.error(e);}
+    toast(newStatus==='in_transit'?'En route to delivery!':'Status updated','success');
+  }catch(e){
+    alert('Network error: '+e.message);
+  }
 }
 
 function reportIssue(){
