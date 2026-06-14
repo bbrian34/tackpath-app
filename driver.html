@@ -438,6 +438,7 @@ body::before{content:'';position:fixed;inset:0;
       <div class="es-title">Ready for your<br>next job</div>
       <div class="es-sub">SmartPath will notify you the moment a signal matches your area.</div>
       <div class="es-pulse"><div class="es-pulse-dot"></div><span id="scanStatus">Scanning for nearby signals...</span></div>
+      <button onclick="pollJobs()" style="margin-top:20px;padding:12px 28px;border-radius:24px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Check for Jobs Now</button>
 
       <!-- Bottom nav spacer so nav shows through -->
       <div style="position:absolute;bottom:0;left:0;right:0;height:calc(60px + var(--safe-bottom));"></div>
@@ -774,38 +775,22 @@ function toggleOnline(){
 }
 
 // ── POLL JOBS FROM SUPABASE ──
-function debugLog(msg){
-  const el=document.getElementById('debugLog');
-  if(!el) return;
-  const time=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  el.innerHTML='['+time+'] '+msg+'<br>'+el.innerHTML;
-  const lines=el.innerHTML.split('<br>');
-  if(lines.length>6) el.innerHTML=lines.slice(0,6).join('<br>');
-}
-
 async function pollJobs(){
-  if(currentJob){debugLog('Skip: active job');return;}
-  if(document.getElementById('jobAlert').classList.contains('on')){debugLog('Skip: alert open');return;}
-  debugLog('Polling Supabase...');
+  if(currentJob) return;
+  if(document.getElementById('jobAlert').classList.contains('on')) return;
   try{
-    const pending=await sbGet('jobs?select=*&status=eq.pending&order=created_at.desc&limit=1');
-    debugLog('Found '+pending.length+' pending job(s)');
-    if(pending.length){
-      const job=pending[0];
-      debugLog('Job: '+(job.title||job.id).slice(0,30));
-      if(!pendingJob && !rejectedJobIds.has(job.id)){
-        pendingJob=job;
-        showIncomingJobFromDB(pendingJob);
-      } else if(rejectedJobIds.has(job.id)){
-        debugLog('Skipping rejected job');
-      } else {
-        debugLog('Alert already showing');
-      }
-    } else {
-      debugLog('No pending jobs');
+    const url=SB_URL+'/rest/v1/jobs?select=*&status=eq.pending&order=created_at.desc&limit=1&apikey='+SB_KEY;
+    const r=await fetch(url);
+    const pending=await r.json();
+    const scanEl=document.getElementById('scanStatus');
+    if(scanEl) scanEl.textContent=pending.length+' signal(s) in queue — scanning...';
+    if(pending.length && !pendingJob && !rejectedJobIds.has(pending[0].id)){
+      pendingJob=pending[0];
+      showIncomingJobFromDB(pendingJob);
     }
   }catch(e){
-    debugLog('ERROR: '+e.message);
+    const scanEl=document.getElementById('scanStatus');
+    if(scanEl) scanEl.textContent='Connection error — retrying...';
   }
 }
 
