@@ -20,7 +20,7 @@
   --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--red:#ff3b30;--purple:#8d5cff;
   --bg:#02060e;--card:#07101e;--card2:#0b1728;
   --border:rgba(25,183,239,.08);--border2:rgba(255,255,255,.06);
-  --text:#d8eeff;--muted:rgba(216,238,255,.45);--faint:rgba(216,238,255,.18);
+  --text:#ffffff;--muted:rgba(216,238,255,.75);--faint:rgba(216,238,255,.45);
   --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
@@ -102,9 +102,9 @@ body::before{content:'';position:fixed;inset:0;
 .home-greeting span{color:var(--blue);}
 .home-status-row{display:flex;align-items:center;gap:10px;}
 .online-toggle{display:flex;align-items:center;gap:8px;padding:8px 16px;
-  border-radius:20px;background:rgba(83,255,136,.08);
-  border:1px solid rgba(83,255,136,.2);cursor:pointer;
-  font-size:12px;font-weight:700;color:var(--green);}
+  border-radius:20px;background:rgba(83,255,136,.12);
+  border:1px solid rgba(83,255,136,.35);cursor:pointer;
+  font-size:14px;font-weight:800;color:#53ff88;}
 .toggle-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
   box-shadow:0 0 8px rgba(83,255,136,.8);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
@@ -229,8 +229,8 @@ body::before{content:'';position:fixed;inset:0;
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;
   justify-content:center;padding:40px 32px;text-align:center;background:var(--bg);min-height:300px;}
 .es-icon{font-size:96px;margin-bottom:28px;opacity:.6;}
-.es-title{font-size:28px;font-weight:800;color:var(--text);margin-bottom:12px;letter-spacing:-.3px;}
-.es-sub{font-size:15px;color:var(--muted);line-height:1.7;max-width:280px;}
+.es-title{font-size:28px;font-weight:800;color:#ffffff;margin-bottom:12px;letter-spacing:-.3px;}
+.es-sub{font-size:15px;color:#c0d8f0;line-height:1.7;max-width:280px;}
 .es-pulse{margin-top:32px;display:flex;align-items:center;gap:10px;
   font-family:var(--mono);font-size:11px;color:var(--blue);}
 .empty-state .online-strip{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center;}
@@ -345,8 +345,8 @@ body::before{content:'';position:fixed;inset:0;
   display:flex;align-items:center;gap:10px;}
 .jac-pulse{width:12px;height:12px;border-radius:50%;background:var(--blue);
   box-shadow:0 0 14px rgba(25,183,239,.9);animation:pulse .7s infinite;flex-shrink:0;}
-.jac-title{font-size:16px;font-weight:800;flex:1;}
-.jac-timer{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--orange);}
+.jac-title{font-size:18px;font-weight:900;color:#ffffff;flex:1;}
+.jac-timer{font-family:var(--mono);font-size:16px;font-weight:900;color:#ff961e;}
 .jac-body{padding:20px;}
 .jac-route{display:flex;gap:14px;margin-bottom:16px;}
 .jac-route-dots{display:flex;flex-direction:column;align-items:center;padding-top:5px;}
@@ -354,23 +354,36 @@ body::before{content:'';position:fixed;inset:0;
 .jrd-line{width:2px;min-height:24px;flex:1;background:rgba(255,255,255,.1);margin:4px auto;}
 .jrd-drop{width:12px;height:12px;border-radius:50%;background:var(--green);flex-shrink:0;}
 .jac-addrs{flex:1;}
-.jac-addr-lbl{font-family:var(--mono);font-size:8px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
-.jac-addr-txt{font-size:14px;font-weight:600;margin-bottom:12px;line-height:1.4;}
+.jac-addr-lbl{font-family:var(--mono);font-size:10px;color:#6b9cc4;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
+.jac-addr-txt{font-size:16px;font-weight:700;color:#ffffff;margin-bottom:12px;line-height:1.4;}
 .jac-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
 .jac-chip{padding:5px 12px;border-radius:8px;font-family:var(--mono);font-size:10px;font-weight:600;}
 .jcc-blue{background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
 .jcc-green{background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.18);color:var(--green);}
 .jcc-orange{background:rgba(255,150,30,.08);border:1px solid rgba(255,150,30,.18);color:var(--orange);}
 .jac-btns{display:grid;grid-template-columns:1fr 2fr;gap:10px;}
-.jac-reject{padding:16px;border-radius:14px;background:rgba(255,59,48,.08);
-  color:var(--red);font-size:15px;font-weight:800;border:1px solid rgba(255,59,48,.2);
+.jac-reject{padding:20px;border-radius:14px;background:rgba(255,59,48,.1);
+  color:#ff3b30;font-size:18px;font-weight:900;border:2px solid rgba(255,59,48,.3);
   cursor:pointer;font-family:var(--sans);}
 .jac-reject:active{transform:scale(.96);}
-.jac-accept{padding:16px;border-radius:14px;background:linear-gradient(135deg,#53ff88,#22cc66);
-  color:#010e21;font-size:15px;font-weight:800;border:none;
+.jac-accept{padding:20px;border-radius:14px;background:linear-gradient(135deg,#53ff88,#22cc66);
+  color:#010e21;font-size:18px;font-weight:900;border:none;
   cursor:pointer;font-family:var(--sans);
-  box-shadow:0 8px 24px rgba(83,255,136,.25);}
+  box-shadow:0 8px 28px rgba(83,255,136,.35);}
 .jac-accept:active{transform:scale(.96);}
+
+/* ── ACTION BUTTONS ── */
+.action-btn-main{width:100%;padding:20px;border-radius:16px;
+  font-size:19px;font-weight:900;border:none;cursor:pointer;
+  font-family:var(--sans);transition:all .15s;letter-spacing:.2px;}
+.action-btn-main:active{transform:scale(.97);}
+.abt-green{background:linear-gradient(135deg,#53ff88,#22cc66);color:#010e21;
+  box-shadow:0 10px 28px rgba(83,255,136,.3);}
+.abt-blue{background:linear-gradient(135deg,#0aa8ff,#0060cc);color:#fff;
+  box-shadow:0 10px 28px rgba(10,168,255,.3);}
+.abt-purple{background:linear-gradient(135deg,#8d5cff,#5533cc);color:#fff;
+  box-shadow:0 10px 28px rgba(141,92,255,.3);}
+.abt-grey{background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.1);}
 
 /* ── BOTTOM NAV ── */
 .bottom-nav{height:calc(60px + var(--safe-bottom));padding-bottom:var(--safe-bottom);
@@ -380,8 +393,8 @@ body::before{content:'';position:fixed;inset:0;
 .bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
   cursor:pointer;padding:4px 0;}
 .bnav-icon{font-size:20px;line-height:1;}
-.bnav-label{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--muted);}
+.bnav-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:#6b9cc4;}
 .bnav-item.on .bnav-label{color:var(--blue);}
 .bnav-badge{position:relative;}
 .bnav-badge-dot{position:absolute;top:-2px;right:-6px;width:8px;height:8px;
@@ -413,14 +426,12 @@ body::before{content:'';position:fixed;inset:0;
 <!-- ── HOME SCREEN ── -->
 <div class="screen" id="scHome">
 
-  <div style="padding:8px 14px;background:rgba(25,183,239,.06);border-bottom:1px solid rgba(25,183,239,.1);">
-    <div id="debugLog" style="font-family:var(--mono);font-size:9px;color:var(--blue);line-height:1.8;min-height:20px;"></div>
-  </div>
+
   <div class="home-body">
 
 
     <!-- ACTIVE JOB -->
-    <div id="activeJobSection" style="display:none;margin-bottom:16px;"></div>
+    <div id="activeJobSection" style="display:none;"></div>
 
     <!-- EMPTY / WAITING -->
     <div class="empty-state" id="waitingState">
@@ -437,8 +448,8 @@ body::before{content:'';position:fixed;inset:0;
       <div class="es-icon">&#128663;</div>
       <div class="es-title">Ready for your<br>next job</div>
       <div class="es-sub">SmartPath will notify you the moment a signal matches your area.</div>
-      <div class="es-pulse"><div class="es-pulse-dot"></div><span id="scanStatus">Scanning for nearby signals...</span></div>
-      <button onclick="pollJobs()" style="margin-top:20px;padding:12px 28px;border-radius:24px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Check for Jobs Now</button>
+      <div class="es-pulse"><div class="es-pulse-dot"></div><span id="scanStatus" style="color:#19b7ef;font-weight:600;">Scanning for nearby signals...</span></div>
+      <button onclick="pollJobs()" style="margin-top:24px;padding:16px 36px;border-radius:24px;background:rgba(25,183,239,.12);border:2px solid rgba(25,183,239,.4);color:#19b7ef;font-size:15px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;letter-spacing:.2px;">&#128663; Check for Jobs Now</button>
 
       <!-- Bottom nav spacer so nav shows through -->
       <div style="position:absolute;bottom:0;left:0;right:0;height:calc(60px + var(--safe-bottom));"></div>
@@ -503,9 +514,7 @@ body::before{content:'';position:fixed;inset:0;
       <div class="pod-section-title">Notes (optional)</div>
       <textarea class="pod-notes" id="podNotes" placeholder="e.g. Left with doorman, package at front door..."></textarea>
     </div>
-    <button class="action-btn-main abt-green" onclick="submitPOD()" style="margin-top:8px;">
-      &#10003; &nbsp; Confirm Delivery
-    </button>
+    <button onclick="submitPOD()" style="width:100%;padding:20px;border-radius:16px;background:linear-gradient(135deg,#53ff88,#22cc66);color:#010e21;font-size:19px;font-weight:900;border:none;cursor:pointer;font-family:Inter,sans-serif;margin-top:8px;box-shadow:0 10px 28px rgba(83,255,136,.3);">&#10003; Confirm Delivery</button>
   </div>
 </div>
 
@@ -585,7 +594,7 @@ body::before{content:'';position:fixed;inset:0;
     <div style="padding:20px;border-radius:16px;background:var(--card);border:1px solid var(--border);margin-bottom:14px;display:flex;align-items:center;gap:16px;">
       <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#0aa8ff,#005faa);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0;" id="moreAvatarBig">D</div>
       <div style="flex:1;">
-        <div style="font-size:18px;font-weight:700;margin-bottom:3px;" id="moreName">—</div>
+        <div style="font-size:20px;font-weight:800;color:#ffffff;margin-bottom:3px;" id="moreName">—</div>
         <div style="font-family:var(--mono);font-size:10px;color:var(--muted);" id="moreEmail">—</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
           <div style="padding:3px 10px;border-radius:12px;background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.18);font-family:var(--mono);font-size:9px;font-weight:600;color:var(--green);">&#128663; Driver</div>
@@ -944,40 +953,50 @@ function renderActiveJob(){
   const bnav = document.querySelector('.bottom-nav');
   if(bnav) bnav.style.display='none';
 
+  var actionColor = s==='assigned'?'#8d5cff':s==='in_transit'?'#53ff88':'#444';
+  var actionTextColor = s==='in_transit'?'#010e21':'#fff';
+  var actionLabel = s==='assigned'?'&#128230; Start Delivery':s==='in_transit'?'&#10003; Confirm Delivery':'&#10003; Complete';
+  var actionDisabled = (s!=='assigned'&&s!=='in_transit') ? 'disabled' : '';
+
   var html = '<div style="position:fixed;inset:0;z-index:10;background:#02060e;display:flex;flex-direction:column;">';
 
-  // MAP
-  html += '<div style="flex:1;position:relative;overflow:hidden;">';
-  html += '<iframe src="'+mapFallback+'" width="100%" height="100%" style="border:0;display:block;position:absolute;inset:0;width:100%;height:100%;filter:hue-rotate(195deg) saturate(0.9) brightness(0.75);" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>';
-  // Top badges
-  html += '<div style="position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;">';
-  html += '<div style="padding:6px 14px;border-radius:20px;background:rgba(2,6,14,.85);border:1px solid rgba(25,183,239,.3);font-family:var(--mono);font-size:10px;font-weight:600;color:#fff;">TP-'+shortId+'</div>';
-  html += '<div style="padding:6px 14px;border-radius:20px;background:rgba(2,6,14,.85);border:1px solid rgba(25,183,239,.2);font-family:var(--mono);font-size:10px;font-weight:700;color:'+statusColor+';">'+statusLabel+'</div>';
-  html += '</div>';
-  // Navigate button on map
-  html += '<a href="'+mapsUrl+'" target="_blank" style="position:absolute;bottom:12px;right:12px;padding:12px 20px;border-radius:24px;background:var(--blue);color:#fff;font-size:14px;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:7px;box-shadow:0 4px 16px rgba(25,183,239,.4);">&#9194; Navigate</a>';
+  // ── MAP (top ~58% of screen) ──
+  html += '<div style="flex:1;position:relative;overflow:hidden;min-height:0;">';
+  html += '<iframe src="'+mapFallback+'" width="100%" height="100%" style="border:0;display:block;position:absolute;inset:0;width:100%;height:100%;filter:hue-rotate(195deg) saturate(0.85) brightness(0.72);" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>';
+  // Signal ID top left
+  html += '<div style="position:absolute;top:14px;left:14px;padding:7px 14px;border-radius:20px;background:rgba(2,6,14,.9);border:1px solid rgba(25,183,239,.35);font-size:11px;font-weight:700;color:#19b7ef;letter-spacing:.04em;">TP-'+shortId+'</div>';
+  // Status top right
+  html += '<div style="position:absolute;top:14px;right:14px;padding:7px 14px;border-radius:20px;background:rgba(2,6,14,.9);border:1px solid '+statusColor+'44;font-size:11px;font-weight:700;color:'+statusColor+';">'+statusLabel+'</div>';
   html += '</div>';
 
-  // BOTTOM SHEET
-  html += '<div style="background:rgba(7,16,30,.99);border-top:2px solid rgba(25,183,239,.25);padding:16px 16px 24px;flex-shrink:0;">';
-  // Progress dots
-  html += '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;">'+progressDots+'</div>';
-  // Address
-  html += '<div style="margin-bottom:14px;">';
-  html += '<div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;">'+(isTransit?'DELIVERING TO':'PICKUP FROM')+'</div>';
-  html += '<div style="font-size:15px;font-weight:700;color:#d8eeff;line-height:1.4;">'+destAddr+'</div>';
-  if(dropoffHint) html += dropoffHint;
-  html += '</div>';
-  // Action button
-  html += actionBtn;
-  // Navigate + secondary row
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">';
-  html += '<a href="'+mapsUrl+'" target="_blank" style="padding:13px;border-radius:12px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-size:13px;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">&#9194; Navigate</a>';
-  html += '<button id="dispatchBtn" style="padding:13px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(216,238,255,.5);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">&#128172; Dispatch</button>';
+  // ── BOTTOM PANEL (bottom ~42%) ──
+  html += '<div style="background:#07101e;border-top:2px solid #19b7ef33;padding:18px 18px 0;flex-shrink:0;">';
+
+  // Progress steps
+  html += '<div style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:16px;">'+progressDots+'</div>';
+
+  // Address label
+  html += '<div style="font-size:11px;font-weight:700;color:#6b8aaa;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;">'+(isTransit?'DELIVERING TO':'PICKUP FROM')+'</div>';
+  // Address value — large, white, impossible to miss
+  html += '<div style="font-size:18px;font-weight:800;color:#ffffff;line-height:1.3;margin-bottom:6px;">'+destAddr+'</div>';
+
+  // Dropoff hint
+  if(!isTransit && currentJob.dropoff_address){
+    html += '<div style="font-size:12px;color:#4a7096;margin-bottom:12px;">Then to: '+currentJob.dropoff_address+'</div>';
+  } else {
+    html += '<div style="margin-bottom:12px;"></div>';
+  }
+
+  // ── MAIN ACTION BUTTON — full width, huge, unmissable ──
+  html += '<button id="mainActionBtn" '+actionDisabled+' style="width:100%;padding:20px;border-radius:16px;background:'+actionColor+';color:'+actionTextColor+';font-size:19px;font-weight:900;border:none;cursor:pointer;letter-spacing:.3px;margin-bottom:12px;box-shadow:0 8px 28px '+actionColor+'44;font-family:Inter,sans-serif;">'+actionLabel+'</button>';
+
+  // ── NAVIGATE + DISPATCH row ──
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-bottom:18px;">';
+  html += '<a href="'+mapsUrl+'" target="_blank" style="padding:15px;border-radius:13px;background:#19b7ef1a;border:1px solid #19b7ef44;color:#19b7ef;font-size:14px;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:7px;">&#9194; Navigate</a>';
+  html += '<button id="dispatchBtn" style="padding:15px;border-radius:13px;background:#ffffff0a;border:1px solid #ffffff18;color:#8ab0cc;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;">&#128172; Dispatch</button>';
   html += '</div>';
 
   html += '</div>';
-
   html += '</div>';
 
   document.getElementById('activeJobSection').innerHTML = html;
