@@ -922,11 +922,11 @@ body::after{content:'';position:fixed;inset:0;
     <div class="oc-tabs">
       <button class="oc-tab on" onclick="switchCommsTab('customers',this)">
         &#128100; Customers
-        <div class="oc-tab-badge" id="badge-customers" style="display:flex;">2</div>
+        <div class="oc-tab-badge" id="badge-customers" style="display:none;">0</div>
       </button>
       <button class="oc-tab" onclick="switchCommsTab('drivers',this)">
         &#128663; Drivers
-        <div class="oc-tab-badge" id="badge-drivers" style="display:flex;">1</div>
+        <div class="oc-tab-badge" id="badge-drivers" style="display:none;">0</div>
       </button>
       <button class="oc-tab" onclick="switchCommsTab('internal',this)">&#128276; Internal</button>
     </div>
@@ -935,20 +935,7 @@ body::after{content:'';position:fixed;inset:0;
   <!-- CUSTOMERS CHANNEL -->
   <div class="oc-channel on" id="ch-customers">
     <div class="oc-msgs" id="msgs-customers">
-      <div class="oc-system">Customer channel · Signal TP-4821</div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta">Dr. Okonkwo · 8m ago</div>
-        <div class="oc-msg oc-customer">Hi, my driver hasn't arrived yet and I have a critical medical delivery. It's been 45 minutes.</div>
-      </div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta">Dr. Okonkwo · 6m ago</div>
-        <div class="oc-msg oc-customer">Is there an update? This is urgent.</div>
-      </div>
-      <div class="oc-system">Customer channel · Signal TP-6670</div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta">Kevin Nguyen · 3m ago</div>
-        <div class="oc-msg oc-customer">Nobody answered the door — driver left. Can you resend?</div>
-      </div>
+      <div class="oc-msg oc-system">Customer messages will appear here when customers report issues.</div>
     </div>
     <div class="oc-inp-area">
       <select class="oc-recipient" id="sel-customer">
@@ -966,19 +953,7 @@ body::after{content:'';position:fixed;inset:0;
   <!-- DRIVERS CHANNEL -->
   <div class="oc-channel" id="ch-drivers">
     <div class="oc-msgs" id="msgs-drivers">
-      <div class="oc-system">Driver channel · All active drivers</div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta">Marcus T. · 10m ago</div>
-        <div class="oc-msg oc-driver">Hit traffic on I-285 W. Rerouting now. Will be about 12 minutes late.</div>
-      </div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta right">Dispatcher · 9m ago</div>
-        <div class="oc-msg oc-outbound" style="align-self:flex-end;">Noted. Customer has been notified. Stay on the reroute SmartPath selected.</div>
-      </div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta">Ray M. · 8m ago</div>
-        <div class="oc-msg oc-driver">Customer at 455 Sandy Springs didn't answer. Tried twice. What do I do?</div>
-      </div>
+      <div class="oc-msg oc-system">Loading driver messages...</div>
     </div>
     <div class="oc-inp-area">
       <select class="oc-recipient" id="sel-driver">
@@ -998,15 +973,7 @@ body::after{content:'';position:fixed;inset:0;
   <!-- INTERNAL CHANNEL -->
   <div class="oc-channel" id="ch-internal">
     <div class="oc-msgs" id="msgs-internal">
-      <div class="oc-system">Internal channel · ATL HUB 01 · Supervisor + Dispatch</div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta">System · 2m ago</div>
-        <div class="oc-msg oc-inbound">&#9888; Exception auto-flagged: TP-4821 running 12m behind SLA. Escalation pending in 4:32.</div>
-      </div>
-      <div class="oc-msg-wrap">
-        <div class="oc-msg-meta">System · 8m ago</div>
-        <div class="oc-msg oc-inbound">SmartPath rerouted TP-5512 due to US-41 incident. ETA +4m. Customer auto-notified.</div>
-      </div>
+      <div class="oc-msg oc-system">Internal channel · ATL HUB 01</div>
     </div>
     <div class="oc-inp-area">
       <select class="oc-recipient" id="sel-internal">
@@ -1025,7 +992,7 @@ body::after{content:'';position:fixed;inset:0;
 <button id="chatFab" onclick="toggleChat()">
   <div id="chatFab-dot"></div>
   Dispatch Comms
-  <div id="chatFab-unread" style="display:flex;">3</div>
+  <div id="chatFab-unread" style="display:none;">0</div>
 </button>
 <div id="toast"></div>
 
@@ -1497,7 +1464,12 @@ function updateUnreadCount(){
 }
 function toggleChat(){
   const c=document.getElementById('opsChat');c.classList.toggle('open');
-  if(c.classList.contains('open')) updateUnreadCount();
+  if(c.classList.contains('open')){
+    updateUnreadCount();
+    // Auto-load driver messages when comms opens
+    const driverTab=document.querySelector('.oc-tab.on');
+    if(driverTab&&driverTab.textContent.includes('Driver')) loadDriverMessages();
+  }
 }
 function closeChat(){document.getElementById('opsChat').classList.remove('open');}
 
