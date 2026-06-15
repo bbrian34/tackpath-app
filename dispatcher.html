@@ -1267,7 +1267,7 @@ function renderSmartTrack(){
     setTimeout(()=>{ iframe.src = src; }, 50);
   }
   const active=jobs.filter(j=>j.status==='in_transit'||j.status==='assigned');
-  document.getElementById('trackingCount').textContent=active.length;
+  const trackEl=document.getElementById('trackingCount');if(trackEl)trackEl.textContent=active.length;
   const grid=document.getElementById('drvGrid');
   if(!active.length){
     grid.innerHTML='<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div>';
