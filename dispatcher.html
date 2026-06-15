@@ -939,9 +939,7 @@ body::after{content:'';position:fixed;inset:0;
     </div>
     <div class="oc-inp-area">
       <select class="oc-recipient" id="sel-customer">
-        <option>Reply to: Dr. Okonkwo (TP-4821)</option>
-        <option>Reply to: Kevin Nguyen (TP-6670)</option>
-        <option>Reply to: Sarah Mitchell (TP-7293)</option>
+        <option>No active customer messages</option>
       </select>
       <div class="oc-inp-row">
         <input id="ocInput" placeholder="Type a message to customer..." onkeydown="if(event.key==='Enter')sendComms('customers')"/>
@@ -957,11 +955,7 @@ body::after{content:'';position:fixed;inset:0;
     </div>
     <div class="oc-inp-area">
       <select class="oc-recipient" id="sel-driver">
-        <option>Message: Marcus T. (TP-4821)</option>
-        <option>Message: Ray M. (TP-6670)</option>
-        <option>Message: Jordan C. (TP-7293)</option>
-        <option>Message: Priya S. (TP-5512)</option>
-        <option>Broadcast: All Active Drivers</option>
+        <option id="sel-driver-opt">Active driver will appear here</option>
       </select>
       <div class="oc-inp-row">
         <input placeholder="Type a message to driver..." onkeydown="if(event.key==='Enter')sendComms('drivers')" id="ocInputDriver"/>
@@ -1026,7 +1020,7 @@ function doLogin(){
     document.getElementById('chatFab').style.display='flex';
     const db=document.querySelector('.demo-badge');if(db)db.style.display='none';
     startClock();loadJobs();
-    pollInterval=setInterval(loadJobs,10000);
+    pollInterval=setInterval(loadJobs,5000);
   },500);
 }
 document.addEventListener('keydown',e=>{
@@ -1423,6 +1417,11 @@ async function loadDriverMessages(){
       container.innerHTML+='<div class="oc-msg oc-system">No messages yet for this job</div>';
     }
     if(atBottom) container.scrollTop=container.scrollHeight;
+    // Update driver dropdown with real driver name
+    const sel=document.getElementById('sel-driver');
+    if(sel&&activeJob.driver_name){
+      sel.innerHTML='<option>Message: '+activeJob.driver_name+'</option>';
+    }
   }catch(e){console.error('Load messages error:',e);}
   if(commsLoadInterval) clearInterval(commsLoadInterval);
   commsLoadInterval=setInterval(loadDriverMessages,5000);
