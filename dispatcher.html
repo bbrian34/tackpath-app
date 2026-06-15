@@ -1096,19 +1096,20 @@ async function loadJobs(){
   ring.style.display='block';ps.textContent='Polling...';
   try{
     const prevStatuses={};
-    if(jobs.length) jobs.forEach(j=>prevStatuses[j.id]=j.status);
-    jobs=await sbGet('jobs?select=*&order=created_at.desc');
+    jobs.forEach(j=>prevStatuses[j.id]=j.status);
+    const newJobs=await sbGet('jobs?select=*&order=created_at.desc');
     ring.style.display='none';ps.textContent='Live';
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-    // Detect status changes and log to intel feed
-    jobs.forEach(j=>{
-      if(prevStatuses[j.id]&&prevStatuses[j.id]!==j.status){
-        const colors={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
-        addIntelEvent('<strong>'+j.title+'</strong> status changed: <strong>'+j.status.replace('_',' ')+'</strong>'+(j.driver_name?' · Driver: '+j.driver_name:''),colors[j.status]||'var(--blue)');
+    // Detect status changes
+    const colors={routing:'var(--purple)',pending:'var(--orange)',assigned:'var(--blue)',customer_confirmed:'var(--yellow)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
+    newJobs.forEach(j=>{
+      const prev=prevStatuses[j.id];
+      if(prev&&prev!==j.status){
+        addIntelEvent('<strong>'+(j.title||j.id.slice(0,8))+'</strong> — status: <strong>'+j.status.replace(/_/g,' ')+'</strong>'+(j.driver_name?' · '+j.driver_name:''),colors[j.status]||'var(--blue)');
       }
     });
+    jobs=newJobs;
     renderAll();
-    addIntelEvent('Database synced — '+jobs.length+' job'+(jobs.length===1?'':'s')+' loaded from Supabase.','var(--blue)');
   }catch(e){
     ring.style.display='none';ps.textContent='Error';
     console.error('DB error:',e);
@@ -1418,31 +1419,44 @@ function switchCommsTab(ch,btn){
   const badge=document.getElementById('badge-'+ch);
   if(badge) badge.style.display='none';
   updateUnreadCount();
-  if(ch==='drivers') loadDriverMessages();
+  if(ch==='drivers'){
+    if(commsLoadInterval) clearInterval(commsLoadInterval);
+    loadDriverMessages();
+  } else {
+    if(commsLoadInterval){clearInterval(commsLoadInterval);commsLoadInterval=null;}
+  }
 }
 
 async function loadDriverMessages(){
-  // Find most recent active job
-  const activeJob=jobs.find(j=>j.status==='assigned'||j.status==='in_transit')||jobs[0];
-  if(!activeJob) return;
+  // Find most recent active or assigned job
+  const activeJob=jobs.find(j=>['assigned','customer_confirmed','in_transit'].includes(j.status))||jobs[0];
+  if(!activeJob){
+    document.getElementById('msgs-drivers').innerHTML='<div class="oc-msg oc-system">No active jobs — messages will appear when a driver accepts a job.</div>';
+    return;
+  }
   activeCommsJob=activeJob;
-  const msgs=await getMessages(activeJob.id);
-  const container=document.getElementById('msgs-drivers');
-  if(!msgs||!msgs.length) return;
-  container.innerHTML='<div class="msg-bubble msg-system">Driver channel · '+activeJob.title+'</div>';
-  msgs.forEach(m=>{
-    const isDispatch=m.sender_role==='dispatcher';
-    const wrap=document.createElement('div');wrap.className='oc-msg-wrap';
-    const meta=document.createElement('div');meta.className='oc-msg-meta'+(isDispatch?' right':'');
-    meta.textContent=(isDispatch?'You':'Driver')+' · '+new Date(m.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
-    const bubble=document.createElement('div');bubble.className='oc-msg '+(isDispatch?'oc-outbound':'oc-driver');
-    if(isDispatch) bubble.style.alignSelf='flex-end';
-    bubble.textContent=m.body;
-    wrap.appendChild(meta);wrap.appendChild(bubble);
-    container.appendChild(wrap);
-  });
-  container.scrollTop=container.scrollHeight;
-  // Poll for new messages
+  try{
+    const msgs=await getMessages(activeJob.id);
+    const container=document.getElementById('msgs-drivers');
+    const atBottom=container.scrollHeight-container.scrollTop<=container.clientHeight+60;
+    container.innerHTML='<div class="msg-bubble msg-system">'+activeJob.title+'</div>';
+    if(msgs&&msgs.length){
+      msgs.forEach(m=>{
+        const isMe=m.sender_role==='dispatcher';
+        const wrap=document.createElement('div');wrap.className='oc-msg-wrap';
+        const meta=document.createElement('div');meta.className='oc-msg-meta'+(isMe?' right':'');
+        meta.textContent=(isMe?'You':m.sender||'Driver')+' · '+new Date(m.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+        const bubble=document.createElement('div');bubble.className='oc-msg '+(isMe?'oc-outbound':'oc-driver');
+        if(isMe) bubble.style.alignSelf='flex-end';
+        bubble.textContent=m.body;
+        wrap.appendChild(meta);wrap.appendChild(bubble);
+        container.appendChild(wrap);
+      });
+    } else {
+      container.innerHTML+='<div class="oc-msg oc-system">No messages yet for this job</div>';
+    }
+    if(atBottom) container.scrollTop=container.scrollHeight;
+  }catch(e){console.error('Load messages error:',e);}
   if(commsLoadInterval) clearInterval(commsLoadInterval);
   commsLoadInterval=setInterval(loadDriverMessages,5000);
 }
