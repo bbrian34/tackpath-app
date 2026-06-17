@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath — Customer Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;
+  --bg:#010e21;--card:#071828;--card2:#0c1624;
+  --border:rgba(25,183,239,.08);--border2:rgba(255,255,255,.06);
+  --text:#eef4ff;--muted:rgba(238,244,255,.55);--faint:rgba(238,244,255,.25);
+  --mono:'DM Mono','Courier New',monospace;
+  --display:'DM Sans',-apple-system,sans-serif;
+}
+html,body{margin:0;padding:0;}
+body{font-family:var(--display);color:var(--text);background:var(--bg);min-height:100vh;line-height:1.6;}
+body::before{content:'';position:fixed;inset:0;
+  background:linear-gradient(rgba(25,183,239,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(25,183,239,.015) 1px,transparent 1px);
+  background-size:72px 72px;pointer-events:none;z-index:0;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
+  display:flex;align-items:center;padding:0 32px;justify-content:space-between;
+  background:rgba(1,14,33,.97);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);}
+.nav-wm{font-size:18px;font-weight:800;text-decoration:none;display:flex;}
+.nav-wm .t{color:#fff;}.nav-wm .p{color:var(--blue);}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-user{font-size:13px;color:var(--muted);}
+.nav-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border2);background:transparent;
+  color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;font-family:var(--display);}
+.nav-btn:hover{color:var(--text);}
+
+/* SCREENS */
+.screen{display:none;padding-top:60px;min-height:100vh;position:relative;z-index:1;}
+.screen.on{display:block;}
+
+/* LOGIN */
+#scLogin{display:flex;align-items:center;justify-content:center;padding:24px;min-height:100vh;
+  background:radial-gradient(ellipse at 30% 40%,rgba(25,183,239,.08),transparent 55%),var(--bg);}
+.login-box{width:min(440px,96vw);border-radius:22px;overflow:hidden;position:relative;
+  background:rgba(7,24,40,.97);border:1px solid rgba(25,183,239,.15);
+  box-shadow:0 40px 80px rgba(0,0,0,.6);}
+.login-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.login-top{padding:40px 36px 28px;text-align:center;border-bottom:1px solid var(--border);}
+.login-wm{font-size:32px;font-weight:900;letter-spacing:-.5px;margin-bottom:8px;}
+.login-wm .t{color:#fff;}.login-wm .p{color:var(--blue);}
+.login-sub{font-size:14px;color:var(--muted);}
+.login-form{padding:28px 36px 36px;}
+.fl{display:block;font-family:var(--mono);font-size:9px;font-weight:600;color:var(--muted);
+  letter-spacing:.15em;text-transform:uppercase;margin-bottom:7px;}
+.fi{width:100%;padding:13px 15px;border-radius:11px;background:rgba(255,255,255,.03);
+  border:1px solid var(--border);color:var(--text);font-size:15px;font-family:var(--display);
+  outline:none;margin-bottom:14px;transition:border-color .2s;}
+.fi:focus{border-color:rgba(25,183,239,.4);}
+.fi::placeholder{color:var(--faint);}
+.btn-login{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#0aa8ff,#0060cc);
+  border:none;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--display);
+  box-shadow:0 10px 28px rgba(10,168,255,.28);}
+.login-note{text-align:center;margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--faint);}
+.login-create{text-align:center;margin-top:10px;font-size:13px;color:var(--muted);}
+.login-create a{color:var(--blue);text-decoration:none;font-weight:700;}
+
+/* PORTAL */
+.wrap{max-width:900px;margin:0 auto;padding:40px 24px;}
+
+/* STATUS BAR */
+#statusBar{display:none;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;
+  background:var(--card);border:1px solid var(--border);margin-bottom:24px;}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(83,255,136,.5);}50%{opacity:.7;box-shadow:0 0 0 5px rgba(83,255,136,0);}}
+.sb-text{font-size:13px;color:var(--muted);}
+.sb-text strong{color:var(--text);}
+
+/* WELCOME */
+.welcome{margin-bottom:28px;}
+.welcome h1{font-size:26px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px;}
+.welcome h1 span{color:var(--blue);}
+.welcome-sub{font-size:14px;color:var(--muted);}
+
+/* ORDER FORM */
+.order-card{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:24px;position:relative;}
+.order-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.card-hdr{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;}
+.card-hdr h2{font-size:16px;font-weight:800;}
+.card-hdr p{font-size:12px;color:var(--muted);margin-top:3px;}
+.use-saved{padding:7px 13px;border-radius:8px;background:rgba(25,183,239,.07);border:1px solid rgba(25,183,239,.18);
+  color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;display:none;white-space:nowrap;}
+.card-body{padding:24px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg{margin-bottom:14px;}
+.fl2{display:block;font-family:var(--mono);font-size:9px;font-weight:600;color:var(--muted);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;}
+.fi2{width:100%;padding:11px 13px;border-radius:10px;background:rgba(255,255,255,.03);
+  border:1px solid var(--border);color:var(--text);font-size:14px;font-family:var(--display);
+  outline:none;transition:border-color .2s;cursor:pointer;}
+.fi2:focus{border-color:rgba(25,183,239,.35);}
+.fi2::placeholder{color:var(--faint);}
+.fi2 option{background:#071828;}
+.sec-div{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;
+  text-transform:uppercase;margin:20px 0 12px;display:flex;align-items:center;gap:10px;}
+.sec-div::after{content:'';flex:1;height:1px;background:var(--border);}
+.pri-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.po{padding:14px;border-radius:12px;border:1px solid var(--border);cursor:pointer;text-align:center;transition:all .15s;}
+.po:hover{border-color:rgba(25,183,239,.2);}
+.po.sel{border-color:rgba(25,183,239,.4);background:rgba(25,183,239,.06);}
+.po.sel.pp{border-color:rgba(255,150,30,.4);background:rgba(255,150,30,.06);}
+.po.sel.pc{border-color:rgba(141,92,255,.4);background:rgba(141,92,255,.06);}
+.po-icon{font-size:20px;margin-bottom:5px;}
+.po-name{font-size:13px;font-weight:700;margin-bottom:2px;}
+.po-desc{font-size:10px;color:var(--muted);}
+.form-actions{display:flex;gap:12px;margin-top:20px;}
+.btn-primary{padding:13px 24px;border-radius:11px;background:var(--blue);color:#fff;
+  font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:var(--display);
+  box-shadow:0 8px 22px rgba(25,183,239,.22);transition:all .15s;}
+.btn-primary:hover{background:#22ccff;}
+.btn-ghost{padding:13px 22px;border-radius:11px;background:transparent;color:var(--text);
+  font-size:14px;font-weight:600;border:1px solid var(--border);cursor:pointer;font-family:var(--display);}
+
+/* STATUS SECTION */
+#statusSection{display:none;margin-bottom:24px;}
+.status-card{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;position:relative;}
+.status-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+
+/* STATUS DISPLAY */
+#statusDisplay{padding:40px 24px;text-align:center;}
+#statusIcon{margin-bottom:18px;}
+#statusMain{font-size:clamp(22px,3vw,32px);font-weight:800;letter-spacing:-.5px;line-height:1.2;margin-bottom:10px;}
+#statusSub{font-size:14px;color:var(--muted);max-width:420px;margin:0 auto;line-height:1.7;}
+
+/* PROGRESS BAR */
+#progressBar{display:none;padding:16px 24px;border-bottom:1px solid var(--border);background:rgba(1,14,33,.5);}
+.pb-steps{display:flex;align-items:flex-start;}
+.pb-step{flex:1;text-align:center;position:relative;}
+.pb-step:not(:last-child)::after{content:'';position:absolute;top:11px;left:50%;width:100%;
+  height:2px;background:rgba(255,255,255,.06);z-index:0;transition:background .5s;}
+.pb-step.done:not(:last-child)::after{background:var(--green);}
+.pb-dot{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.1);
+  background:var(--bg);margin:0 auto 6px;position:relative;z-index:1;
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;transition:all .4s;}
+.pb-step.done .pb-dot{border-color:var(--green);background:var(--green);color:#010e21;}
+.pb-step.active .pb-dot{border-color:var(--blue);box-shadow:0 0 12px rgba(25,183,239,.55);}
+.pb-label{font-size:9px;color:var(--muted);font-family:var(--mono);}
+.pb-step.done .pb-label,.pb-step.active .pb-label{color:var(--text);}
+
+/* TRACKING PANELS */
+#trackingPanel{display:none;padding:20px 24px;border-top:1px solid var(--border);}
+.signal-bar{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;border-radius:10px;background:rgba(83,255,136,.05);
+  border:1px solid rgba(83,255,136,.12);margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.sig-id{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green);}
+.sig-driver{font-size:13px;font-weight:600;}
+.track-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.ts-box{padding:14px;border-radius:11px;background:var(--card2);text-align:center;}
+.ts-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
+.ts-val{font-size:18px;font-weight:800;}
+.map-wrap{height:280px;border-radius:14px;overflow:hidden;border:1px solid var(--border);position:relative;margin-bottom:16px;}
+.map-wrap iframe{width:100%;height:100%;border:0;display:block;filter:hue-rotate(195deg) saturate(0.9) brightness(0.75);}
+.map-lbl{position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:5px 14px;border-radius:18px;
+  background:rgba(1,14,33,.88);border:1px solid rgba(25,183,239,.3);
+  font-family:var(--mono);font-size:9px;font-weight:700;color:var(--blue);letter-spacing:.1em;}
+
+/* APPROACHING ALERT */
+#approachingAlert{display:none;padding:12px 16px;border-radius:10px;
+  background:rgba(255,150,30,.06);border:1px solid rgba(255,150,30,.2);
+  font-size:13px;color:var(--orange);margin-bottom:12px;}
+
+/* PROOF OF DELIVERY */
+#proofSection{display:none;padding:20px 24px;border-top:1px solid rgba(83,255,136,.12);}
+.proof-inner{display:grid;grid-template-columns:80px 1fr;gap:16px;align-items:center;}
+.proof-icon{font-size:48px;text-align:center;}
+.proof-tag{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px;}
+.proof-title{font-size:20px;font-weight:800;margin-bottom:6px;}
+.proof-note{font-size:13px;color:var(--muted);line-height:1.6;}
+
+/* CONFIRMATION MODAL */
+#confirmModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);
+  backdrop-filter:blur(12px);z-index:9000;align-items:center;justify-content:center;padding:20px;}
+.conf-box{width:min(520px,96vw);border-radius:24px;background:linear-gradient(145deg,#0d1d2e,#08111c);
+  border:1px solid rgba(25,183,239,.3);padding:32px;
+  box-shadow:0 0 60px rgba(25,183,239,.12),0 32px 80px rgba(0,0,0,.6);}
+.conf-eyebrow{font-family:var(--mono);font-size:9px;color:rgba(25,183,239,.7);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px;}
+.conf-title{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
+.conf-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
+.conf-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;}
+.cg-box{padding:14px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);}
+.cg-lbl{font-family:var(--mono);font-size:8px;color:rgba(238,244,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.cg-val{font-size:14px;font-weight:700;}
+.conf-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:22px;}
+.cp-box{padding:18px;border-radius:14px;background:rgba(25,183,239,.07);border:1px solid rgba(25,183,239,.25);text-align:center;}
+.cp-lbl{font-family:var(--mono);font-size:8px;color:rgba(25,183,239,.7);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.cp-val{font-size:36px;font-weight:900;color:var(--blue);letter-spacing:-1px;}
+.btn-confirm{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,#0aa8ff,#0077cc);
+  border:1px solid rgba(255,255,255,.1);color:#fff;font-size:16px;font-weight:800;cursor:pointer;
+  font-family:var(--display);box-shadow:0 10px 32px rgba(10,168,255,.3);}
+.conf-cancel{text-align:center;margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer;
+  text-decoration:underline;background:none;border:none;color:var(--muted);font-family:var(--display);}
+
+/* ORDER HISTORY */
+.history-card{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-top:24px;}
+.hist-hdr{padding:16px 22px;border-bottom:1px solid var(--border);}
+.hist-hdr h3{font-size:15px;font-weight:700;}
+.hist-empty{padding:32px;text-align:center;color:var(--faint);font-size:13px;}
+.hist-row{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.03);}
+.hist-row:last-child{border-bottom:none;}
+.hist-sig{font-family:var(--mono);font-size:11px;color:var(--blue);min-width:72px;}
+.hist-route{flex:1;font-size:13px;font-weight:600;}
+.hist-route span{color:var(--muted);font-weight:400;}
+.hist-date{font-size:11px;color:var(--muted);}
+.badge-del{padding:3px 9px;border-radius:18px;font-family:var(--mono);font-size:9px;font-weight:600;
+  background:rgba(83,255,136,.07);border:1px solid rgba(83,255,136,.18);color:var(--green);}
+
+/* SMS */
+#smsModal{display:none;position:fixed;top:74px;left:50%;transform:translateX(-50%);
+  width:min(320px,92vw);z-index:9999;animation:smsIn .4s cubic-bezier(.32,1.15,.6,1) both;}
+@keyframes smsIn{from{opacity:0;transform:translateX(-50%) translateY(-12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.sms-shell{border-radius:18px;background:rgba(8,17,28,.97);border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 16px 50px rgba(0,0,0,.6);overflow:hidden;}
+.sms-hdr{display:flex;align-items:center;gap:9px;padding:11px 13px;
+  border-bottom:1px solid rgba(255,255,255,.06);background:linear-gradient(135deg,rgba(83,255,136,.07),transparent);}
+.sms-icon{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#53ff88,#2acc66);
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sms-from{font-size:12px;font-weight:800;}
+.sms-body{padding:12px 14px;}
+.sms-bubble{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);
+  border-radius:4px 14px 14px 14px;padding:11px 13px;font-size:12px;line-height:1.6;margin-bottom:10px;}
+.sms-bubble strong{color:var(--green);}
+.sms-acts{display:flex;gap:7px;}
+.sms-btn{flex:1;padding:9px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;
+  border:none;font-family:var(--display);}
+.sms-ok{background:var(--green);color:#000;}
+.sms-dis{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid rgba(255,255,255,.1);}
+
+@media(max-width:640px){
+  .g2,.conf-grid,.conf-price-grid,.track-stats,.pri-grid{grid-template-columns:1fr;}
+  .proof-inner{grid-template-columns:1fr;text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-wm"><span class="t">TACK</span><span class="p">PATH</span></a>
+  <div class="nav-right">
+    <span class="nav-user" id="navUser" style="display:none;"></span>
+    <button class="nav-btn" id="btnLogout" style="display:none;" onclick="logout()">Sign Out</button>
+    <a href="index.html" class="nav-btn">&#8592; Back</a>
+  </div>
+</nav>
+
+<!-- LOGIN -->
+<div id="scLogin" class="screen on" style="padding-top:0;">
+  <div class="login-box">
+    <div class="login-top">
+      <div class="login-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
+      <div class="login-sub">Sign in to your delivery account</div>
+    </div>
+    <div class="login-form">
+      <label class="fl">Email Address</label>
+      <input type="email" class="fi" id="loginEmail" placeholder="you@company.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <label class="fl">Password</label>
+      <input type="password" class="fi" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="btn-login" onclick="doLogin()">Sign In &#8594;</button>
+      <div class="login-note">Demo mode — any credentials work</div>
+      <div class="login-create">New to TackPath? <a href="#" onclick="doLogin()">Create account &#8594;</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- PORTAL -->
+<div id="scPortal" class="screen">
+  <div class="wrap">
+
+    <div id="statusBar">
+      <div class="sb-dot"></div>
+      <div class="sb-text"><strong id="sbSig"></strong> — <span id="sbStatus">processing</span></div>
+    </div>
+
+    <div class="welcome">
+      <h1>Welcome back, <span id="welcomeName">there</span></h1>
+      <div class="welcome-sub">Place a delivery request and track it in real time.</div>
+    </div>
+
+    <!-- ORDER FORM -->
+    <div class="order-card" id="orderSection">
+      <div class="card-hdr">
+        <div><h2>New Delivery</h2><p>Enter your details to request a quote and dispatch a driver.</p></div>
+        <button class="use-saved" id="useSavedBtn" onclick="useSaved()">Use saved</button>
+      </div>
+      <div class="card-body">
+        <div class="sec-div">Recipient</div>
+        <div class="g2">
+          <div class="fg"><label class="fl2">Recipient Name</label><input type="text" class="fi2" id="recipient" placeholder="Full name"/></div>
+          <div class="fg"><label class="fl2">Package Type</label>
+            <select class="fi2" id="pkgType">
+              <option>Standard Package</option><option>Medical Documents</option>
+              <option>Fragile Items</option><option>Legal Documents</option><option>Electronics</option>
+            </select>
+          </div>
+        </div>
+        <div class="sec-div">Pickup</div>
+        <div class="g2">
+          <div class="fg"><label class="fl2">Pickup Address</label><input type="text" class="fi2" id="pickupAddr" placeholder="1200 Peachtree St NE"/></div>
+          <div class="fg"><label class="fl2">Pickup City</label>
+            <select class="fi2" id="pickupCity">
+              <option>Midtown Atlanta</option><option>Atlanta</option><option>Buckhead</option>
+              <option>Sandy Springs</option><option>Smyrna</option><option>Norcross</option>
+              <option>Decatur</option><option>Marietta</option><option>Roswell</option>
+            </select>
+          </div>
+        </div>
+        <div class="sec-div">Delivery</div>
+        <div class="g2">
+          <div class="fg"><label class="fl2">Delivery Address</label><input type="text" class="fi2" id="deliveryAddr" placeholder="455 Cobb Parkway"/></div>
+          <div class="fg"><label class="fl2">Delivery City</label>
+            <select class="fi2" id="deliveryCity">
+              <option>Marietta</option><option>Atlanta</option><option>Sandy Springs</option>
+              <option>Smyrna</option><option>Norcross</option><option>Buckhead</option>
+              <option>Decatur</option><option>Midtown Atlanta</option><option>Roswell</option>
+            </select>
+          </div>
+        </div>
+        <div class="sec-div">Priority</div>
+        <div class="pri-grid">
+          <div class="po sel" id="po-standard" onclick="setPri('standard')">
+            <div class="po-icon">&#128666;</div><div class="po-name">Standard</div><div class="po-desc">Same-day</div>
+          </div>
+          <div class="po pp" id="po-priority" onclick="setPri('priority')">
+            <div class="po-icon">&#9889;</div><div class="po-name">Priority</div><div class="po-desc">2-4 hours</div>
+          </div>
+          <div class="po pc" id="po-critical" onclick="setPri('critical')">
+            <div class="po-icon">&#9763;</div><div class="po-name">Critical</div><div class="po-desc">Immediate</div>
+          </div>
+        </div>
+        <div class="sec-div" style="margin-top:20px;">Notes</div>
+        <input type="text" class="fi2" id="notes" placeholder="Special instructions (optional)"/>
+        <div class="form-actions" style="margin-top:16px;">
+          <button class="btn-primary" onclick="requestQuote()">Request Quote &#8594;</button>
+          <button class="btn-ghost" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATUS SECTION -->
+    <div id="statusSection">
+      <div class="status-card">
+        <div id="progressBar">
+          <div class="pb-steps">
+            <div class="pb-step" id="ps0"><div class="pb-dot">1</div><div class="pb-label">Signal</div></div>
+            <div class="pb-step" id="ps1"><div class="pb-dot">2</div><div class="pb-label">Routing</div></div>
+            <div class="pb-step" id="ps2"><div class="pb-dot">3</div><div class="pb-label">Driver</div></div>
+            <div class="pb-step" id="ps3"><div class="pb-dot">4</div><div class="pb-label">Confirmed</div></div>
+            <div class="pb-step" id="ps4"><div class="pb-dot">5</div><div class="pb-label">In Transit</div></div>
+            <div class="pb-step" id="ps5"><div class="pb-dot">&#10003;</div><div class="pb-label">Delivered</div></div>
+          </div>
+        </div>
+        <div id="statusDisplay">
+          <div id="statusIcon" style="font-size:64px;margin-bottom:16px;">&#128663;</div>
+          <div id="statusMain">Processing your request</div>
+          <div id="statusSub">SmartPath is calculating your route and price.</div>
+        </div>
+        <div id="trackingPanel">
+          <div class="signal-bar">
+            <div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px;">SIGNAL ID</div><div class="sig-id" id="trackSig">—</div></div>
+            <div style="text-align:right;"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px;">DRIVER</div><div class="sig-driver" id="trackDriver">Pending</div></div>
+          </div>
+          <div class="track-stats">
+            <div class="ts-box"><div class="ts-lbl">Cost</div><div class="ts-val" style="color:var(--blue);" id="trackCost">—</div></div>
+            <div class="ts-box"><div class="ts-lbl">ETA</div><div class="ts-val" style="color:var(--green);" id="trackEta">—</div></div>
+            <div class="ts-box"><div class="ts-lbl">Distance</div><div class="ts-val" id="trackDist">—</div></div>
+            <div class="ts-box"><div class="ts-lbl">Route</div><div class="ts-val" style="font-size:12px;" id="trackRoute">—</div></div>
+          </div>
+          <div id="approachingAlert">&#128276; Your driver is approaching — please be ready to receive your delivery.</div>
+          <div class="map-wrap">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d106544.32!2d-84.4677!3d33.8760!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x88f5045d6993098d%3A0x66fede2f990b630b!2sMidtown%20Atlanta%2C%20Atlanta%2C%20GA!3m2!1d33.7841!2d-84.3838!4m5!1s0x88f508ef74cc9b23%3A0xb5b9ff8de2f2a6f1!2sMarietta%2C%20GA!3m2!1d33.9526!2d-84.5499!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <div class="map-lbl">SmartTrack</div>
+          </div>
+        </div>
+        <div id="proofSection">
+          <div style="padding:28px 24px;text-align:center;border-top:2px solid rgba(83,255,136,.2);">
+            <div style="font-size:64px;margin-bottom:16px;">&#10003;</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px;">Delivery Complete</div>
+            <div style="font-size:26px;font-weight:900;letter-spacing:-.5px;margin-bottom:8px;">Your order was delivered!</div>
+            <div style="font-size:14px;color:var(--muted);margin-bottom:24px;">A record has been saved to your account.</div>
+            <!-- Delivery timeline -->
+            <div style="text-align:left;background:var(--card2);border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:20px;">
+              <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;">Delivery Timeline</div>
+              <div id="deliveryTimeline" style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:32px;height:32px;border-radius:50%;background:rgba(83,255,136,.1);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--green);flex-shrink:0;">&#10003;</div>
+                  <div><div style="font-size:13px;font-weight:700;">Order Placed</div><div style="font-size:11px;color:var(--muted);" id="tlTime1">—</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:32px;height:32px;border-radius:50%;background:rgba(83,255,136,.1);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--green);flex-shrink:0;">&#10003;</div>
+                  <div><div style="font-size:13px;font-weight:700;">Driver Assigned</div><div style="font-size:11px;color:var(--muted);" id="tlDriverName">—</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:32px;height:32px;border-radius:50%;background:rgba(83,255,136,.1);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--green);flex-shrink:0;">&#10003;</div>
+                  <div><div style="font-size:13px;font-weight:700;">Package Collected</div><div style="font-size:11px;color:var(--muted);">Picked up from origin</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:32px;height:32px;border-radius:50%;background:rgba(83,255,136,.1);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--green);flex-shrink:0;">&#10003;</div>
+                  <div><div style="font-size:13px;font-weight:700;">Delivered</div><div style="font-size:11px;color:var(--muted);" id="tlTime4">—</div></div>
+                </div>
+              </div>
+            </div>
+            <button onclick="location.reload()" style="padding:14px 32px;border-radius:12px;background:var(--blue);color:#fff;font-size:15px;font-weight:800;border:none;cursor:pointer;font-family:var(--display);">Place Another Delivery</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDER HISTORY -->
+    <div class="history-card">
+      <div class="hist-hdr"><h3>Recent Orders</h3></div>
+      <div id="histBody"><div class="hist-empty">No orders yet. Place your first delivery above.</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div id="confirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);z-index:9000;align-items:center;justify-content:center;padding:20px;">
+  <div class="conf-box">
+    <div class="conf-eyebrow">Awaiting Your Confirmation</div>
+    <div class="conf-title">Confirm Your Delivery</div>
+    <div class="conf-sub">SmartPath has calculated your route and price. A driver is ready. Please confirm to proceed.</div>
+    <div class="conf-grid">
+      <div class="cg-box"><div class="cg-lbl">Recipient</div><div class="cg-val" id="confRecipient">—</div></div>
+      <div class="cg-box"><div class="cg-lbl">Signal ID</div><div class="cg-val" id="confSig" style="font-family:var(--mono);color:var(--blue);font-size:12px;">—</div></div>
+      <div class="cg-box"><div class="cg-lbl">Route</div><div class="cg-val" id="confRoute">—</div></div>
+      <div class="cg-box"><div class="cg-lbl">Priority</div><div class="cg-val" id="confPri">Standard</div></div>
+    </div>
+    <div class="conf-price-grid">
+      <div class="cp-box"><div class="cp-lbl">Total Cost</div><div class="cp-val" id="confCost">—</div></div>
+      <div class="cp-box"><div class="cp-lbl">Est. Delivery</div><div class="cp-val" id="confEta">—</div></div>
+    </div>
+    <button class="btn-confirm" onclick="customerConfirm()">&#10003; &nbsp; Confirm &amp; Dispatch</button>
+    <div style="text-align:center;margin-top:10px;">
+      <button onclick="cancelOrder()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--display);text-decoration:underline;">Cancel Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- SMS NOTIFICATION -->
+<div id="smsModal">
+  <div class="sms-shell">
+    <div class="sms-hdr">
+      <div class="sms-icon">&#128172;</div>
+      <div><div class="sms-from">TackPath</div><div style="font-size:10px;color:var(--muted);">Text Message</div></div>
+    </div>
+    <div class="sms-body">
+      <div class="sms-bubble">
+        <strong>Driver approaching!</strong> Your delivery is almost here. Signal: <span id="smsSig">—</span>. Please be ready.
+      </div>
+      <div class="sms-acts">
+        <button class="sms-btn sms-ok" onclick="dismissSms()">&#10003; Ready</button>
+        <button class="sms-btn sms-dis" onclick="dismissSms()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
+const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
+async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbGet(p){const r=await fetch(sbUrl(p),{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});if(!r.ok)throw new Error(await r.text());return r.json();}
+
+// STATE
+let currentUser=null, selectedPri='standard', currentJobId=null, currentSignalId=null;
+let pollInterval=null, orderHistory=[], currentPrice=0, currentEta=0;
+
+// ── LOGIN ──
+function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim()||'customer@tackpath.com';
+  const name=email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  currentUser={email,name};
+  localStorage.setItem('tp_customer',JSON.stringify(currentUser));
+  showPortal();
+}
+function logout(){
+  localStorage.removeItem('tp_customer');
+  location.reload();
+}
+function showPortal(){
+  const login = document.getElementById('scLogin');
+  login.classList.remove('on');
+  login.style.display='none'; // Force hide since CSS specificity issue
+  document.getElementById('scPortal').classList.add('on');
+  document.getElementById('scPortal').style.display='block';
+  document.getElementById('welcomeName').textContent=currentUser.name.split(' ')[0];
+  document.getElementById('navUser').style.display='block';
+  document.getElementById('navUser').textContent=currentUser.name;
+  document.getElementById('btnLogout').style.display='block';
+  loadSaved();loadHistory();
+}
+
+// ── SAVED ADDRESSES ──
+function loadSaved(){
+  if(localStorage.getItem('tp_saved_c')) document.getElementById('useSavedBtn').style.display='block';
+}
+function useSaved(){
+  const s=JSON.parse(localStorage.getItem('tp_saved_c')||'{}');
+  if(s.recipient) document.getElementById('recipient').value=s.recipient;
+  if(s.pickupAddr) document.getElementById('pickupAddr').value=s.pickupAddr;
+  if(s.pickupCity) document.getElementById('pickupCity').value=s.pickupCity;
+  if(s.deliveryAddr) document.getElementById('deliveryAddr').value=s.deliveryAddr;
+  if(s.deliveryCity) document.getElementById('deliveryCity').value=s.deliveryCity;
+}
+function saveAddresses(){
+  localStorage.setItem('tp_saved_c',JSON.stringify({
+    recipient:document.getElementById('recipient').value,
+    pickupAddr:document.getElementById('pickupAddr').value,
+    pickupCity:document.getElementById('pickupCity').value,
+    deliveryAddr:document.getElementById('deliveryAddr').value,
+    deliveryCity:document.getElementById('deliveryCity').value
+  }));
+  document.getElementById('useSavedBtn').style.display='block';
+}
+
+// ── PRIORITY ──
+function setPri(p){
+  selectedPri=p;
+  ['standard','priority','critical'].forEach(id=>document.getElementById('po-'+id).classList.remove('sel'));
+  document.getElementById('po-'+p).classList.add('sel');
+}
+
+// ── REQUEST QUOTE ──
+// Step 1: Customer submits order
+// System calculates route + price
+// Job created with status 'routing' 
+// Driver gets notified when status becomes 'pending' (after route calculated)
+// Customer sees confirmation modal when driver accepts (status='assigned')
+// Customer confirms -> status='customer_confirmed' -> driver gets Start Delivery
+async function requestQuote(){
+  const recipient=document.getElementById('recipient').value.trim();
+  const pickupAddr=document.getElementById('pickupAddr').value.trim();
+  const pickupCity=document.getElementById('pickupCity').value;
+  const deliveryAddr=document.getElementById('deliveryAddr').value.trim();
+  const deliveryCity=document.getElementById('deliveryCity').value;
+  if(!recipient){alert('Please enter recipient name.');return;}
+  if(!pickupAddr){alert('Please enter pickup address.');return;}
+  if(!deliveryAddr){alert('Please enter delivery address.');return;}
+
+  // Calculate route and price
+  const base=18;
+  const distMiles=parseFloat((Math.random()*12+4).toFixed(1));
+  const distFee=Math.round(distMiles*2.8);
+  const surcharge={standard:0,priority:12,critical:28}[selectedPri];
+  currentPrice=base+distFee+surcharge;
+  currentEta=Math.floor(Math.random()*20+18);
+  const priorityLabel={standard:'Standard',priority:'Priority',critical:'Critical'}[selectedPri];
+  const routeSummary=pickupCity+' to '+deliveryCity;
+
+  currentSignalId='TP-'+Math.floor(Math.random()*9000+1000);
+
+  // Save addresses
+  saveAddresses();
+
+  // Show status section immediately
+  document.getElementById('statusSection').style.display='block';
+  document.getElementById('progressBar').style.display='block';
+  document.getElementById('statusBar').style.display='flex';
+  document.getElementById('sbSig').textContent=currentSignalId;
+  document.getElementById('sbStatus').textContent='calculating route';
+  setProgress(0);
+  setStatus('&#128663;','Building your route','SmartPath is calculating the optimal path from '+pickupCity+' to '+deliveryCity+'.');
+  setTimeout(()=>document.getElementById('statusSection').scrollIntoView({behavior:'smooth',block:'start'}),200);
+
+  // Create job in Supabase with status 'routing'
+  // Driver will NOT be notified yet
+  try{
+    const created=await sbPost('jobs',{
+      title:recipient+' — '+pickupCity+' to '+deliveryCity,
+      pickup_address:pickupAddr+', '+pickupCity,
+      dropoff_address:deliveryAddr+', '+deliveryCity,
+      status:'routing',
+      price:currentPrice,
+      distance_miles:distMiles,
+      route_summary:routeSummary,
+      customer_confirmed:false
+    });
+    if(created&&created[0]) currentJobId=created[0].id;
+  }catch(e){console.error('Create job error:',e);}
+
+  // Populate tracking stats
+  document.getElementById('trackCost').textContent='$'+currentPrice;
+  document.getElementById('trackEta').textContent=currentEta+'m';
+  document.getElementById('trackDist').textContent=distMiles+' mi';
+  document.getElementById('trackRoute').textContent=routeSummary;
+  document.getElementById('trackSig').textContent=currentSignalId;
+
+  // After 4 seconds, route is calculated — show customer the price confirmation
+  // Driver does NOT get notified yet
+  setTimeout(async()=>{
+    setStatus('&#128663;','Route calculated','SmartPath has built your route and calculated the cost. Please confirm to find you a driver.');
+    setProgress(1);
+    document.getElementById('sbStatus').textContent='awaiting your confirmation';
+    // Show confirmation modal to customer
+    document.getElementById('confRecipient').textContent=recipient;
+    document.getElementById('confSig').textContent=currentSignalId;
+    document.getElementById('confRoute').textContent=pickupCity+' to '+deliveryCity;
+    document.getElementById('confPri').textContent={standard:'Standard',priority:'Priority',critical:'Critical'}[selectedPri];
+    document.getElementById('confCost').textContent='$'+currentPrice;
+    document.getElementById('confEta').textContent=currentEta+'m';
+    showModal();
+  },4000);
+}
+
+function clearForm(){
+  ['recipient','pickupAddr','deliveryAddr','notes'].forEach(id=>document.getElementById(id).value='');
+}
+
+// ── STATUS POLLING ──
+function startPolling(){
+  if(pollInterval) clearInterval(pollInterval);
+  pollInterval=setInterval(checkStatus,3000);
+  checkStatus();
+}
+
+async function checkStatus(){
+  if(!currentJobId) return;
+  // Restart poll if somehow stopped
+  if(!pollInterval) startPolling();
+  try{
+    const jobs=await sbGet('jobs?id=eq.'+currentJobId+'&select=*');
+    if(!jobs||!jobs.length) return;
+    const job=jobs[0];
+    const s=job.status;
+    const driverName=job.driver_name||'Driver';
+
+    if(s==='assigned'||s==='customer_confirmed'){
+      // Driver accepted the job
+      setProgress(3);
+      setStatus('&#128663;','Driver found!',driverName+' has accepted your delivery and is on the way.');
+      document.getElementById('sbStatus').textContent='driver assigned';
+      document.getElementById('trackDriver').textContent=driverName;
+      document.getElementById('trackingPanel').style.display='block';
+    } else if(s==='in_transit'){
+      hideModal();
+      setProgress(4);
+      setStatus('&#128200;','Your delivery is live','Your package is on the way to '+document.getElementById('deliveryCity').value+'. Track it below.');
+      document.getElementById('sbStatus').textContent='in transit';
+      document.getElementById('trackDriver').textContent=driverName;
+      document.getElementById('trackingPanel').style.display='block';
+      // Auto scroll to map
+      setTimeout(()=>{
+        document.getElementById('trackingPanel').scrollIntoView({behavior:'smooth',block:'start'});
+      },600);
+    } else if(s==='approaching'){
+      setStatus('&#128205;','Driver approaching','Your driver will arrive shortly.');
+      document.getElementById('approachingAlert').style.display='block';
+      document.getElementById('smsSig').textContent=currentSignalId;
+      document.getElementById('smsModal').style.display='block';
+    } else if(s==='delivered'){
+      clearInterval(pollInterval);
+      setProgress(6);
+      setStatus('&#10003;','Delivered!','Your delivery has been completed successfully.');
+      document.getElementById('sbStatus').textContent='delivered';
+      document.getElementById('proofSection').style.display='block';
+      // Populate timeline
+      const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+      const el1=document.getElementById('tlTime1');if(el1)el1.textContent='Confirmed at '+now;
+      const el4=document.getElementById('tlTime4');if(el4)el4.textContent='Delivered at '+now;
+      const eld=document.getElementById('tlDriverName');if(eld)eld.textContent=driverName;
+      saveHistory();
+      // Auto scroll to top to show delivery complete
+      setTimeout(()=>{
+        window.scrollTo({top:0,behavior:'smooth'});
+        setTimeout(()=>document.getElementById('proofSection').scrollIntoView({behavior:'smooth',block:'start'}),800);
+      },600);
+    }
+  }catch(e){console.warn('Poll error:',e);}
+}
+
+// ── CUSTOMER CONFIRMS ──
+async function customerConfirm(){
+  hideModal();
+  setProgress(2);
+  setStatus('&#128663;','Finding your driver','SmartPath is matching you with the nearest available driver.');
+  document.getElementById('sbStatus').textContent='finding driver';
+  document.getElementById('trackingPanel').style.display='block';
+  if(currentJobId){
+    try{
+      // NOW set to pending — driver gets notified for the first time
+      await sbPatch('jobs?id=eq.'+currentJobId,{status:'pending',customer_confirmed:true});
+    }catch(e){console.error(e);}
+  }
+  // Start polling for driver to accept
+  startPolling();
+}
+
+async function cancelOrder(){
+  hideModal();
+  if(currentJobId){
+    try{await sbPatch('jobs?id=eq.'+currentJobId,{status:'cancelled'});}catch(e){}
+  }
+  clearInterval(pollInterval);
+  document.getElementById('statusSection').style.display='none';
+  document.getElementById('statusBar').style.display='none';
+  currentJobId=null;
+}
+
+// ── UI HELPERS ──
+function setStatus(icon,main,sub){
+  document.getElementById('statusIcon').innerHTML=icon;
+  document.getElementById('statusMain').innerHTML=main;
+  document.getElementById('statusSub').textContent=sub;
+}
+function setProgress(step){
+  for(let i=0;i<6;i++){
+    const el=document.getElementById('ps'+i);
+    if(!el) continue;
+    el.classList.remove('done','active');
+    if(i<step) el.classList.add('done');
+    else if(i===step) el.classList.add('active');
+  }
+}
+function showModal(){
+  const m=document.getElementById('confirmModal');
+  m.style.display='flex';
+  m.style.alignItems='center';
+  m.style.justifyContent='center';
+}
+function hideModal(){
+  const m=document.getElementById('confirmModal');
+  m.style.display='none';
+}
+function dismissSms(){
+  document.getElementById('smsModal').style.display='none';
+}
+
+// ── HISTORY ──
+function saveHistory(){
+  orderHistory.unshift({sig:currentSignalId,from:document.getElementById('pickupCity').value,to:document.getElementById('deliveryCity').value,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})});
+  localStorage.setItem('tp_hist_'+currentUser.email,JSON.stringify(orderHistory));
+  loadHistory();
+}
+function loadHistory(){
+  if(!currentUser) return;
+  const stored=localStorage.getItem('tp_hist_'+currentUser.email);
+  orderHistory=stored?JSON.parse(stored):[];
+  const body=document.getElementById('histBody');
+  if(!orderHistory.length){body.innerHTML='<div class="hist-empty">No orders yet. Place your first delivery above.</div>';return;}
+  body.innerHTML=orderHistory.slice(0,8).map(o=>`
+    <div class="hist-row">
+      <div class="hist-sig">${o.sig}</div>
+      <div class="hist-route">${o.from} <span>&#8594; ${o.to}</span></div>
+      <span class="badge-del">delivered</span>
+      <div class="hist-date">${o.date}</div>
+    </div>
+  `).join('');
+}
+
+// ── INIT ──
+const saved=localStorage.getItem('tp_customer');
+if(saved){currentUser=JSON.parse(saved);showPortal();}
+</script>
+</body>
+</html>
