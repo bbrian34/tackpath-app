@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Symphony+ · Managed Logistics Operations</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#c9a84c;--gold2:#e8c97a;--gold3:#f5e4b0;--gold-dim:rgba(201,168,76,.15);
+  --bg:#0e0c09;--bg2:#141209;--card:#1c1810;--card2:#231f14;
+  --border:rgba(201,168,76,.12);--border2:rgba(201,168,76,.06);
+  --text:#f5f0e8;--muted:rgba(245,240,232,.5);--faint:rgba(245,240,232,.2);
+  --p1:#ff4444;--p2:#ff9500;--p3:#ffd23d;
+  --green:#4caf7d;--blue:#19b7ef;
+  --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;--display:'Playfair Display',serif;
+}
+html,body{margin:0;padding:0;background:var(--bg);}
+body{font-family:var(--sans);color:var(--text);min-height:100vh;line-height:1.6;}
+
+/* ── HEADER ── */
+header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
+  display:flex;align-items:center;padding:0 28px;justify-content:space-between;
+  background:rgba(14,12,9,.97);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);}
+.hdr-left{display:flex;align-items:center;gap:20px;}
+.wordmark{font-family:var(--display);font-size:22px;font-weight:700;
+  background:linear-gradient(135deg,#c9a84c,#f5e4b0,#c9a84c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;letter-spacing:.02em;}
+.wordmark span{font-style:italic;font-weight:400;}
+.hdr-divider{width:1px;height:24px;background:var(--border);}
+.hdr-sub{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;}
+.hdr-right{display:flex;align-items:center;gap:16px;}
+.hdr-status{display:flex;align-items:center;gap:7px;padding:6px 14px;
+  border-radius:20px;background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);
+  font-family:var(--mono);font-size:10px;font-weight:600;color:var(--green);}
+.hdr-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px rgba(76,175,125,.8);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.hdr-time{font-family:var(--mono);font-size:12px;color:var(--muted);}
+.hdr-op{width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,#c9a84c,#8b6914);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;color:#0e0c09;}
+
+/* ── LAYOUT ── */
+.wrap{padding:78px 24px 24px;max-width:1600px;margin:0 auto;}
+
+/* ── KPI BAR ── */
+.kpi-bar{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}
+.kpi{padding:16px 18px;border-radius:14px;background:var(--card);
+  border:1px solid var(--border2);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.4;}
+.kpi-lbl{font-family:var(--mono);font-size:8px;font-weight:600;color:var(--muted);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px;}
+.kpi-val{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1;}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+
+/* ── MAIN GRID ── */
+.main-grid{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px;}
+
+/* ── CLIENT FLEET CARDS ── */
+.fleet-grid{display:flex;flex-direction:column;gap:12px;}
+.fleet-card{background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  overflow:hidden;transition:border-color .2s;}
+.fleet-card:hover{border-color:rgba(201,168,76,.2);}
+.fc-hdr{padding:14px 18px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--border2);background:var(--card2);}
+.fc-logo{width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--gold-dim),rgba(201,168,76,.05));
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold);}
+.fc-name{font-size:14px;font-weight:700;}
+.fc-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.fc-status{margin-left:auto;display:flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:10px;font-family:var(--mono);font-size:9px;font-weight:600;}
+.fc-ok{background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);color:var(--green);}
+.fc-warn{background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.2);color:var(--p2);}
+.fc-body{padding:14px 18px;}
+.driver-row{display:flex;align-items:center;gap:10px;padding:8px 0;
+  border-bottom:1px solid var(--border2);}
+.driver-row:last-child{border-bottom:none;}
+.dr-avatar{width:28px;height:28px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.dr-name{font-size:12px;font-weight:600;flex:1;}
+.dr-status{font-family:var(--mono);font-size:9px;font-weight:600;
+  padding:3px 8px;border-radius:6px;}
+.ds-transit{background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);color:#8d5cff;}
+.ds-assigned{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
+.ds-idle{background:rgba(245,240,232,.04);border:1px solid var(--border2);color:var(--muted);}
+.ds-offline{background:rgba(255,68,68,.06);border:1px solid rgba(255,68,68,.15);color:#ff6b6b;}
+.dr-job{font-size:10px;color:var(--muted);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dr-eta{font-family:var(--mono);font-size:10px;color:var(--gold);margin-left:auto;flex-shrink:0;}
+
+/* ── ALERT QUEUE ── */
+.alert-panel{background:var(--card);border:1px solid var(--border2);border-radius:16px;overflow:hidden;}
+.ap-hdr{padding:14px 18px;border-bottom:1px solid var(--border2);background:var(--card2);
+  display:flex;align-items:center;justify-content:space-between;}
+.ap-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.ap-badge{padding:3px 8px;border-radius:8px;font-family:var(--mono);font-size:9px;font-weight:700;
+  background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
+.ap-body{max-height:520px;overflow-y:auto;}
+.alert-item{padding:14px 18px;border-bottom:1px solid var(--border2);cursor:pointer;
+  transition:background .15s;position:relative;}
+.alert-item:hover{background:rgba(201,168,76,.03);}
+.alert-item:last-child{border-bottom:none;}
+.ai-priority{position:absolute;left:0;top:0;bottom:0;width:3px;}
+.p1-bar{background:var(--p1);}
+.p2-bar{background:var(--p2);}
+.p3-bar{background:var(--p3);}
+.ai-top{display:flex;align-items:center;gap:8px;margin-bottom:5px;padding-left:10px;}
+.ai-badge{font-family:var(--mono);font-size:9px;font-weight:700;
+  padding:2px 7px;border-radius:5px;}
+.p1-badge{background:rgba(255,68,68,.12);border:1px solid rgba(255,68,68,.25);color:var(--p1);}
+.p2-badge{background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.2);color:var(--p2);}
+.p3-badge{background:rgba(255,210,61,.08);border:1px solid rgba(255,210,61,.18);color:var(--p3);}
+.ai-org{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.ai-time{font-family:var(--mono);font-size:9px;color:var(--faint);margin-left:auto;}
+.ai-desc{font-size:12px;font-weight:600;padding-left:10px;margin-bottom:4px;}
+.ai-reasoning{font-size:11px;color:var(--muted);padding-left:10px;line-height:1.5;}
+.ai-actions{display:flex;gap:6px;padding-left:10px;margin-top:8px;}
+.ai-btn{padding:5px 11px;border-radius:7px;font-size:10px;font-weight:700;
+  cursor:pointer;border:none;font-family:var(--sans);}
+.ai-btn-resolve{background:rgba(76,175,125,.1);border:1px solid rgba(76,175,125,.25);color:var(--green);}
+.ai-btn-escalate{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
+.ai-btn-msg{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
+
+/* ── AGENT FEED ── */
+.agent-feed{background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  overflow:hidden;margin-bottom:16px;}
+.af-hdr{padding:14px 18px;border-bottom:1px solid var(--border2);background:var(--card2);
+  display:flex;align-items:center;justify-content:space-between;}
+.af-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.af-ai{padding:3px 10px;border-radius:8px;font-family:var(--mono);font-size:9px;font-weight:700;
+  background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);color:var(--gold);}
+.af-body{padding:14px 18px;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.af-entry{display:flex;align-items:flex-start;gap:10px;font-size:12px;}
+.af-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+.af-text{flex:1;color:var(--muted);line-height:1.5;}
+.af-text strong{color:var(--text);}
+.af-time{font-family:var(--mono);font-size:9px;color:var(--faint);flex-shrink:0;margin-top:2px;}
+
+/* ── CLIENT SELECTOR ── */
+.client-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.ct{padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;
+  cursor:pointer;border:1px solid var(--border);background:var(--card);
+  color:var(--muted);transition:all .15s;}
+.ct.on{background:var(--gold-dim);border-color:rgba(201,168,76,.3);color:var(--gold);}
+.ct-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;
+  font-family:var(--mono);font-size:11px;color:var(--muted);gap:10px;}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);
+  border-top-color:var(--gold);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── EMPTY STATE ── */
+.empty{padding:32px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--faint);}
+
+/* ── TOAST ── */
+.tw{position:fixed;top:70px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tIn .3s ease;max-width:320px;}
+@keyframes tIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+@media(max-width:1100px){
+  .main-grid{grid-template-columns:1fr;}
+  .kpi-bar{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:640px){
+  .kpi-bar{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <div class="wordmark">Symphony<span>+</span></div>
+    <div class="hdr-divider"></div>
+    <div class="hdr-sub">Managed Logistics Operations Center</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-status"><div class="hdr-dot"></div>Agent Active</div>
+    <div class="hdr-time" id="hdrTime">—</div>
+    <div class="hdr-op" id="hdrOp">L</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- KPI BAR -->
+  <div class="kpi-bar">
+    <div class="kpi">
+      <div class="kpi-lbl">Active Clients</div>
+      <div class="kpi-val" id="kpiClients" style="color:var(--gold);">—</div>
+      <div class="kpi-sub">Symphony+ enrolled</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Active Drivers</div>
+      <div class="kpi-val" id="kpiDrivers" style="color:var(--blue);">—</div>
+      <div class="kpi-sub">Across all fleets</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Live Signals</div>
+      <div class="kpi-val" id="kpiJobs" style="color:#8d5cff;">—</div>
+      <div class="kpi-sub">Active deliveries</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">P1 Alerts</div>
+      <div class="kpi-val" id="kpiP1" style="color:var(--p1);">—</div>
+      <div class="kpi-sub">Require attention</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Delivered Today</div>
+      <div class="kpi-val" id="kpiDelivered" style="color:var(--green);">—</div>
+      <div class="kpi-sub">Completed signals</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Agent Actions</div>
+      <div class="kpi-val" id="kpiActions" style="color:var(--gold);">—</div>
+      <div class="kpi-sub">Last 24 hours</div>
+    </div>
+  </div>
+
+  <!-- CLIENT TABS -->
+  <div class="client-tabs" id="clientTabs">
+    <div class="ct on" onclick="filterClient('all')"><span class="ct-dot" style="background:var(--gold);"></span>All Clients</div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: Fleet cards + Agent feed -->
+    <div>
+      <div class="fleet-grid" id="fleetGrid">
+        <div class="loading"><div class="spin"></div>Loading fleet data...</div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="agent-feed">
+          <div class="af-hdr">
+            <div class="af-title">&#9889; Agent Activity Feed <div class="af-ai">AI ACTIVE</div></div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);" id="lastScan">Scanning...</div>
+          </div>
+          <div class="af-body" id="agentFeed">
+            <div class="loading"><div class="spin"></div>Agent initializing...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Alert queue -->
+    <div>
+      <div class="alert-panel">
+        <div class="ap-hdr">
+          <div class="ap-title">&#9888; Exception Queue <div class="ap-badge" id="alertBadge">0 OPEN</div></div>
+        </div>
+        <div class="ap-body" id="alertQueue">
+          <div class="empty">No exceptions · All systems healthy</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="tw" id="tw"></div>
+
+<script>
+// ── SUPABASE ──
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
+const sbu=p=>SB+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+KEY;
+const sbGet=async p=>{const r=await fetch(sbu(p),{headers:H});if(!r.ok)throw Error(await r.text());return r.json();};
+const sbPatch=async(p,b)=>{const r=await fetch(sbu(p),{method:'PATCH',headers:{...H,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
+const sbPost=async(p,b)=>{const r=await fetch(sbu(p),{method:'POST',headers:{...H,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
+
+// ── STATE ──
+let jobs=[],orgs=[],agentLog=[],alerts=[],pollInterval=null,agentInterval=null;
+let activeFilter='all',actionCount=0;
+
+// ── CLOCK ──
+function updateClock(){
+  const now=new Date();
+  document.getElementById('hdrTime').textContent=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' · ATL';
+}
+setInterval(updateClock,1000);updateClock();
+
+// ── TOAST ──
+function toast(msg,color='var(--gold)'){
+  const wrap=document.getElementById('tw');
+  const el=document.createElement('div');
+  el.className='toast';
+  el.style.borderColor=color;
+  el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300);},4000);
+}
+
+// ── AGENT FEED ──
+function addAgentEntry(text,color='var(--muted)',dotColor='var(--gold)'){
+  agentLog.unshift({text,color,dotColor,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})});
+  if(agentLog.length>50) agentLog=agentLog.slice(0,50);
+  renderFeed();
+}
+
+function renderFeed(){
+  const feed=document.getElementById('agentFeed');
+  if(!agentLog.length){feed.innerHTML='<div class="empty">Agent feed will appear here</div>';return;}
+  feed.innerHTML=agentLog.map(e=>`
+    <div class="af-entry">
+      <div class="af-dot" style="background:${e.dotColor};"></div>
+      <div class="af-text">${e.text}</div>
+      <div class="af-time">${e.time}</div>
+    </div>
+  `).join('');
+}
+
+// ── ADD ALERT ──
+function addAlert(priority,org,desc,reasoning,jobId){
+  const existing=alerts.find(a=>a.jobId===jobId&&a.desc===desc&&!a.resolved);
+  if(existing)return;
+  alerts.unshift({id:Date.now(),priority,org,desc,reasoning,jobId,time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}),resolved:false});
+  renderAlerts();
+  // Log agent action to Supabase
+  try{
+    sbPost('agent_actions',{job_id:jobId||null,action_type:'exception_flagged',priority,description:desc,reasoning});
+    actionCount++;
+    document.getElementById('kpiActions').textContent=actionCount;
+  }catch(e){}
+}
+
+function renderAlerts(){
+  const queue=document.getElementById('alertQueue');
+  const open=alerts.filter(a=>!a.resolved);
+  document.getElementById('alertBadge').textContent=open.length+' OPEN';
+  if(!open.length){queue.innerHTML='<div class="empty">No exceptions · All systems healthy</div>';return;}
+  // Sort by priority P1 first
+  const sorted=open.sort((a,b)=>a.priority.localeCompare(b.priority));
+  queue.innerHTML=sorted.map(a=>`
+    <div class="alert-item">
+      <div class="ai-priority ${a.priority.toLowerCase()}-bar"></div>
+      <div class="ai-top">
+        <span class="ai-badge ${a.priority.toLowerCase()}-badge">${a.priority}</span>
+        <span class="ai-org">${a.org}</span>
+        <span class="ai-time">${a.time}</span>
+      </div>
+      <div class="ai-desc">${a.desc}</div>
+      <div class="ai-reasoning">${a.reasoning}</div>
+      <div class="ai-actions">
+        <button class="ai-btn ai-btn-resolve" onclick="resolveAlert(${a.id})">&#10003; Resolve</button>
+        <button class="ai-btn ai-btn-msg" onclick="msgDriver('${a.jobId}')">&#128172; Message Driver</button>
+        <button class="ai-btn ai-btn-escalate" onclick="escalate(${a.id})">&#9650; Escalate</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function resolveAlert(id){
+  const a=alerts.find(x=>x.id===id);
+  if(a){a.resolved=true;renderAlerts();addAgentEntry('Exception resolved: <strong>'+a.desc+'</strong>','var(--text)','var(--green)');}
+}
+
+function escalate(id){
+  const a=alerts.find(x=>x.id===id);
+  if(a){a.priority='P1';renderAlerts();toast('Escalated to P1 — operator notified','var(--p1)');}
+}
+
+async function msgDriver(jobId){
+  if(!jobId){toast('No job ID for this alert');return;}
+  try{
+    await sbPost('messages',{job_id:jobId,sender:'Symphony+ Agent',sender_role:'dispatcher',body:'Symphony+ Agent: Please provide a status update on your current delivery.'});
+    toast('Message sent to driver','var(--blue)');
+    addAgentEntry('Auto-message sent to driver for signal <strong>'+jobId.slice(0,8)+'</strong>','var(--text)','var(--blue)');
+  }catch(e){toast('Message failed');}
+}
+
+// ── RENDER FLEET ──
+function renderFleet(){
+  const grid=document.getElementById('fleetGrid');
+  const filtered=activeFilter==='all'?jobs:jobs.filter(j=>j.org_id===activeFilter);
+  // Group by org
+  const orgMap={};
+  orgs.forEach(o=>orgMap[o.id]=o);
+
+  // Build org groups from jobs
+  const orgGroups={};
+  filtered.forEach(j=>{
+    const orgId=j.org_id||'default';
+    if(!orgGroups[orgId])orgGroups[orgId]={org:orgMap[orgId]||{name:'TackPath ATL',id:orgId},jobs:[]};
+    orgGroups[orgId].jobs.push(j);
+  });
+
+  // Also add orgs with no jobs
+  orgs.forEach(o=>{
+    if(!orgGroups[o.id]) orgGroups[o.id]={org:o,jobs:[]};
+  });
+
+  const groups=Object.values(orgGroups);
+  if(!groups.length){
+    grid.innerHTML='<div class="empty">No active clients. Add organizations to begin monitoring.</div>';
+    return;
+  }
+
+  grid.innerHTML=groups.map(({org,jobs:oJobs})=>{
+    const activeJobs=oJobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status));
+    const hasIssue=activeJobs.some(j=>j.exception_flag);
+    const initials=(org.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+    const driverRows=activeJobs.length?activeJobs.map(j=>{
+      const statusClass=j.status==='in_transit'?'ds-transit':j.status==='assigned'||j.status==='customer_confirmed'?'ds-assigned':'ds-idle';
+      const statusLabel=j.status?j.status.replace(/_/g,' '):'idle';
+      return `<div class="driver-row">
+        <div class="dr-avatar">${(j.driver_name||'?')[0].toUpperCase()}</div>
+        <div>
+          <div class="dr-name">${j.driver_name||'Unassigned'}</div>
+          <div class="dr-job">${(j.title||'').split('—')[1]||j.title||'—'}</div>
+        </div>
+        <span class="dr-status ${statusClass}">${statusLabel}</span>
+        <div class="dr-eta">${j.status==='in_transit'?'~'+Math.floor(Math.random()*20+5)+'m':'—'}</div>
+      </div>`;
+    }).join(''):'<div class="empty" style="padding:16px;">No active deliveries</div>';
+
+    return `<div class="fleet-card">
+      <div class="fc-hdr">
+        <div class="fc-logo">${initials}</div>
+        <div>
+          <div class="fc-name">${org.name||'Unknown Client'}</div>
+          <div class="fc-meta">${activeJobs.length} active · ${oJobs.filter(j=>j.status==='delivered').length} delivered today</div>
+        </div>
+        <div class="fc-status ${hasIssue?'fc-warn':'fc-ok'}">${hasIssue?'⚠ Exception':'● Nominal'}</div>
+      </div>
+      <div class="fc-body">${driverRows}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER KPIS ──
+function renderKPIs(){
+  document.getElementById('kpiClients').textContent=orgs.length||'—';
+  const active=jobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status));
+  const drivers=new Set(jobs.filter(j=>j.driver_name).map(j=>j.driver_name));
+  document.getElementById('kpiDrivers').textContent=drivers.size||0;
+  document.getElementById('kpiJobs').textContent=active.length||0;
+  document.getElementById('kpiP1').textContent=alerts.filter(a=>a.priority==='P1'&&!a.resolved).length||0;
+  document.getElementById('kpiDelivered').textContent=jobs.filter(j=>j.status==='delivered').length||0;
+}
+
+// ── RENDER CLIENT TABS ──
+function renderClientTabs(){
+  const tabs=document.getElementById('clientTabs');
+  const colors=['var(--gold)','var(--blue)','#8d5cff','var(--green)','var(--p2)'];
+  tabs.innerHTML=`<div class="ct ${activeFilter==='all'?'on':''}" onclick="filterClient('all')"><span class="ct-dot" style="background:var(--gold);"></span>All Clients</div>`;
+  orgs.forEach((o,i)=>{
+    tabs.innerHTML+=`<div class="ct ${activeFilter===o.id?'on':''}" onclick="filterClient('${o.id}')">
+      <span class="ct-dot" style="background:${colors[i%colors.length]};"></span>${o.name}
+    </div>`;
+  });
+}
+
+function filterClient(id){
+  activeFilter=id;
+  renderClientTabs();
+  renderFleet();
+}
+
+// ── AI AGENT ──
+async function runAgent(){
+  document.getElementById('lastScan').textContent='Agent scanning — '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+
+  const activeJobs=jobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status));
+  if(!activeJobs.length){
+    addAgentEntry('No active signals — all fleets clear','var(--muted)','var(--gold)');
+    return;
+  }
+
+  const now=new Date();
+
+  activeJobs.forEach(job=>{
+    const created=new Date(job.created_at);
+    const ageMinutes=Math.floor((now-created)/60000);
+    const orgName=orgs.find(o=>o.id===job.org_id)?.name||'TackPath ATL';
+    const sig='TP-'+(job.id?job.id.slice(0,8):'?');
+
+    // P1: Job in_transit for over 60 minutes
+    if(job.status==='in_transit'&&ageMinutes>60){
+      addAlert('P1',orgName,
+        sig+' — Driver past estimated delivery window',
+        'Job has been in transit for '+ageMinutes+' minutes. Driver '+( job.driver_name||'unknown')+' may need assistance.',
+        job.id
+      );
+      addAgentEntry('P1 flagged: <strong>'+sig+'</strong> — '+ageMinutes+'m in transit with no delivery confirmation','var(--p1)','var(--p1)');
+    }
+
+    // P2: Job assigned but not started after 30 minutes
+    else if((job.status==='assigned'||job.status==='customer_confirmed')&&ageMinutes>30){
+      addAlert('P2',orgName,
+        sig+' — Driver assigned but delivery not started',
+        'Job assigned '+ageMinutes+' minutes ago. Driver '+(job.driver_name||'unknown')+' has not started delivery.',
+        job.id
+      );
+      addAgentEntry('P2 flagged: <strong>'+sig+'</strong> — assigned '+ageMinutes+'m ago, not started','var(--p2)','var(--p2)');
+    }
+
+    // P3: Job pending for over 15 minutes
+    else if(job.status==='pending'&&ageMinutes>15){
+      addAlert('P3',orgName,
+        sig+' — No driver assigned after '+ageMinutes+' minutes',
+        'Job has been awaiting driver assignment for '+ageMinutes+' minutes. Consider expanding driver pool or adjusting offer.',
+        job.id
+      );
+      addAgentEntry('P3 flagged: <strong>'+sig+'</strong> — pending '+ageMinutes+'m, no driver','var(--p3)','var(--p3)');
+    }
+
+    // All clear
+    else{
+      addAgentEntry('<strong>'+sig+'</strong> · '+orgName+' · '+job.status.replace(/_/g,' ')+' · '+ageMinutes+'m · Nominal','var(--muted)','var(--green)');
+    }
+  });
+
+  renderKPIs();
+  renderFleet();
+}
+
+// ── LOAD DATA ──
+async function loadData(){
+  try{
+    // Load jobs
+    jobs=await sbGet('jobs?select=*&order=created_at.desc&limit=100');
+    // Try to load orgs (may not exist yet)
+    try{orgs=await sbGet('organizations?select=*&status=eq.active');}
+    catch(e){orgs=[];}
+    renderClientTabs();
+    renderFleet();
+    renderKPIs();
+  }catch(e){
+    document.getElementById('fleetGrid').innerHTML='<div class="empty">Error loading data: '+e.message+'</div>';
+  }
+}
+
+// ── INIT ──
+async function init(){
+  addAgentEntry('Symphony+ agent initialized — monitoring all active signals','var(--text)','var(--gold)');
+  await loadData();
+  await runAgent();
+  // Poll every 15 seconds
+  pollInterval=setInterval(loadData,15000);
+  // Run agent every 30 seconds
+  agentInterval=setInterval(runAgent,30000);
+}
+
+init();
+</script>
+</body>
+</html>
