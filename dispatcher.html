@@ -583,6 +583,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab" onclick="setTab('smarttrack',this)">SmartTrack</button>
       <button class="tbtab" onclick="setTab('command',this)">Command</button>
       <button class="tbtab" onclick="setTab('analytics',this)">Analytics</button>
+      <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
     </div>
     <div class="tb-right">
       <div class="sys-status"><div class="sys-dot"></div>SYSTEMS NOMINAL</div>
@@ -876,6 +877,85 @@ body::after{content:'';position:fixed;inset:0;
         </div>
       </div>
 
+      <!-- SURGE TAB -->
+      <div class="tab" id="tab-surge">
+        <div style="margin-bottom:16px;">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--purple);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Surge · Block Dispatch</div>
+          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Live Block Ops</div>
+        </div>
+
+        <!-- SURGE SUMMARY ROW -->
+        <div class="spark-row" style="margin-bottom:14px;">
+          <div class="spark-box">
+            <div class="spark-lbl">Active Blocks</div>
+            <div class="spark-val" style="color:var(--purple);" id="sg-active">0</div>
+            <div class="bar-w"><div class="bar-f" id="sg-abar" style="background:var(--purple);width:0%;"></div></div>
+          </div>
+          <div class="spark-box">
+            <div class="spark-lbl">Drivers On Block</div>
+            <div class="spark-val" style="color:var(--blue);" id="sg-drivers">0</div>
+            <div class="bar-w"><div class="bar-f" id="sg-dbar" style="background:var(--blue);width:0%;"></div></div>
+          </div>
+          <div class="spark-box">
+            <div class="spark-lbl">Stops Completed</div>
+            <div class="spark-val" style="color:var(--green);" id="sg-stops">0</div>
+            <div class="bar-w"><div class="bar-f" id="sg-sbar" style="background:var(--green);width:0%;"></div></div>
+          </div>
+          <div class="spark-box">
+            <div class="spark-lbl">Exceptions</div>
+            <div class="spark-val" style="color:var(--orange);" id="sg-exc">0</div>
+            <div class="bar-w"><div class="bar-f" id="sg-ebar" style="background:var(--orange);width:0%;"></div></div>
+          </div>
+        </div>
+
+        <!-- SURGE ACTION BAR -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <a href="surge.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;background:rgba(141,92,255,0.12);border:1px solid rgba(141,92,255,0.3);color:var(--purple);font-family:var(--mono);font-size:11px;font-weight:600;text-decoration:none;letter-spacing:.06em;">+ NEW BLOCK DISPATCH</a>
+          <button onclick="renderSurge()" style="padding:8px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;">&#8635; REFRESH</button>
+        </div>
+
+        <!-- LIVE BLOCK BOARD -->
+        <div class="panel" style="border-color:rgba(141,92,255,.2);margin-bottom:12px;">
+          <div class="panel-hdr">
+            <div>
+              <div class="panel-ttl">Block Board</div>
+              <div class="panel-sub">ROUTE ID · DRIVER · STOP PROGRESS · STATUS</div>
+            </div>
+            <div class="ai-chip" style="background:rgba(141,92,255,.1);color:var(--purple);border-color:rgba(141,92,255,.3);">SURGE LIVE</div>
+          </div>
+          <div id="sg-board">
+            <div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active blocks. Launch a block dispatch from Surge.</div>
+          </div>
+        </div>
+
+        <!-- EXCEPTION QUEUE -->
+        <div class="panel" style="border-color:rgba(255,150,30,.2);margin-bottom:12px;">
+          <div class="panel-hdr">
+            <div>
+              <div class="panel-ttl" style="color:var(--orange);">Block Exceptions</div>
+              <div class="panel-sub">DRIVER DARK · REJECTED MID-ROUTE · BEHIND PACE</div>
+            </div>
+            <div id="sg-exc-badge" style="font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.25);color:var(--orange);">0 OPEN</div>
+          </div>
+          <div id="sg-exceptions">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>
+          </div>
+        </div>
+
+        <!-- ACTIVITY FEED -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <div>
+              <div class="panel-ttl">Block Activity Feed</div>
+              <div class="panel-sub">REAL-TIME DRIVER EVENTS</div>
+            </div>
+          </div>
+          <div id="sg-feed" style="display:flex;flex-direction:column;gap:0;max-height:240px;overflow-y:auto;">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:10px 0;">No activity yet for this session.</div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /main -->
   </div><!-- /layout -->
 </div><!-- /shell -->
@@ -1042,6 +1122,7 @@ function setTab(id,btn){
   if(id==='smarttrack') renderSmartTrack();
   if(id==='analytics') renderAnalytics();
   if(id==='command') renderCommand();
+  if(id==='surge') renderSurge();
 }
 
 // ── LOAD JOBS ──
@@ -1302,6 +1383,117 @@ function renderCommand(){
     </div>
   `;
 }
+
+// ── SURGE ──
+const surgeBlocks = [];
+
+function renderSurge(){
+  const board = document.getElementById('sg-board');
+  const feed  = document.getElementById('sg-feed');
+  const excEl = document.getElementById('sg-exceptions');
+  const excBadge = document.getElementById('sg-exc-badge');
+
+  const active   = surgeBlocks.filter(b=>b.status==='active').length;
+  const drivers  = surgeBlocks.filter(b=>b.driver).length;
+  const stops    = surgeBlocks.reduce((t,b)=>t+(b.stopsCompleted||0),0);
+  const totalStops = surgeBlocks.reduce((t,b)=>t+(b.stops||0),0);
+  const exceptions = surgeBlocks.filter(b=>b.exception).length;
+
+  document.getElementById('sg-active').textContent  = active;
+  document.getElementById('sg-drivers').textContent = drivers;
+  document.getElementById('sg-stops').textContent   = stops;
+  document.getElementById('sg-exc').textContent     = exceptions;
+  document.getElementById('sg-abar').style.width    = active ? Math.min(active/surgeBlocks.length*100,100)+'%' : '0%';
+  document.getElementById('sg-dbar').style.width    = drivers ? Math.min(drivers/surgeBlocks.length*100,100)+'%' : '0%';
+  document.getElementById('sg-sbar').style.width    = totalStops ? Math.min(stops/totalStops*100,100)+'%' : '0%';
+  document.getElementById('sg-ebar').style.width    = exceptions ? Math.min(exceptions/surgeBlocks.length*100,100)+'%' : '0%';
+
+  excBadge.textContent = exceptions+' OPEN';
+
+  if(surgeBlocks.length===0){
+    board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active blocks. Launch a block dispatch from Surge.</div>';
+    excEl.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>';
+    return;
+  }
+
+  const statusColor={active:'var(--blue)',accepted:'var(--green)',rejected:'var(--red)',complete:'var(--green)',exception:'var(--orange)',broadcast:'var(--purple)'};
+
+  board.innerHTML=surgeBlocks.map(b=>{
+    const pct = b.stops ? Math.round((b.stopsCompleted||0)/b.stops*100) : 0;
+    const sc  = statusColor[b.status]||'var(--muted)';
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--purple);background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);border-radius:4px;padding:3px 8px;flex-shrink:0;min-width:70px;text-align:center;">${b.id}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:3px;">${b.driver||'Awaiting driver'}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;">
+              <div style="height:4px;border-radius:2px;background:var(--purple);width:${pct}%;transition:width .4s;"></div>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0;">${b.stopsCompleted||0}/${b.stops||0}</div>
+          </div>
+        </div>
+        <div style="font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;border:1px solid ${sc};color:${sc};flex-shrink:0;">${b.status.toUpperCase()}</div>
+        ${b.exception?`<div style="font-size:10px;color:var(--orange);">&#9888;</div>`:''}
+      </div>
+    `;
+  }).join('');
+
+  const excs = surgeBlocks.filter(b=>b.exception);
+  excEl.innerHTML = excs.length===0
+    ? '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>'
+    : excs.map(b=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--purple);background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);border-radius:4px;padding:3px 8px;">${b.id}</div>
+          <div style="flex:1;font-size:12px;color:var(--orange);">${b.exceptionMsg||'Driver not responding'}</div>
+          <button onclick="surgeRebroadcast('${b.id}')" style="padding:5px 11px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.3);color:var(--orange);font-family:var(--mono);font-size:10px;cursor:pointer;">REBROADCAST</button>
+        </div>
+      `).join('');
+}
+
+function surgeAddBlock(block){
+  // Called when a broadcast is received from surge.html via localStorage event
+  const existing = surgeBlocks.findIndex(b=>b.id===block.id);
+  if(existing>=0) surgeBlocks[existing]=block;
+  else surgeBlocks.push(block);
+  surgeFeedEntry(block.id, block.driver
+    ? block.driver+' accepted '+block.id
+    : block.id+' broadcast to drivers');
+  renderSurge();
+}
+
+function surgeRebroadcast(routeId){
+  const b = surgeBlocks.find(x=>x.id===routeId);
+  if(!b) return;
+  b.exception=false;
+  b.exceptionMsg='';
+  b.status='broadcast';
+  b.driver=null;
+  surgeFeedEntry(routeId, routeId+' rebroadcast to driver pool');
+  renderSurge();
+}
+
+function surgeFeedEntry(routeId, msg){
+  const feed=document.getElementById('sg-feed');
+  if(!feed) return;
+  const now=new Date();
+  const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const el=document.createElement('div');
+  el.style.cssText='display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
+  el.innerHTML=`<span style="font-family:var(--mono);font-size:10px;color:var(--muted);width:40px;flex-shrink:0;">${t}</span><span style="color:var(--purple);font-family:var(--mono);font-size:10px;flex-shrink:0;">${routeId}</span><span style="color:var(--text);">${msg}</span>`;
+  if(feed.children.length===1 && feed.children[0].tagName!=='DIV'.toLowerCase()) feed.innerHTML='';
+  feed.prepend(el);
+}
+
+// Listen for surge broadcast events from surge.html
+window.addEventListener('storage', e=>{
+  if(e.key==='surge_broadcast'){
+    try{
+      const data=JSON.parse(e.newValue||'{}');
+      if(data.blocks) data.blocks.forEach(b=>surgeAddBlock(b));
+    }catch(err){}
+  }
+});
 
 // ── DRAWER ──
 function openDrawer(id){

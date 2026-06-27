@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TackPath Surge — Block Dispatch</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue:    #19b7ef;
+    --green:   #53ff88;
+    --purple:  #8d5cff;
+    --orange:  #ff961e;
+    --dark:    #010e21;
+    --mid:     #071828;
+    --surface: #0b2035;
+    --border:  rgba(25,183,239,0.15);
+    --text:    #e2eaf2;
+    --muted:   #6a8fa8;
+  }
+
+  html, body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    font-size: 15px;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--mid);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-left { display: flex; align-items: center; gap: 20px; }
+
+  .wordmark {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+  }
+  .wordmark span:first-child { color: #fff; }
+  .wordmark span:last-child  { color: var(--blue); }
+
+  .nav-back {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-back:hover { color: var(--blue); }
+
+  .nav-service {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--purple);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(141,92,255,0.1);
+    border: 1px solid rgba(141,92,255,0.25);
+    padding: 3px 10px;
+    border-radius: 4px;
+  }
+
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+
+  .nav-sign-out {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .nav-sign-out:hover { color: var(--text); }
+
+  /* LAYOUT */
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  .page-header {
+    margin-bottom: 32px;
+  }
+
+  .page-header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .page-header p {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* STAGE TABS */
+  .stage-nav {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 28px;
+    background: var(--mid);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+  }
+
+  .stage-tab {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 5px;
+    border: none;
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .stage-tab .stage-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .stage-tab.active {
+    background: var(--surface);
+    color: #fff;
+  }
+
+  .stage-tab.active .stage-num {
+    border-color: var(--purple);
+    color: var(--purple);
+    background: rgba(141,92,255,0.1);
+  }
+
+  .stage-tab.done {
+    color: var(--green);
+  }
+
+  .stage-tab.done .stage-num {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(83,255,136,0.08);
+  }
+
+  /* PANELS */
+  .panel {
+    display: none;
+  }
+  .panel.active {
+    display: block;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--blue);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 18px;
+  }
+
+  /* FORM ELEMENTS */
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="time"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--blue);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted);
+  }
+
+  select option {
+    background: var(--mid);
+    color: var(--text);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .field { margin-bottom: 16px; }
+
+  .field-row {
+    display: grid;
+    gap: 14px;
+  }
+
+  .field-row.col-2 { grid-template-columns: 1fr 1fr; }
+  .field-row.col-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  /* BLOCK WINDOW SELECTOR */
+  .block-window-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .block-window-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 12px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--mid);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .block-window-btn:hover {
+    border-color: var(--purple);
+    color: var(--text);
+  }
+
+  .block-window-btn.selected {
+    border-color: var(--purple);
+    background: rgba(141,92,255,0.12);
+    color: #fff;
+  }
+
+  .block-window-btn .window-label {
+    font-size: 18px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 2px;
+    color: #fff;
+  }
+
+  .block-window-btn .window-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* STOP LIST */
+  .stop-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .stop-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--mid);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+  }
+
+  .stop-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--purple);
+    background: rgba(141,92,255,0.1);
+    border: 1px solid rgba(141,92,255,0.2);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .stop-fields {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stop-fields .field { margin-bottom: 0; }
+
+  .stop-address { grid-column: 1 / -1; }
+
+  .stop-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px;
+    transition: color 0.2s;
+    flex-shrink: 0;
+  }
+  .stop-remove:hover { color: #ff4d4d; }
+
+  /* CSV UPLOAD */
+  .csv-drop {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .csv-drop:hover,
+  .csv-drop.drag-over {
+    border-color: var(--blue);
+    background: rgba(25,183,239,0.04);
+  }
+
+  .csv-drop input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .csv-drop-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .csv-drop p {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .csv-drop .csv-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* INPUT MODE TOGGLE */
+  .input-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px;
+    margin-bottom: 20px;
+    width: fit-content;
+  }
+
+  .input-toggle-btn {
+    padding: 7px 18px;
+    border-radius: 4px;
+    border: none;
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .input-toggle-btn.active {
+    background: var(--surface);
+    color: #fff;
+  }
+
+  /* ROUTE CARDS */
+  .route-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .route-card {
+    background: var(--mid);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .route-card-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--purple);
+    background: rgba(141,92,255,0.1);
+    border: 1px solid rgba(141,92,255,0.2);
+    border-radius: 4px;
+    padding: 4px 8px;
+    flex-shrink: 0;
+  }
+
+  .route-card-info {
+    flex: 1;
+  }
+
+  .route-card-stops {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 2px;
+  }
+
+  .route-card-meta {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 14px;
+  }
+
+  .route-card-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .route-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .route-status.pending {
+    color: var(--orange);
+    background: rgba(255,150,30,0.1);
+    border: 1px solid rgba(255,150,30,0.2);
+  }
+
+  .route-status.accepted {
+    color: var(--green);
+    background: rgba(83,255,136,0.08);
+    border: 1px solid rgba(83,255,136,0.2);
+  }
+
+  .route-status.rejected {
+    color: #ff4d4d;
+    background: rgba(255,77,77,0.08);
+    border: 1px solid rgba(255,77,77,0.2);
+  }
+
+  .route-status.broadcast {
+    color: var(--blue);
+    background: rgba(25,183,239,0.08);
+    border: 1px solid rgba(25,183,239,0.2);
+  }
+
+  /* BROADCAST SUMMARY */
+  .broadcast-summary {
+    background: rgba(141,92,255,0.07);
+    border: 1px solid rgba(141,92,255,0.2);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .summary-stat { text-align: center; }
+
+  .summary-stat .stat-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    display: block;
+  }
+
+  .summary-stat .stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 7px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #14a3d5; }
+
+  .btn-purple {
+    background: var(--purple);
+    color: #fff;
+  }
+  .btn-purple:hover { background: #7a4de8; }
+
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--blue); color: var(--text); }
+
+  .btn-danger {
+    background: none;
+    border: 1px solid rgba(255,77,77,0.3);
+    color: #ff4d4d;
+  }
+  .btn-danger:hover { background: rgba(255,77,77,0.08); }
+
+  .btn-full { width: 100%; justify-content: center; }
+
+  .btn-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* ADD STOP BTN */
+  .add-stop-btn {
+    width: 100%;
+    padding: 11px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 7px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .add-stop-btn:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    background: var(--mid);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-dot.blue { background: var(--blue); }
+  .status-dot.green { background: var(--green); }
+  .status-dot.orange { background: var(--orange); animation: pulse 1.5s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* DRIVER ACTIVITY FEED */
+  .activity-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .activity-item:last-child { border-bottom: none; }
+
+  .activity-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+    width: 48px;
+  }
+
+  .activity-text { color: var(--text); }
+  .activity-text strong { color: #fff; }
+
+  /* BROADCAST ANIMATION */
+  .broadcast-btn-wrap {
+    position: relative;
+  }
+
+  .broadcast-pulse {
+    display: none;
+    position: absolute;
+    inset: -4px;
+    border-radius: 11px;
+    border: 2px solid var(--purple);
+    animation: broadcastPulse 1s ease-out infinite;
+  }
+
+  @keyframes broadcastPulse {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.08); }
+  }
+
+  .broadcast-btn-wrap.broadcasting .broadcast-pulse { display: block; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .empty-state .empty-icon { font-size: 32px; margin-bottom: 10px; }
+  .empty-state p { font-size: 14px; }
+
+  /* MOBILE */
+  @media (max-width: 640px) {
+    .stage-tab span:not(.stage-num) { display: none; }
+    .field-row.col-2, .field-row.col-3 { grid-template-columns: 1fr; }
+    .stop-fields { grid-template-columns: 1fr; }
+    .stop-address { grid-column: 1; }
+    .broadcast-summary { grid-template-columns: 1fr 1fr; }
+    .block-window-btn .window-sub { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="https://tackpath.com/index.html" class="wordmark"><span>TACK</span><span>PATH</span></a>
+    <span class="nav-service">Surge</span>
+    <a href="https://tackpath.com/index.html" class="nav-back">← Back</a>
+  </div>
+  <div class="nav-right">
+    <button class="nav-sign-out" onclick="alert('Sign out')">Sign Out</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>Block Dispatch</h1>
+    <p>Configure, build, and broadcast multi-stop delivery blocks to available drivers.</p>
+  </div>
+
+  <!-- STAGE TABS -->
+  <div class="stage-nav">
+    <button class="stage-tab active" id="tab-1" onclick="goToStage(1)">
+      <span class="stage-num">1</span>
+      <span>Configure</span>
+    </button>
+    <button class="stage-tab" id="tab-2" onclick="goToStage(2)">
+      <span class="stage-num">2</span>
+      <span>Stops</span>
+    </button>
+    <button class="stage-tab" id="tab-3" onclick="goToStage(3)">
+      <span class="stage-num">3</span>
+      <span>Routes</span>
+    </button>
+    <button class="stage-tab" id="tab-4" onclick="goToStage(4)">
+      <span class="stage-num">4</span>
+      <span>Broadcast</span>
+    </button>
+  </div>
+
+  <!-- STAGE 1: CONFIGURE -->
+  <div class="panel active" id="panel-1">
+    <div class="card">
+      <div class="card-title">Block Window</div>
+      <div class="field">
+        <label>Duration</label>
+        <div class="block-window-group">
+          <button class="block-window-btn" onclick="selectWindow(this, '4hr')">
+            <span class="window-label">4 hr</span>
+            <span class="window-sub">Half-day block</span>
+          </button>
+          <button class="block-window-btn selected" onclick="selectWindow(this, '6hr')">
+            <span class="window-label">6 hr</span>
+            <span class="window-sub">Standard block</span>
+          </button>
+          <button class="block-window-btn" onclick="selectWindow(this, '8hr')">
+            <span class="window-label">8 hr</span>
+            <span class="window-sub">Full-day block</span>
+          </button>
+        </div>
+      </div>
+      <div class="field-row col-2">
+        <div class="field">
+          <label>Start Time</label>
+          <input type="time" id="config-start-time" value="08:00">
+        </div>
+        <div class="field">
+          <label>Hub Address</label>
+          <input type="text" id="config-hub" placeholder="Warehouse / starting location">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pay Standards</div>
+      <div class="field-row col-3">
+        <div class="field">
+          <label>Block Pay ($)</label>
+          <input type="number" id="config-pay" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="field">
+          <label>Mileage Baseline</label>
+          <input type="number" id="config-miles" placeholder="mi per block" min="0">
+        </div>
+        <div class="field">
+          <label>Max Stops / Block</label>
+          <input type="number" id="config-max-stops" placeholder="e.g. 20" min="1">
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px;">These standards apply to every block built in this session. SmartPath will distribute stops within these parameters.</p>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveConfig()">Save &amp; Continue to Stops &rarr;</button>
+    </div>
+  </div>
+
+  <!-- STAGE 2: STOPS -->
+  <div class="panel" id="panel-2">
+
+    <div class="status-bar">
+      <span class="status-dot blue"></span>
+      <span id="stop-count-status">0 stops entered. Add stops manually or upload a CSV.</span>
+    </div>
+
+    <div class="input-toggle">
+      <button class="input-toggle-btn active" id="toggle-manual" onclick="switchInput('manual')">Manual Entry</button>
+      <button class="input-toggle-btn" id="toggle-csv" onclick="switchInput('csv')">CSV Upload</button>
+    </div>
+
+    <!-- MANUAL ENTRY -->
+    <div id="input-manual">
+      <ul class="stop-list" id="stop-list"></ul>
+      <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+    </div>
+
+    <!-- CSV UPLOAD -->
+    <div id="input-csv" style="display:none;">
+      <div class="csv-drop" id="csv-drop">
+        <input type="file" accept=".csv" onchange="handleCSV(event)">
+        <div class="csv-drop-icon">+</div>
+        <p>Drop your CSV here or click to browse</p>
+        <span class="csv-hint">Columns: recipient_name, address, notes (optional)</span>
+      </div>
+      <div id="csv-preview" style="margin-top:14px;display:none;"></div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="btn-group">
+      <button class="btn btn-ghost" onclick="goToStage(1)">&larr; Back</button>
+      <button class="btn btn-primary" onclick="buildRoutes()">Build Routes with SmartPath &rarr;</button>
+    </div>
+  </div>
+
+  <!-- STAGE 3: ROUTES -->
+  <div class="panel" id="panel-3">
+
+    <div class="status-bar">
+      <span class="status-dot blue"></span>
+      <span id="route-status-text">SmartPath has organized your stops into optimized routes. Review before broadcasting.</span>
+    </div>
+
+    <div class="route-list" id="route-list"></div>
+
+    <hr class="divider">
+
+    <div class="btn-group">
+      <button class="btn btn-ghost" onclick="goToStage(2)">&larr; Back to Stops</button>
+      <button class="btn btn-purple" onclick="goToStage(4)">Proceed to Broadcast &rarr;</button>
+    </div>
+  </div>
+
+  <!-- STAGE 4: BROADCAST -->
+  <div class="panel" id="panel-4">
+
+    <div class="broadcast-summary" id="broadcast-summary">
+      <div class="summary-stat">
+        <span class="stat-val" id="bcast-routes">0</span>
+        <div class="stat-label">Routes ready</div>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-val" id="bcast-stops">0</span>
+        <div class="stat-label">Total stops</div>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-val" id="bcast-pay">$0</span>
+        <div class="stat-label">Pay per block</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Broadcast Settings</div>
+      <div class="field-row col-2">
+        <div class="field">
+          <label>Driver Pool</label>
+          <select id="bcast-pool">
+            <option value="all">All available drivers</option>
+            <option value="preferred">Preferred drivers only</option>
+            <option value="zone">Zone-matched drivers</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Accept Window</label>
+          <select id="bcast-window">
+            <option value="5">5 minutes to accept</option>
+            <option value="10" selected>10 minutes to accept</option>
+            <option value="15">15 minutes to accept</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Broadcast Note (optional)</label>
+        <textarea id="bcast-note" placeholder="Any instructions for drivers -- hub access, PPE requirements, etc."></textarea>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;" id="broadcast-btn-container">
+      <div class="broadcast-btn-wrap" id="bcast-btn-wrap">
+        <div class="broadcast-pulse"></div>
+        <button class="btn btn-purple btn-full" id="bcast-btn" onclick="broadcastNow()" style="font-size:15px;padding:14px;">
+          Broadcast All Routes to Drivers
+        </button>
+      </div>
+    </div>
+
+    <!-- ACTIVITY FEED (shown after broadcast) -->
+    <div class="card" id="activity-card" style="display:none;">
+      <div class="card-title">Driver Activity</div>
+      <div class="activity-feed" id="activity-feed"></div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="btn-group">
+      <button class="btn btn-ghost" onclick="goToStage(3)">&larr; Back to Routes</button>
+      <button class="btn btn-danger" id="cancel-btn" onclick="cancelBroadcast()" style="display:none;">Cancel Broadcast</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // STATE
+  const state = {
+    stage: 1,
+    config: {
+      window: '6hr',
+      startTime: '08:00',
+      hub: '',
+      pay: 0,
+      miles: 0,
+      maxStops: 20
+    },
+    stops: [],
+    routes: [],
+    broadcasting: false,
+    stopCounter: 0
+  };
+
+  // STAGE NAVIGATION
+  function goToStage(n) {
+    if (n > state.stage) return; // must progress forward via buttons
+    setStage(n);
+  }
+
+  function setStage(n) {
+    state.stage = n;
+    document.querySelectorAll('.panel').forEach((p, i) => {
+      p.classList.toggle('active', i + 1 === n);
+    });
+    document.querySelectorAll('.stage-tab').forEach((t, i) => {
+      t.classList.remove('active', 'done');
+      if (i + 1 === n) t.classList.add('active');
+      if (i + 1 < n)  t.classList.add('done');
+    });
+    // update done nums to checkmarks
+    document.querySelectorAll('.stage-tab.done .stage-num').forEach(el => {
+      el.textContent = el.textContent === el.textContent ? el.textContent : el.textContent;
+    });
+  }
+
+  // BLOCK WINDOW
+  function selectWindow(btn, val) {
+    document.querySelectorAll('.block-window-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.config.window = val;
+  }
+
+  // SAVE CONFIG
+  function saveConfig() {
+    const hub = document.getElementById('config-hub').value.trim();
+    const pay = parseFloat(document.getElementById('config-pay').value) || 0;
+    const miles = parseFloat(document.getElementById('config-miles').value) || 0;
+    const maxStops = parseInt(document.getElementById('config-max-stops').value) || 20;
+    const startTime = document.getElementById('config-start-time').value;
+
+    if (!hub) {
+      alert('Please enter a hub address before continuing.');
+      return;
+    }
+    if (!pay) {
+      alert('Please set block pay before continuing.');
+      return;
+    }
+
+    state.config.hub = hub;
+    state.config.pay = pay;
+    state.config.miles = miles;
+    state.config.maxStops = maxStops;
+    state.config.startTime = startTime;
+
+    state.stage = 1;
+    setStage(2);
+    if (state.stops.length === 0) addStop();
+  }
+
+  // STOP MANAGEMENT
+  function addStop() {
+    state.stopCounter++;
+    const id = state.stopCounter;
+    const li = document.createElement('li');
+    li.className = 'stop-item';
+    li.id = 'stop-' + id;
+    li.innerHTML = `
+      <div class="stop-num">${state.stops.length + 1}</div>
+      <div class="stop-fields">
+        <div class="field">
+          <label>Recipient</label>
+          <input type="text" placeholder="Name or business" data-stop-id="${id}" data-field="recipient">
+        </div>
+        <div class="field">
+          <label>Phone (optional)</label>
+          <input type="text" placeholder="Contact number" data-stop-id="${id}" data-field="phone">
+        </div>
+        <div class="field stop-address">
+          <label>Delivery Address</label>
+          <input type="text" placeholder="Street, City, State ZIP" data-stop-id="${id}" data-field="address">
+        </div>
+        <div class="field">
+          <label>Notes (optional)</label>
+          <input type="text" placeholder="Gate code, leave at door, etc." data-stop-id="${id}" data-field="notes">
+        </div>
+      </div>
+      <button class="stop-remove" onclick="removeStop(${id})" title="Remove stop">x</button>
+    `;
+    state.stops.push({ id, recipient: '', phone: '', address: '', notes: '' });
+    document.getElementById('stop-list').appendChild(li);
+    updateStopStatus();
+
+    // bind inputs
+    li.querySelectorAll('[data-stop-id]').forEach(input => {
+      input.addEventListener('input', e => {
+        const s = state.stops.find(s => s.id === id);
+        if (s) s[e.target.dataset.field] = e.target.value;
+        updateStopStatus();
+      });
+    });
+  }
+
+  function removeStop(id) {
+    state.stops = state.stops.filter(s => s.id !== id);
+    document.getElementById('stop-' + id)?.remove();
+    // renumber
+    document.querySelectorAll('.stop-num').forEach((el, i) => el.textContent = i + 1);
+    updateStopStatus();
+  }
+
+  function updateStopStatus() {
+    const n = state.stops.length;
+    document.getElementById('stop-count-status').textContent =
+      n === 0 ? 'No stops entered yet.'
+               : `${n} stop${n !== 1 ? 's' : ''} entered.`;
+  }
+
+  // INPUT TOGGLE
+  function switchInput(mode) {
+    document.getElementById('input-manual').style.display = mode === 'manual' ? '' : 'none';
+    document.getElementById('input-csv').style.display   = mode === 'csv'    ? '' : 'none';
+    document.getElementById('toggle-manual').classList.toggle('active', mode === 'manual');
+    document.getElementById('toggle-csv').classList.toggle('active', mode === 'csv');
+  }
+
+  // CSV HANDLER
+  function handleCSV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const lines = ev.target.result.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+      const rows = lines.slice(1);
+
+      state.stops = [];
+      state.stopCounter = 0;
+      state.routes = [];
+      document.getElementById('stop-list').innerHTML = '';
+
+      const hasRouteId = headers.includes('route_id');
+      const routeMap = {}; // route_id -> [stops]
+
+      rows.forEach(row => {
+        if (!row.trim()) return;
+        // handle commas inside quoted fields
+        const cols = [];
+        let cur = '', inQuote = false;
+        for (let ch of row) {
+          if (ch === '"') { inQuote = !inQuote; continue; }
+          if (ch === ',' && !inQuote) { cols.push(cur.trim()); cur = ''; continue; }
+          cur += ch;
+        }
+        cols.push(cur.trim());
+
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = cols[i] || '');
+
+        const address = obj.address || obj.delivery_address || '';
+        if (!address) return;
+
+        state.stopCounter++;
+        const stop = {
+          id: state.stopCounter,
+          recipient: obj.recipient_name || obj.recipient || '',
+          phone: obj.phone || '',
+          address,
+          notes: obj.notes || '',
+          routeId: hasRouteId ? obj.route_id : null
+        };
+        state.stops.push(stop);
+
+        if (hasRouteId && obj.route_id) {
+          if (!routeMap[obj.route_id]) routeMap[obj.route_id] = [];
+          routeMap[obj.route_id].push(stop);
+        }
+      });
+
+      const preview = document.getElementById('csv-preview');
+      preview.style.display = '';
+
+      if (hasRouteId && Object.keys(routeMap).length > 0) {
+        // Pre-grouped CSV -- build routes directly, SmartPath will sequence within each
+        const routeIds = Object.keys(routeMap);
+        state.routes = routeIds.map(rid => ({
+          id: rid,
+          stops: routeMap[rid],
+          status: 'pending',
+          driver: null
+        }));
+
+        preview.innerHTML = `
+          <div class="status-bar">
+            <span class="status-dot green"></span>
+            <span>${state.stops.length} stops across ${state.routes.length} routes loaded. SmartPath will sequence each route. Proceed to Routes to review.</span>
+          </div>
+        `;
+
+        // Show a proceed button that skips to stage 3
+        preview.innerHTML += `
+          <div class="btn-group" style="margin-top:14px;">
+            <button class="btn btn-primary" onclick="proceedFromCSV()">Review Routes &rarr;</button>
+          </div>
+        `;
+      } else {
+        // Flat stop list -- SmartPath will group and sequence
+        preview.innerHTML = `
+          <div class="status-bar">
+            <span class="status-dot green"></span>
+            <span>${state.stops.length} stops loaded. SmartPath will build and sequence routes. Click "Build Routes" to continue.</span>
+          </div>
+        `;
+      }
+
+      updateStopStatus();
+    };
+    reader.readAsText(file);
+  }
+
+  function proceedFromCSV() {
+    if (state.routes.length === 0) return;
+    // SmartPath sequences stops within each pre-grouped route
+    state.routes.forEach(route => {
+      // Simulate SmartPath reordering stops for optimal path
+      route.stops = [...route.stops].sort(() => Math.random() - 0.5);
+    });
+    renderRoutes();
+    updateBroadcastSummary();
+    setStage(3);
+  }
+
+  // BUILD ROUTES (SmartPath simulation)
+  function buildRoutes() {
+    const validStops = state.stops.filter(s => s.address.trim());
+    if (validStops.length === 0) {
+      alert('Add at least one stop with an address before building routes.');
+      return;
+    }
+
+    // Simulate SmartPath distributing stops into routes
+    const maxPerRoute = state.config.maxStops || 20;
+    state.routes = [];
+    let routeNum = 1;
+
+    for (let i = 0; i < validStops.length; i += maxPerRoute) {
+      const chunk = validStops.slice(i, i + maxPerRoute);
+      state.routes.push({
+        id: 'SR-' + String(routeNum).padStart(3, '0'),
+        stops: chunk,
+        status: 'pending',
+        driver: null
+      });
+      routeNum++;
+    }
+
+    renderRoutes();
+    setStage(3);
+    updateBroadcastSummary();
+  }
+
+  function renderRoutes() {
+    const list = document.getElementById('route-list');
+    list.innerHTML = '';
+
+    if (state.routes.length === 0) {
+      list.innerHTML = '<div class="empty-state"><p>No routes built yet.</p></div>';
+      return;
+    }
+
+    state.routes.forEach(route => {
+      const el = document.createElement('div');
+      el.className = 'route-card';
+      el.id = 'route-' + route.id;
+      const windowLabel = state.config.window === '4hr' ? '4 hr' : state.config.window === '8hr' ? '8 hr' : '6 hr';
+      el.innerHTML = `
+        <div class="route-card-id">${route.id}</div>
+        <div class="route-card-info">
+          <div class="route-card-stops">${route.stops.length} stop${route.stops.length !== 1 ? 's' : ''}</div>
+          <div class="route-card-meta">
+            <span>${windowLabel} block</span>
+            <span>$${state.config.pay.toFixed(2)}</span>
+            <span>Hub: ${state.config.hub || 'TBD'}</span>
+          </div>
+        </div>
+        <div class="route-status ${route.status}" id="status-${route.id}">${route.status.charAt(0).toUpperCase() + route.status.slice(1)}</div>
+      `;
+      list.appendChild(el);
+    });
+
+    document.getElementById('route-status-text').textContent =
+      `SmartPath built ${state.routes.length} route${state.routes.length !== 1 ? 's' : ''} from ${state.stops.filter(s => s.address).length} stops. Review before broadcasting.`;
+  }
+
+  // BROADCAST SUMMARY
+  function updateBroadcastSummary() {
+    document.getElementById('bcast-routes').textContent = state.routes.length;
+    document.getElementById('bcast-stops').textContent = state.stops.filter(s => s.address).length;
+    document.getElementById('bcast-pay').textContent = '$' + (state.config.pay || 0).toFixed(0);
+  }
+
+  // BROADCAST
+  function broadcastNow() {
+    if (state.routes.length === 0) return;
+
+    state.broadcasting = true;
+    document.getElementById('bcast-btn-wrap').classList.add('broadcasting');
+    document.getElementById('bcast-btn').textContent = 'Broadcasting...';
+    document.getElementById('bcast-btn').disabled = true;
+    document.getElementById('cancel-btn').style.display = '';
+    document.getElementById('activity-card').style.display = '';
+
+    // Mark all routes as broadcast
+    state.routes.forEach(r => {
+      r.status = 'broadcast';
+      const el = document.getElementById('status-' + r.id);
+      if (el) { el.className = 'route-status broadcast'; el.textContent = 'Broadcast'; }
+    });
+
+    // simulate driver responses
+    const feed = document.getElementById('activity-feed');
+    feed.innerHTML = '';
+
+    addActivity('Broadcast sent to all available drivers.', true);
+
+    // Fire to dispatcher.html ops board
+    try {
+      const broadcastPayload = {
+        blocks: state.routes.map(r => ({
+          id: r.id,
+          stops: r.stops.length,
+          stopsCompleted: 0,
+          status: 'broadcast',
+          driver: null,
+          exception: false,
+          exceptionMsg: '',
+          window: state.config.window,
+          pay: state.config.pay,
+          hub: state.config.hub
+        })),
+        timestamp: Date.now()
+      };
+      localStorage.setItem('surge_broadcast', JSON.stringify(broadcastPayload));
+    } catch(e) {}
+
+    const drivers = ['Driver D-104', 'Driver D-217', 'Driver D-089', 'Driver D-331', 'Driver D-158'];
+    const routeIds = state.routes.map(r => r.id);
+
+    routeIds.forEach((routeId, i) => {
+      const delay = 2000 + (i * 3500) + Math.random() * 2000;
+      setTimeout(() => {
+        if (!state.broadcasting) return;
+        const driver = drivers[i % drivers.length];
+        const accepted = Math.random() > 0.25;
+        const route = state.routes.find(r => r.id === routeId);
+        if (route) {
+          route.status = accepted ? 'accepted' : 'rejected';
+          route.driver = accepted ? driver : null;
+          const el = document.getElementById('status-' + routeId);
+          if (el) {
+            el.className = 'route-status ' + route.status;
+            el.textContent = accepted ? 'Accepted' : 'Rejected';
+          }
+          addActivity(
+            accepted
+              ? `<strong>${driver}</strong> accepted route ${routeId}`
+              : `<strong>${driver}</strong> declined route ${routeId}`,
+            false
+          );
+          // Update dispatcher board with driver binding
+          try {
+            const current = JSON.parse(localStorage.getItem('surge_broadcast')||'{}');
+            if(current.blocks){
+              const blk = current.blocks.find(b=>b.id===routeId);
+              if(blk){ blk.status=route.status; blk.driver=route.driver||null; }
+              localStorage.setItem('surge_broadcast', JSON.stringify(current));
+            }
+          } catch(e) {}
+        }
+
+        // Check if all routes resolved
+        const unresolved = state.routes.filter(r => r.status === 'broadcast').length;
+        if (unresolved === 0) {
+          const accepted = state.routes.filter(r => r.status === 'accepted').length;
+          addActivity(`Broadcast complete. ${accepted} of ${routeIds.length} routes accepted.`, true);
+          document.getElementById('bcast-btn').textContent = 'Broadcast Complete';
+          document.getElementById('bcast-btn-wrap').classList.remove('broadcasting');
+          document.getElementById('cancel-btn').style.display = 'none';
+          state.broadcasting = false;
+        }
+      }, delay);
+    });
+  }
+
+  function addActivity(text, isSys) {
+    const feed = document.getElementById('activity-feed');
+    const now = new Date();
+    const t = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    const el = document.createElement('div');
+    el.className = 'activity-item';
+    el.innerHTML = `
+      <span class="activity-time">${t}</span>
+      <span class="activity-text" style="${isSys ? 'color:var(--muted);font-size:12px;' : ''}">${text}</span>
+    `;
+    feed.prepend(el);
+  }
+
+  function cancelBroadcast() {
+    state.broadcasting = false;
+    document.getElementById('bcast-btn-wrap').classList.remove('broadcasting');
+    document.getElementById('bcast-btn').textContent = 'Broadcast All Routes to Drivers';
+    document.getElementById('bcast-btn').disabled = false;
+    document.getElementById('cancel-btn').style.display = 'none';
+    state.routes.forEach(r => {
+      if (r.status === 'broadcast') {
+        r.status = 'pending';
+        const el = document.getElementById('status-' + r.id);
+        if (el) { el.className = 'route-status pending'; el.textContent = 'Pending'; }
+      }
+    });
+    addActivity('Broadcast cancelled.', true);
+  }
+
+  // INIT
+  addStop();
+</script>
+</body>
+</html>
