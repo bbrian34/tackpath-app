@@ -1162,7 +1162,6 @@ function showScreen(id){
     if(dBtn){dBtn.style.background='';dBtn.style.borderColor='';dBtn.style.color='';}
     // Do NOT reset bgMsgCount here - just clear visual indicators
     // bgMsgCount resets only when a new job starts
-    lastMsgCount=0;
     loadMessages();
     commsInterval=setInterval(loadMessages,4000);
   } else {
@@ -1463,41 +1462,53 @@ async function startDelivery(){
 }
 
 // ── BACKGROUND MESSAGE POLL ──
-let bgMsgInterval=null,bgMsgCount=0;
+let bgMsgInterval=null;
+let lastSeenMsgId=null; // track by ID not count -- prevents double-firing
+
 function startBgMsgPoll(){
   if(bgMsgInterval)clearInterval(bgMsgInterval);
-  bgMsgCount=0;
+  lastSeenMsgId=null;
+  // Seed with current latest message so we don't alert on old ones
+  if(currentJob&&currentJob.id){
+    fetch(SB+'/rest/v1/messages?job_id=eq.'+currentJob.id+'&sender_role=eq.dispatcher&order=created_at.desc&limit=1&apikey='+KEY,{headers:GH})
+      .then(r=>r.json()).then(msgs=>{ if(msgs&&msgs.length) lastSeenMsgId=msgs[0].id; }).catch(()=>{});
+  }
   bgMsgInterval=setInterval(async()=>{
     if(!currentJob||!currentJob.id)return;
+    // Skip if comms screen is open -- loadMessages handles display there
     try{
-      const url=SB+'/rest/v1/messages?job_id=eq.'+currentJob.id+'&sender_role=eq.dispatcher&order=created_at.asc&apikey='+KEY;
+      const url=SB+'/rest/v1/messages?job_id=eq.'+currentJob.id+'&sender_role=eq.dispatcher&order=created_at.desc&limit=1&apikey='+KEY;
       const r=await fetch(url,{headers:GH});
       if(!r.ok)return;
       const msgs=await r.json();
       if(!msgs||!msgs.length)return;
-      const count=msgs.length;
-      if(count>bgMsgCount){
-        const newMsg=msgs[msgs.length-1].body;
-        playMsgAlert();
-        showMsgNotification(newMsg);
-        sendMsgPushNotification(newMsg);
-        remySpeakDispatchMsg(newMsg);
+      const latest=msgs[0];
+      if(latest.id!==lastSeenMsgId){
+        lastSeenMsgId=latest.id;
+        const onComms=document.getElementById('scComms')?.classList.contains('on');
+        if(!onComms){
+          playMsgAlert();
+          showMsgNotification(latest.body);
+          sendMsgPushNotification(latest.body);
+        }
+        // Always try voice
+        remySpeakDispatchMsg(latest.body);
+        // Light up UI indicators
         const dot=document.getElementById('dispatchDot');
         if(dot)dot.style.display='inline-block';
         const dBtn=document.getElementById('dispatchJobBtn');
-        if(dBtn){dBtn.style.background='rgba(255,59,48,.15)';dBtn.style.borderColor='rgba(255,59,48,.4)';dBtn.style.color='#ff3b30';}
+        if(dBtn){dBtn.style.background='rgba(255,59,48,.15)';dBtn.style.borderColor='rgba(255,59,48,.4)';dBtn.style.color='#ff3b30';setTimeout(()=>{dBtn.style.background='';dBtn.style.borderColor='';dBtn.style.color='';},5000);}
         const badge=document.getElementById('msgBadge');
         if(badge){badge.style.display='block';badge.style.background='#ff3b30';badge.style.boxShadow='0 0 8px rgba(255,59,48,.8)';}
         const bn=document.querySelectorAll('.bn')[1];
         if(bn){bn.style.background='rgba(255,59,48,.15)';bn.style.borderRadius='12px';setTimeout(()=>{bn.style.background='';},5000);}
       }
-      bgMsgCount=count;
     }catch(e){}
   },5000);
 }
 function stopBgMsgPoll(){
   if(bgMsgInterval){clearInterval(bgMsgInterval);bgMsgInterval=null;}
-  bgMsgCount=0;
+  lastSeenMsgId=null;
 }
 
 // ── JOB STATUS POLLING ──
@@ -1609,55 +1620,7 @@ async function loadMessages(){
     }
     commsEl.innerHTML=html;
     if(atBottom)commsEl.scrollTop=commsEl.scrollHeight;
-    // Detect new messages from dispatcher and alert
-    if(msgs&&msgs.length){
-      const dispatchMsgs=msgs.filter(m=>m.sender_role==='dispatcher');
-      const newCount=dispatchMsgs.length;
-      if(newCount>lastMsgCount&&lastMsgCount>=0&&newCount>0){
-        const onComms=document.getElementById('scComms').classList.contains('on');
-        if(!onComms){
-          playMsgAlert();
-          const newMsg=dispatchMsgs[dispatchMsgs.length-1].body;
-          showMsgNotification(newMsg);
-          sendMsgPushNotification(newMsg);
-          // Remy reads the message aloud
-          remySpeakDispatchMsg(newMsg);
-        }
-        // Light up chat button in nav
-        const badge=document.getElementById('msgBadge');
-        if(badge){
-          badge.style.display='block';
-          badge.style.width='12px';badge.style.height='12px';
-          badge.style.background='#ff3b30';
-          badge.style.boxShadow='0 0 8px rgba(255,59,48,.8)';
-          badge.style.animation='blink 1s infinite';
-        }
-        // Flash comms nav button
-        const commsBtn=document.querySelectorAll('.bn')[1];
-        if(commsBtn){
-          commsBtn.style.background='rgba(255,59,48,.15)';
-          commsBtn.style.borderRadius='12px';
-          setTimeout(()=>{commsBtn.style.background='';},3000);
-        }
-        // Red dot on Dispatch button in job sheet
-        const dot=document.getElementById('dispatchDot');
-        if(dot) dot.style.display='inline-block';
-        // Flash the dispatch button itself
-        const dBtn=document.getElementById('dispatchJobBtn');
-        if(dBtn){
-          dBtn.style.background='rgba(255,59,48,.15)';
-          dBtn.style.borderColor='rgba(255,59,48,.4)';
-          dBtn.style.color='#ff3b30';
-          setTimeout(()=>{
-            dBtn.style.background='';dBtn.style.borderColor='';dBtn.style.color='';
-          },5000);
-        }
-      }
-      lastMsgCount=newCount;
-      if(!document.getElementById('scComms').classList.contains('on')){
-        document.getElementById('msgBadge').style.display='block';
-      }
-    }
+    // bgMsgPoll owns notifications and voice -- loadMessages just updates the chat UI
   }catch(e){console.error('Load messages error:',e);}
 }
 
