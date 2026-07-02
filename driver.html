@@ -442,10 +442,13 @@ body{font-family:var(--sans);color:#fff;background:var(--bg);height:100dvh;overf
   <div class="comms-msgs" id="commsBody">
     <div class="c-sys">Messages between you and your dispatcher appear here</div>
   </div>
-  <div class="comms-inp-row">
-    <input class="comms-inp" id="commsInp" placeholder="Message dispatcher..."
-      onkeydown="if(event.key==='Enter')sendMsg();"/>
-    <button class="comms-send" onclick="sendMsg()">&#8594;</button>
+  <div id="commsRubyBar" style="display:flex;align-items:center;gap:14px;padding:14px 18px 30px;background:#07101e;border-top:1px solid rgba(25,183,239,.15);flex-shrink:0;">
+    <div style="flex:1;">
+      <div id="commsRubyLabel" style="font-size:13px;font-weight:600;color:#4a6e88;font-family:var(--mono);">Tap Ruby to speak to dispatch</div>
+      <div id="commsRubyTranscript" style="font-size:12px;color:rgba(255,255,255,.4);margin-top:3px;min-height:16px;"></div>
+    </div>
+    <button id="commsRubyBtn" onclick="activateCommsRuby()"
+      style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#8d5cff,#5533cc);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;font-family:var(--sans);letter-spacing:.04em;box-shadow:0 6px 24px rgba(141,92,255,.45);flex-shrink:0;transition:background .2s;">Ruby</button>
   </div>
 </div>
 
@@ -1663,6 +1666,119 @@ function showMsgNotification(text){
   },4000);
 }
 
+// ── COMMS RUBY VOICE ──
+let commsRubyActive = false;
+let commsRubyRecognition = null;
+
+function activateCommsRuby() {
+  if(commsRubyActive) return;
+  const btn = document.getElementById('commsRubyBtn');
+  const label = document.getElementById('commsRubyLabel');
+  const transcript = document.getElementById('commsRubyTranscript');
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) {
+    // Fallback: show a native prompt
+    const msg = prompt('Type your message to dispatch:');
+    if(msg && msg.trim()) sendCommsMessage(msg.trim());
+    return;
+  }
+
+  commsRubyActive = true;
+  if(btn) {
+    btn.style.background = 'linear-gradient(135deg,#ff3b30,#cc1100)';
+    btn.style.boxShadow = '0 6px 28px rgba(255,59,48,.6)';
+    btn.textContent = '...';
+  }
+  if(label) label.textContent = 'Listening...';
+  if(transcript) transcript.textContent = '';
+
+  commsRubyRecognition = new SpeechRecognition();
+  commsRubyRecognition.lang = 'en-US';
+  commsRubyRecognition.continuous = false;
+  commsRubyRecognition.interimResults = true;
+  commsRubyRecognition.maxAlternatives = 1;
+
+  commsRubyRecognition.onresult = (e) => {
+    const text = Array.from(e.results).map(r => r[0].transcript).join('').trim();
+    if(transcript) transcript.textContent = text;
+    if(e.results[0].isFinal) {
+      resetCommsRuby();
+      if(text) sendCommsMessage(text);
+    }
+  };
+
+  commsRubyRecognition.onend = () => {
+    resetCommsRuby();
+  };
+
+  commsRubyRecognition.onerror = (e) => {
+    resetCommsRuby();
+    if(e.error !== 'no-speech') toast('Ruby could not hear you. Try again.','warn');
+  };
+
+  try { commsRubyRecognition.start(); } catch(e) { resetCommsRuby(); }
+
+  // Auto stop after 10 seconds
+  setTimeout(() => {
+    if(commsRubyActive) {
+      try { commsRubyRecognition.stop(); } catch(e) {}
+    }
+  }, 10000);
+}
+
+function resetCommsRuby() {
+  commsRubyActive = false;
+  const btn = document.getElementById('commsRubyBtn');
+  const label = document.getElementById('commsRubyLabel');
+  if(btn) {
+    btn.style.background = 'linear-gradient(135deg,#8d5cff,#5533cc)';
+    btn.style.boxShadow = '0 6px 24px rgba(141,92,255,.45)';
+    btn.textContent = 'Ruby';
+  }
+  if(label) label.textContent = 'Tap Ruby to speak to dispatch';
+}
+
+async function sendCommsMessage(text) {
+  if(!text) return;
+  const label = document.getElementById('commsRubyLabel');
+  if(label) label.textContent = 'Sending...';
+
+  // Optimistic UI
+  const msgBody = document.getElementById('commsBody');
+  const t = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+  const d = document.createElement('div'); d.className = 'c-wrap';
+  d.innerHTML = '<div class="c-meta r">You · '+t+'</div><div class="c-bubble c-out" style="align-self:flex-end;">'+text+'</div>';
+  msgBody.appendChild(d); msgBody.scrollTop = msgBody.scrollHeight;
+
+  // Confirm via voice
+  try {
+    const utt = new SpeechSynthesisUtterance('Message sent to dispatch.');
+    utt.volume = 0.6; utt.rate = 1.1; utt.pitch = 1.1;
+    window.speechSynthesis.speak(utt);
+  } catch(e) {}
+
+  const transcript = document.getElementById('commsRubyTranscript');
+  if(transcript) setTimeout(() => { transcript.textContent = ''; }, 2000);
+  if(label) setTimeout(() => { label.textContent = 'Tap Ruby to speak to dispatch'; }, 2000);
+
+  try {
+    const msgData = { sender: driver ? driver.name : 'Driver', sender_role: 'driver', body: text };
+    if(currentJob && currentJob.id) msgData.job_id = currentJob.id;
+    const resp = await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages', {
+      method: 'POST',
+      headers: {
+        'apikey': 'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp',
+        'Authorization': 'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(msgData)
+    });
+    if(!resp.ok) toast('Send failed','warn');
+  } catch(e) { toast('Send error: '+e.message,'warn'); }
+}
+
 async function sendMsg(){
   const inp=document.getElementById('commsInp');
   const text=inp.value.trim();
@@ -1762,23 +1878,102 @@ async function startCamera() {
   const chip  = document.getElementById('scanStatusChip');
   try {
     scanStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
     });
     video.srcObject = scanStream;
+    await video.play();
     chip.textContent = 'Camera ready — point at barcode';
     chip.style.color = 'var(--green)';
-    // In production: wire BarcodeDetector or ZXing here
-    // For now simulate a scan every 4 seconds if camera is active
-    startScanSimulation();
+    // Use BarcodeDetector API (Chrome on Android supports this natively)
+    if('BarcodeDetector' in window) {
+      startBarcodeDetector(video);
+    } else {
+      // Fallback: ZXing via CDN
+      startZXingScanner(video);
+    }
   } catch(e) {
-    chip.textContent = 'Camera unavailable — use manual entry';
+    chip.textContent = 'Camera unavailable — use manual entry below';
     chip.style.color = 'var(--orange)';
+    console.error('Camera error:', e);
+  }
+}
+
+let barcodeDetectorInterval = null;
+
+function startBarcodeDetector(video) {
+  const detector = new BarcodeDetector({
+    formats: ['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','pdf417','aztec','data_matrix','itf']
+  });
+  const canvas = document.getElementById('scanCanvas');
+  const ctx = canvas.getContext('2d');
+  if(barcodeDetectorInterval) clearInterval(barcodeDetectorInterval);
+  barcodeDetectorInterval = setInterval(async () => {
+    if(!scanStream || video.readyState < 2) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    try {
+      const barcodes = await detector.detect(canvas);
+      if(barcodes && barcodes.length > 0) {
+        const code = barcodes[0].rawValue;
+        if(code && !scannedPackages.find(p=>p.barcode===code)) {
+          processScan(code);
+        }
+      }
+    } catch(e) {}
+  }, 300);
+}
+
+async function startZXingScanner(video) {
+  // Load ZXing dynamically
+  try {
+    if(!window.ZXing) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/@zxing/library@latest/umd/index.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+    const hints = new Map();
+    const formats = [
+      ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A,
+      ZXing.BarcodeFormat.DATA_MATRIX, ZXing.BarcodeFormat.PDF_417
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    const reader = new ZXing.MultiFormatReader();
+    reader.setHints(hints);
+    const canvas = document.getElementById('scanCanvas');
+    const ctx = canvas.getContext('2d');
+    if(barcodeDetectorInterval) clearInterval(barcodeDetectorInterval);
+    barcodeDetectorInterval = setInterval(() => {
+      if(!scanStream || video.readyState < 2) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      try {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const luminance = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
+        const binary = new ZXing.HybridBinarizer(luminance);
+        const result = reader.decode(new ZXing.BinaryBitmap(binary));
+        if(result && result.text && !scannedPackages.find(p=>p.barcode===result.text)) {
+          processScan(result.text);
+        }
+      } catch(e) {}
+    }, 400);
+  } catch(e) {
+    const chip = document.getElementById('scanStatusChip');
+    if(chip) { chip.textContent = 'Use manual entry below'; chip.style.color = 'var(--orange)'; }
   }
 }
 
 function stopCamera() {
   if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
   if(scanInterval){ clearInterval(scanInterval); scanInterval=null; }
+  if(barcodeDetectorInterval){ clearInterval(barcodeDetectorInterval); barcodeDetectorInterval=null; }
 }
 
 let simIndex = 0;
