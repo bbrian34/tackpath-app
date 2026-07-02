@@ -399,37 +399,44 @@ body{font-family:var(--sans);color:#fff;background:var(--bg);height:100dvh;overf
 </div>
 
 <!-- ACTIVE JOB -->
-<div class="screen" id="scJob">
+<div class="screen" id="scJob" style="background:#02060e;">
+  <!-- Map fills top half -->
   <div class="job-map">
     <iframe id="jobMap" src="about:blank" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
     <div class="jmap-sig" id="mapSig">—</div>
     <div class="jmap-status" id="mapStatus" style="border:1px solid rgba(83,255,136,.4);color:#53ff88;">Assigned</div>
   </div>
-  <div class="job-sheet">
-    <div class="js-dest-lbl" id="destLbl">PICKUP FROM</div>
-    <div class="js-dest" id="destAddr">—</div>
-    <button class="js-action jsa-wait" id="jobBtn" onclick="handleJobAction()">Waiting for customer...</button>
-    <div class="js-row">
-      <a id="navLink" href="#" target="_blank" class="js-btn jsb-nav">&#9194; Navigate</a>
-      <button class="js-btn jsb-msg" onclick="showComms()" id="dispatchJobBtn">
-        &#128172; Dispatch
-        <span id="dispatchDot" style="display:none;width:10px;height:10px;border-radius:50%;
-          background:#ff3b30;margin-left:6px;display:none;
-          box-shadow:0 0 8px rgba(255,59,48,.9);animation:blink 1s infinite;
-          vertical-align:middle;"></span>
+  <!-- Bottom sheet -->
+  <div style="background:#07101e;border-top:2px solid rgba(25,183,239,.15);padding:18px 18px 0;overflow-y:auto;flex-shrink:0;">
+    <!-- Destination -->
+    <div style="font-family:var(--mono);font-size:10px;font-weight:600;color:#4a6e88;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px;" id="destLbl">PICKUP FROM</div>
+    <div style="font-size:19px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:14px;" id="destAddr">—</div>
+    <!-- Scanned badge - shows after scanning -->
+    <div id="scannedBadge" style="display:none;padding:10px 14px;border-radius:12px;background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.25);margin-bottom:12px;display:none;align-items:center;gap:10px;">
+      <span style="font-size:16px;">&#9638;</span>
+      <span id="scannedBadgeText" style="font-size:13px;font-weight:700;color:#8d5cff;">0 packages loaded</span>
+    </div>
+    <!-- Main action button -->
+    <button class="js-action jsa-wait" id="jobBtn" onclick="handleJobAction()">Waiting for confirmation...</button>
+    <!-- Secondary row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <a id="navLink" href="#" target="_blank" style="padding:14px;border-radius:13px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:#19b7ef;font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">Navigate</a>
+      <button onclick="showComms()" id="dispatchJobBtn" style="padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#8ab4cc;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+        Dispatch<span id="dispatchDot" style="display:none;width:8px;height:8px;border-radius:50%;background:#ff3b30;box-shadow:0 0 8px rgba(255,59,48,.9);animation:blink 1s infinite;"></span>
       </button>
     </div>
-    <div style="padding:0 16px 12px;">
-      <button onclick="openScanner()" style="width:100%;padding:13px;border-radius:13px;background:rgba(141,92,255,.12);border:1px solid rgba(141,92,255,.3);color:var(--purple);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-        <span style="font-size:18px;">&#9638;</span> Scan Packages
-      </button>
+    <!-- Scan button -->
+    <button onclick="openScanner()" style="width:100%;padding:13px;border-radius:13px;background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.25);color:#8d5cff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;">
+      &#9638; Scan Packages
+    </button>
+    <!-- Ruby bar -->
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 0 28px;border-top:1px solid rgba(255,255,255,.06);">
+      <div style="flex:1;">
+        <div style="font-family:var(--mono);font-size:9px;font-weight:600;color:#4a6e88;letter-spacing:.1em;text-transform:uppercase;">Voice Command</div>
+        <div id="rubyJobLabel" style="font-size:13px;color:#8ab4cc;margin-top:2px;">Tap Ruby to speak</div>
+      </div>
+      <button class="remy-btn" id="remyBtn" onclick="activateRemy();unlockSpeech();">Ruby</button>
     </div>
-    </div>
-    <!-- REMY BUTTON -->
-    <div style="display:flex;align-items:center;justify-content:center;padding:14px 0 4px;">
-      <button class="remy-btn" id="remyBtn" onclick="activateRemy()">Ruby</button>
-    </div>
-    <div style="text-align:center;font-family:var(--mono);font-size:9px;color:#8ab8d4;margin-top:4px;letter-spacing:.08em;">TAP TO SPEAK TO RUBY</div>
   </div>
 </div>
 
@@ -667,10 +674,14 @@ function unlockAudio(){
     src.buffer=buf;src.connect(ctx.destination);src.start(0);
     audioUnlocked=true;
   }catch(e){}
-  // Also unlock speechSynthesis — must be called from a user gesture
+  unlockSpeech();
+}
+// Separate speech unlock -- must be called from a direct user gesture
+function unlockSpeech(){
   try{
-    const utt=new SpeechSynthesisUtterance('');
-    utt.volume=0;
+    window.speechSynthesis.cancel();
+    const utt=new SpeechSynthesisUtterance(' ');
+    utt.volume=0;utt.rate=2;
     window.speechSynthesis.speak(utt);
   }catch(e){}
 }
@@ -1028,22 +1039,21 @@ async function askClaude(userMsg,systemPrompt){
 function remySpeakDispatchMsg(msg){
   if(!msg)return;
   try{
-    // Resume speech synthesis if paused (PWA issue)
-    if(remySpeechSynth.paused)remySpeechSynth.resume();
-    remySpeechSynth.cancel();
-    // Small delay to let cancel complete
+    if(remySpeechSynth.speaking||remySpeechSynth.pending) remySpeechSynth.cancel();
+    if(remySpeechSynth.paused) remySpeechSynth.resume();
     setTimeout(()=>{
       const utt=new SpeechSynthesisUtterance('Dispatch says: '+msg);
-      // Reload voices in case they were not loaded yet
       const voices=remySpeechSynth.getVoices();
-      const voice=voices.find(v=>v.lang==='en-US'&&!v.name.includes('Compact'))
-        ||voices.find(v=>v.lang.startsWith('en'))
+      const voice=voices.find(v=>v.lang==='en-US'&&!v.name.toLowerCase().includes('compact'))
+        ||voices.find(v=>v.lang.startsWith('en-'))
         ||null;
-      if(voice)utt.voice=voice;
-      utt.rate=1.0;utt.pitch=1.1;utt.volume=1;
+      if(voice) utt.voice=voice;
+      utt.rate=1.0; utt.pitch=1.1; utt.volume=1;
+      // Chrome Android workaround: re-trigger if speech stops mid-way
+      utt.onend=()=>{ remySpeechSynth.cancel(); };
       remySpeechSynth.speak(utt);
-    },100);
-  }catch(e){console.warn('Speech error:',e);}
+    },150);
+  }catch(e){ console.warn('Speech error:',e); }
 }
 
 // ── GPS TRACKING ──
@@ -2071,7 +2081,13 @@ function updateScanDoneBtn() {
 function doneScanningAll() {
   if(!scannedPackages.length) return;
   stopCamera();
-  buildOptimizedManifest();
+  // Show scanned badge on job screen and return to job
+  const badge = document.getElementById('scannedBadge');
+  const badgeText = document.getElementById('scannedBadgeText');
+  if(badge) { badge.style.display='flex'; }
+  if(badgeText) { badgeText.textContent = scannedPackages.length + ' package' + (scannedPackages.length!==1?'s':'') + ' loaded'; }
+  toast(scannedPackages.length + ' packages scanned. Tap Start Delivery when ready.','ok');
+  showScreen('scJob');
 }
 
 // SmartPath route optimization (simulated -- groups by address proximity)
