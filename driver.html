@@ -691,13 +691,12 @@ function unlockSpeech(){
 
 function speak(text){
   try{
-    if(synth.speaking||synth.pending) synth.cancel();
-    setTimeout(()=>{
-      const u=new SpeechSynthesisUtterance(text);
-      if(synthVoice) u.voice=synthVoice;
-      u.rate=1.0; u.pitch=1.1; u.volume=1;
-      synth.speak(u);
-    },100);
+    synth.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    if(synthVoice) u.voice=synthVoice;
+    u.rate=1.0; u.pitch=1.1; u.volume=1;
+    // No onend handler -- fire once and done
+    setTimeout(()=>synth.speak(u), 150);
   }catch(e){}
 }
 
@@ -755,8 +754,9 @@ function startDispatchPoll(){
         playMsgAlert();
         showDispatchNotif(latest.body);
       }
-      // Always speak
-      speak('Dispatch says: '+latest.body);
+      // Speak once -- cancel first to stop any looping
+      synth.cancel();
+      setTimeout(()=>speak('Dispatch says: '+latest.body), 200);
       // Light up indicators
       const dot=document.getElementById('dispatchDot');
       if(dot)dot.style.display='inline-block';
@@ -783,9 +783,9 @@ function showDispatchNotif(text){
   n.id='dispNotif';
   n.className='dispatch-notif';
   n.innerHTML='<div class="dn-icon">&#128172;</div><div class="dn-info"><div class="dn-from">Dispatch says</div><div class="dn-body">'+text.slice(0,100)+'</div></div><div class="dn-tap">TAP</div>';
-  n.onclick=()=>{ speak('Dispatch says: '+text); n.remove(); };
+  n.onclick=()=>{ synth.cancel(); speak('Dispatch says: '+text); n.remove(); };
   document.body.appendChild(n);
-  setTimeout(()=>{ if(document.getElementById('dispNotif')===n){ n.style.opacity='0';n.style.transition='opacity .4s';setTimeout(()=>n.remove(),400); } },7000);
+  setTimeout(()=>{ if(document.getElementById('dispNotif')===n){ n.style.opacity='0';n.style.transition='opacity .4s';setTimeout(()=>n.remove(),400); } },6000);
 }
 
 // ── LOGIN ──
