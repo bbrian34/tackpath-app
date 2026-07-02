@@ -136,43 +136,59 @@ input,textarea{font-family:var(--sans);}
   font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blue);}
 .map-status{position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;
   background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;}
-.job-sheet{background:var(--card);border-top:2px solid rgba(25,183,239,.12);
-  padding:18px 18px 0;flex-shrink:0;}
+/* Bottom sheet -- clean, focused */
+.job-sheet{background:var(--card);border-top:2px solid rgba(25,183,239,.1);
+  padding:20px 20px 0;flex-shrink:0;}
+/* Destination block */
 .dest-lbl{font-family:var(--mono);font-size:9px;font-weight:600;color:#4a6e88;
-  letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
-.dest-addr{font-size:18px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:14px;}
-.job-action{width:100%;padding:18px;border-radius:16px;font-size:18px;font-weight:900;
-  border:none;cursor:pointer;margin-bottom:10px;transition:transform .1s;}
-.job-action:active{transform:scale(.98);}
-.ja-wait{background:rgba(255,255,255,.06);color:#4a6e88;cursor:default;font-size:14px;}
-.ja-start{background:linear-gradient(135deg,var(--purple),#5533cc);color:#fff;
-  box-shadow:0 8px 24px rgba(141,92,255,.3);}
-.ja-deliver{background:linear-gradient(135deg,var(--green),#22cc66);color:#02060e;
-  box-shadow:0 8px 24px rgba(83,255,136,.25);}
-.job-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
-.job-btn{padding:14px;border-radius:13px;font-size:13px;font-weight:700;
-  cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:6px;}
-.jb-nav{background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);
-  color:var(--blue);text-decoration:none;}
-.jb-msg{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#8ab4cc;}
-.jb-scan{background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);
-  color:var(--purple);width:100%;margin-bottom:10px;}
-.scan-badge{display:none;align-items:center;gap:8px;padding:9px 14px;
-  border-radius:12px;background:rgba(141,92,255,.08);border:1px solid rgba(141,92,255,.2);
-  margin-bottom:10px;font-size:13px;font-weight:700;color:var(--purple);}
-.ruby-bar{display:flex;align-items:center;gap:14px;
-  padding:12px 0 calc(16px + env(safe-area-inset-bottom));
-  border-top:1px solid rgba(255,255,255,.06);margin-top:2px;}
-.ruby-info{flex:1;}
-.ruby-title{font-family:var(--mono);font-size:9px;font-weight:600;color:#4a6e88;
-  letter-spacing:.1em;text-transform:uppercase;}
-.ruby-status{font-size:12px;color:#6a8ea8;margin-top:2px;}
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:3px;}
+.dest-addr{font-size:19px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:16px;}
+/* Scanned badge */
+.scan-badge{display:none;align-items:center;gap:8px;padding:8px 14px;
+  border-radius:10px;background:rgba(141,92,255,.08);border:1px solid rgba(141,92,255,.18);
+  margin-bottom:14px;font-size:13px;font-weight:700;color:var(--purple);}
+/* Big action button -- only thing that matters */
+.job-action{width:100%;padding:20px;border-radius:18px;font-size:18px;font-weight:900;
+  border:none;cursor:pointer;margin-bottom:16px;transition:transform .12s,box-shadow .2s;
+  letter-spacing:-.2px;}
+.job-action:active{transform:scale(.97);}
+.ja-wait{background:rgba(255,255,255,.05);color:#4a6e88;cursor:default;font-size:14px;
+  border:1px solid rgba(255,255,255,.08);}
+.ja-start{background:linear-gradient(135deg,var(--purple),#4422bb);color:#fff;
+  box-shadow:0 10px 28px rgba(141,92,255,.35);}
+.ja-deliver{background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;
+  box-shadow:0 10px 28px rgba(83,255,136,.28);}
+/* Icon tool row -- 4 equal tiles */
+.job-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  margin-bottom:0;padding-bottom:calc(16px + env(safe-area-inset-bottom));}
+.job-tool{display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:12px 6px;border-radius:14px;cursor:pointer;border:none;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  transition:background .15s;}
+.job-tool:active{background:rgba(255,255,255,.1);}
+.jt-icon{font-size:20px;line-height:1;}
+.jt-lbl{font-family:var(--mono);font-size:9px;font-weight:600;color:#6a8ea8;
+  letter-spacing:.06em;text-transform:uppercase;}
+.jt-nav{border-color:rgba(25,183,239,.2);}
+.jt-nav .jt-icon,.jt-nav .jt-lbl{color:var(--blue);}
+.jt-msg{border-color:rgba(255,255,255,.08);}
+.jt-msg .jt-icon,.jt-msg .jt-lbl{color:#8ab4cc;}
+.jt-msg.alert{border-color:rgba(255,59,48,.25);background:rgba(255,59,48,.08);}
+.jt-msg.alert .jt-icon,.jt-msg.alert .jt-lbl{color:var(--red);}
+.jt-scan{border-color:rgba(141,92,255,.2);}
+.jt-scan .jt-icon,.jt-scan .jt-lbl{color:var(--purple);}
+.jt-ruby{border-color:rgba(141,92,255,.2);}
+.jt-ruby .jt-icon{font-size:22px;}
+.jt-ruby .jt-lbl{color:var(--purple);}
+.jt-ruby.listening{border-color:rgba(255,59,48,.3);background:rgba(255,59,48,.08);}
+.jt-ruby.listening .jt-icon,.jt-ruby.listening .jt-lbl{color:var(--red);}
+/* Ruby btn kept for comms screen */
 .ruby-btn{width:60px;height:60px;border-radius:50%;
   background:linear-gradient(135deg,var(--purple),#5533cc);
   border:none;color:#fff;font-size:12px;font-weight:900;
   cursor:pointer;flex-shrink:0;
   box-shadow:0 6px 20px rgba(141,92,255,.4);
-  transition:transform .1s,box-shadow .2s;letter-spacing:.04em;}
+  transition:transform .1s;letter-spacing:.04em;}
 .ruby-btn:active{transform:scale(.93);}
 .ruby-btn.listening{background:linear-gradient(135deg,var(--red),#cc1100);
   box-shadow:0 6px 24px rgba(255,59,48,.5);animation:pulse 1s infinite;}
@@ -468,30 +484,33 @@ input,textarea{font-family:var(--sans);}
     <div class="map-status" id="mapStatus" style="border:1px solid rgba(83,255,136,.35);color:var(--green);">Assigned</div>
   </div>
   <div class="job-sheet">
+    <!-- Destination -->
     <div class="dest-lbl" id="destLbl">PICKUP FROM</div>
     <div class="dest-addr" id="destAddr">&mdash;</div>
-    <!-- Scanned packages badge -->
+    <!-- Scanned badge -->
     <div class="scan-badge" id="scanBadge">
       <span>&#9638;</span><span id="scanBadgeTxt">0 packages loaded</span>
     </div>
-    <!-- Main action -->
+    <!-- One big action button -->
     <button class="job-action ja-wait" id="jobBtn" onclick="handleJobAction()">Waiting for confirmation...</button>
-    <!-- Nav + Dispatch -->
-    <div class="job-row">
-      <a id="navLink" href="#" target="_blank" class="job-btn jb-nav">Navigate</a>
-      <button class="job-btn jb-msg" onclick="showComms()" id="dispatchBtn">
-        Dispatch<span id="dispatchDot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--red);margin-left:6px;box-shadow:0 0 6px rgba(255,59,48,.8);animation:blink 1s infinite;display:none;"></span>
+    <!-- 4-icon tool row -->
+    <div class="job-tools">
+      <a id="navLink" href="#" target="_blank" class="job-tool jt-nav">
+        <span class="jt-icon">&#9194;</span>
+        <span class="jt-lbl">Navigate</span>
+      </a>
+      <button class="job-tool jt-msg" id="dispatchBtn" onclick="showComms()">
+        <span class="jt-icon" id="dispatchIcon">&#128172;</span>
+        <span class="jt-lbl">Dispatch</span>
       </button>
-    </div>
-    <!-- Scan -->
-    <button class="job-btn jb-scan" onclick="openScanner()">&#9638; Scan Packages</button>
-    <!-- Ruby -->
-    <div class="ruby-bar">
-      <div class="ruby-info">
-        <div class="ruby-title">Voice Command</div>
-        <div class="ruby-status" id="rubyJobStatus">Tap Ruby to speak</div>
-      </div>
-      <button class="ruby-btn" id="rubyJobBtn" onclick="activateRuby(this)">Ruby</button>
+      <button class="job-tool jt-scan" onclick="openScanner()">
+        <span class="jt-icon">&#9638;</span>
+        <span class="jt-lbl">Scan</span>
+      </button>
+      <button class="job-tool jt-ruby" id="rubyJobTool" onclick="activateRuby(this)">
+        <span class="jt-icon" id="rubyJobIcon">&#127908;</span>
+        <span class="jt-lbl" id="rubyJobLbl">Ruby</span>
+      </button>
     </div>
   </div>
 </div>
@@ -820,10 +839,10 @@ function showScreen(id){
     document.querySelectorAll('.bn')[1]?.classList.add('on');
     const badge=document.getElementById('msgBadge');
     if(badge)badge.style.display='none';
-    const dot=document.getElementById('dispatchDot');
-    if(dot)dot.style.display='none';
     const dBtn=document.getElementById('dispatchBtn');
-    if(dBtn){dBtn.style.background='';dBtn.style.borderColor='';dBtn.style.color='';}
+    if(dBtn)dBtn.classList.remove('alert');
+    const dIcon=document.getElementById('dispatchIcon');
+    if(dIcon)dIcon.textContent='\u{1F4AC}';
     loadMessages();
     commsInterval=setInterval(loadMessages,4000);
   } else {
@@ -1083,17 +1102,27 @@ function activateRuby(btn){
   const overlay=document.getElementById('rubyOverlay');
   overlay.classList.add('on');
   rubyActive=true;
-  setRubyState('listening',btn);
-  startRubyListen(btn);
+  // btn is the tool tile
+  const tool=document.getElementById('rubyJobTool');
+  const lbl=document.getElementById('rubyJobLbl');
+  const ico=document.getElementById('rubyJobIcon');
+  if(tool)tool.classList.add('listening');
+  if(lbl)lbl.textContent='Listening';
+  if(ico)ico.textContent='\u{1F399}';
+  setRubyState('listening',null);
+  startRubyListen(null);
 }
 
 function closeRuby(){
   rubyActive=false;
   if(rubyRecog)try{rubyRecog.stop();}catch(e){}
   document.getElementById('rubyOverlay').classList.remove('on');
-  const btn=document.getElementById('rubyJobBtn');
-  if(btn){btn.className='ruby-btn';btn.textContent='Ruby';}
-  document.getElementById('rubyJobStatus').textContent='Tap Ruby to speak';
+  const tool=document.getElementById('rubyJobTool');
+  const lbl=document.getElementById('rubyJobLbl');
+  const ico=document.getElementById('rubyJobIcon');
+  if(tool)tool.classList.remove('listening');
+  if(lbl)lbl.textContent='Ruby';
+  if(ico)ico.textContent='\u{1F3A4}';
 }
 
 function setRubyState(state,btn){
