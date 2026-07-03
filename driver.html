@@ -177,11 +177,8 @@ input,textarea{font-family:var(--sans);}
 .jt-msg.alert .jt-icon,.jt-msg.alert .jt-lbl{color:var(--red);}
 .jt-scan{border-color:rgba(141,92,255,.2);}
 .jt-scan .jt-icon,.jt-scan .jt-lbl{color:var(--purple);}
-.jt-ruby{border-color:rgba(255,59,48,.25);background:rgba(255,59,48,.06);}
-.jt-ruby .jt-icon{font-size:22px;color:var(--red);}
-.jt-ruby .jt-lbl{color:var(--red);}
-.jt-ruby.listening{border-color:rgba(255,59,48,.5);background:rgba(255,59,48,.15);animation:pulse 1s infinite;}
-.jt-ruby.listening .jt-icon,.jt-ruby.listening .jt-lbl{color:var(--red);}
+.jt-ruby{border:none;background:none;padding:0;}
+.jt-ruby.listening{animation:pulse 1s infinite;}
 /* Ruby btn kept for comms screen */
 .ruby-btn{width:60px;height:60px;border-radius:50%;
   background:linear-gradient(135deg,var(--red),#aa1100);
@@ -512,10 +509,13 @@ input,textarea{font-family:var(--sans);}
         <span class="jt-icon">&#9638;</span>
         <span class="jt-lbl">Scan</span>
       </button>
-      <button class="job-tool jt-ruby" id="rubyJobTool" onclick="activateRuby(this)">
-        <span class="jt-icon" id="rubyJobIcon" style="font-size:13px;font-weight:900;color:var(--red);">Ruby</span>
-        <span class="jt-lbl" id="rubyJobLbl" style="color:var(--red);">Voice</span>
-      </button>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+        <button id="rubyJobTool" onclick="activateRuby(this)"
+          style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--red),#aa1100);border:none;color:#fff;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 6px 20px rgba(255,59,48,.45);letter-spacing:.04em;flex-shrink:0;">
+          <span id="rubyJobIcon">Ruby</span>
+        </button>
+        <span id="rubyJobLbl" style="font-family:var(--mono);font-size:9px;font-weight:600;color:var(--red);letter-spacing:.06em;text-transform:uppercase;">Ruby</span>
+      </div>
     </div>
   </div>
 </div>
@@ -1253,7 +1253,7 @@ function activateRuby(btn){
   const tool=document.getElementById('rubyJobTool');
   const lbl=document.getElementById('rubyJobLbl');
   const ico=document.getElementById('rubyJobIcon');
-  if(tool)tool.classList.add('listening');
+  if(tool){tool.style.animation='pulse 1s infinite';tool.style.boxShadow='0 6px 28px rgba(255,59,48,.7)';}
   if(lbl)lbl.textContent='Active';
   if(ico)ico.textContent='Ruby';
   setRubyState('listening',null);
@@ -1267,8 +1267,8 @@ function closeRuby(){
   const tool=document.getElementById('rubyJobTool');
   const lbl=document.getElementById('rubyJobLbl');
   const ico=document.getElementById('rubyJobIcon');
-  if(tool)tool.classList.remove('listening');
-  if(lbl)lbl.textContent='Voice';
+  if(tool){tool.style.animation='';tool.style.boxShadow='0 6px 20px rgba(255,59,48,.45)';}
+  if(lbl)lbl.textContent='Ruby';
   if(ico)ico.textContent='Ruby';
 }
 
