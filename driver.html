@@ -1049,6 +1049,8 @@ function renderJobScreen(){
 
   if(scanTile)scanTile.style.display='none';
   if(sb)sb.style.display='none';
+  const oldArr=document.getElementById('arrivedBtn');
+  if(oldArr)oldArr.style.display='none';
 
   // ── 1. ASSIGNED: waiting for customer ──
   if(s==='assigned'){
@@ -1057,13 +1059,35 @@ function renderJobScreen(){
     setBadge('Assigned','var(--orange)','rgba(255,150,30,.3)');
     setBtn('Waiting for customer...','ja-wait',null,true);
 
-  // ── 2. CONFIRMED: head to pickup ──
+  // ── 2. CONFIRMED: navigate to pickup first ──
   } else if(s==='customer_confirmed'){
     setDest('HEAD TO PICKUP',currentJob.pickup_address);
     setMap(currentJob.pickup_address);
     setBadge('En Route','var(--blue)','rgba(25,183,239,.35)');
-    setBtn('Arrived at Pickup','ja-start',arrivedAtPickup);
-    if(scanTile)scanTile.style.display='flex';
+    setBtn('Navigate to Pickup','ja-start',()=>{
+      const dest=encodeURIComponent(currentJob.pickup_address||'');
+      window.open('https://www.google.com/maps/dir/?api=1&destination='+dest,'_blank');
+    });
+    if(scanTile)scanTile.style.display='none';
+    // Show "Arrived" as secondary action below the nav button
+    const sheet=document.getElementById('jobBtn').parentNode;
+    let arr=document.getElementById('arrivedBtn');
+    if(!arr){
+      arr=document.createElement('button');
+      arr.id='arrivedBtn';
+      arr.className='job-action ja-wait';
+      arr.style.marginTop='-6px';
+      arr.style.fontSize='14px';
+      arr.style.color='#4a6e88';
+      sheet.insertBefore(arr,document.getElementById('jobBtn').nextSibling);
+    }
+    arr.textContent='I've Arrived at Pickup';
+    arr.style.background='rgba(255,255,255,.05)';
+    arr.style.border='1px solid rgba(255,255,255,.1)';
+    arr.style.color='#8ab4cc';
+    arr.style.cursor='pointer';
+    arr.style.display='block';
+    arr.onclick=arrivedAtPickup;
 
   // ── 3. ARRIVED AT PICKUP: scan packages ──
   } else if(s==='arrived_pickup'){
