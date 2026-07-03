@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Symphony+ | TackPath Operations Center</title>
+<title>Symphony+ | The Logistics Operations Center by TackPath</title>
 <meta name="description" content="Symphony+ is a Logistics Operations Center. A fully managed service that runs your courier fleet's entire operation, end to end.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
@@ -18,10 +18,9 @@
   --text:#f5f0e8;--muted:rgba(245,240,232,.5);--faint:rgba(245,240,232,.18);
   --p1:#ff4444;--p2:#ff9500;--p3:#ffd23d;
   --green:#4caf7d;--blue:#19b7ef;--purple:#8d5cff;--orange:#ff961e;
-  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Playfair Display',serif;
-  /* legacy aliases */
   --ink:#f5f0e8;--ink-dim:rgba(245,240,232,.5);--ink-faint:rgba(245,240,232,.18);
   --line:rgba(201,168,76,.1);--line-soft:rgba(201,168,76,.05);
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Playfair Display',serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -729,9 +728,12 @@ footer{
 }
 </style>
 <body>
-<div id="demo" style="display:block;">
+<div id="demo" style="display:block;position:relative;height:auto;">
 
-  
+  <div id="cine">
+    <div id="cine-line"></div>
+  </div>
+  <button class="demo-skip" id="skipBtn" onclick="skipIntro()">SKIP INTRO</button>
 
   <div id="console">
     <div id="topbar">
@@ -756,20 +758,20 @@ footer{
           <div class="tm"><span id="tmAllD">11 drivers</span><span id="tmAllJ">6 jobs</span></div>
           <div class="alert-badge" id="b-all"></div>
         </div>
-        <div class="tenant" id="t-zel" onclick="selectTenant('zel')">
-          <div class="tn"><span class="cdot" style="background:#0d8fc7"></span>Zelurco</div>
+        <div class="tenant" id="t-abc" onclick="selectTenant('abc')">
+          <div class="tn"><span class="cdot" style="background:#0d8fc7"></span>ABC Couriers</div>
           <div class="tm"><span>4 drivers</span><span id="tmZelJ">2 jobs</span></div>
-          <div class="alert-badge" id="b-zel"></div>
+          <div class="alert-badge" id="b-abc"></div>
         </div>
-        <div class="tenant" id="t-pmc" onclick="selectTenant('pmc')">
+        <div class="tenant" id="t-xyz" onclick="selectTenant('xyz')">
           <div class="tn"><span class="cdot" style="background:#6f45d8"></span>Peach Metro Couriers</div>
           <div class="tm"><span>4 drivers</span><span>3 jobs</span></div>
-          <div class="alert-badge" id="b-pmc"></div>
+          <div class="alert-badge" id="b-xyz"></div>
         </div>
-        <div class="tenant" id="t-nse" onclick="selectTenant('nse')">
+        <div class="tenant" id="t-ppp-couriers" onclick="selectTenant('ppp-couriers')">
           <div class="tn"><span class="cdot" style="background:#149a4e"></span>Northside Express</div>
           <div class="tm"><span>3 drivers</span><span>1 job</span></div>
-          <div class="alert-badge" id="b-nse"></div>
+          <div class="alert-badge" id="b-ppp-couriers"></div>
         </div>
         <div class="rail-foot">
           One operator. <b>Three courier companies.</b> Every fleet isolated, every exception surfaced. Powered by <b>TackPath</b>.
@@ -780,8 +782,8 @@ footer{
       <div class="col" id="center">
         <div id="mapCard">
           <div id="mapHdr">
-            <div id="mapTitle">Live board · Atlanta Metro</div>
-            <div id="mapSub">Metro Atlanta · Live tracking</div>
+            <div id="mapTitle">Live board · All clients</div>
+            <div id="mapSub">Metro Atlanta · 11 units tracked</div>
           </div>
           <div id="locMap"></div>
           <div class="map-ctrl">
@@ -900,9 +902,9 @@ footer{
   ============================================================ */
   var TEN = {
     all:{name:'All clients', short:'All', color:'#b98424'},
-    zel:{name:'Zelurco', short:'Zelurco', color:'#0d8fc7'},
-    pmc:{name:'Peach Metro Couriers', short:'Peach Metro', color:'#6f45d8'},
-    nse:{name:'Northside Express', short:'Northside Exp', color:'#149a4e'}
+    abc:{name:'ABC Couriers', short:'ABC Couriers', color:'#0d8fc7'},
+    xyz:{name:'Peach Metro Couriers', short:'Peach Metro', color:'#6f45d8'},
+    ppp-couriers:{name:'Northside Express', short:'Northside Exp', color:'#149a4e'}
   };
   var tenant='all', paused=false, currentStep=-1, stepTimer=null, t0=Date.now();
   var selectedId=null, routeLayer=null, routeDots=[];
@@ -978,27 +980,27 @@ footer{
   window.mapFitAll = function(){ if(map) focusTenant(); };
 
   var DRIVERS=[
-    {id:'Z1',t:'zel',name:'D. Carter',lat:33.8590,lng:-84.0166,dlat:.00006,dlng:.00009,off:false,risk:false,
+    {id:'Z1',t:'abc',name:'D. Carter',lat:33.8590,lng:-84.0166,dlat:.00006,dlng:.00009,off:false,risk:false,
       job:{jid:'TP-2209',type:'Documents',from:'Lawrenceville',to:'Tucker',o:[33.956,-84.013],dst:[33.854,-84.217],eta:'12:40'}},
-    {id:'Z2',t:'zel',name:'M. Reyes',lat:33.7748,lng:-84.2963,dlat:-.00005,dlng:.00007,off:false,risk:false,
+    {id:'Z2',t:'abc',name:'M. Reyes',lat:33.7748,lng:-84.2963,dlat:-.00005,dlng:.00007,off:false,risk:false,
       job:{jid:'TP-2214',type:'Documents',from:'Snellville',to:'Decatur',o:[33.857,-84.020],dst:[33.774,-84.296],eta:'12:25'}},
-    {id:'Z3',t:'zel',name:'A. Brooks',lat:33.9090,lng:-84.1702,dlat:.00004,dlng:-.00008,off:false,risk:false,
+    {id:'Z3',t:'abc',name:'A. Brooks',lat:33.9090,lng:-84.1702,dlat:.00004,dlng:-.00008,off:false,risk:false,
       job:{jid:'TP-2216',type:'Parcels',from:'Duluth',to:'Chamblee',o:[34.002,-84.144],dst:[33.892,-84.299],eta:'13:05'}},
-    {id:'Z4',t:'zel',name:'K. Nguyen',lat:33.7950,lng:-84.1330,dlat:.00007,dlng:.00005,off:false,risk:false,
+    {id:'Z4',t:'abc',name:'K. Nguyen',lat:33.7950,lng:-84.1330,dlat:.00007,dlng:.00005,off:false,risk:false,
       job:{jid:'TP-2211',type:'Parcels',from:'Stone Mountain',to:'Lilburn',o:[33.808,-84.170],dst:[33.890,-84.143],eta:'12:55'}},
-    {id:'P1',t:'pmc',name:'T. Okafor',lat:33.7490,lng:-84.3880,dlat:-.00006,dlng:-.00005,off:false,risk:false,
+    {id:'P1',t:'xyz',name:'T. Okafor',lat:33.7490,lng:-84.3880,dlat:-.00006,dlng:-.00005,off:false,risk:false,
       job:{jid:'PM-305',type:'Legal filing',from:'Downtown',to:'East Point',o:[33.755,-84.390],dst:[33.679,-84.439],eta:'12:30'}},
-    {id:'P2',t:'pmc',name:'S. Alvarez',lat:33.8463,lng:-84.3621,dlat:-.00004,dlng:.00008,off:false,risk:false,
+    {id:'P2',t:'xyz',name:'S. Alvarez',lat:33.8463,lng:-84.3621,dlat:-.00004,dlng:.00008,off:false,risk:false,
       job:{jid:'PM-307',type:'Medical',from:'Buckhead',to:'Smyrna',o:[33.847,-84.367],dst:[33.884,-84.514],eta:'12:42'}},
-    {id:'P3',t:'pmc',name:'J. Whitfield',lat:33.7900,lng:-84.4660,dlat:.00006,dlng:-.00004,off:false,risk:false,
+    {id:'P3',t:'xyz',name:'J. Whitfield',lat:33.7900,lng:-84.4660,dlat:.00006,dlng:-.00004,off:false,risk:false,
       job:{jid:'PM-309',type:'Parcels',from:'Westside',to:'Vinings',o:[33.786,-84.413],dst:[33.864,-84.464],eta:'13:10'}},
-    {id:'P4',t:'pmc',name:'R. Patel',lat:33.6890,lng:-84.3300,dlat:-.00007,dlng:.00004,off:false,risk:false,
+    {id:'P4',t:'xyz',name:'R. Patel',lat:33.6890,lng:-84.3300,dlat:-.00007,dlng:.00004,off:false,risk:false,
       job:{jid:'PM-302',type:'Parcels',from:'Hapeville',to:'College Park',o:[33.660,-84.410],dst:[33.653,-84.449],eta:'12:35'}},
-    {id:'N1',t:'nse',name:'L. Simmons',lat:33.9526,lng:-84.5499,dlat:.00005,dlng:-.00007,off:false,risk:false,
+    {id:'N1',t:'ppp-couriers',name:'L. Simmons',lat:33.9526,lng:-84.5499,dlat:.00005,dlng:-.00007,off:false,risk:false,
       job:{jid:'NE-118',type:'Parcels',from:'Marietta',to:'Kennesaw',o:[33.952,-84.549],dst:[34.023,-84.615],eta:'12:20'}},
-    {id:'N2',t:'nse',name:'C. Hardy',lat:34.0234,lng:-84.3616,dlat:.00007,dlng:.00005,off:false,risk:false,
+    {id:'N2',t:'ppp-couriers',name:'C. Hardy',lat:34.0234,lng:-84.3616,dlat:.00007,dlng:.00005,off:false,risk:false,
       job:{jid:'NE-121',type:'Documents',from:'Alpharetta',to:'Roswell',o:[34.075,-84.294],dst:[34.023,-84.361],eta:'12:50'}},
-    {id:'N3',t:'nse',name:'E. Mosley',lat:33.9810,lng:-84.4220,dlat:.00003,dlng:.00008,off:false,risk:false,
+    {id:'N3',t:'ppp-couriers',name:'E. Mosley',lat:33.9810,lng:-84.4220,dlat:.00003,dlng:.00008,off:false,risk:false,
       job:{jid:'NE-119',type:'Parcels',from:'Sandy Springs',to:'Dunwoody',o:[33.924,-84.378],dst:[33.946,-84.334],eta:'13:00'}}
   ];
 
@@ -1064,16 +1066,16 @@ footer{
 
   function seedPipe(){
     orders=[
-      {jid:'NE-121',t:'nse',from:'Alpharetta',to:'Roswell',cargo:'Documents',price:'38.00',miles:'7.2',tier:'Same day',driver:'C. Hardy (N2)',reason:'Nearest unit, 1.4 mi out',stops:'1',eta:'12:50',t0:'11:52',stage:4},
-      {jid:'PM-305',t:'pmc',from:'Downtown',to:'East Point',cargo:'Legal filing',price:'55.00',miles:'8.9',tier:'Rush',driver:'T. Okafor (P1)',reason:'Rush certified, closest',stops:'1',eta:'12:30',t0:'11:47',stage:4}
+      {jid:'NE-121',t:'ppp-couriers',from:'Alpharetta',to:'Roswell',cargo:'Documents',price:'38.00',miles:'7.2',tier:'Same day',driver:'C. Hardy (N2)',reason:'Nearest unit, 1.4 mi out',stops:'1',eta:'12:50',t0:'11:52',stage:4},
+      {jid:'PM-305',t:'xyz',from:'Downtown',to:'East Point',cargo:'Legal filing',price:'55.00',miles:'8.9',tier:'Rush',driver:'T. Okafor (P1)',reason:'Rush certified, closest',stops:'1',eta:'12:30',t0:'11:47',stage:4}
     ];
     renderPipe();
   }
 
   /* ---------- comms agent ---------- */
-  var chatOpen=false, chatChannel='co-zel', chatLog={}, replyTimer=null;
+  var chatOpen=false, chatChannel='co-abc', chatLog={}, replyTimer=null;
   function channelList(){
-    var out=[{id:'co-zel',label:'Zelurco · Dispatch'},{id:'co-pmc',label:'Peach Metro · Dispatch'},{id:'co-nse',label:'Northside Exp · Dispatch'}];
+    var out=[{id:'co-abc',label:'ABC Couriers · Dispatch'},{id:'co-xyz',label:'Peach Metro · Dispatch'},{id:'co-ppp-couriers',label:'Northside Exp · Dispatch'}];
     DRIVERS.forEach(function(d){ out.push({id:'dr-'+d.id,label:d.id+' · '+d.name+' ('+TEN[d.t].short+')'}); });
     return out;
   }
@@ -1111,13 +1113,13 @@ footer{
       var d=DRIVERS.find(function(x){return 'dr-'+x.id===ch;});
       if(!d) return;
       if(d.off){
-        replyTimer=setTimeout(function(){ pushMsg(ch,'SYSTEM','No response. Unit is offline.','sys'); },1800);
+        replyTimer=setTimeout(function(){ pushMsg(ch,'SYSTEM','No respoppp-couriers. Unit is offline.','sys'); },1800);
         return;
       }
       var pool=['Copy that.','10-4, on schedule.','Roger. Will confirm at the next stop.','Copy, ETA holding at '+d.job.eta+'.'];
       replyTimer=setTimeout(function(){ pushMsg(ch,d.name,pool[Math.floor(Math.random()*pool.length)],'in'); },1400);
     } else {
-      var co={ 'co-zel':'Zelurco dispatch','co-pmc':'Peach Metro dispatch','co-nse':'Northside dispatch' }[ch];
+      var co={ 'co-abc':'ABC Couriers dispatch','co-xyz':'Peach Metro dispatch','co-ppp-couriers':'Northside dispatch' }[ch];
       var pool2=['Dispatch here. We see it on the board.','Thanks, noted on our end.','Copy. We will follow up with the customer.'];
       replyTimer=setTimeout(function(){ pushMsg(ch,co,pool2[Math.floor(Math.random()*pool2.length)],'in'); },1500);
     }
@@ -1243,7 +1245,7 @@ footer{
   /* ---------- ui helpers ---------- */
   window.selectTenant = function(t){
     tenant=t;
-    ['all','zel','pmc','nse'].forEach(function(k){
+    ['all','abc','xyz','ppp-couriers'].forEach(function(k){
       document.getElementById('t-'+k).classList.toggle('active',k===t);
     });
     document.getElementById('mapTitle').textContent='Live board · '+TEN[t].name;
@@ -1298,10 +1300,10 @@ footer{
     feed('<b>Operator on shift.</b> Board check complete. 3 fleets nominal.','#b98424');
   }},
   {d:7000,run:function(){
-    window.selectTenant('zel');
-    narr('<b>Signal in.</b> Zelurco receives job TP-2214: documents, Snellville to Decatur, 40 minute window. Symphony+ auto-assigns the nearest unit, Z2. The operator just watches it land. No phone call, no email thread.');
-    feed('<b>Zelurco</b> · Signal TP-2214 received. Auto-assigned to Z2. ETA inside window.','#0d8fc7');
-    newOrder({jid:'TP-2214',t:'zel',from:'Snellville',to:'Decatur',cargo:'Documents',
+    window.selectTenant('abc');
+    narr('<b>Signal in.</b> ABC Couriers receives job TP-2214: documents, Snellville to Decatur, 40 minute window. Symphony+ auto-assigns the nearest unit, Z2. The operator just watches it land. No phone call, no email thread.');
+    feed('<b>ABC Couriers</b> · Signal TP-2214 received. Auto-assigned to Z2. ETA inside window.','#0d8fc7');
+    newOrder({jid:'TP-2214',t:'abc',from:'Snellville',to:'Decatur',cargo:'Documents',
       price:'42.50',miles:'18.4',tier:'Same day',driver:'M. Reyes (Z2)',reason:'Nearest unit, 2.1 mi out',stops:'1',eta:'12:25',t0:'12:18'});
     document.getElementById('tmZelJ').textContent='3 jobs';
     document.getElementById('kpiActive').textContent='7';
@@ -1309,47 +1311,47 @@ footer{
   {d:7500,run:function(){
     window.selectTenant('all');
     addAlert('pod','p3','Northside Express','Proof of delivery missing','Job NE-118 marked delivered 4 min ago. No POD photo submitted by N1.',[{label:'Request POD',primary:true},{label:'Snooze'}]);
-    badge('nse','p3',1); badge('all','p3',1); setAlertsKPI(1);
+    badge('ppp-couriers','p3',1); badge('all','p3',1); setAlertsKPI(1);
     narr('<b>First exception, severity P3.</b> A Northside driver closed a job without a proof of delivery photo. Low urgency, but it gets logged and surfaced. Nothing slips through the queue.');
     feed('<b>Northside Express</b> · P3 raised: POD missing on NE-118.','#0d8fc7');
   }},
   {d:7500,run:function(){
     resolveAlert('pod','Resolved · POD received from N1 at door, attached to NE-118');
-    badge('nse',null,0);
-    newOrder({jid:'PM-311',t:'pmc',from:'Buckhead',to:'Brookhaven',cargo:'Medical',
+    badge('ppp-couriers',null,0);
+    newOrder({jid:'PM-311',t:'xyz',from:'Buckhead',to:'Brookhaven',cargo:'Medical',
       price:'68.00',miles:'9.7',tier:'Priority',driver:'S. Alvarez (P2)',reason:'Best fit, medical certified',stops:'1',eta:'13:05',t0:'12:24'});
     addAlert('win','p2','Peach Metro Couriers','Delivery window at risk','Job PM-307 ETA now 12:42, window closes 12:45. Traffic on I-285 East.',[{label:'Notify customer',primary:true},{label:'Reroute'}]);
     var p2=DRIVERS.find(function(x){return x.id==='P2';}); p2.risk=true; refreshMarkers();
-    badge('pmc','p2',1); badge('all','p2',1); setAlertsKPI(1);
+    badge('xyz','p2',1); badge('all','p2',1); setAlertsKPI(1);
     narr('<b>P3 cleared, P2 raised.</b> The driver sends the photo and the alert closes itself. Meanwhile a Peach Metro job is about to miss its window because of I-285 traffic. The operator taps Notify customer: an automatic text goes out with the new ETA.');
     feed('<b>Peach Metro</b> · P2 raised: PM-307 window at risk. Customer notified, new ETA sent.','#d97a06');
   }},
   {d:8000,run:function(){
     var z=DRIVERS.find(function(x){return x.id==='Z1';}); z.off=true; refreshMarkers();
-    window.selectTenant('zel');
+    window.selectTenant('abc');
     resolveAlert('win','Resolved · Customer accepted 12:48 ETA, window extended');
     var p2b=DRIVERS.find(function(x){return x.id==='P2';}); p2b.risk=false;
-    badge('pmc',null,0);
-    addAlert('off','p1','Zelurco','Driver offline mid-route','Z1 lost telemetry 90 seconds ago on an active job, TP-2209. Last position: Lawrenceville Hwy.',[{label:'Call driver',primary:true},{label:'Reassign job'}]);
-    badge('zel','p1',1); badge('all','p1',1); setAlertsKPI(1);
-    narr('<b>P1. The board goes red.</b> A Zelurco driver drops offline mid-route with a live package. The map flags the last known position. This is the moment a small courier with no ops desk loses a customer. The LOC catches it in 90 seconds.');
-    feed('<b>Zelurco</b> · P1 raised: Z1 offline on TP-2209. Operator calling driver.','#d03b3b');
+    badge('xyz',null,0);
+    addAlert('off','p1','ABC Couriers','Driver offline mid-route','Z1 lost telemetry 90 seconds ago on an active job, TP-2209. Last position: Lawrenceville Hwy.',[{label:'Call driver',primary:true},{label:'Reassign job'}]);
+    badge('abc','p1',1); badge('all','p1',1); setAlertsKPI(1);
+    narr('<b>P1. The board goes red.</b> A ABC Couriers driver drops offline mid-route with a live package. The map flags the last known position. This is the moment a small courier with no ops desk loses a customer. The LOC catches it in 90 seconds.');
+    feed('<b>ABC Couriers</b> · P1 raised: Z1 offline on TP-2209. Operator calling driver.','#d03b3b');
   }},
   {d:8000,run:function(){
     narr('<b>Human in the loop.</b> The operator calls. Dead phone battery, the driver is fine and still moving. He plugs in, telemetry returns, position confirmed against the route. The alert resolves with a full audit trail.');
     setTimeout(function(){
       var z=DRIVERS.find(function(x){return x.id==='Z1';}); z.off=false; refreshMarkers();
       resolveAlert('off','Resolved · Voice contact made, telemetry restored, route confirmed');
-      badge('zel',null,0); badge('all',null,0); setAlertsKPI(0);
+      badge('abc',null,0); badge('all',null,0); setAlertsKPI(0);
       document.getElementById('qLive').textContent='MONITORING';
-      feed('<b>Zelurco</b> · Z1 back online. TP-2209 continuing, customer unaffected.','#149a4e');
+      feed('<b>ABC Couriers</b> · Z1 back online. TP-2209 continuing, customer unaffected.','#149a4e');
       pushMsg('dr-Z1','D. Carter','Back online. Phone died, plugged in now. Continuing TP-2209.','in');
     },3500);
   }},
   {d:7000,run:function(){
     window.selectTenant('all');
     narr('<b>Back to green.</b> TP-2214 delivers inside its window. POD photo attached, customer notified automatically, on-time rate ticks up. Three companies ran clean through a messy half hour, and none of them employ a dispatcher.');
-    feed('<b>Zelurco</b> · TP-2214 delivered on time. POD attached. Customer rated 5 stars.','#149a4e');
+    feed('<b>ABC Couriers</b> · TP-2214 delivered on time. POD attached. Customer rated 5 stars.','#149a4e');
     document.getElementById('kpiOTD').textContent='98.6%';
     document.getElementById('kpiActive').textContent='6';
     document.getElementById('tmZelJ').textContent='2 jobs';
@@ -1377,7 +1379,7 @@ footer{
     document.getElementById('alertList').innerHTML='<div class="queue-empty" id="qEmpty"><b>Board is clear</b>All fleets nominal. Monitoring continues.</div>';
     document.getElementById('todayFeed').innerHTML='';
     document.getElementById('qLive').textContent='MONITORING';
-    ['zel','pmc','nse','all'].forEach(function(t){ badge(t,null,0); });
+    ['abc','xyz','ppp-couriers','all'].forEach(function(t){ badge(t,null,0); });
     setAlertsKPI(0);
     document.getElementById('kpiActive').textContent='6';
     document.getElementById('kpiOTD').textContent='98.4%';
