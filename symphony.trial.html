@@ -268,11 +268,11 @@ footer{
 #demo{
   position:fixed;inset:0;z-index:100;
   display:none;
-  color:var(--ink);
+  color:#14213a;
   background:
     radial-gradient(ellipse 70% 50% at 75% 0%, rgba(201,150,58,.3), transparent 55%),
     radial-gradient(ellipse 50% 40% at 5% 100%, rgba(201,150,58,.2), transparent 50%),
-    var(--bg);
+    linear-gradient(180deg, #fdf8ec 0%, #f1dfb4 100%);
 }
 #demo.open{display:block;animation:demoFade .6s ease}
 @keyframes demoFade{from{opacity:0}to{opacity:1}}
@@ -304,7 +304,7 @@ footer{
 }
 .cine-text{
   font-family:'Playfair Display',serif;font-weight:500;
-  font-size:clamp(28px, 5.4vw, 56px);line-height:1.25;color:var(--ink);
+  font-size:clamp(28px, 5.4vw, 56px);line-height:1.25;color:#14213a;
 }
 .cine-text .gold{color:#b98424;font-style:italic}
 .cine-kicker{
@@ -339,7 +339,7 @@ footer{
 }
 .tb-spacer{flex:1}
 .kpi{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
-.kpi .v{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--ink)}
+.kpi .v{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:#14213a}
 .kpi .l{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#9aa4b0;white-space:nowrap}
 .kpi .v.green{color:#149a4e}.kpi .v.blue{color:#0d8fc7}.kpi .v.orange{color:#d97a06}.kpi .v.red{color:#d03b3b}
 .shift{
@@ -372,7 +372,7 @@ footer{
 }
 .tenant:hover{border-color:rgba(185,132,36,.45)}
 .tenant.active{border-color:rgba(185,132,36,.7);background:rgba(232,184,92,.13)}
-.tenant .tn{font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px;color:var(--ink)}
+.tenant .tn{font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px;color:#14213a}
 .tenant .tn .cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .tenant .tm{font-family:'DM Mono',monospace;font-size:10px;color:#5b6878;margin-top:5px;display:flex;gap:10px}
 .tenant .alert-badge{
@@ -411,11 +411,11 @@ footer{
 .order.live{border-color:rgba(185,132,36,.5);box-shadow:0 0 16px rgba(232,184,92,.14)}
 .order-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(20,33,58,.06)}
 .order-head .cdot{width:8px;height:8px;border-radius:50%;flex:none}
-.order-jid{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--ink)}
+.order-jid{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:#14213a}
 .order-co{font-size:11px;color:#5b6878}
 .order-time{margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:#9aa4b0}
 .order-body{padding:9px 12px;display:flex;flex-direction:column;gap:8px}
-.order-route{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink)}
+.order-route{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#14213a}
 .order-route .arr{color:#b98424;font-weight:700}
 .order-route .typ{margin-left:auto;font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:.5px;color:#9aa4b0;text-transform:uppercase}
 .pipe-steps{display:flex;flex-direction:column;gap:0}
@@ -430,7 +430,7 @@ footer{
 .pstep.on .pnum{background:rgba(232,184,92,.2);color:#8a5e10;border-color:rgba(185,132,36,.5)}
 .pstep.done .pnum{background:rgba(20,154,78,.14);color:#149a4e;border-color:rgba(20,154,78,.4)}
 .pstep .pmain{flex:1;min-width:0}
-.pstep .plabel{font-size:11.5px;font-weight:600;color:var(--ink);line-height:1.4}
+.pstep .plabel{font-size:11.5px;font-weight:600;color:#14213a;line-height:1.4}
 .pstep .pdetail{font-size:11px;color:#5b6878;line-height:1.45;margin-top:1px}
 .pstep .pdetail b{color:#8a5e10;font-weight:600}
 .pquote{
@@ -443,7 +443,7 @@ footer{
   position:absolute;top:0;left:0;right:0;z-index:500;display:flex;align-items:center;gap:10px;padding:12px 16px;
   background:linear-gradient(180deg,rgba(255,253,248,.92),transparent);pointer-events:none;
 }
-#mapTitle{font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--ink)}
+#mapTitle{font-size:12px;font-weight:700;letter-spacing:.5px;color:#14213a}
 #mapSub{font-family:'DM Mono',monospace;font-size:10px;color:#5b6878}
 #locMap{width:100%;height:100%;display:block;background:#dfe7ee}
 .leaflet-container{background:#dfe7ee;font-family:'DM Mono',monospace}
@@ -485,7 +485,7 @@ footer{
 .map-ctrl button{
   width:34px;height:34px;border-radius:9px;cursor:pointer;
   background:rgba(255,255,255,.95);border:1px solid rgba(185,132,36,.4);
-  color:var(--ink);font-family:'DM Mono',monospace;font-size:15px;font-weight:500;
+  color:#14213a;font-family:'DM Mono',monospace;font-size:15px;font-weight:500;
   box-shadow:0 3px 10px rgba(120,90,20,.18);transition:all .15s;
   display:flex;align-items:center;justify-content:center;
 }
@@ -503,15 +503,15 @@ footer{
   position:absolute;top:7px;right:9px;background:none;border:none;cursor:pointer;
   color:#9aa4b0;font-size:16px;line-height:1;padding:3px;
 }
-.uc-close:hover{color:var(--ink)}
+.uc-close:hover{color:#14213a}
 .uc-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
-.uc-head b{font-size:14.5px;color:var(--ink)}
+.uc-head b{font-size:14.5px;color:#14213a}
 .uc-head .cdot{width:9px;height:9px;border-radius:50%;flex:none}
 .uc-id{font-family:'DM Mono',monospace;font-size:10.5px;color:#9aa4b0}
 .uc-co{font-size:11.5px;color:#5b6878;margin-bottom:9px}
-.uc-job{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--ink);margin-bottom:4px}
+.uc-job{font-family:'DM Mono',monospace;font-size:11.5px;color:#14213a;margin-bottom:4px}
 .uc-route{font-size:12.5px;color:#4a5568;margin-bottom:10px}
-.uc-route b{color:var(--ink)}
+.uc-route b{color:#14213a}
 .uc-stat{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .uc-pill{
   font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:.8px;font-weight:500;
@@ -549,21 +549,21 @@ footer{
 }
 .ch-head .t{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#5b6878}
 #chChan{
-  flex:1;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;color:var(--ink);
+  flex:1;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;color:#14213a;
   border:1px solid rgba(20,33,58,.16);border-radius:7px;padding:5px 6px;background:#fff;min-width:0;
 }
 .ch-close{background:none;border:none;cursor:pointer;color:#9aa4b0;font-size:15px;padding:2px 4px}
-.ch-close:hover{color:var(--ink)}
+.ch-close:hover{color:#14213a}
 #chMsgs{flex:1;overflow-y:auto;padding:11px;display:flex;flex-direction:column;gap:7px}
 .ch-msg{max-width:84%;padding:7px 11px;border-radius:11px;font-size:12px;line-height:1.45;animation:slidein .25s ease}
-.ch-msg.out{align-self:flex-end;background:rgba(232,184,92,.22);color:var(--ink);border:1px solid rgba(185,132,36,.3)}
-.ch-msg.in{align-self:flex-start;background:rgba(20,33,58,.05);color:var(--ink);border:1px solid rgba(20,33,58,.08)}
+.ch-msg.out{align-self:flex-end;background:rgba(232,184,92,.22);color:#14213a;border:1px solid rgba(185,132,36,.3)}
+.ch-msg.in{align-self:flex-start;background:rgba(20,33,58,.05);color:#14213a;border:1px solid rgba(20,33,58,.08)}
 .ch-msg.sys{align-self:center;background:none;border:none;color:#9aa4b0;font-size:10.5px;font-family:'DM Mono',monospace}
 .ch-msg .ch-who{display:block;font-family:'DM Mono',monospace;font-size:9px;color:#9a6e15;margin-bottom:2px;letter-spacing:.5px}
 .ch-empty{text-align:center;color:#9aa4b0;font-size:11.5px;padding:26px 14px;line-height:1.7}
 .ch-input{display:flex;gap:7px;padding:10px;border-top:1px solid rgba(185,132,36,.2);flex:none}
 #chText{
-  flex:1;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--ink);
+  flex:1;font-family:'DM Sans',sans-serif;font-size:12.5px;color:#14213a;
   border:1px solid rgba(20,33,58,.16);border-radius:9px;padding:8px 11px;background:#fff;min-width:0;
 }
 #chText:focus{outline:none;border-color:rgba(185,132,36,.6)}
@@ -601,7 +601,7 @@ footer{
 .dl-row .cdot{width:8px;height:8px;border-radius:50%;flex:none}
 .dl-main{flex:1;min-width:0}
 .dl-top{display:flex;align-items:baseline;gap:7px;min-width:0}
-.dl-id{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink);font-weight:500;flex:none}
+.dl-id{font-family:'DM Mono',monospace;font-size:11px;color:#14213a;font-weight:500;flex:none}
 .dl-name{font-size:12px;color:#5b6878;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dl-route{font-size:11px;color:#8a93a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .dl-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}
@@ -614,7 +614,7 @@ footer{
 .feed-row .ft{font-family:'DM Mono',monospace;font-size:11px;color:#9aa4b0;flex-shrink:0;padding-top:1px}
 .feed-row .fdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
 .feed-row .fx{color:#4a5568;line-height:1.45}
-.feed-row .fx b{color:var(--ink);font-weight:600}
+.feed-row .fx b{color:#14213a;font-weight:600}
 
 /* alert queue */
 #queue{border-left:1px solid rgba(185,132,36,.18);min-height:0}
@@ -634,12 +634,12 @@ footer{
 .sev.p3{background:rgba(13,143,199,.1);color:#0d8fc7}
 .al-client{font-family:'DM Mono',monospace;font-size:10px;color:#9aa4b0;letter-spacing:.5px}
 .al-time{margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:#9aa4b0}
-.al-title{font-size:14.5px;font-weight:700;margin-bottom:4px;color:var(--ink)}
+.al-title{font-size:14.5px;font-weight:700;margin-bottom:4px;color:#14213a}
 .al-desc{font-size:12.5px;color:#5b6878;line-height:1.55}
 .al-actions{display:flex;gap:7px;margin-top:11px}
 .al-btn{
   flex:1;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;padding:8px 0;border-radius:8px;
-  border:1px solid rgba(20,33,58,.14);background:rgba(20,33,58,.03);color:var(--ink);cursor:pointer;transition:all .2s;
+  border:1px solid rgba(20,33,58,.14);background:rgba(20,33,58,.03);color:#14213a;cursor:pointer;transition:all .2s;
 }
 .al-btn:hover{background:rgba(20,33,58,.07)}
 .al-btn.primary{background:rgba(232,184,92,.2);border-color:rgba(185,132,36,.5);color:#8a5e10}
@@ -663,11 +663,11 @@ footer{
   background:rgba(232,184,92,.12);
 }
 #narrText{font-size:13.5px;color:#4a5568;line-height:1.55;flex:1}
-#narrText b{color:var(--ink)}
+#narrText b{color:#14213a}
 .ctrl{display:flex;gap:7px;flex-shrink:0}
 .ctrl button{
   font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;padding:8px 13px;border-radius:9px;cursor:pointer;
-  border:1px solid rgba(20,33,58,.14);background:rgba(20,33,58,.03);color:var(--ink);transition:all .2s;
+  border:1px solid rgba(20,33,58,.14);background:rgba(20,33,58,.03);color:#14213a;transition:all .2s;
 }
 .ctrl button:hover{background:rgba(20,33,58,.08)}
 .ctrl button.goldbtn{background:rgba(232,184,92,.2);border-color:rgba(185,132,36,.5);color:#8a5e10}
@@ -680,7 +680,7 @@ footer{
 }
 #doneBanner.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
 #doneBanner .gd{width:11px;height:11px;border-radius:50%;background:#149a4e;box-shadow:0 0 12px rgba(20,154,78,.6);flex:none}
-#doneBanner .dt{font-size:13px;font-weight:800;color:var(--ink)}
+#doneBanner .dt{font-size:13px;font-weight:800;color:#14213a}
 #doneBanner .ds{font-family:'DM Mono',monospace;font-size:10px;color:#5b6878;margin-top:2px}
 
 /* ---------- responsive ---------- */
@@ -726,7 +726,207 @@ footer{
   html{scroll-behavior:auto}
 }
 </style>
+
+</head>
 <body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="wordmark" href="#top"><span class="tack">TACK</span><span class="path">PATH</span></a>
+    <span class="nav-badge">SYMPHONY+</span>
+  </div>
+</nav>
+
+<header id="top">
+  <div class="hero-grid-lines"></div>
+  <div class="wrap hero-inner">
+    <span class="eyebrow">A TackPath Managed Service</span>
+    <h1 class="brand">Symphony<span class="plus">+</span></h1>
+    <div class="hero-role">The Logistics Operations Center</div>
+    <p class="hero-sub">
+      The fully managed operations center for courier fleets. Our operators run your
+      <strong>entire operation</strong>, dispatch, tracking, customer communication, and billing, end to end, delivered as a single managed service.
+    </p>
+    <div class="cta-row">
+      <button class="btn btn-gold" onclick="startDemo()">Begin the demo</button>
+      <a class="btn btn-ghost" href="#run">See what we run</a>
+    </div>
+    <div class="hero-strip">
+      <span><span class="dot gold"></span>The gold standard of managed logistics</span>
+      <span><span class="dot blue"></span>Live in days, not months</span>
+      <span><span class="dot green"></span>Built for small fleets</span>
+    </div>
+  </div>
+</header>
+
+<div class="rule"></div>
+
+<section id="what">
+  <div class="wrap">
+    <span class="eyebrow">What it is</span>
+    <p class="thesis" style="margin-top:18px">
+      <span class="dim">Every dispatch platform on the market hands you a login and wishes you luck.</span>
+      Symphony+ never will. It is a <span class="gold">Logistics Operations Center</span>:
+      a staffed, always-on command floor, operated by our team on the TackPath platform, running your operation so you never have to.
+    </p>
+    <div class="is-cols">
+      <div class="is-col them">
+        <h3>Dispatch software</h3>
+        <p>You buy a tool. You configure it. You train on it. You sit at the screen all day routing, calling, chasing, invoicing. The software watches you work.</p>
+      </div>
+      <div class="is-col us">
+        <h3>Symphony+ LOC</h3>
+        <p>You hand us your fleet once. From that moment, our operators and our platform receive every order, build every route, dispatch every driver, speak to every customer, and settle every dollar. You never see a screen. You see results.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="run">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">What we run</span>
+      <h2>Your operation, <em>conducted</em> from intake to invoice.</h2>
+      <p>Eight movements. One operations center. Nothing left on your plate.</p>
+    </div>
+    <div class="run-grid">
+      <div class="run-card">
+        <span class="dot blue"></span>
+        <h3>Order intake</h3>
+        <p>Every request, from any channel, lands in the LOC and becomes a structured job in seconds.</p>
+        <span class="tag">Movement 01</span>
+      </div>
+      <div class="run-card">
+        <span class="dot gold"></span>
+        <h3>Dispatch and routing</h3>
+        <p>Routes built, sequenced, and assigned to the right driver before the coffee gets cold.</p>
+        <span class="tag">Movement 02</span>
+      </div>
+      <div class="run-card">
+        <span class="dot green"></span>
+        <h3>Live tracking</h3>
+        <p>Every vehicle, every stop, every ETA watched in real time by the operations floor.</p>
+        <span class="tag">Movement 03</span>
+      </div>
+      <div class="run-card">
+        <span class="dot purple"></span>
+        <h3>Customer communication</h3>
+        <p>Confirmations, ETAs, and updates sent on your behalf. Your customers hear from you constantly. You never type a word.</p>
+        <span class="tag">Movement 04</span>
+      </div>
+      <div class="run-card">
+        <span class="dot orange"></span>
+        <h3>Exception handling</h3>
+        <p>Traffic, breakdowns, failed stops. The LOC catches it, reroutes around it, and notifies everyone affected.</p>
+        <span class="tag">Movement 05</span>
+      </div>
+      <div class="run-card">
+        <span class="dot blue"></span>
+        <h3>Proof of delivery</h3>
+        <p>Signatures, photos, and timestamps captured at every stop and packaged for your records.</p>
+        <span class="tag">Movement 06</span>
+      </div>
+      <div class="run-card">
+        <span class="dot gold"></span>
+        <h3>Billing and settlement</h3>
+        <p>Invoices generated the moment a run closes. Payments tracked. Settlements queued. Nothing slips.</p>
+        <span class="tag">Movement 07</span>
+      </div>
+      <div class="run-card">
+        <span class="dot green"></span>
+        <h3>Daily reporting</h3>
+        <p>One report at end of day: jobs, performance, revenue. Your whole business on a single page.</p>
+        <span class="tag">Movement 08</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">How it begins</span>
+      <h2>Three steps. Then the music <em>starts</em>.</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">STEP 01</div>
+        <h3>Connect your fleet</h3>
+        <p>Drivers get the TackPath app by text link. Your customers and rate sheet come over in one sitting. No hardware, no installs, no IT project.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">STEP 02</div>
+        <h3>We take the floor</h3>
+        <p>The Symphony+ operations center assumes dispatch, tracking, customer comms, and billing. Day one, your phone goes quiet.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">STEP 03</div>
+        <h3>You drive and grow</h3>
+        <p>Your time goes back to deliveries, new accounts, and the next vehicle. The LOC scales with you, run by run.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section id="compare">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Why nothing else compares</span>
+      <h2>They sell you a screen. We hand you an <em>operation</em>.</h2>
+      <p>Nothing like this exists in logistics. That is the point.</p>
+    </div>
+    <div class="compare">
+      <div class="compare-row compare-head">
+        <div class="compare-cell them">Everything else</div>
+        <div class="compare-cell us">Symphony+</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell them">Weeks of setup, training videos, and support tickets</div>
+        <div class="compare-cell us"><span class="dot gold"></span>Live in days, run for you from the first order</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell them">You staff the desk or you lose the night</div>
+        <div class="compare-cell us"><span class="dot green"></span>An operations floor that never leaves the desk</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell them">Exceptions become missed deliveries and angry calls</div>
+        <div class="compare-cell us"><span class="dot orange"></span>Exceptions caught, rerouted, and communicated before the customer notices</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell them">Invoicing happens at midnight, at your kitchen table</div>
+        <div class="compare-cell us"><span class="dot blue"></span>Invoices out the moment the run closes, settlement on schedule</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell them">Per-seat pricing that punishes you for growing</div>
+        <div class="compare-cell us"><span class="dot purple"></span>A managed service that scales when you do</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="final">
+  <div class="wrap">
+    <span class="eyebrow">See it move</span>
+    <h2>Hand us the operation.<br>Keep the <em>company</em>.</h2>
+    <p>Watch the Symphony+ Logistics Operations Center run a full day for a small Atlanta fleet, from first signal to final settlement.</p>
+    <button class="btn btn-gold" onclick="startDemo()">Begin the demo</button>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span><span style="color:var(--ink)">TACK</span><span style="color:var(--blue)">PATH</span> / <span style="color:var(--gold)">SYMPHONY+</span> LOGISTICS OPERATIONS CENTER</span>
+    <span>ATLANTA METRO</span>
+  </div>
+</footer>
+
+<!-- ============ DEMO ============ -->
 <div id="demo" role="dialog" aria-modal="true" aria-label="Symphony+ demo">
 
   <div id="cine">
@@ -757,20 +957,20 @@ footer{
           <div class="tm"><span id="tmAllD">11 drivers</span><span id="tmAllJ">6 jobs</span></div>
           <div class="alert-badge" id="b-all"></div>
         </div>
-        <div class="tenant" id="t-abc" onclick="selectTenant('abc')">
-          <div class="tn"><span class="cdot" style="background:#0d8fc7"></span>ABC Couriers</div>
+        <div class="tenant" id="t-zel" onclick="selectTenant('zel')">
+          <div class="tn"><span class="cdot" style="background:#0d8fc7"></span>Zelurco</div>
           <div class="tm"><span>4 drivers</span><span id="tmZelJ">2 jobs</span></div>
-          <div class="alert-badge" id="b-abc"></div>
+          <div class="alert-badge" id="b-zel"></div>
         </div>
-        <div class="tenant" id="t-xyz" onclick="selectTenant('xyz')">
+        <div class="tenant" id="t-pmc" onclick="selectTenant('pmc')">
           <div class="tn"><span class="cdot" style="background:#6f45d8"></span>Peach Metro Couriers</div>
           <div class="tm"><span>4 drivers</span><span>3 jobs</span></div>
-          <div class="alert-badge" id="b-xyz"></div>
+          <div class="alert-badge" id="b-pmc"></div>
         </div>
-        <div class="tenant" id="t-ppp" onclick="selectTenant('ppp')">
+        <div class="tenant" id="t-nse" onclick="selectTenant('nse')">
           <div class="tn"><span class="cdot" style="background:#149a4e"></span>Northside Express</div>
           <div class="tm"><span>3 drivers</span><span>1 job</span></div>
-          <div class="alert-badge" id="b-ppp"></div>
+          <div class="alert-badge" id="b-nse"></div>
         </div>
         <div class="rail-foot">
           One operator. <b>Three courier companies.</b> Every fleet isolated, every exception surfaced. Powered by <b>TackPath</b>.
@@ -901,7 +1101,7 @@ footer{
   ============================================================ */
   var TEN = {
     all:{name:'All clients', short:'All', color:'#b98424'},
-    zel:{name:'ABC Couriers', short:'ABC Couriers', color:'#0d8fc7'},
+    zel:{name:'Zelurco', short:'Zelurco', color:'#0d8fc7'},
     pmc:{name:'Peach Metro Couriers', short:'Peach Metro', color:'#6f45d8'},
     nse:{name:'Northside Express', short:'Northside Exp', color:'#149a4e'}
   };
@@ -979,27 +1179,27 @@ footer{
   window.mapFitAll = function(){ if(map) focusTenant(); };
 
   var DRIVERS=[
-    {id:'Z1',t:'abc',name:'D. Carter',lat:33.8590,lng:-84.0166,dlat:.00006,dlng:.00009,off:false,risk:false,
+    {id:'Z1',t:'zel',name:'D. Carter',lat:33.8590,lng:-84.0166,dlat:.00006,dlng:.00009,off:false,risk:false,
       job:{jid:'TP-2209',type:'Documents',from:'Lawrenceville',to:'Tucker',o:[33.956,-84.013],dst:[33.854,-84.217],eta:'12:40'}},
-    {id:'Z2',t:'abc',name:'M. Reyes',lat:33.7748,lng:-84.2963,dlat:-.00005,dlng:.00007,off:false,risk:false,
+    {id:'Z2',t:'zel',name:'M. Reyes',lat:33.7748,lng:-84.2963,dlat:-.00005,dlng:.00007,off:false,risk:false,
       job:{jid:'TP-2214',type:'Documents',from:'Snellville',to:'Decatur',o:[33.857,-84.020],dst:[33.774,-84.296],eta:'12:25'}},
-    {id:'Z3',t:'abc',name:'A. Brooks',lat:33.9090,lng:-84.1702,dlat:.00004,dlng:-.00008,off:false,risk:false,
+    {id:'Z3',t:'zel',name:'A. Brooks',lat:33.9090,lng:-84.1702,dlat:.00004,dlng:-.00008,off:false,risk:false,
       job:{jid:'TP-2216',type:'Parcels',from:'Duluth',to:'Chamblee',o:[34.002,-84.144],dst:[33.892,-84.299],eta:'13:05'}},
-    {id:'Z4',t:'abc',name:'K. Nguyen',lat:33.7950,lng:-84.1330,dlat:.00007,dlng:.00005,off:false,risk:false,
+    {id:'Z4',t:'zel',name:'K. Nguyen',lat:33.7950,lng:-84.1330,dlat:.00007,dlng:.00005,off:false,risk:false,
       job:{jid:'TP-2211',type:'Parcels',from:'Stone Mountain',to:'Lilburn',o:[33.808,-84.170],dst:[33.890,-84.143],eta:'12:55'}},
-    {id:'P1',t:'xyz',name:'T. Okafor',lat:33.7490,lng:-84.3880,dlat:-.00006,dlng:-.00005,off:false,risk:false,
+    {id:'P1',t:'pmc',name:'T. Okafor',lat:33.7490,lng:-84.3880,dlat:-.00006,dlng:-.00005,off:false,risk:false,
       job:{jid:'PM-305',type:'Legal filing',from:'Downtown',to:'East Point',o:[33.755,-84.390],dst:[33.679,-84.439],eta:'12:30'}},
-    {id:'P2',t:'xyz',name:'S. Alvarez',lat:33.8463,lng:-84.3621,dlat:-.00004,dlng:.00008,off:false,risk:false,
+    {id:'P2',t:'pmc',name:'S. Alvarez',lat:33.8463,lng:-84.3621,dlat:-.00004,dlng:.00008,off:false,risk:false,
       job:{jid:'PM-307',type:'Medical',from:'Buckhead',to:'Smyrna',o:[33.847,-84.367],dst:[33.884,-84.514],eta:'12:42'}},
-    {id:'P3',t:'xyz',name:'J. Whitfield',lat:33.7900,lng:-84.4660,dlat:.00006,dlng:-.00004,off:false,risk:false,
+    {id:'P3',t:'pmc',name:'J. Whitfield',lat:33.7900,lng:-84.4660,dlat:.00006,dlng:-.00004,off:false,risk:false,
       job:{jid:'PM-309',type:'Parcels',from:'Westside',to:'Vinings',o:[33.786,-84.413],dst:[33.864,-84.464],eta:'13:10'}},
-    {id:'P4',t:'xyz',name:'R. Patel',lat:33.6890,lng:-84.3300,dlat:-.00007,dlng:.00004,off:false,risk:false,
+    {id:'P4',t:'pmc',name:'R. Patel',lat:33.6890,lng:-84.3300,dlat:-.00007,dlng:.00004,off:false,risk:false,
       job:{jid:'PM-302',type:'Parcels',from:'Hapeville',to:'College Park',o:[33.660,-84.410],dst:[33.653,-84.449],eta:'12:35'}},
-    {id:'N1',t:'ppp',name:'L. Simmons',lat:33.9526,lng:-84.5499,dlat:.00005,dlng:-.00007,off:false,risk:false,
+    {id:'N1',t:'nse',name:'L. Simmons',lat:33.9526,lng:-84.5499,dlat:.00005,dlng:-.00007,off:false,risk:false,
       job:{jid:'NE-118',type:'Parcels',from:'Marietta',to:'Kennesaw',o:[33.952,-84.549],dst:[34.023,-84.615],eta:'12:20'}},
-    {id:'N2',t:'ppp',name:'C. Hardy',lat:34.0234,lng:-84.3616,dlat:.00007,dlng:.00005,off:false,risk:false,
+    {id:'N2',t:'nse',name:'C. Hardy',lat:34.0234,lng:-84.3616,dlat:.00007,dlng:.00005,off:false,risk:false,
       job:{jid:'NE-121',type:'Documents',from:'Alpharetta',to:'Roswell',o:[34.075,-84.294],dst:[34.023,-84.361],eta:'12:50'}},
-    {id:'N3',t:'ppp',name:'E. Mosley',lat:33.9810,lng:-84.4220,dlat:.00003,dlng:.00008,off:false,risk:false,
+    {id:'N3',t:'nse',name:'E. Mosley',lat:33.9810,lng:-84.4220,dlat:.00003,dlng:.00008,off:false,risk:false,
       job:{jid:'NE-119',type:'Parcels',from:'Sandy Springs',to:'Dunwoody',o:[33.924,-84.378],dst:[33.946,-84.334],eta:'13:00'}}
   ];
 
@@ -1065,8 +1265,8 @@ footer{
 
   function seedPipe(){
     orders=[
-      {jid:'NE-121',t:'ppp',from:'Alpharetta',to:'Roswell',cargo:'Documents',price:'38.00',miles:'7.2',tier:'Same day',driver:'C. Hardy (N2)',reason:'Nearest unit, 1.4 mi out',stops:'1',eta:'12:50',t0:'11:52',stage:4},
-      {jid:'PM-305',t:'xyz',from:'Downtown',to:'East Point',cargo:'Legal filing',price:'55.00',miles:'8.9',tier:'Rush',driver:'T. Okafor (P1)',reason:'Rush certified, closest',stops:'1',eta:'12:30',t0:'11:47',stage:4}
+      {jid:'NE-121',t:'nse',from:'Alpharetta',to:'Roswell',cargo:'Documents',price:'38.00',miles:'7.2',tier:'Same day',driver:'C. Hardy (N2)',reason:'Nearest unit, 1.4 mi out',stops:'1',eta:'12:50',t0:'11:52',stage:4},
+      {jid:'PM-305',t:'pmc',from:'Downtown',to:'East Point',cargo:'Legal filing',price:'55.00',miles:'8.9',tier:'Rush',driver:'T. Okafor (P1)',reason:'Rush certified, closest',stops:'1',eta:'12:30',t0:'11:47',stage:4}
     ];
     renderPipe();
   }
@@ -1074,7 +1274,7 @@ footer{
   /* ---------- comms agent ---------- */
   var chatOpen=false, chatChannel='co-zel', chatLog={}, replyTimer=null;
   function channelList(){
-    var out=[{id:'co-zel',label:'ABC Couriers · Dispatch'},{id:'co-pmc',label:'Peach Metro · Dispatch'},{id:'co-nse',label:'Northside Exp · Dispatch'}];
+    var out=[{id:'co-zel',label:'Zelurco · Dispatch'},{id:'co-pmc',label:'Peach Metro · Dispatch'},{id:'co-nse',label:'Northside Exp · Dispatch'}];
     DRIVERS.forEach(function(d){ out.push({id:'dr-'+d.id,label:d.id+' · '+d.name+' ('+TEN[d.t].short+')'}); });
     return out;
   }
@@ -1118,7 +1318,7 @@ footer{
       var pool=['Copy that.','10-4, on schedule.','Roger. Will confirm at the next stop.','Copy, ETA holding at '+d.job.eta+'.'];
       replyTimer=setTimeout(function(){ pushMsg(ch,d.name,pool[Math.floor(Math.random()*pool.length)],'in'); },1400);
     } else {
-      var co={ 'co-zel':'ABC Couriers dispatch','co-pmc':'Peach Metro dispatch','co-nse':'Northside dispatch' }[ch];
+      var co={ 'co-zel':'Zelurco dispatch','co-pmc':'Peach Metro dispatch','co-nse':'Northside dispatch' }[ch];
       var pool2=['Dispatch here. We see it on the board.','Thanks, noted on our end.','Copy. We will follow up with the customer.'];
       replyTimer=setTimeout(function(){ pushMsg(ch,co,pool2[Math.floor(Math.random()*pool2.length)],'in'); },1500);
     }
@@ -1244,7 +1444,7 @@ footer{
   /* ---------- ui helpers ---------- */
   window.selectTenant = function(t){
     tenant=t;
-    ['all','abc','xyz','ppp'].forEach(function(k){
+    ['all','zel','pmc','nse'].forEach(function(k){
       document.getElementById('t-'+k).classList.toggle('active',k===t);
     });
     document.getElementById('mapTitle').textContent='Live board · '+TEN[t].name;
@@ -1299,10 +1499,10 @@ footer{
     feed('<b>Operator on shift.</b> Board check complete. 3 fleets nominal.','#b98424');
   }},
   {d:7000,run:function(){
-    window.selectTenant('abc');
-    narr('<b>Signal in.</b> ABC Couriers receives job TP-2214: documents, Snellville to Decatur, 40 minute window. Symphony+ auto-assigns the nearest unit, Z2. The operator just watches it land. No phone call, no email thread.');
-    feed('<b>ABC Couriers</b> · Signal TP-2214 received. Auto-assigned to Z2. ETA inside window.','#0d8fc7');
-    newOrder({jid:'TP-2214',t:'abc',from:'Snellville',to:'Decatur',cargo:'Documents',
+    window.selectTenant('zel');
+    narr('<b>Signal in.</b> Zelurco receives job TP-2214: documents, Snellville to Decatur, 40 minute window. Symphony+ auto-assigns the nearest unit, Z2. The operator just watches it land. No phone call, no email thread.');
+    feed('<b>Zelurco</b> · Signal TP-2214 received. Auto-assigned to Z2. ETA inside window.','#0d8fc7');
+    newOrder({jid:'TP-2214',t:'zel',from:'Snellville',to:'Decatur',cargo:'Documents',
       price:'42.50',miles:'18.4',tier:'Same day',driver:'M. Reyes (Z2)',reason:'Nearest unit, 2.1 mi out',stops:'1',eta:'12:25',t0:'12:18'});
     document.getElementById('tmZelJ').textContent='3 jobs';
     document.getElementById('kpiActive').textContent='7';
@@ -1310,47 +1510,47 @@ footer{
   {d:7500,run:function(){
     window.selectTenant('all');
     addAlert('pod','p3','Northside Express','Proof of delivery missing','Job NE-118 marked delivered 4 min ago. No POD photo submitted by N1.',[{label:'Request POD',primary:true},{label:'Snooze'}]);
-    badge('ppp','p3',1); badge('all','p3',1); setAlertsKPI(1);
+    badge('nse','p3',1); badge('all','p3',1); setAlertsKPI(1);
     narr('<b>First exception, severity P3.</b> A Northside driver closed a job without a proof of delivery photo. Low urgency, but it gets logged and surfaced. Nothing slips through the queue.');
     feed('<b>Northside Express</b> · P3 raised: POD missing on NE-118.','#0d8fc7');
   }},
   {d:7500,run:function(){
     resolveAlert('pod','Resolved · POD received from N1 at door, attached to NE-118');
-    badge('ppp',null,0);
-    newOrder({jid:'PM-311',t:'xyz',from:'Buckhead',to:'Brookhaven',cargo:'Medical',
+    badge('nse',null,0);
+    newOrder({jid:'PM-311',t:'pmc',from:'Buckhead',to:'Brookhaven',cargo:'Medical',
       price:'68.00',miles:'9.7',tier:'Priority',driver:'S. Alvarez (P2)',reason:'Best fit, medical certified',stops:'1',eta:'13:05',t0:'12:24'});
     addAlert('win','p2','Peach Metro Couriers','Delivery window at risk','Job PM-307 ETA now 12:42, window closes 12:45. Traffic on I-285 East.',[{label:'Notify customer',primary:true},{label:'Reroute'}]);
     var p2=DRIVERS.find(function(x){return x.id==='P2';}); p2.risk=true; refreshMarkers();
-    badge('xyz','p2',1); badge('all','p2',1); setAlertsKPI(1);
+    badge('pmc','p2',1); badge('all','p2',1); setAlertsKPI(1);
     narr('<b>P3 cleared, P2 raised.</b> The driver sends the photo and the alert closes itself. Meanwhile a Peach Metro job is about to miss its window because of I-285 traffic. The operator taps Notify customer: an automatic text goes out with the new ETA.');
     feed('<b>Peach Metro</b> · P2 raised: PM-307 window at risk. Customer notified, new ETA sent.','#d97a06');
   }},
   {d:8000,run:function(){
     var z=DRIVERS.find(function(x){return x.id==='Z1';}); z.off=true; refreshMarkers();
-    window.selectTenant('abc');
+    window.selectTenant('zel');
     resolveAlert('win','Resolved · Customer accepted 12:48 ETA, window extended');
     var p2b=DRIVERS.find(function(x){return x.id==='P2';}); p2b.risk=false;
-    badge('xyz',null,0);
-    addAlert('off','p1','ABC Couriers','Driver offline mid-route','Z1 lost telemetry 90 seconds ago on an active job, TP-2209. Last position: Lawrenceville Hwy.',[{label:'Call driver',primary:true},{label:'Reassign job'}]);
-    badge('abc','p1',1); badge('all','p1',1); setAlertsKPI(1);
-    narr('<b>P1. The board goes red.</b> A ABC Couriers driver drops offline mid-route with a live package. The map flags the last known position. This is the moment a small courier with no ops desk loses a customer. The LOC catches it in 90 seconds.');
-    feed('<b>ABC Couriers</b> · P1 raised: Z1 offline on TP-2209. Operator calling driver.','#d03b3b');
+    badge('pmc',null,0);
+    addAlert('off','p1','Zelurco','Driver offline mid-route','Z1 lost telemetry 90 seconds ago on an active job, TP-2209. Last position: Lawrenceville Hwy.',[{label:'Call driver',primary:true},{label:'Reassign job'}]);
+    badge('zel','p1',1); badge('all','p1',1); setAlertsKPI(1);
+    narr('<b>P1. The board goes red.</b> A Zelurco driver drops offline mid-route with a live package. The map flags the last known position. This is the moment a small courier with no ops desk loses a customer. The LOC catches it in 90 seconds.');
+    feed('<b>Zelurco</b> · P1 raised: Z1 offline on TP-2209. Operator calling driver.','#d03b3b');
   }},
   {d:8000,run:function(){
     narr('<b>Human in the loop.</b> The operator calls. Dead phone battery, the driver is fine and still moving. He plugs in, telemetry returns, position confirmed against the route. The alert resolves with a full audit trail.');
     setTimeout(function(){
       var z=DRIVERS.find(function(x){return x.id==='Z1';}); z.off=false; refreshMarkers();
       resolveAlert('off','Resolved · Voice contact made, telemetry restored, route confirmed');
-      badge('abc',null,0); badge('all',null,0); setAlertsKPI(0);
+      badge('zel',null,0); badge('all',null,0); setAlertsKPI(0);
       document.getElementById('qLive').textContent='MONITORING';
-      feed('<b>ABC Couriers</b> · Z1 back online. TP-2209 continuing, customer unaffected.','#149a4e');
+      feed('<b>Zelurco</b> · Z1 back online. TP-2209 continuing, customer unaffected.','#149a4e');
       pushMsg('dr-Z1','D. Carter','Back online. Phone died, plugged in now. Continuing TP-2209.','in');
     },3500);
   }},
   {d:7000,run:function(){
     window.selectTenant('all');
     narr('<b>Back to green.</b> TP-2214 delivers inside its window. POD photo attached, customer notified automatically, on-time rate ticks up. Three companies ran clean through a messy half hour, and none of them employ a dispatcher.');
-    feed('<b>ABC Couriers</b> · TP-2214 delivered on time. POD attached. Customer rated 5 stars.','#149a4e');
+    feed('<b>Zelurco</b> · TP-2214 delivered on time. POD attached. Customer rated 5 stars.','#149a4e');
     document.getElementById('kpiOTD').textContent='98.6%';
     document.getElementById('kpiActive').textContent='6';
     document.getElementById('tmZelJ').textContent='2 jobs';
@@ -1378,7 +1578,7 @@ footer{
     document.getElementById('alertList').innerHTML='<div class="queue-empty" id="qEmpty"><b>Board is clear</b>All fleets nominal. Monitoring continues.</div>';
     document.getElementById('todayFeed').innerHTML='';
     document.getElementById('qLive').textContent='MONITORING';
-    ['abc','xyz','ppp','all'].forEach(function(t){ badge(t,null,0); });
+    ['zel','pmc','nse','all'].forEach(function(t){ badge(t,null,0); });
     setAlertsKPI(0);
     document.getElementById('kpiActive').textContent='6';
     document.getElementById('kpiOTD').textContent='98.4%';
