@@ -513,8 +513,8 @@ input,textarea{font-family:var(--sans);}
         <span class="jt-lbl">Scan</span>
       </button>
       <button class="job-tool jt-ruby" id="rubyJobTool" onclick="activateRuby(this)">
-        <span class="jt-icon" id="rubyJobIcon">&#127908;</span>
-        <span class="jt-lbl" id="rubyJobLbl">Ruby</span>
+        <span class="jt-icon" id="rubyJobIcon" style="font-size:13px;font-weight:900;color:var(--red);">Ruby</span>
+        <span class="jt-lbl" id="rubyJobLbl" style="color:var(--red);">Voice</span>
       </button>
     </div>
   </div>
@@ -538,7 +538,7 @@ input,textarea{font-family:var(--sans);}
       <div class="cr-lbl">Tap Ruby to speak to dispatch</div>
       <div class="cr-transcript" id="commsRubyTranscript"></div>
     </div>
-    <button class="ruby-btn" id="commsRubyBtn" onclick="activateCommsRuby(this)">Ruby</button>
+    <button class="ruby-btn" id="commsRubyBtn" onclick="activateCommsRuby(this)" style="background:linear-gradient(135deg,var(--red),#aa1100);box-shadow:0 6px 20px rgba(255,59,48,.45);">Ruby</button>
   </div>
 </div>
 
@@ -678,7 +678,7 @@ input,textarea{font-family:var(--sans);}
 
 <!-- RUBY OVERLAY -->
 <div class="ruby-overlay" id="rubyOverlay">
-  <div class="ruby-orb" id="rubyOrb">Ruby</div>
+  <div class="ruby-orb" id="rubyOrb" style="flex-direction:column;gap:4px;"><span style="font-size:18px;font-weight:900;">Ruby</span></div>
   <div class="ruby-overlay-state" id="rubyOvState">Tap a command or speak</div>
   <div class="ruby-overlay-transcript" id="rubyOvTranscript"></div>
   <div class="ruby-cmds" id="rubyCmds">
@@ -1099,18 +1099,17 @@ function renderJobScreen(){
 }
 
 function handleJobAction(){
-  if(!currentJob||!btn)return;
-  btn.onclick && btn.onclick();
+  if(!currentJob)return;
+  const b=document.getElementById('jobBtn');
+  if(b&&b.onclick) b.onclick();
 }
 
 async function arrivedAtPickup(){
   if(!currentJob)return;
-  try{
-    await sbPatch('jobs?id=eq.'+currentJob.id,{status:'arrived_pickup',driver_name:driver.name});
-    currentJob.status='arrived_pickup';
-    renderJobScreen();
-    toast('Arrived at pickup. Scan packages.','ok');
-  }catch(e){ toast('Could not update status','warn'); }
+  // Store arrived_pickup locally -- Supabase keeps customer_confirmed until we start delivery
+  currentJob.status='arrived_pickup';
+  renderJobScreen();
+  toast('Arrived at pickup. Scan packages.','ok');
 }
 
 async function startDelivery(){
@@ -1120,17 +1119,15 @@ async function startDelivery(){
     currentJob.status='in_transit';
     renderJobScreen();
     toast('Package collected. En route to dropoff.','ok');
-  }catch(e){ toast('Could not update status','warn'); }
+  }catch(e){ toast('Could not update status: '+e.message.slice(0,50),'warn'); }
 }
 
 async function arrivedAtDropoff(){
   if(!currentJob)return;
-  try{
-    await sbPatch('jobs?id=eq.'+currentJob.id,{status:'arrived_dropoff',driver_name:driver.name});
-    currentJob.status='arrived_dropoff';
-    renderJobScreen();
-    toast('Arrived at dropoff. Confirm delivery.','ok');
-  }catch(e){ toast('Could not update status','warn'); }
+  // Store arrived_dropoff locally -- Supabase keeps in_transit until delivery confirmed
+  currentJob.status='arrived_dropoff';
+  renderJobScreen();
+  toast('Arrived at dropoff. Confirm delivery.','ok');
 }
 
 // ── JOB STATUS POLL ──
@@ -1217,7 +1214,12 @@ function activateCommsRuby(btn){
 
 function stopCommsRuby(btn){
   commsRubyActive=false;
-  if(btn){ btn.className='ruby-btn'; btn.textContent='Ruby'; }
+  if(btn){
+    btn.className='ruby-btn';
+    btn.style.background='linear-gradient(135deg,var(--red),#aa1100)';
+    btn.style.boxShadow='0 6px 20px rgba(255,59,48,.45)';
+    btn.textContent='Ruby';
+  }
   document.getElementById('commsRubyTranscript').textContent='';
   try{if(commsRubyRecog)commsRubyRecog.stop();}catch(e){}
 }
@@ -1252,8 +1254,8 @@ function activateRuby(btn){
   const lbl=document.getElementById('rubyJobLbl');
   const ico=document.getElementById('rubyJobIcon');
   if(tool)tool.classList.add('listening');
-  if(lbl)lbl.textContent='Listening';
-  if(ico)ico.textContent='\u{1F399}';
+  if(lbl)lbl.textContent='Active';
+  if(ico)ico.textContent='Ruby';
   setRubyState('listening',null);
   startRubyListen(null);
 }
@@ -1266,29 +1268,25 @@ function closeRuby(){
   const lbl=document.getElementById('rubyJobLbl');
   const ico=document.getElementById('rubyJobIcon');
   if(tool)tool.classList.remove('listening');
-  if(lbl)lbl.textContent='Ruby';
-  if(ico)ico.textContent='\u{1F3A4}';
+  if(lbl)lbl.textContent='Voice';
+  if(ico)ico.textContent='Ruby';
 }
 
 function setRubyState(state,btn){
   const orb=document.getElementById('rubyOrb');
   const stEl=document.getElementById('rubyOvState');
-  const jobStatus=document.getElementById('rubyJobStatus');
   if(state==='listening'){
     if(orb)orb.className='ruby-orb listening';
     if(stEl)stEl.textContent='Listening...';
     if(btn){btn.className='ruby-btn listening';btn.textContent='...';}
-    if(jobStatus)jobStatus.textContent='Ruby listening...';
   } else if(state==='thinking'){
     if(orb)orb.className='ruby-orb thinking';
     if(stEl)stEl.textContent='Thinking...';
     if(btn){btn.className='ruby-btn thinking';btn.textContent='...';}
-    if(jobStatus)jobStatus.textContent='Ruby thinking...';
   } else {
     if(orb)orb.className='ruby-orb';
     if(stEl)stEl.textContent='Tap a command or speak';
     if(btn){btn.className='ruby-btn';btn.textContent='Ruby';}
-    if(jobStatus)jobStatus.textContent='Tap Ruby to speak';
   }
 }
 
@@ -1616,8 +1614,9 @@ async function submitPOD(){
       body:JSON.stringify({status:'delivered',driver_name:driver.name})
     });
     if(!resp.ok){
-      const err=await resp.text();
-      throw new Error(err);
+      const errText=await resp.text();
+      console.error('POD submit error:',errText);
+      throw new Error('Status '+resp.status+': '+errText.slice(0,80));
     }
     // Post delivery confirmation message to dispatch
     if(currentJob.id){
@@ -1644,9 +1643,9 @@ async function submitPOD(){
 // ── MORE ──
 function refreshMore(){
   if(!driver)return;
-  document.getElementById('moreName').textContent=driver.name;
-  document.getElementById('moreEmail').textContent=driver.email;
-  document.getElementById('moreAv').textContent=driver.first[0].toUpperCase();
+  document.getElementById('moreName').textContent=driver.name||'Driver';
+  document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
+  document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
   document.getElementById('statEarn').textContent='$'+earnings;
   document.getElementById('statJobs').textContent=jobCount;
   document.getElementById('statYTD').textContent='$'+(earnings+Math.floor(Math.random()*500+800));
@@ -1683,4 +1682,5 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 </script>
 </body>
 </html>
+
 
