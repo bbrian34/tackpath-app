@@ -405,13 +405,18 @@ input,textarea{font-family:var(--sans);}
       <div class="wm"><span class="t">TACK</span><span class="p">PATH</span></div>
       <div class="lbox-badge">Driver Portal</div>
     </div>
-    <div class="lbox-form">
-      <label class="fl">Driver ID / Email</label>
-      <input class="fi" type="text" id="loginEmail" placeholder="driver@tackpath.com" autocomplete="username"/>
-      <label class="fl">Password</label>
-      <input class="fi" type="password" id="loginPass" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password"/>
-      <button class="fb" onclick="doLogin()">Sign In</button>
+    <div class="lbox-form" id="loginPhasePhone">
+      <label class="fl">Mobile Number</label>
+      <input class="fi" type="tel" id="loginPhone" placeholder="+1 (404) 555-0100" autocomplete="tel"/>
+      <button class="fb" onclick="requestCode()" id="loginPhoneBtn">Send Code</button>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
+    </div>
+    <div class="lbox-form" id="loginPhaseCode" style="display:none;">
+      <label class="fl">Verification Code</label>
+      <div style="font-family:var(--mono);font-size:11px;color:#4a6e88;margin-bottom:12px;" id="loginCodeHint">Enter the 6-digit code sent to your phone</div>
+      <input class="fi" type="number" id="loginCode" placeholder="000000" maxlength="6" autocomplete="one-time-code" style="font-size:28px;font-weight:900;letter-spacing:8px;text-align:center;"/>
+      <button class="fb" onclick="verifyCode()" id="loginVerifyBtn">Verify</button>
+      <button onclick="showPhoneInput()" style="width:100%;padding:14px;border-radius:12px;background:none;border:1px solid rgba(255,255,255,.08);color:#4a6e88;font-size:14px;cursor:pointer;margin-top:10px;">Change number</button>
     </div>
   </div>
 </div>
@@ -600,15 +605,42 @@ input,textarea{font-family:var(--sans);}
     <div style="font-size:17px;font-weight:800;">Proof of Delivery</div>
   </div>
   <div class="pod-body">
+    <!-- Recipient -->
     <div class="pod-sec">
       <div class="pod-lbl">Delivered To</div>
       <input class="pod-inp" type="text" id="podRecipient" placeholder="Recipient name"/>
     </div>
+    <!-- POD method tabs -->
     <div class="pod-sec">
-      <div class="pod-lbl">Signature <span style="color:#8ab4cc;font-size:11px;">(optional)</span></div>
-      <canvas class="sig-canvas" id="sigPad"></canvas>
-      <button class="sig-clear" onclick="clearSig()">Clear</button>
+      <div class="pod-lbl">Proof Method</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button id="podTabSig" onclick="switchPODTab('sig')"
+          style="flex:1;padding:12px;border-radius:12px;background:var(--blue);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Signature</button>
+        <button id="podTabPhoto" onclick="switchPODTab('photo')"
+          style="flex:1;padding:12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#8ab4cc;font-size:13px;font-weight:700;cursor:pointer;">Photo</button>
+      </div>
+      <!-- Signature tab -->
+      <div id="podPanelSig">
+        <canvas class="sig-canvas" id="sigPad"></canvas>
+        <button class="sig-clear" onclick="clearSig()">Clear</button>
+      </div>
+      <!-- Photo tab -->
+      <div id="podPanelPhoto" style="display:none;">
+        <video id="podVideo" autoplay playsinline muted
+          style="width:100%;border-radius:12px;background:#000;max-height:200px;object-fit:cover;display:none;"></video>
+        <img id="podPhotoPreview" style="width:100%;border-radius:12px;display:none;max-height:200px;object-fit:cover;"/>
+        <canvas id="podPhotoCanvas" style="display:none;"></canvas>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button id="podCameraBtn" onclick="startPODCamera()"
+            style="flex:1;padding:14px;border-radius:12px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-size:14px;font-weight:700;cursor:pointer;">Open Camera</button>
+          <button id="podCaptureBtn" onclick="capturePODPhoto()"
+            style="flex:1;padding:14px;border-radius:12px;background:var(--blue);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:none;">Take Photo</button>
+          <button id="podRetakeBtn" onclick="retakePODPhoto()"
+            style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#8ab4cc;font-size:14px;font-weight:700;cursor:pointer;display:none;">Retake</button>
+        </div>
+      </div>
     </div>
+    <!-- Notes -->
     <div class="pod-sec" style="clear:both;">
       <div class="pod-lbl">Notes <span style="color:#8ab4cc;font-size:11px;">(optional)</span></div>
       <textarea class="pod-notes" id="podNotes" placeholder="e.g. Left with doorman, front door..."></textarea>
@@ -807,23 +839,74 @@ function showDispatchNotif(text){
   setTimeout(()=>{ if(document.getElementById('dispNotif')===n){ n.style.opacity='0';n.style.transition='opacity .4s';setTimeout(()=>n.remove(),400); } },6000);
 }
 
-// ── LOGIN ──
-function doLogin(){
-  const email=document.getElementById('loginEmail').value.trim()||'driver@tackpath.com';
-  const name=email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  driver={email,name,first:name.split(' ')[0]};
-  localStorage.setItem('tp_drv',JSON.stringify(driver));
-  unlockSpeech();
-  initApp();
+// ── LOGIN -- phone + code ──
+let pendingPhone='', pendingCode='';
+
+function showPhoneInput(){
+  document.getElementById('loginPhasePhone').style.display='block';
+  document.getElementById('loginPhaseCode').style.display='none';
+  document.getElementById('loginPhone').value='';
+  document.getElementById('loginCode').value='';
 }
+
+async function requestCode(){
+  const raw=document.getElementById('loginPhone').value.trim();
+  if(!raw){ toast('Enter your mobile number','warn'); return; }
+  const phone=raw.replace(/\D/g,'');
+  if(phone.length<10){ toast('Enter a valid phone number','warn'); return; }
+  const btn=document.getElementById('loginPhoneBtn');
+  btn.textContent='Sending...'; btn.disabled=true;
+  try{
+    // Check if driver exists in Supabase
+    const drivers=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&select=id,name,phone,email');
+    if(!drivers||!drivers.length){
+      toast('Phone number not registered. Contact your dispatcher.','warn');
+      btn.textContent='Send Code'; btn.disabled=false; return;
+    }
+    // Generate 6-digit code and store temporarily
+    pendingPhone=phone;
+    pendingCode=String(Math.floor(100000+Math.random()*900000));
+    // In production: send SMS via Twilio/Supabase Edge Function
+    // For now: show code in hint (dev mode)
+    document.getElementById('loginCodeHint').textContent='Code: '+pendingCode+' (SMS integration coming)';
+    document.getElementById('loginPhasePhone').style.display='none';
+    document.getElementById('loginPhaseCode').style.display='block';
+    document.getElementById('loginCode').focus();
+    btn.textContent='Send Code'; btn.disabled=false;
+  }catch(e){
+    toast('Could not verify number. Try again.','warn');
+    btn.textContent='Send Code'; btn.disabled=false;
+  }
+}
+
+async function verifyCode(){
+  const entered=document.getElementById('loginCode').value.trim();
+  if(entered!==pendingCode){ toast('Incorrect code. Try again.','warn'); return; }
+  const btn=document.getElementById('loginVerifyBtn');
+  btn.textContent='Verifying...'; btn.disabled=true;
+  try{
+    const drivers=await sbGet('drivers?phone=eq.'+encodeURIComponent(pendingPhone)+'&select=id,name,phone,email');
+    const d=drivers[0];
+    const nameParts=(d.name||'Driver').split(' ');
+    driver={id:d.id,phone:pendingPhone,name:d.name||'Driver',email:d.email||'',first:nameParts[0]};
+    localStorage.setItem('tp_drv',JSON.stringify(driver));
+    unlockSpeech();
+    initApp();
+  }catch(e){
+    toast('Login failed. Try again.','warn');
+    btn.textContent='Verify'; btn.disabled=false;
+  }
+}
+
 function doLogout(){ if(!confirm('Sign out?'))return; localStorage.removeItem('tp_drv'); location.reload(); }
-document.getElementById('loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter')doLogin(); });
+document.getElementById('loginPhone').addEventListener('keydown',e=>{ if(e.key==='Enter')requestCode(); });
+document.getElementById('loginCode').addEventListener('keydown',e=>{ if(e.key==='Enter')verifyCode(); });
 
 // ── INIT ──
 function initApp(){
-  document.getElementById('moreName').textContent=driver.name;
-  document.getElementById('moreEmail').textContent=driver.email;
-  document.getElementById('moreAv').textContent=driver.first[0].toUpperCase();
+  document.getElementById('moreName').textContent=driver.name||'Driver';
+  document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
+  document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
   showHome();
   startPolling();
 }
@@ -935,83 +1018,99 @@ function declineOffer(){
   toast('Job declined','warn');
 }
 
-// ── ACTIVE JOB SCREEN ──
+// ── ACTIVE JOB SCREEN -- 6 granular steps (Fleetbase-style) ──
+// Statuses: assigned → customer_confirmed → en_route_pickup → arrived_pickup → in_transit → arrived_dropoff → delivered
 function renderJobScreen(){
   if(!currentJob)return;
   const s=currentJob.status;
-  const isTransit=s==='in_transit';
-  const dest=isTransit?(currentJob.dropoff_address||'--'):(currentJob.pickup_address||'--');
-  const mapsUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest);
-
-  document.getElementById('mapSig').textContent='TP-'+(currentJob.id?currentJob.id.slice(0,8):'--');
-  document.getElementById('navLink').href=mapsUrl;
-
-  const iframe=document.getElementById('jobMap');
-  const mapSrc='https://maps.google.com/maps?q='+encodeURIComponent(dest)+'&output=embed';
-  if(iframe.src!==mapSrc) iframe.src=mapSrc;
-
   const badge=document.getElementById('mapStatus');
   const btn=document.getElementById('jobBtn');
   const scanTile=document.getElementById('scanTile');
   const sb=document.getElementById('scanBadge');
+  const destLbl=document.getElementById('destLbl');
+  const destAddr=document.getElementById('destAddr');
 
-  // ── STEP 1: Accepted, not yet confirmed ──
+  function setDest(lbl,addr){ destLbl.textContent=lbl; destAddr.textContent=addr||'--'; }
+  function setMap(addr){
+    document.getElementById('mapSig').textContent='TP-'+(currentJob.id?currentJob.id.slice(0,8):'--');
+    document.getElementById('navLink').href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(addr||'');
+    const iframe=document.getElementById('jobMap');
+    const src='https://maps.google.com/maps?q='+encodeURIComponent(addr||'')+'&output=embed';
+    if(iframe.src!==src) iframe.src=src;
+  }
+  function setBadge(text,color,borderColor){
+    badge.textContent=text;
+    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid '+borderColor+';color:'+color;
+  }
+  function setBtn(text,cls,onclick,disabled=false){
+    btn.textContent=text; btn.className='job-action '+cls;
+    btn.disabled=disabled; btn.onclick=onclick||null;
+  }
+
+  if(scanTile)scanTile.style.display='none';
+  if(sb)sb.style.display='none';
+
+  // ── 1. ASSIGNED: waiting for customer ──
   if(s==='assigned'){
-    document.getElementById('destLbl').textContent='TRAVELING TO PICKUP';
-    document.getElementById('destAddr').textContent=currentJob.pickup_address||'--';
-    badge.textContent='Assigned';
-    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(255,150,30,.3);color:var(--orange)';
-    btn.textContent='Waiting for confirmation...';
-    btn.className='job-action ja-wait';btn.disabled=true;
-    if(scanTile)scanTile.style.display='none';
-    if(sb)sb.style.display='none';
+    setDest('ASSIGNED','Job confirmed');
+    setMap(currentJob.pickup_address);
+    setBadge('Assigned','var(--orange)','rgba(255,150,30,.3)');
+    setBtn('Waiting for customer...','ja-wait',null,true);
 
-  // ── STEP 2: Confirmed -- travel to pickup, scan on arrival ──
+  // ── 2. CONFIRMED: head to pickup ──
   } else if(s==='customer_confirmed'){
-    document.getElementById('destLbl').textContent='TRAVEL TO PICKUP';
-    document.getElementById('destAddr').textContent=currentJob.pickup_address||'--';
-    badge.textContent='Head to Pickup';
-    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(25,183,239,.35);color:var(--blue)';
-    if(scannedPackages.length>0){
-      // Packages already scanned -- show Start Delivery
-      btn.textContent='Start Delivery';
-      btn.className='job-action ja-start';btn.disabled=false;
-      if(sb){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
-      if(scanTile)scanTile.style.display='flex';
-    } else {
-      // No packages scanned yet -- Scan is the primary action
-      btn.textContent='Scan Packages at Pickup';
-      btn.className='job-action ja-start';btn.disabled=false;
-      btn.onclick=openScanner;
-      if(scanTile)scanTile.style.display='flex';
-      if(sb)sb.style.display='none';
-    }
+    setDest('HEAD TO PICKUP',currentJob.pickup_address);
+    setMap(currentJob.pickup_address);
+    setBadge('En Route','var(--blue)','rgba(25,183,239,.35)');
+    setBtn('Arrived at Pickup','ja-start',arrivedAtPickup);
+    if(scanTile)scanTile.style.display='flex';
 
-  // ── STEP 3: In transit -- delivering ──
+  // ── 3. ARRIVED AT PICKUP: scan packages ──
+  } else if(s==='arrived_pickup'){
+    setDest('AT PICKUP',currentJob.pickup_address);
+    setMap(currentJob.pickup_address);
+    setBadge('At Pickup','var(--yellow)','rgba(255,210,61,.4)');
+    if(scannedPackages.length>0){
+      setBtn('Package Collected — Start Delivery','ja-start',startDelivery);
+      if(sb){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' scanned';}
+    } else {
+      setBtn('Scan Packages','ja-start',openScanner);
+    }
+    if(scanTile)scanTile.style.display='flex';
+
+  // ── 4. IN TRANSIT: delivering ──
   } else if(s==='in_transit'){
-    document.getElementById('destLbl').textContent='DELIVERING TO';
-    document.getElementById('destAddr').textContent=currentJob.dropoff_address||'--';
-    badge.textContent='In Transit';
-    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(141,92,255,.4);color:var(--purple)';
-    btn.textContent='Confirm Delivery';
-    btn.className='job-action ja-deliver';btn.disabled=false;
-    btn.onclick=()=>showScreen('scPOD');
-    if(scanTile)scanTile.style.display='none';
+    setDest('DELIVERING TO',currentJob.dropoff_address);
+    setMap(currentJob.dropoff_address);
+    setBadge('In Transit','var(--purple)','rgba(141,92,255,.4)');
+    setBtn('Arrived at Dropoff','ja-start',arrivedAtDropoff);
     if(sb&&scannedPackages.length>0){
       sb.style.display='flex';
-      document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';
+      document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' on board';
     }
+
+  // ── 5. ARRIVED AT DROPOFF: confirm delivery ──
+  } else if(s==='arrived_dropoff'){
+    setDest('AT DROPOFF',currentJob.dropoff_address);
+    setMap(currentJob.dropoff_address);
+    setBadge('At Dropoff','var(--green)','rgba(83,255,136,.4)');
+    setBtn('Confirm Delivery','ja-deliver',()=>showScreen('scPOD'));
   }
 }
 
 function handleJobAction(){
+  if(!currentJob||!btn)return;
+  btn.onclick && btn.onclick();
+}
+
+async function arrivedAtPickup(){
   if(!currentJob)return;
-  if(currentJob.status==='customer_confirmed'){
-    if(scannedPackages.length>0) startDelivery();
-    else openScanner();
-  } else if(currentJob.status==='in_transit'){
-    showScreen('scPOD');
-  }
+  try{
+    await sbPatch('jobs?id=eq.'+currentJob.id,{status:'arrived_pickup',driver_name:driver.name});
+    currentJob.status='arrived_pickup';
+    renderJobScreen();
+    toast('Arrived at pickup. Scan packages.','ok');
+  }catch(e){ toast('Could not update status','warn'); }
 }
 
 async function startDelivery(){
@@ -1020,7 +1119,17 @@ async function startDelivery(){
     await sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name});
     currentJob.status='in_transit';
     renderJobScreen();
-    toast('In transit! Customer notified.','ok');
+    toast('Package collected. En route to dropoff.','ok');
+  }catch(e){ toast('Could not update status','warn'); }
+}
+
+async function arrivedAtDropoff(){
+  if(!currentJob)return;
+  try{
+    await sbPatch('jobs?id=eq.'+currentJob.id,{status:'arrived_dropoff',driver_name:driver.name});
+    currentJob.status='arrived_dropoff';
+    renderJobScreen();
+    toast('Arrived at dropoff. Confirm delivery.','ok');
   }catch(e){ toast('Could not update status','warn'); }
 }
 
@@ -1036,7 +1145,7 @@ function startJobStatusPoll(){
       if(ns!==currentJob.status){
         currentJob.status=ns;
         renderJobScreen();
-        if(ns==='customer_confirmed'){ toast('Customer confirmed! Tap Start Delivery.','ok'); playAlert(); }
+        if(ns==='customer_confirmed'){ toast('Job confirmed! Head to pickup.','ok'); playAlert(); }
         else if(ns==='cancelled'){
           clearInterval(jobStatusInterval); stopDispatchPoll();
           currentJob=null; showHome();
@@ -1401,8 +1510,29 @@ function doneScanningAll(){
 }
 
 // ── POD ──
-let sigCtxPad=null;
+let sigCtxPad=null, podStream=null, podPhotoData=null, podTab='sig';
+
+function switchPODTab(tab){
+  podTab=tab;
+  const sig=document.getElementById('podPanelSig');
+  const photo=document.getElementById('podPanelPhoto');
+  const btnSig=document.getElementById('podTabSig');
+  const btnPhoto=document.getElementById('podTabPhoto');
+  if(tab==='sig'){
+    sig.style.display='block'; photo.style.display='none';
+    btnSig.style.background='var(--blue)'; btnSig.style.color='#fff'; btnSig.style.border='none';
+    btnPhoto.style.background='rgba(255,255,255,.06)'; btnPhoto.style.color='#8ab4cc'; btnPhoto.style.border='1px solid rgba(255,255,255,.1)';
+    stopPODCamera();
+  } else {
+    sig.style.display='none'; photo.style.display='block';
+    btnPhoto.style.background='var(--blue)'; btnPhoto.style.color='#fff'; btnPhoto.style.border='none';
+    btnSig.style.background='rgba(255,255,255,.06)'; btnSig.style.color='#8ab4cc'; btnSig.style.border='1px solid rgba(255,255,255,.1)';
+  }
+}
+
 function initSig(){
+  podPhotoData=null; podTab='sig';
+  switchPODTab('sig');
   const c=document.getElementById('sigPad');
   if(!c)return;
   const ctx=c.getContext('2d');
@@ -1424,18 +1554,70 @@ function initSig(){
     document.getElementById('podRecipient').value=title.split('—')[0].trim();
   }
 }
+
 function clearSig(){if(sigCtxPad){const c=document.getElementById('sigPad');sigCtxPad.clearRect(0,0,c.offsetWidth,c.offsetHeight);}}
+
+async function startPODCamera(){
+  try{
+    podStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const v=document.getElementById('podVideo');
+    v.srcObject=podStream; v.style.display='block';
+    document.getElementById('podPhotoPreview').style.display='none';
+    document.getElementById('podCameraBtn').style.display='none';
+    document.getElementById('podCaptureBtn').style.display='flex';
+    document.getElementById('podRetakeBtn').style.display='none';
+  }catch(e){ toast('Camera unavailable','warn'); }
+}
+
+function capturePODPhoto(){
+  const v=document.getElementById('podVideo');
+  const canvas=document.getElementById('podPhotoCanvas');
+  canvas.width=v.videoWidth; canvas.height=v.videoHeight;
+  canvas.getContext('2d').drawImage(v,0,0);
+  podPhotoData=canvas.toDataURL('image/jpeg',0.8);
+  stopPODCamera();
+  const preview=document.getElementById('podPhotoPreview');
+  preview.src=podPhotoData; preview.style.display='block';
+  v.style.display='none';
+  document.getElementById('podCaptureBtn').style.display='none';
+  document.getElementById('podRetakeBtn').style.display='flex';
+  document.getElementById('podCameraBtn').style.display='none';
+  toast('Photo captured','ok');
+}
+
+function retakePODPhoto(){
+  podPhotoData=null;
+  document.getElementById('podPhotoPreview').style.display='none';
+  document.getElementById('podRetakeBtn').style.display='none';
+  document.getElementById('podCameraBtn').style.display='flex';
+}
+
+function stopPODCamera(){
+  if(podStream){podStream.getTracks().forEach(t=>t.stop());podStream=null;}
+  const v=document.getElementById('podVideo');
+  if(v){v.srcObject=null;v.style.display='none';}
+}
 
 async function submitPOD(){
   const recipient=document.getElementById('podRecipient').value.trim();
   if(!recipient){toast('Enter recipient name','warn');return;}
+  if(podTab==='photo'&&!podPhotoData){toast('Take a photo first','warn');return;}
   try{
-    await sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name});
+    const notes=document.getElementById('podNotes').value.trim();
+    const podMethod=podTab==='photo'?'photo':'signature';
+    await sbPatch('jobs?id=eq.'+currentJob.id,{
+      status:'delivered',
+      driver_name:driver.name,
+      pod_method:podMethod,
+      pod_notes:notes||null,
+      pod_recipient:recipient
+    });
+    stopPODCamera();
     const pay=currentJob.price||Math.floor(Math.random()*35+45);
     earnings+=pay; jobCount++;
     stopDispatchPoll();
     clearInterval(jobStatusInterval);
-    currentJob=null; scannedPackages=[];
+    currentJob=null; scannedPackages=[]; podPhotoData=null;
     showHome();
     toast('Delivered! +$'+pay,'ok');
   }catch(e){toast('Submission failed','warn');}
@@ -1483,3 +1665,4 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 </script>
 </body>
 </html>
+
