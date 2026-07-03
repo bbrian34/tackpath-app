@@ -583,7 +583,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab" onclick="setTab('smarttrack',this)">SmartTrack</button>
       <button class="tbtab" onclick="setTab('command',this)">Command</button>
       <button class="tbtab" onclick="setTab('analytics',this)">Analytics</button>
-      <button class="tbtab" onclick="setTab('sling',this)" style="color:var(--blue);">Sling</button>
+      <button class="tbtab" onclick="setTab('sprint',this)" style="color:var(--blue);">Sprint</button>
       <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
     </div>
     <div class="tb-right">
@@ -888,10 +888,10 @@ body::after{content:'';position:fixed;inset:0;
       </div>
 
       <!-- SLING TAB -->
-      <div class="tab" id="tab-sling">
+      <div class="tab" id="tab-sprint">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--blue);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Sling · On-Demand Dispatch</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Live Sling Ops</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--blue);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Sprint · On-Demand Dispatch</div>
+          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Live Sprint Ops</div>
         </div>
 
         <!-- SLING SUMMARY ROW -->
@@ -921,7 +921,7 @@ body::after{content:'';position:fixed;inset:0;
         <!-- SLING ACTION BAR -->
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
           <a href="customer.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-family:var(--mono);font-size:11px;font-weight:600;text-decoration:none;letter-spacing:.06em;">+ NEW SLING ORDER</a>
-          <button onclick="renderSling()" style="padding:8px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;">&#8635; REFRESH</button>
+          <button onclick="renderSprint()" style="padding:8px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;">&#8635; REFRESH</button>
         </div>
 
         <!-- LIVE JOB BOARD -->
@@ -934,7 +934,7 @@ body::after{content:'';position:fixed;inset:0;
             <div class="ai-chip" style="background:rgba(25,183,239,.1);color:var(--blue);border-color:rgba(25,183,239,.3);">SLING LIVE</div>
           </div>
           <div id="sl-board">
-            <div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active Sling jobs. Orders appear here when dispatched.</div>
+            <div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>
           </div>
         </div>
 
@@ -948,7 +948,7 @@ body::after{content:'';position:fixed;inset:0;
             <div id="sl-exc-badge" style="font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.25);color:var(--orange);">0 OPEN</div>
           </div>
           <div id="sl-exceptions">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All Sling jobs running clean</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All Sprint jobs running clean</div>
           </div>
         </div>
 
@@ -1211,7 +1211,7 @@ function setTab(id,btn){
   if(id==='smarttrack') renderSmartTrack();
   if(id==='analytics') renderAnalytics();
   if(id==='command') renderCommand();
-  if(id==='sling') renderSling();
+  if(id==='sprint') renderSprint();
   if(id==='surge') renderSurge();
 }
 
@@ -1402,12 +1402,12 @@ function renderSmartTrack(){
   const trackEl=document.getElementById('trackingCount');if(trackEl)trackEl.textContent=active.length + surgeBlocks.filter(b=>b.status==='active'||b.status==='accepted').length;
   const grid=document.getElementById('drvGrid');
 
-  // Determine service type color -- Surge = purple, Sling = blue
+  // Determine service type color -- Surge = purple, Sprint = blue
   function serviceColor(j){ return (j.service_type==='surge'||j.isSurge) ? 'var(--purple)' : 'var(--blue)'; }
-  function serviceLabel(j){ return (j.service_type==='surge'||j.isSurge) ? 'Surge' : 'Sling'; }
+  function serviceLabel(j){ return (j.service_type==='surge'||j.isSurge) ? 'Surge' : 'Sprint'; }
   function serviceDot(j){ return (j.service_type==='surge'||j.isSurge) ? '#8d5cff' : '#19b7ef'; }
 
-  // Combine Sling jobs + active Surge blocks into unified driver list for the map
+  // Combine Sprint jobs + active Surge blocks into unified driver list for the map
   const surgeActive = surgeBlocks
     .filter(b=>b.status==='active'||b.status==='accepted')
     .map(b=>({
@@ -1544,7 +1544,7 @@ function renderCommand(){
 }
 
 // ── SLING ──
-function renderSling(){
+function renderSprint(){
   const active    = jobs.filter(j=>j.status==='assigned'||j.status==='in_transit');
   const pending   = jobs.filter(j=>j.status==='pending');
   const delivered = jobs.filter(j=>j.status==='delivered');
@@ -1568,7 +1568,7 @@ function renderSling(){
   const statusColor={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--green)',delivered:'var(--green)',cancelled:'var(--red)'};
 
   if(!jobs.length){
-    board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active Sling jobs. Orders appear here when dispatched.</div>';
+    board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>';
   } else {
     board.innerHTML=jobs.map(j=>{
       const sc=statusColor[j.status]||'var(--muted)';
@@ -1592,19 +1592,19 @@ function renderSling(){
   // Exceptions
   const excEl=document.getElementById('sl-exceptions');
   if(!exceptions.length){
-    excEl.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All Sling jobs running clean</div>';
+    excEl.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All Sprint jobs running clean</div>';
   } else {
     excEl.innerHTML=exceptions.map(j=>`
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
         <div style="font-family:var(--mono);font-size:11px;color:var(--blue);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.15);border-radius:4px;padding:3px 8px;">TP-${j.id?j.id.slice(0,8):'—'}</div>
         <div style="flex:1;font-size:12px;color:var(--orange);">${j.status==='cancelled'?'Order cancelled':'Driver not responding'}</div>
-        <button onclick="slingFeedEntry('TP-${j.id?j.id.slice(0,8):'—'}','Reassign attempted')" style="padding:5px 11px;border-radius:5px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-family:var(--mono);font-size:10px;cursor:pointer;">REASSIGN</button>
+        <button onclick="sprintFeedEntry('TP-${j.id?j.id.slice(0,8):'—'}','Reassign attempted')" style="padding:5px 11px;border-radius:5px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-family:var(--mono);font-size:10px;cursor:pointer;">REASSIGN</button>
       </div>
     `).join('');
   }
 }
 
-function slingFeedEntry(signalId, msg){
+function sprintFeedEntry(signalId, msg){
   const feed=document.getElementById('sl-feed');
   if(!feed) return;
   const now=new Date();
