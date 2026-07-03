@@ -9,20 +9,20 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
   --gold:#c9a84c;--gold2:#e8c97a;--gold3:#f5e4b0;--gold-dim:rgba(201,168,76,.12);
-  --bg:#1a1608;--bg2:#201b0a;--card:#26200e;--card2:#2e2812;--card3:#363016;
+  --bg:#010e21;--bg2:#061423;--card:#071828;--card2:#0d2135;--card3:#12293f;
   --border:rgba(201,168,76,.1);--border2:rgba(201,168,76,.05);
   --text:#f5f0e8;--muted:rgba(245,240,232,.5);--faint:rgba(245,240,232,.18);
   --p1:#ff4444;--p2:#ff9500;--p3:#ffd23d;
   --green:#4caf7d;--blue:#19b7ef;--purple:#8d5cff;
   --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;--display:'Playfair Display',serif;
 }
-html,body{margin:0;padding:0;background:#1a1608;}
+html,body{margin:0;padding:0;background:#010e21;}
 body{font-family:var(--sans);color:var(--text);min-height:100vh;line-height:1.6;}
 
 /* ── HEADER ── */
 header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
   display:flex;align-items:center;padding:0 28px;justify-content:space-between;
-  background:rgba(26,22,8,.97);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);}
+  background:rgba(1,14,33,.9);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);}
 .hdr-left{display:flex;align-items:center;gap:20px;}
 .wordmark{font-family:var(--display);font-size:22px;font-weight:700;
   background:linear-gradient(135deg,#c9a84c,#f5e4b0,#c9a84c);
@@ -47,7 +47,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
 /* ── NAV TABS ── */
 .nav-tabs{position:fixed;top:58px;left:0;right:0;z-index:998;height:44px;
   display:flex;align-items:center;padding:0 28px;gap:4px;
-  background:rgba(26,22,8,.95);border-bottom:1px solid var(--border2);}
+  background:rgba(1,14,33,.88);border-bottom:1px solid var(--border2);}
 .nav-tab{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;
   cursor:pointer;color:var(--muted);transition:all .15s;border:none;background:transparent;font-family:var(--sans);}
 .nav-tab.on{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.2);}
@@ -82,11 +82,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
 .pb-green{background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);color:var(--green);}
 .pb-blue{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
 
-/* ── CLIENT TABS ── */
-.client-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-.ct{padding:7px 14px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
-  border:1px solid var(--border2);background:var(--card);color:var(--muted);transition:all .15s;}
-.ct.on{background:var(--gold-dim);border-color:rgba(201,168,76,.25);color:var(--gold);}
+
 .ct-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;}
 
 /* ── FLEET CARDS ── */
@@ -291,7 +287,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
 
   <!-- KPI BAR -->
   <div class="kpi-bar">
-    <div class="kpi"><div class="kpi-lbl">Active Clients</div><div class="kpi-val" id="kpiClients" style="color:var(--gold);">—</div><div class="kpi-sub">Symphony+ enrolled</div></div>
+    
     <div class="kpi"><div class="kpi-lbl">Active Drivers</div><div class="kpi-val" id="kpiDrivers" style="color:var(--blue);">—</div><div class="kpi-sub">Across all fleets</div></div>
     <div class="kpi"><div class="kpi-lbl">Live Signals</div><div class="kpi-val" id="kpiJobs" style="color:var(--purple);">—</div><div class="kpi-sub">Active deliveries</div></div>
     <div class="kpi"><div class="kpi-lbl">P1 Alerts</div><div class="kpi-val" id="kpiP1" style="color:var(--p1);">—</div><div class="kpi-sub">Require attention</div></div>
@@ -301,160 +297,11 @@ header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
 
   <!-- DISPATCH TAB -->
   <div class="tab-content on" id="tab-dispatch">
-    <div class="client-tabs" id="clientTabs">
-      <div class="ct on" onclick="filterClient('all')"><span class="ct-dot" style="background:var(--gold);"></span>All Clients</div>
-    </div>
+    
     <div class="main-grid">
       <div class="left-col">
         <!-- Fleet cards -->
-        <div id="fleetGrid"><div class="loading"><div class="spin"></div>Loading fleet data...</div></div>
-        <!-- Agent feed -->
-        <div class="panel">
-          <div class="panel-hdr">
-            <div class="panel-title">&#9889; Claude AI Agent Feed <span class="panel-badge pb-gold">ACTIVE</span></div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);" id="lastScan">Initializing...</div>
-          </div>
-          <div class="af-body" id="agentFeed"><div class="loading"><div class="spin"></div>Agent initializing...</div></div>
-        </div>
-      </div>
-      <!-- Alert queue -->
-      <div>
-        <div class="panel" style="position:sticky;top:118px;">
-          <div class="panel-hdr">
-            <div class="panel-title">&#9888; Exception Queue <span class="panel-badge pb-red" id="alertBadge">0 OPEN</span></div>
-          </div>
-          <div id="alertQueue" style="max-height:600px;overflow-y:auto;">
-            <div class="empty">No exceptions · All systems healthy</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAP TAB -->
-  <div class="tab-content" id="tab-map">
-    <div class="panel" style="margin-bottom:14px;">
-      <div class="panel-hdr">
-        <div class="panel-title">&#127759; Live Fleet Map <span class="panel-badge pb-blue">REAL-TIME</span></div>
-        <div style="font-size:11px;color:var(--muted);" id="mapDriverCount">Loading...</div>
-      </div>
-      <div style="padding:14px;">
-        <div class="map-wrap">
-          <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d106544!2d-84.3880!3d33.7490!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
-          <div class="map-legend">
-            <div class="ml-item"><div class="ml-dot" style="background:var(--purple);"></div>In Transit</div>
-            <div class="ml-item"><div class="ml-dot" style="background:var(--blue);"></div>Assigned</div>
-            <div class="ml-item"><div class="ml-dot" style="background:var(--green);"></div>Available</div>
-            <div class="ml-item"><div class="ml-dot" style="background:var(--faint);"></div>Offline</div>
-          </div>
-        </div>
-        <div style="margin-top:14px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Active Driver Signals</div>
-          <div id="mapDriverList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- COMMS TAB -->
-  <div class="tab-content" id="tab-comms">
-    <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;">
-      <button class="cm-auto-btn" onclick="sendAutoResponse()">&#9889; Send AI Auto-Response to All Active Drivers</button>
-      <div style="font-size:11px;color:var(--muted);">Claude will generate context-aware messages for each active job</div>
-    </div>
-    <div class="comms-grid">
-      <div class="comms-sidebar">
-        <div class="cs-hdr">Driver Channels</div>
-        <div class="cs-list" id="commsList">
-          <div class="empty">No active drivers</div>
-        </div>
-      </div>
-      <div class="comms-main">
-        <div class="cm-hdr">
-          <div>
-            <div class="cm-name" id="commsDriverName">Select a driver</div>
-            <div class="cm-sub" id="commsDriverSub">—</div>
-          </div>
-          <button class="cm-auto-btn" id="autoResponseBtn" onclick="sendSingleAutoResponse()" style="display:none;">&#9889; AI Response</button>
-        </div>
-        <div class="cm-msgs" id="commsMessages">
-          <div class="cm-sys">Select a driver from the left to view messages</div>
-        </div>
-        <div class="cm-inp-row">
-          <input class="cm-inp" id="commsInput" placeholder="Message driver..." onkeydown="if(event.key==='Enter')sendDispatchMsg();"/>
-          <button class="cm-send" onclick="sendDispatchMsg()">Send</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- INCIDENTS TAB -->
-  <div class="tab-content" id="tab-incidents">
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;">
-      <div>
-        <!-- Incident filters -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-          <button class="inc-filter-btn on" onclick="filterIncidents('all',this)">All</button>
-          <button class="inc-filter-btn" onclick="filterIncidents('P1',this)" style="color:var(--p1);border-color:rgba(255,68,68,.2);">P1 Critical</button>
-          <button class="inc-filter-btn" onclick="filterIncidents('P2',this)" style="color:var(--p2);border-color:rgba(255,149,0,.2);">P2 Warning</button>
-          <button class="inc-filter-btn" onclick="filterIncidents('P3',this)" style="color:var(--p3);border-color:rgba(255,210,61,.2);">P3 Notice</button>
-          <button class="inc-filter-btn" onclick="filterIncidents('resolved',this)" style="color:var(--green);border-color:rgba(76,175,125,.2);">Resolved</button>
-          <div style="margin-left:auto;display:flex;gap:8px;">
-            <button onclick="createManualIncident()" style="padding:7px 14px;border-radius:8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">+ New Incident</button>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-hdr">
-            <div class="panel-title">&#128274; Incident Log <span class="panel-badge pb-red" id="incBadge">0 OPEN</span></div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);" id="incLastScan">—</div>
-          </div>
-          <div id="incidentLog" style="max-height:580px;overflow-y:auto;">
-            <div class="empty">No incidents · All systems nominal</div>
-          </div>
-        </div>
-      </div>
-      <!-- Incident stats sidebar -->
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="panel">
-          <div class="panel-hdr"><div class="panel-title">&#128200; Incident Stats</div></div>
-          <div style="padding:14px 16px;" id="incStats">
-            <div class="empty">Loading...</div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-hdr"><div class="panel-title">&#9889; Auto-Escalation</div></div>
-          <div style="padding:14px 16px;">
-            <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:12px;">Escalation rules active:</div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
-                <span style="color:var(--muted);">P3 → P2 after</span><span style="font-family:var(--mono);color:var(--p3);">10 min</span>
-              </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
-                <span style="color:var(--muted);">P2 → P1 after</span><span style="font-family:var(--mono);color:var(--p2);">5 min</span>
-              </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
-                <span style="color:var(--muted);">P1 notify operator</span><span style="font-family:var(--mono);color:var(--p1);">Immediate</span>
-              </div>
-            </div>
-            <div style="margin-top:12px;padding:8px 10px;border-radius:8px;background:rgba(76,175,125,.06);border:1px solid rgba(76,175,125,.15);font-size:10px;color:var(--green);">
-              &#10003; Auto-escalation enabled
-            </div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-hdr"><div class="panel-title">&#128203; Audit Trail</div></div>
-          <div style="padding:14px 16px;max-height:200px;overflow-y:auto;" id="auditTrail">
-            <div class="empty">No actions yet</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ANALYTICS TAB -->
-  <div class="tab-content" id="tab-analytics">
-    <div class="health-grid" id="healthGrid">
-      <div class="loading" style="grid-column:1/-1;"><div class="spin"></div>Loading client health scores...</div>
+        <div id="fleetGrid">
     </div>
     <div class="analytics-grid">
       <div class="stat-card">
@@ -466,9 +313,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
         <div id="agentStats"><div class="empty">Loading...</div></div>
       </div>
       <div class="stat-card">
-        <div class="sc-title">Signal Volume by Client</div>
-        <div id="volumeStats"><div class="empty">Loading...</div></div>
-      </div>
+        
       <div class="stat-card">
         <div class="sc-title">Exception Breakdown</div>
         <div id="exceptionStats"><div class="empty">Loading...</div></div>
@@ -904,16 +749,7 @@ function renderFleet(){
   }).join('');
 }
 
-// ── CLIENT TABS ──
-function renderClientTabs(){
-  const tabs=document.getElementById('clientTabs');
-  const colors=['var(--gold)','var(--blue)','var(--purple)','var(--green)','var(--p2)'];
-  tabs.innerHTML=`<div class="ct ${activeFilter==='all'?'on':''}" onclick="filterClient('all')"><span class="ct-dot" style="background:var(--gold);"></span>All Clients</div>`;
-  orgs.forEach((o,i)=>{
-    tabs.innerHTML+=`<div class="ct ${activeFilter===o.id?'on':''}" onclick="filterClient('${o.id}')"><span class="ct-dot" style="background:${colors[i%colors.length]};"></span>${o.name}</div>`;
-  });
-}
-function filterClient(id){activeFilter=id;renderClientTabs();renderFleet();}
+
 
 // ── KPI ──
 function renderKPIs(){
@@ -1167,7 +1003,7 @@ function renderAnalytics(){
 async function loadData(){
   try{
     jobs=await sbGet('jobs?select=*&order=created_at.desc&limit=200');
-    try{orgs=await sbGet('organizations?select=*&status=eq.active');}catch(e){orgs=[];}
+    orgs=[];
     renderClientTabs();
     renderFleet();
     renderKPIs();
@@ -1183,7 +1019,7 @@ async function init(){
   addFeed('Symphony+ initialized — Claude AI agent online','var(--gold)');
   addFeed('Connecting to Supabase data layer...','var(--muted)');
   await loadData();
-  addFeed('Data loaded — <strong>'+jobs.length+' signals</strong>, <strong>'+orgs.length+' clients</strong>','var(--green)');
+  addFeed('Data loaded — <strong>'+jobs.length+' signals</strong>','var(--green)')');
   await runAIAgent();
   pollInterval=setInterval(loadData,15000);
   agentInterval=setInterval(runAIAgent,30000);
