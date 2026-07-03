@@ -503,7 +503,7 @@ input,textarea{font-family:var(--sans);}
         <span class="jt-icon" id="dispatchIcon">&#128172;</span>
         <span class="jt-lbl">Dispatch</span>
       </button>
-      <button class="job-tool jt-scan" onclick="openScanner()">
+      <button class="job-tool jt-scan" id="scanTile" onclick="openScanner()">
         <span class="jt-icon">&#9638;</span>
         <span class="jt-lbl">Scan</span>
       </button>
@@ -919,10 +919,10 @@ async function acceptOffer(){
   try{
     await sbPatch('jobs?id=eq.'+currentJob.id,{status:'customer_confirmed',driver_name:driver.name,customer_confirmed:true});
   }catch(e){}
-  toast('Job accepted! Tap Start Delivery when ready.','ok');
   scannedPackages=[];
   renderJobScreen();
   showScreen('scJob');
+  toast('Job accepted! Head to pickup location.','ok');
   startDispatchPoll();
   startJobStatusPoll();
 }
@@ -940,42 +940,78 @@ function renderJobScreen(){
   if(!currentJob)return;
   const s=currentJob.status;
   const isTransit=s==='in_transit';
-  const dest=isTransit?(currentJob.dropoff_address||'&mdash;'):(currentJob.pickup_address||'&mdash;');
+  const dest=isTransit?(currentJob.dropoff_address||'--'):(currentJob.pickup_address||'--');
   const mapsUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest);
-  document.getElementById('mapSig').textContent='TP-'+(currentJob.id?currentJob.id.slice(0,8):'&mdash;');
-  document.getElementById('destLbl').textContent=isTransit?'DELIVERING TO':'PICKUP FROM';
-  document.getElementById('destAddr').textContent=dest;
+
+  document.getElementById('mapSig').textContent='TP-'+(currentJob.id?currentJob.id.slice(0,8):'--');
   document.getElementById('navLink').href=mapsUrl;
+
   const iframe=document.getElementById('jobMap');
   const mapSrc='https://maps.google.com/maps?q='+encodeURIComponent(dest)+'&output=embed';
   if(iframe.src!==mapSrc) iframe.src=mapSrc;
+
   const badge=document.getElementById('mapStatus');
-  if(isTransit){badge.textContent='In Transit';badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(141,92,255,.4);color:var(--purple)';}
-  else if(s==='customer_confirmed'){badge.textContent='Confirmed';badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(25,183,239,.35);color:var(--blue)';}
-  else{badge.textContent='Assigned';badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(255,150,30,.3);color:var(--orange)';}
   const btn=document.getElementById('jobBtn');
+  const scanTile=document.getElementById('scanTile');
+  const sb=document.getElementById('scanBadge');
+
+  // ── STEP 1: Accepted, not yet confirmed ──
   if(s==='assigned'){
-    btn.textContent='Waiting for customer confirmation...';
+    document.getElementById('destLbl').textContent='TRAVELING TO PICKUP';
+    document.getElementById('destAddr').textContent=currentJob.pickup_address||'--';
+    badge.textContent='Assigned';
+    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(255,150,30,.3);color:var(--orange)';
+    btn.textContent='Waiting for confirmation...';
     btn.className='job-action ja-wait';btn.disabled=true;
+    if(scanTile)scanTile.style.display='none';
+    if(sb)sb.style.display='none';
+
+  // ── STEP 2: Confirmed -- travel to pickup, scan on arrival ──
   } else if(s==='customer_confirmed'){
-    btn.textContent='Start Delivery';
-    btn.className='job-action ja-start';btn.disabled=false;
+    document.getElementById('destLbl').textContent='TRAVEL TO PICKUP';
+    document.getElementById('destAddr').textContent=currentJob.pickup_address||'--';
+    badge.textContent='Head to Pickup';
+    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(25,183,239,.35);color:var(--blue)';
+    if(scannedPackages.length>0){
+      // Packages already scanned -- show Start Delivery
+      btn.textContent='Start Delivery';
+      btn.className='job-action ja-start';btn.disabled=false;
+      if(sb){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
+      if(scanTile)scanTile.style.display='flex';
+    } else {
+      // No packages scanned yet -- Scan is the primary action
+      btn.textContent='Scan Packages at Pickup';
+      btn.className='job-action ja-start';btn.disabled=false;
+      btn.onclick=openScanner;
+      if(scanTile)scanTile.style.display='flex';
+      if(sb)sb.style.display='none';
+    }
+
+  // ── STEP 3: In transit -- delivering ──
   } else if(s==='in_transit'){
+    document.getElementById('destLbl').textContent='DELIVERING TO';
+    document.getElementById('destAddr').textContent=currentJob.dropoff_address||'--';
+    badge.textContent='In Transit';
+    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(141,92,255,.4);color:var(--purple)';
     btn.textContent='Confirm Delivery';
     btn.className='job-action ja-deliver';btn.disabled=false;
-  }
-  // Show scanned badge if packages loaded
-  const sb=document.getElementById('scanBadge');
-  if(sb&&scannedPackages.length>0){
-    sb.style.display='flex';
-    document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';
+    btn.onclick=()=>showScreen('scPOD');
+    if(scanTile)scanTile.style.display='none';
+    if(sb&&scannedPackages.length>0){
+      sb.style.display='flex';
+      document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';
+    }
   }
 }
 
 function handleJobAction(){
   if(!currentJob)return;
-  if(currentJob.status==='customer_confirmed') startDelivery();
-  else if(currentJob.status==='in_transit') showScreen('scPOD');
+  if(currentJob.status==='customer_confirmed'){
+    if(scannedPackages.length>0) startDelivery();
+    else openScanner();
+  } else if(currentJob.status==='in_transit'){
+    showScreen('scPOD');
+  }
 }
 
 async function startDelivery(){
@@ -1359,13 +1395,9 @@ function updateScanUI(){
 function doneScanningAll(){
   if(!scannedPackages.length)return;
   stopCamera();
-  // Return to job screen -- driver taps Start Delivery from there
-  const sb=document.getElementById('scanBadge');
-  if(sb){sb.style.display='flex';}
-  const st=document.getElementById('scanBadgeTxt');
-  if(st){st.textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
-  toast(scannedPackages.length+' packages scanned. Tap Start Delivery.','ok');
   showScreen('scJob');
+  renderJobScreen(); // re-render -- now shows Start Delivery since packages scanned
+  toast(scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' scanned. Tap Start Delivery.','ok');
 }
 
 // ── POD ──
