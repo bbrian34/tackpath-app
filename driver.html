@@ -177,21 +177,21 @@ input,textarea{font-family:var(--sans);}
 .jt-msg.alert .jt-icon,.jt-msg.alert .jt-lbl{color:var(--red);}
 .jt-scan{border-color:rgba(141,92,255,.2);}
 .jt-scan .jt-icon,.jt-scan .jt-lbl{color:var(--purple);}
-.jt-ruby{border-color:rgba(141,92,255,.2);}
-.jt-ruby .jt-icon{font-size:22px;}
-.jt-ruby .jt-lbl{color:var(--purple);}
-.jt-ruby.listening{border-color:rgba(255,59,48,.3);background:rgba(255,59,48,.08);}
+.jt-ruby{border-color:rgba(255,59,48,.25);background:rgba(255,59,48,.06);}
+.jt-ruby .jt-icon{font-size:22px;color:var(--red);}
+.jt-ruby .jt-lbl{color:var(--red);}
+.jt-ruby.listening{border-color:rgba(255,59,48,.5);background:rgba(255,59,48,.15);animation:pulse 1s infinite;}
 .jt-ruby.listening .jt-icon,.jt-ruby.listening .jt-lbl{color:var(--red);}
 /* Ruby btn kept for comms screen */
 .ruby-btn{width:60px;height:60px;border-radius:50%;
-  background:linear-gradient(135deg,var(--purple),#5533cc);
+  background:linear-gradient(135deg,var(--red),#aa1100);
   border:none;color:#fff;font-size:12px;font-weight:900;
   cursor:pointer;flex-shrink:0;
-  box-shadow:0 6px 20px rgba(141,92,255,.4);
+  box-shadow:0 6px 20px rgba(255,59,48,.45);
   transition:transform .1s;letter-spacing:.04em;}
 .ruby-btn:active{transform:scale(.93);}
-.ruby-btn.listening{background:linear-gradient(135deg,var(--red),#cc1100);
-  box-shadow:0 6px 24px rgba(255,59,48,.5);animation:pulse 1s infinite;}
+.ruby-btn.listening{background:linear-gradient(135deg,#ff6b5b,#cc1100);
+  box-shadow:0 6px 28px rgba(255,59,48,.7);animation:pulse 1s infinite;}
 .ruby-btn.thinking{background:linear-gradient(135deg,var(--blue),#0060cc);
   box-shadow:0 6px 24px rgba(25,183,239,.5);}
 
@@ -346,13 +346,13 @@ input,textarea{font-family:var(--sans);}
   display:none;flex-direction:column;align-items:center;justify-content:center;}
 .ruby-overlay.on{display:flex;}
 .ruby-orb{width:120px;height:120px;border-radius:50%;
-  background:linear-gradient(135deg,var(--purple),#5533cc);
+  background:linear-gradient(135deg,var(--red),#aa1100);
   display:flex;align-items:center;justify-content:center;
   font-size:22px;font-weight:900;color:#fff;
-  box-shadow:0 0 60px rgba(141,92,255,.55);margin-bottom:24px;
+  box-shadow:0 0 60px rgba(255,59,48,.5);margin-bottom:24px;
   animation:pulse 2s ease-in-out infinite;}
-.ruby-orb.listening{background:linear-gradient(135deg,var(--red),#cc1100);
-  box-shadow:0 0 60px rgba(255,59,48,.65);animation:pulse .7s ease-in-out infinite;}
+.ruby-orb.listening{background:linear-gradient(135deg,#ff6b5b,#cc1100);
+  box-shadow:0 0 70px rgba(255,59,48,.75);animation:pulse .7s ease-in-out infinite;}
 .ruby-orb.thinking{background:linear-gradient(135deg,var(--blue),#0060cc);
   box-shadow:0 0 60px rgba(25,183,239,.6);}
 .ruby-overlay-state{font-size:17px;font-weight:700;color:#fff;margin-bottom:6px;}
@@ -645,7 +645,7 @@ input,textarea{font-family:var(--sans);}
       <div class="pod-lbl">Notes <span style="color:#8ab4cc;font-size:11px;">(optional)</span></div>
       <textarea class="pod-notes" id="podNotes" placeholder="e.g. Left with doorman, front door..."></textarea>
     </div>
-    <button class="pod-submit" onclick="submitPOD()">&#10003; Confirm Delivery</button>
+    <button class="pod-submit" id="podSubmitBtn" onclick="submitPOD()">&#10003; Confirm Delivery</button>
   </div>
 </div>
 
@@ -1602,16 +1602,31 @@ async function submitPOD(){
   const recipient=document.getElementById('podRecipient').value.trim();
   if(!recipient){toast('Enter recipient name','warn');return;}
   if(podTab==='photo'&&!podPhotoData){toast('Take a photo first','warn');return;}
+  const btn=document.getElementById('podSubmitBtn');
+  if(btn){btn.textContent='Submitting...';btn.disabled=true;}
   try{
-    const notes=document.getElementById('podNotes').value.trim();
-    const podMethod=podTab==='photo'?'photo':'signature';
-    await sbPatch('jobs?id=eq.'+currentJob.id,{
-      status:'delivered',
-      driver_name:driver.name,
-      pod_method:podMethod,
-      pod_notes:notes||null,
-      pod_recipient:recipient
+    const resp=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?id=eq.'+currentJob.id,{
+      method:'PATCH',
+      headers:{
+        'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp',
+        'Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp',
+        'Content-Type':'application/json',
+        'Prefer':'return=representation'
+      },
+      body:JSON.stringify({status:'delivered',driver_name:driver.name})
     });
+    if(!resp.ok){
+      const err=await resp.text();
+      throw new Error(err);
+    }
+    // Post delivery confirmation message to dispatch
+    if(currentJob.id){
+      fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages',{
+        method:'POST',
+        headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify({job_id:currentJob.id,sender:driver.name,sender_role:'driver',body:'Delivered to '+recipient+'. POD: '+podTab+'.'})
+      }).catch(()=>{});
+    }
     stopPODCamera();
     const pay=currentJob.price||Math.floor(Math.random()*35+45);
     earnings+=pay; jobCount++;
@@ -1620,7 +1635,10 @@ async function submitPOD(){
     currentJob=null; scannedPackages=[]; podPhotoData=null;
     showHome();
     toast('Delivered! +$'+pay,'ok');
-  }catch(e){toast('Submission failed','warn');}
+  }catch(e){
+    toast('Submission failed: '+e.message.slice(0,60),'warn');
+    if(btn){btn.textContent='Confirm Delivery';btn.disabled=false;}
+  }
 }
 
 // ── MORE ──
