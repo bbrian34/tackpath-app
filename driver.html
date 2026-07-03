@@ -977,25 +977,45 @@ async function pollJobs(){
 }
 
 // ── JOB OFFER ──
+let offerAlertInterval=null;
+
+function stopOfferAlert(){
+  if(offerAlertInterval){clearInterval(offerAlertInterval);offerAlertInterval=null;}
+}
+
 function showOffer(job){
-  document.getElementById('offerPickup').textContent=job.pickup_address||'&mdash;';
-  document.getElementById('offerDropoff').textContent=job.dropoff_address||'&mdash;';
-  document.getElementById('offerPay').textContent='$'+(job.price||'&mdash;');
-  document.getElementById('offerDist').textContent=(job.distance_miles||'&mdash;')+' miles';
+  document.getElementById('offerPickup').textContent=job.pickup_address||'--';
+  document.getElementById('offerDropoff').textContent=job.dropoff_address||'--';
+  document.getElementById('offerPay').textContent='$'+(job.price||'--');
+  document.getElementById('offerDist').textContent=(job.distance_miles||'--')+' miles';
   showScreen('scOffer');
+  // Fire immediately
   playAlert();
+  // Then repeat every 4 seconds until driver responds
+  stopOfferAlert();
+  offerAlertInterval=setInterval(()=>{
+    // Only alert if offer screen is still showing
+    if(document.getElementById('scOffer').classList.contains('on')){
+      playAlert();
+    } else {
+      stopOfferAlert();
+    }
+  },4000);
+  // Countdown timer
   let secs=30;
   document.getElementById('offerTimer').textContent='0:30';
   clearInterval(offerTimerInt);
   offerTimerInt=setInterval(()=>{
     secs--;
     document.getElementById('offerTimer').textContent='0:'+(secs<10?'0':'')+secs;
-    if(secs<=0){clearInterval(offerTimerInt);declineOffer();}
+    if(secs<=0){clearInterval(offerTimerInt);stopOfferAlert();declineOffer();}
   },1000);
 }
 
 async function acceptOffer(){
   if(!pendingJob)return;
+  stopOfferAlert();
+  clearInterval(offerTimerInt);
   unlockSpeech();
   currentJob=pendingJob; pendingJob=null;
   currentJob.status='customer_confirmed';
@@ -1011,6 +1031,8 @@ async function acceptOffer(){
 }
 
 function declineOffer(){
+  stopOfferAlert();
+  clearInterval(offerTimerInt);
   if(pendingJob)rejectedIds.add(pendingJob.id);
   pendingJob=null;
   setTimeout(()=>rejectedIds.clear(),60000);
