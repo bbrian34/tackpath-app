@@ -973,6 +973,7 @@ async function acceptOffer(){
   renderJobScreen();showScreen('scJob');
   toast('Job accepted! Navigate to pickup.','ok');
   startDispatchPoll();startJobStatusPoll();
+  setTimeout(startWakeWord, 1000); // Start listening for "Ruby"
 }
 
 function declineOffer(){
@@ -1253,6 +1254,7 @@ async function sendCommsMsg(text){
 let rubyActive=false,rubyRecog=null;
 function activateRuby(){
   unlockSpeech();
+  stopWakeWord(); // Pause wake listener while Ruby is active
   document.getElementById('rubyOverlay').classList.add('on');
   rubyActive=true;
   const btn=document.getElementById('rubyJobBtn');
@@ -1264,6 +1266,8 @@ function closeRuby(){
   document.getElementById('rubyOverlay').classList.remove('on');
   const btn=document.getElementById('rubyJobBtn');
   if(btn){btn.style.animation='';btn.textContent='Ruby';}
+  // Resume wake word listening
+  if(currentJob) setTimeout(startWakeWord, 1500);
 }
 function setRubyState(state){
   const orb=document.getElementById('rubyOrb');
@@ -1481,6 +1485,7 @@ async function submitPOD(){
     const pay=currentJob.price||Math.floor(Math.random()*35+45);
     earnings+=pay;jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);
+    stopWakeWord();
     currentJob=null;scannedPackages=[];podPhotoData=null;
     showHome();toast('Delivered! +$'+pay,'ok');
   }catch(e){
@@ -1516,6 +1521,60 @@ function startGPS(){
     pos=>{if(!currentJob)return;sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed}).catch(()=>{});},
     err=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:15000}
   );
+}
+
+// ── WAKE WORD LISTENER -- "Ruby" activates Ruby ──
+let wakeRecog=null, wakeActive=false;
+
+function startWakeWord(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR||wakeActive)return;
+  wakeActive=true;
+  wakeRecog=new SR();
+  wakeRecog.lang='en-US';
+  wakeRecog.continuous=true;
+  wakeRecog.interimResults=true;
+  wakeRecog.onresult=e=>{
+    const text=Array.from(e.results).map(r=>r[0].transcript).join('').toLowerCase().trim();
+    if(text.includes('ruby')&&!rubyActive&&!document.getElementById('rubyOverlay').classList.contains('on')){
+      // Wake word detected -- beep to confirm and activate Ruby
+      beepWake();
+      setTimeout(()=>activateRuby(), 300);
+    }
+  };
+  wakeRecog.onend=()=>{
+    wakeActive=false;
+    // Restart after short delay to keep listening
+    if(currentJob) setTimeout(startWakeWord, 1000);
+  };
+  wakeRecog.onerror=()=>{
+    wakeActive=false;
+    if(currentJob) setTimeout(startWakeWord, 3000);
+  };
+  try{ wakeRecog.start(); }catch(e){ wakeActive=false; }
+}
+
+function stopWakeWord(){
+  wakeActive=false;
+  if(wakeRecog)try{wakeRecog.stop();}catch(e){}
+  wakeRecog=null;
+}
+
+function beepWake(){
+  // Double beep -- "I'm listening"
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [[880,0,.1],[1100,.18,.12]].forEach(([f,s,d])=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=f;o.type='sine';
+      g.gain.setValueAtTime(0,ctx.currentTime+s);
+      g.gain.linearRampToValueAtTime(.4,ctx.currentTime+s+.02);
+      g.gain.linearRampToValueAtTime(0,ctx.currentTime+s+d);
+      o.start(ctx.currentTime+s);o.stop(ctx.currentTime+s+d+.1);
+    });
+  }catch(e){}
+  if(navigator.vibrate)navigator.vibrate([40,30,60]);
 }
 
 // ── BOOT ──
