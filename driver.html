@@ -1524,44 +1524,39 @@ function startGPS(){
 }
 
 // ── WAKE WORD LISTENER -- "Ruby" activates Ruby ──
-let wakeRecog=null, wakeActive=false;
+// Uses short 4-second listen windows instead of continuous (Android doesn't support continuous)
+let wakeRecog=null, wakeActive=false, wakeInterval=null;
 
 function startWakeWord(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR||wakeActive)return;
+  // Poll every 5 seconds -- short listen window
+  wakeInterval=setInterval(()=>{
+    if(rubyActive||document.getElementById('rubyOverlay').classList.contains('on'))return;
+    if(wakeRecog)try{wakeRecog.stop();}catch(e){}
+    const recog=new SR();
+    recog.lang='en-US';recog.continuous=false;recog.interimResults=false;
+    recog.onresult=e=>{
+      const text=e.results[0]?.[0]?.transcript?.toLowerCase()||'';
+      if(text.includes('ruby')){
+        beepWake();
+        setTimeout(()=>activateRuby(),300);
+      }
+    };
+    recog.onerror=()=>{}; // Silent fail -- just wait for next interval
+    try{recog.start();wakeRecog=recog;}catch(e){}
+  },5000);
   wakeActive=true;
-  wakeRecog=new SR();
-  wakeRecog.lang='en-US';
-  wakeRecog.continuous=true;
-  wakeRecog.interimResults=true;
-  wakeRecog.onresult=e=>{
-    const text=Array.from(e.results).map(r=>r[0].transcript).join('').toLowerCase().trim();
-    if(text.includes('ruby')&&!rubyActive&&!document.getElementById('rubyOverlay').classList.contains('on')){
-      // Wake word detected -- beep to confirm and activate Ruby
-      beepWake();
-      setTimeout(()=>activateRuby(), 300);
-    }
-  };
-  wakeRecog.onend=()=>{
-    wakeActive=false;
-    // Restart after short delay to keep listening
-    if(currentJob) setTimeout(startWakeWord, 1000);
-  };
-  wakeRecog.onerror=()=>{
-    wakeActive=false;
-    if(currentJob) setTimeout(startWakeWord, 3000);
-  };
-  try{ wakeRecog.start(); }catch(e){ wakeActive=false; }
 }
 
 function stopWakeWord(){
   wakeActive=false;
+  if(wakeInterval){clearInterval(wakeInterval);wakeInterval=null;}
   if(wakeRecog)try{wakeRecog.stop();}catch(e){}
   wakeRecog=null;
 }
 
 function beepWake(){
-  // Double beep -- "I'm listening"
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
     [[880,0,.1],[1100,.18,.12]].forEach(([f,s,d])=>{
