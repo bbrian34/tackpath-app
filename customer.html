@@ -577,6 +577,19 @@ function showPortal(){
 function loadSaved(){
   if(localStorage.getItem('tp_saved_c')) document.getElementById('useSavedBtn').style.display='block';
 }
+function saveInfo(){
+  const data={
+    recipient:document.getElementById('recipient')?.value||'',
+    phone:document.getElementById('custPhone')?.value||'',
+    pickupAddr:document.getElementById('pickupAddr')?.value||'',
+    pickupCity:document.getElementById('pickupCity')?.value||'',
+    deliveryAddr:document.getElementById('deliveryAddr')?.value||'',
+    deliveryCity:document.getElementById('deliveryCity')?.value||'',
+    email:document.getElementById('custEmail')?.value||''
+  };
+  localStorage.setItem('tp_saved_c',JSON.stringify(data));
+}
+
 function useSaved(){
   const s=JSON.parse(localStorage.getItem('tp_saved_c')||'{}');
   if(s.recipient) document.getElementById('recipient').value=s.recipient;
