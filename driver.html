@@ -973,6 +973,7 @@ async function acceptOffer(){
   renderJobScreen();showScreen('scJob');
   toast('Job accepted! Navigate to pickup.','ok');
   startDispatchPoll();startJobStatusPoll();
+  setTimeout(startWakeWord,1500);
 }
 
 function declineOffer(){
@@ -1253,6 +1254,7 @@ async function sendCommsMsg(text){
 let rubyActive=false,rubyRecog=null;
 function activateRuby(){
   unlockSpeech();
+  stopWakeWord();
   document.getElementById('rubyOverlay').classList.add('on');
   rubyActive=true;
   const btn=document.getElementById('rubyJobBtn');
@@ -1264,6 +1266,7 @@ function closeRuby(){
   document.getElementById('rubyOverlay').classList.remove('on');
   const btn=document.getElementById('rubyJobBtn');
   if(btn){btn.style.animation='';btn.textContent='Ruby';}
+  if(currentJob)setTimeout(startWakeWord,1000);
 }
 function setRubyState(state){
   const orb=document.getElementById('rubyOrb');
@@ -1518,10 +1521,61 @@ function startGPS(){
   );
 }
 
-// Wake word removed -- not supported reliably on Android Chrome
-function startWakeWord(){}
-function stopWakeWord(){}
-function beepWake(){}
+// ── WAKE WORD -- single continuous session, restarts only on natural end ──
+let wakeRecog=null,wakeRunning=false;
+
+function beepWake(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [[880,0,.1],[1100,.2,.13]].forEach(([f,s,d])=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);o.frequency.value=f;o.type='sine';
+      g.gain.setValueAtTime(0,ctx.currentTime+s);
+      g.gain.linearRampToValueAtTime(.4,ctx.currentTime+s+.02);
+      g.gain.linearRampToValueAtTime(0,ctx.currentTime+s+d);
+      o.start(ctx.currentTime+s);o.stop(ctx.currentTime+s+d+.1);
+    });
+  }catch(e){}
+  if(navigator.vibrate)navigator.vibrate([40,30,60]);
+}
+
+function startWakeWord(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR||wakeRunning)return;
+  wakeRunning=true;
+  const r=new SR();
+  r.lang='en-US';
+  r.continuous=true;
+  r.interimResults=true;
+  r.onresult=e=>{
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript.toLowerCase().trim();
+      if(t.includes('ruby')&&!rubyActive&&!document.getElementById('rubyOverlay').classList.contains('on')){
+        beepWake();
+        setTimeout(activateRuby,400);
+      }
+    }
+  };
+  r.onend=()=>{
+    // Restart only if still supposed to be running and Ruby is not active
+    if(wakeRunning&&currentJob&&!rubyActive){
+      setTimeout(()=>{ if(wakeRunning&&currentJob) r.start(); },500);
+    }
+  };
+  r.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      wakeRunning=false; // Permission denied -- stop
+    }
+    // All other errors: let onend restart it
+  };
+  try{r.start();wakeRecog=r;}catch(e){wakeRunning=false;}
+}
+
+function stopWakeWord(){
+  wakeRunning=false;
+  if(wakeRecog)try{wakeRecog.stop();}catch(e){}
+  wakeRecog=null;
+}
 
 // ── BOOT ──
 const saved=localStorage.getItem('tp_drv');
