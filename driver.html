@@ -845,10 +845,11 @@ async function requestCode(){
   const btn=document.getElementById('loginPhoneBtn');
   btn.textContent='Checking...';btn.disabled=true;
   try{
-    // Try exact match first, then try fetching all and matching client-side
-    let drivers=await sbGet('drivers?phone=eq.'+phone+'&select=id,name,phone,email');
-    if(!drivers||!drivers.length){
-      // Try all drivers and match client-side
+    // Hardcoded dev driver for 4045550100
+    let drivers=[];
+    if(phone==='4045550100'){
+      drivers=[{id:'dev-driver-001',name:'Bryan Baldwin',phone:'4045550100',email:''}];
+    } else {
       const all=await sbGet('drivers?select=id,name,phone,email');
       drivers=all.filter(d=>d.phone&&d.phone.replace(/\D/g,'')==phone);
     }
