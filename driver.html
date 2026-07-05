@@ -987,7 +987,6 @@ async function acceptOffer(){
   renderJobScreen();showScreen('scJob');
   toast('Job accepted! Navigate to pickup.','ok');
   startDispatchPoll();startJobStatusPoll();
-  setTimeout(startWakeWord,1500);
 }
 
 function declineOffer(){
@@ -1268,7 +1267,6 @@ async function sendCommsMsg(text){
 let rubyActive=false,rubyRecog=null;
 function activateRuby(){
   unlockSpeech();
-  stopWakeWord();
   document.getElementById('rubyOverlay').classList.add('on');
   rubyActive=true;
   const btn=document.getElementById('rubyJobBtn');
@@ -1280,7 +1278,6 @@ function closeRuby(){
   document.getElementById('rubyOverlay').classList.remove('on');
   const btn=document.getElementById('rubyJobBtn');
   if(btn){btn.style.animation='';btn.textContent='Ruby';}
-  if(currentJob)setTimeout(startWakeWord,1000);
 }
 function setRubyState(state){
   const orb=document.getElementById('rubyOrb');
@@ -1535,68 +1532,10 @@ function startGPS(){
   );
 }
 
-// ── WAKE WORD -- listens for "Ruby", restarts cleanly after each session ──
-let wakeRunning=false,wakeRecog=null,wakeErrorCount=0;
-
-function beepWake(){
-  playTones([[880,0,.1],[1100,.2,.13]]);
-  if(navigator.vibrate)navigator.vibrate([40,30,60]);
-}
-
-function startWakeWord(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR||wakeRunning||rubyActive)return;
-  wakeRunning=true;
-  wakeErrorCount=0;
-  _doWakeListen();
-}
-
-function _doWakeListen(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR||!wakeRunning||!currentJob||rubyActive)return;
-  const r=new SR();
-  wakeRecog=r;
-  r.lang='en-US';
-  r.continuous=false; // false is more reliable on Android
-  r.interimResults=false;
-  r.maxAlternatives=3;
-  r.onresult=e=>{
-    wakeErrorCount=0;
-    for(let i=0;i<e.results.length;i++){
-      for(let j=0;j<e.results[i].length;j++){
-        const t=(e.results[i][j].transcript||'').toLowerCase();
-        if(t.includes('ruby')&&!rubyActive){
-          beepWake();
-          setTimeout(activateRuby,400);
-          return;
-        }
-      }
-    }
-  };
-  r.onend=()=>{
-    // Restart after a short pause
-    if(wakeRunning&&currentJob&&!rubyActive){
-      setTimeout(_doWakeListen, 800);
-    }
-  };
-  r.onerror=e=>{
-    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
-      wakeRunning=false;return;
-    }
-    wakeErrorCount++;
-    // Back off if too many errors
-    if(wakeRunning&&currentJob&&!rubyActive&&wakeErrorCount<10){
-      setTimeout(_doWakeListen, wakeErrorCount*1000);
-    } else if(wakeErrorCount>=10){
-      wakeRunning=false; // Give up after 10 consecutive errors
-    }
-  };
-  try{ r.start(); }catch(e){ wakeRunning=false; }
-}
-
-function stopWakeWord(){
-  wakeRunning=false;
-  if(wakeRecog)try{wakeRecog.stop();}catch(e){}
+// Wake word disabled
+function startWakeWord(){}
+function stopWakeWord(){}
+function beepWake(){}
   wakeRecog=null;
   wakeErrorCount=0;
 }
