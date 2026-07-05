@@ -732,6 +732,7 @@ if(synth.onvoiceschanged!==undefined)synth.onvoiceschanged=loadVoices;
 loadVoices();
 
 function unlockSpeech(){
+  unlockAudio(); // Always unlock audio context on user gesture
   if(speechUnlocked)return;
   try{synth.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.rate=2;u.onend=()=>{speechUnlocked=true;};synth.speak(u);}catch(e){}
 }
@@ -740,34 +741,47 @@ function speak(text){
   try{synth.cancel();const u=new SpeechSynthesisUtterance(text);if(synthVoice)u.voice=synthVoice;u.rate=1.0;u.pitch=1.1;u.volume=1;setTimeout(()=>synth.speak(u),150);}catch(e){}
 }
 
-// ── AUDIO ALERTS ──
+// ── AUDIO -- single persistent context, unlocked on first user tap ──
+let audioCtx=null;
+
+function getAudioCtx(){
+  if(!audioCtx){
+    try{ audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function unlockAudio(){
+  const ctx=getAudioCtx();
+  if(!ctx)return;
+  // Play silent buffer to unlock
+  const buf=ctx.createBuffer(1,1,22050);
+  const src=ctx.createBufferSource();
+  src.buffer=buf;src.connect(ctx.destination);src.start(0);
+}
+
+function playTones(tones){
+  const ctx=getAudioCtx();
+  if(!ctx)return;
+  tones.forEach(([f,s,d])=>{
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.frequency.value=f;o.type='sine';
+    g.gain.setValueAtTime(0,ctx.currentTime+s);
+    g.gain.linearRampToValueAtTime(.5,ctx.currentTime+s+.02);
+    g.gain.linearRampToValueAtTime(0,ctx.currentTime+s+d);
+    o.start(ctx.currentTime+s);o.stop(ctx.currentTime+s+d+.1);
+  });
+}
+
 function playAlert(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [[660,0,.18],[880,.28,.18],[660,.56,.18],[880,.84,.18],[660,1.12,.18],[880,1.40,.22]].forEach(([f,s,d])=>{
-      const o=ctx.createOscillator(),g=ctx.createGain();
-      o.connect(g);g.connect(ctx.destination);o.frequency.value=f;o.type='sine';
-      g.gain.setValueAtTime(0,ctx.currentTime+s);
-      g.gain.linearRampToValueAtTime(.5,ctx.currentTime+s+.02);
-      g.gain.linearRampToValueAtTime(0,ctx.currentTime+s+d);
-      o.start(ctx.currentTime+s);o.stop(ctx.currentTime+s+d+.1);
-    });
-  }catch(e){}
+  playTones([[660,0,.18],[880,.28,.18],[660,.56,.18],[880,.84,.18],[660,1.12,.18],[880,1.40,.22]]);
   if(navigator.vibrate)navigator.vibrate([300,100,300,100,300,100,400]);
 }
 
 function playMsgAlert(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [[880,0,.12],[1100,.22,.15]].forEach(([f,s,d])=>{
-      const o=ctx.createOscillator(),g=ctx.createGain();
-      o.connect(g);g.connect(ctx.destination);o.frequency.value=f;o.type='sine';
-      g.gain.setValueAtTime(0,ctx.currentTime+s);
-      g.gain.linearRampToValueAtTime(.35,ctx.currentTime+s+.02);
-      g.gain.linearRampToValueAtTime(0,ctx.currentTime+s+d);
-      o.start(ctx.currentTime+s);o.stop(ctx.currentTime+s+d+.1);
-    });
-  }catch(e){}
+  playTones([[880,0,.12],[1100,.22,.15]]);
   if(navigator.vibrate)navigator.vibrate([200,100,200]);
 }
 
@@ -1521,60 +1535,70 @@ function startGPS(){
   );
 }
 
-// ── WAKE WORD -- single continuous session, restarts only on natural end ──
-let wakeRecog=null,wakeRunning=false;
+// ── WAKE WORD -- listens for "Ruby", restarts cleanly after each session ──
+let wakeRunning=false,wakeRecog=null,wakeErrorCount=0;
 
 function beepWake(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [[880,0,.1],[1100,.2,.13]].forEach(([f,s,d])=>{
-      const o=ctx.createOscillator(),g=ctx.createGain();
-      o.connect(g);g.connect(ctx.destination);o.frequency.value=f;o.type='sine';
-      g.gain.setValueAtTime(0,ctx.currentTime+s);
-      g.gain.linearRampToValueAtTime(.4,ctx.currentTime+s+.02);
-      g.gain.linearRampToValueAtTime(0,ctx.currentTime+s+d);
-      o.start(ctx.currentTime+s);o.stop(ctx.currentTime+s+d+.1);
-    });
-  }catch(e){}
+  playTones([[880,0,.1],[1100,.2,.13]]);
   if(navigator.vibrate)navigator.vibrate([40,30,60]);
 }
 
 function startWakeWord(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR||wakeRunning)return;
+  if(!SR||wakeRunning||rubyActive)return;
   wakeRunning=true;
+  wakeErrorCount=0;
+  _doWakeListen();
+}
+
+function _doWakeListen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR||!wakeRunning||!currentJob||rubyActive)return;
   const r=new SR();
+  wakeRecog=r;
   r.lang='en-US';
-  r.continuous=true;
-  r.interimResults=true;
+  r.continuous=false; // false is more reliable on Android
+  r.interimResults=false;
+  r.maxAlternatives=3;
   r.onresult=e=>{
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t=e.results[i][0].transcript.toLowerCase().trim();
-      if(t.includes('ruby')&&!rubyActive&&!document.getElementById('rubyOverlay').classList.contains('on')){
-        beepWake();
-        setTimeout(activateRuby,400);
+    wakeErrorCount=0;
+    for(let i=0;i<e.results.length;i++){
+      for(let j=0;j<e.results[i].length;j++){
+        const t=(e.results[i][j].transcript||'').toLowerCase();
+        if(t.includes('ruby')&&!rubyActive){
+          beepWake();
+          setTimeout(activateRuby,400);
+          return;
+        }
       }
     }
   };
   r.onend=()=>{
-    // Restart only if still supposed to be running and Ruby is not active
+    // Restart after a short pause
     if(wakeRunning&&currentJob&&!rubyActive){
-      setTimeout(()=>{ if(wakeRunning&&currentJob) r.start(); },500);
+      setTimeout(_doWakeListen, 800);
     }
   };
   r.onerror=e=>{
     if(e.error==='not-allowed'||e.error==='service-not-allowed'){
-      wakeRunning=false; // Permission denied -- stop
+      wakeRunning=false;return;
     }
-    // All other errors: let onend restart it
+    wakeErrorCount++;
+    // Back off if too many errors
+    if(wakeRunning&&currentJob&&!rubyActive&&wakeErrorCount<10){
+      setTimeout(_doWakeListen, wakeErrorCount*1000);
+    } else if(wakeErrorCount>=10){
+      wakeRunning=false; // Give up after 10 consecutive errors
+    }
   };
-  try{r.start();wakeRecog=r;}catch(e){wakeRunning=false;}
+  try{ r.start(); }catch(e){ wakeRunning=false; }
 }
 
 function stopWakeWord(){
   wakeRunning=false;
   if(wakeRecog)try{wakeRecog.stop();}catch(e){}
   wakeRecog=null;
+  wakeErrorCount=0;
 }
 
 // ── BOOT ──
@@ -1584,3 +1608,4 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 </script>
 </body>
 </html>
+
