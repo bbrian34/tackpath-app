@@ -624,6 +624,7 @@ function setPri(p){
 // Customer sees confirmation modal when driver accepts (status='assigned')
 // Customer confirms -> status='customer_confirmed' -> driver gets Start Delivery
 async function requestQuote(){
+  if(document.getElementById('saveInfoCheck')?.checked) saveInfo();
   const recipient=document.getElementById('recipient').value.trim();
   const pickupAddr=document.getElementById('pickupAddr').value.trim();
   const pickupCity=document.getElementById('pickupCity').value;
