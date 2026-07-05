@@ -732,13 +732,19 @@ if(synth.onvoiceschanged!==undefined)synth.onvoiceschanged=loadVoices;
 loadVoices();
 
 function unlockSpeech(){
-  unlockAudio(); // Always unlock audio context on user gesture
-  if(speechUnlocked)return;
-  try{synth.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.rate=2;u.onend=()=>{speechUnlocked=true;};synth.speak(u);}catch(e){}
+  unlockAudio();
+  speechUnlocked=true; // Mark as unlocked -- don't call speechSynthesis on unlock as it triggers mic permission on Android
 }
 
 function speak(text){
-  try{synth.cancel();const u=new SpeechSynthesisUtterance(text);if(synthVoice)u.voice=synthVoice;u.rate=1.0;u.pitch=1.1;u.volume=1;setTimeout(()=>synth.speak(u),150);}catch(e){}
+  try{
+    if(synth.speaking||synth.pending)synth.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    if(synthVoice)u.voice=synthVoice;
+    u.rate=1.0;u.pitch=1.1;u.volume=1;
+    u.onerror=()=>{}; // Silence errors
+    setTimeout(()=>{try{synth.speak(u);}catch(e){}},200);
+  }catch(e){}
 }
 
 // ── AUDIO -- single persistent context, unlocked on first user tap ──
@@ -1536,6 +1542,9 @@ function startGPS(){
 function startWakeWord(){}
 function stopWakeWord(){}
 function beepWake(){}
+  wakeRecog=null;
+  wakeErrorCount=0;
+}
 
 // ── BOOT ──
 const saved=localStorage.getItem('tp_drv');
