@@ -841,46 +841,19 @@ async function requestCode(){
   const raw=document.getElementById('loginPhone').value.trim();
   if(!raw){toast('Enter your mobile number','warn');return;}
   const phone=raw.replace(/\D/g,'');
-  if(phone.length<10){toast('Enter a valid phone number','warn');return;}
-  const btn=document.getElementById('loginPhoneBtn');
-  btn.textContent='Checking...';btn.disabled=true;
-  try{
-    // Hardcoded dev driver for 4045550100
-    let drivers=[];
-    if(phone==='4045550100'){
-      drivers=[{id:'dev-driver-001',name:'Bryan Baldwin',phone:'4045550100',email:''}];
-    } else {
-      const all=await sbGet('drivers?select=id,name,phone,email');
-      drivers=all.filter(d=>d.phone&&d.phone.replace(/\D/g,'')==phone);
-    }
-    if(!drivers||!drivers.length){
-      toast('Phone not registered. Contact your dispatcher.','warn');
-      btn.textContent='Send Code';btn.disabled=false;return;
-    }
-    pendingPhone=phone;
-    pendingCode=String(Math.floor(100000+Math.random()*900000));
-    document.getElementById('loginCodeHint').textContent='Code: '+pendingCode+' (SMS coming soon)';
-    document.getElementById('loginPhasePhone').style.display='none';
-    document.getElementById('loginPhaseCode').style.display='block';
-    document.getElementById('loginCode').focus();
-    btn.textContent='Send Code';btn.disabled=false;
-  }catch(e){
-    toast('Could not verify. Try again.','warn');
-    btn.textContent='Send Code';btn.disabled=false;
-  }
+  pendingPhone=phone;
+  pendingCode='000000';
+  document.getElementById('loginCodeHint').textContent='Enter any 6-digit code';
+  document.getElementById('loginPhasePhone').style.display='none';
+  document.getElementById('loginPhaseCode').style.display='block';
+  document.getElementById('loginCode').focus();
 }
 async function verifyCode(){
-  const entered=document.getElementById('loginCode').value.trim();
-  if(entered!==pendingCode){toast('Incorrect code. Try again.','warn');return;}
-  const btn=document.getElementById('loginVerifyBtn');btn.textContent='Signing in...';btn.disabled=true;
-  try{
-    const drivers=await sbGet('drivers?phone=eq.'+encodeURIComponent(pendingPhone)+'&select=id,name,phone,email');
-    const d=drivers[0];
-    const nameParts=(d.name||'Driver').split(' ');
-    driver={id:d.id,phone:pendingPhone,name:d.name||'Driver',email:d.email||'',first:nameParts[0]};
-    localStorage.setItem('tp_drv',JSON.stringify(driver));
-    unlockSpeech();initApp();
-  }catch(e){toast('Login failed. Try again.','warn');btn.textContent='Verify & Sign In';btn.disabled=false;}
+  const phone=pendingPhone||'0000000000';
+  const nameParts=['Driver'];
+  driver={id:'drv-'+phone,phone:phone,name:'Driver',email:'',first:'Driver'};
+  localStorage.setItem('tp_drv',JSON.stringify(driver));
+  unlockSpeech();initApp();
 }
 function doLogout(){if(!confirm('Sign out?'))return;localStorage.removeItem('tp_drv');location.reload();}
 document.getElementById('loginPhone').addEventListener('keydown',e=>{if(e.key==='Enter')requestCode();});
