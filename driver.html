@@ -973,7 +973,6 @@ async function acceptOffer(){
   renderJobScreen();showScreen('scJob');
   toast('Job accepted! Navigate to pickup.','ok');
   startDispatchPoll();startJobStatusPoll();
-  setTimeout(startWakeWord, 1000); // Start listening for "Ruby"
 }
 
 function declineOffer(){
@@ -1254,7 +1253,6 @@ async function sendCommsMsg(text){
 let rubyActive=false,rubyRecog=null;
 function activateRuby(){
   unlockSpeech();
-  stopWakeWord(); // Pause wake listener while Ruby is active
   document.getElementById('rubyOverlay').classList.add('on');
   rubyActive=true;
   const btn=document.getElementById('rubyJobBtn');
@@ -1266,8 +1264,6 @@ function closeRuby(){
   document.getElementById('rubyOverlay').classList.remove('on');
   const btn=document.getElementById('rubyJobBtn');
   if(btn){btn.style.animation='';btn.textContent='Ruby';}
-  // Resume wake word listening
-  if(currentJob) setTimeout(startWakeWord, 1500);
 }
 function setRubyState(state){
   const orb=document.getElementById('rubyOrb');
@@ -1485,8 +1481,7 @@ async function submitPOD(){
     const pay=currentJob.price||Math.floor(Math.random()*35+45);
     earnings+=pay;jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);
-    stopWakeWord();
-    currentJob=null;scannedPackages=[];podPhotoData=null;
+      currentJob=null;scannedPackages=[];podPhotoData=null;
     showHome();toast('Delivered! +$'+pay,'ok');
   }catch(e){
     toast('Submission failed: '+e.message.slice(0,60),'warn');
@@ -1523,54 +1518,10 @@ function startGPS(){
   );
 }
 
-// ── WAKE WORD LISTENER -- "Ruby" activates Ruby ──
-// Uses short 4-second listen windows instead of continuous (Android doesn't support continuous)
-let wakeRecog=null, wakeActive=false, wakeInterval=null;
-
-function startWakeWord(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR||wakeActive)return;
-  // Poll every 5 seconds -- short listen window
-  wakeInterval=setInterval(()=>{
-    if(rubyActive||document.getElementById('rubyOverlay').classList.contains('on'))return;
-    if(wakeRecog)try{wakeRecog.stop();}catch(e){}
-    const recog=new SR();
-    recog.lang='en-US';recog.continuous=false;recog.interimResults=false;
-    recog.onresult=e=>{
-      const text=e.results[0]?.[0]?.transcript?.toLowerCase()||'';
-      if(text.includes('ruby')){
-        beepWake();
-        setTimeout(()=>activateRuby(),300);
-      }
-    };
-    recog.onerror=()=>{}; // Silent fail -- just wait for next interval
-    try{recog.start();wakeRecog=recog;}catch(e){}
-  },5000);
-  wakeActive=true;
-}
-
-function stopWakeWord(){
-  wakeActive=false;
-  if(wakeInterval){clearInterval(wakeInterval);wakeInterval=null;}
-  if(wakeRecog)try{wakeRecog.stop();}catch(e){}
-  wakeRecog=null;
-}
-
-function beepWake(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [[880,0,.1],[1100,.18,.12]].forEach(([f,s,d])=>{
-      const o=ctx.createOscillator(),g=ctx.createGain();
-      o.connect(g);g.connect(ctx.destination);
-      o.frequency.value=f;o.type='sine';
-      g.gain.setValueAtTime(0,ctx.currentTime+s);
-      g.gain.linearRampToValueAtTime(.4,ctx.currentTime+s+.02);
-      g.gain.linearRampToValueAtTime(0,ctx.currentTime+s+d);
-      o.start(ctx.currentTime+s);o.stop(ctx.currentTime+s+d+.1);
-    });
-  }catch(e){}
-  if(navigator.vibrate)navigator.vibrate([40,30,60]);
-}
+// Wake word removed -- not supported reliably on Android Chrome
+function startWakeWord(){}
+function stopWakeWord(){}
+function beepWake(){}
 
 // ── BOOT ──
 const saved=localStorage.getItem('tp_drv');
