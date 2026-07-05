@@ -845,7 +845,13 @@ async function requestCode(){
   const btn=document.getElementById('loginPhoneBtn');
   btn.textContent='Checking...';btn.disabled=true;
   try{
-    const drivers=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&select=id,name,phone,email');
+    // Try exact match first, then try fetching all and matching client-side
+    let drivers=await sbGet('drivers?phone=eq.'+phone+'&select=id,name,phone,email');
+    if(!drivers||!drivers.length){
+      // Try all drivers and match client-side
+      const all=await sbGet('drivers?select=id,name,phone,email');
+      drivers=all.filter(d=>d.phone&&d.phone.replace(/\D/g,'')==phone);
+    }
     if(!drivers||!drivers.length){
       toast('Phone not registered. Contact your dispatcher.','warn');
       btn.textContent='Send Code';btn.disabled=false;return;
