@@ -335,6 +335,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
             <div class="po-desc" style="font-size:10px;">Immediate</div>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <input type="checkbox" id="saveInfoCheck" style="width:17px;height:17px;cursor:pointer;accent-color:var(--blue);flex-shrink:0;"/>
+          <label for="saveInfoCheck" style="font-size:13px;color:rgba(255,255,255,.65);cursor:pointer;">Save my info for next time</label>
+        </div>
         <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
           <input type="text" class="fi2" id="notes" placeholder="Notes (optional)" style="margin:0;"/>
           <button class="btn-primary" onclick="requestQuote()" style="white-space:nowrap;padding:9px 18px;">Request Quote &#8594;</button>
