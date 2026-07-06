@@ -256,7 +256,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
 
 <!-- LOGIN -->
 <div id="scLogin" class="screen on" style="padding-top:0;">
-  <div class="login-box">
+  <div class="login-box" id="loginMainBox">
     <div class="login-top">
       <div class="login-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
       <div class="login-sub">Sign in to your delivery account</div>
@@ -955,19 +955,21 @@ if(saved){currentUser=JSON.parse(saved);showPortal();}
 const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 
-function showBox(id){
-  ['registerBox','forgotBox'].forEach(b=>{
-    const el=document.getElementById(b);
-    if(el)el.style.display='none';
-  });
-  const loginBox=document.querySelector('#scLogin .login-box:first-of-type');
-  if(loginBox)loginBox.style.display='none';
-  if(id==='login'&&loginBox)loginBox.style.display='block';
-  else{const el=document.getElementById(id);if(el)el.style.display='block';}
+function showRegister(){
+  document.getElementById('loginMainBox').style.display='none';
+  document.getElementById('registerBox').style.display='block';
+  document.getElementById('forgotBox').style.display='none';
 }
-function showRegister(){showBox('registerBox');}
-function showLogin(){showBox('login');}
-function showForgot(){showBox('forgotBox');}
+function showLogin(){
+  document.getElementById('loginMainBox').style.display='block';
+  document.getElementById('registerBox').style.display='none';
+  document.getElementById('forgotBox').style.display='none';
+}
+function showForgot(){
+  document.getElementById('loginMainBox').style.display='none';
+  document.getElementById('registerBox').style.display='none';
+  document.getElementById('forgotBox').style.display='block';
+}
 
 async function doLogin(){
   const email=document.getElementById('loginEmail').value.trim();
