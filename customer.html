@@ -268,7 +268,28 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
       <input type="password" class="fi" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="btn-login" onclick="doLogin()">Sign In &#8594;</button>
       <div class="login-note">Demo mode — any credentials work</div>
-      <div class="login-create">New to TackPath? <a href="#" onclick="doLogin()">Create account &#8594;</a></div>
+      <div class="login-create">New to TackPath? <a href="#" onclick="showRegister()">Create account &#8594;</a></div>
+    </div>
+  </div>
+
+  <!-- REGISTRATION FORM -->
+  <div class="login-box" id="registerBox" style="display:none;margin-top:20px;">
+    <div class="login-top">
+      <div class="login-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
+      <div class="login-sub">Create your account</div>
+    </div>
+    <div class="login-form">
+      <label class="fl">Full Name</label>
+      <input type="text" class="fi" id="regName" placeholder="Your full name" autocomplete="name"/>
+      <label class="fl">Email</label>
+      <input type="email" class="fi" id="regEmail" placeholder="you@email.com" autocomplete="email"/>
+      <label class="fl">Phone Number</label>
+      <input type="tel" class="fi" id="regPhone" placeholder="(404) 555-0000" autocomplete="tel"/>
+      <label class="fl">Company Name <span style="color:var(--faint);font-size:9px;">(optional)</span></label>
+      <input type="text" class="fi" id="regCompany" placeholder="Your company or business"/>
+      <button class="btn-login" id="regBtn" onclick="doRegister()">Create Account &rarr;</button>
+      <div class="login-note" id="regError" style="color:#ff6b6b;display:none;"></div>
+      <div class="login-create" style="margin-top:14px;">Already have an account? <a href="#" onclick="showLogin()">Sign in &#8594;</a></div>
     </div>
   </div>
 </div>
@@ -911,6 +932,57 @@ function loadHistory(){
 // ── INIT ──
 const saved=localStorage.getItem('tp_customer');
 if(saved){currentUser=JSON.parse(saved);showPortal();}
+
+// ── REGISTRATION ──
+function showRegister(){
+  document.getElementById('registerBox').style.display='block';
+  document.querySelector('.login-box:not(#registerBox)').style.display='none';
+}
+function showLogin(){
+  document.getElementById('registerBox').style.display='none';
+  document.querySelector('.login-box:not(#registerBox)').style.display='block';
+}
+async function doRegister(){
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const phone=document.getElementById('regPhone').value.replace(/\D/g,'');
+  const company=document.getElementById('regCompany').value.trim();
+  const errEl=document.getElementById('regError');
+  const btn=document.getElementById('regBtn');
+  if(!name){errEl.textContent='Please enter your name.';errEl.style.display='block';return;}
+  if(!email||!email.includes('@')){errEl.textContent='Please enter a valid email.';errEl.style.display='block';return;}
+  if(!phone||phone.length<10){errEl.textContent='Please enter a valid phone number.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  btn.textContent='Creating account...';btn.disabled=true;
+  try{
+    const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+    const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+    const resp=await fetch(SB+'/rest/v1/customers',{
+      method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({name,email,phone,company:company||null,created_at:new Date().toISOString()})
+    });
+    if(!resp.ok){
+      const err=await resp.text();
+      // If customers table doesn't exist yet, log them in with the info they provided
+      console.warn('Supabase error:',err);
+      currentCustomer={name,email,phone,company};
+      localStorage.setItem('tp_customer',JSON.stringify(currentCustomer));
+      initPortal(currentCustomer);
+      return;
+    }
+    const customers=await resp.json();
+    const customer=customers[0]||{name,email,phone,company};
+    currentCustomer=customer;
+    localStorage.setItem('tp_customer',JSON.stringify(customer));
+    initPortal(customer);
+  }catch(e){
+    // Fallback -- log in with provided info
+    currentCustomer={name,email,phone,company};
+    localStorage.setItem('tp_customer',JSON.stringify(currentCustomer));
+    initPortal(currentCustomer);
+  }
+}
 </script>
 </body>
 </html>
