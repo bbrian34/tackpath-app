@@ -267,7 +267,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
       <label class="fl">Password</label>
       <input type="password" class="fi" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="btn-login" onclick="doLogin()">Sign In &#8594;</button>
-      <div class="login-note">Demo mode — any credentials work</div>
+      <div class="login-note"><a href="#" onclick="showForgot()" style="color:var(--blue);text-decoration:none;">Forgot password?</a></div>
+      <div class="login-note" id="loginError" style="color:#ff6b6b;display:none;margin-top:4px;"></div>
       <div class="login-create">New to TackPath? <a href="#" onclick="showRegister()">Create account &#8594;</a></div>
     </div>
   </div>
@@ -281,15 +282,32 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
     <div class="login-form">
       <label class="fl">Full Name</label>
       <input type="text" class="fi" id="regName" placeholder="Your full name" autocomplete="name"/>
-      <label class="fl">Email</label>
+      <label class="fl">Email Address</label>
       <input type="email" class="fi" id="regEmail" placeholder="you@email.com" autocomplete="email"/>
-      <label class="fl">Phone Number</label>
+      <label class="fl">Password</label>
+      <input type="password" class="fi" id="regPass" placeholder="Create a password (min 6 characters)"/>
+      <label class="fl">Confirm Password</label>
+      <input type="password" class="fi" id="regPassConfirm" placeholder="Confirm your password"/>
+      <label class="fl">Phone Number <span style="color:var(--faint);font-size:9px;">(optional)</span></label>
       <input type="tel" class="fi" id="regPhone" placeholder="(404) 555-0000" autocomplete="tel"/>
-      <label class="fl">Company Name <span style="color:var(--faint);font-size:9px;">(optional)</span></label>
-      <input type="text" class="fi" id="regCompany" placeholder="Your company or business"/>
       <button class="btn-login" id="regBtn" onclick="doRegister()">Create Account &rarr;</button>
-      <div class="login-note" id="regError" style="color:#ff6b6b;display:none;"></div>
+      <div class="login-note" id="regError" style="color:#ff6b6b;display:none;margin-top:8px;"></div>
       <div class="login-create" style="margin-top:14px;">Already have an account? <a href="#" onclick="showLogin()">Sign in &#8594;</a></div>
+    </div>
+  </div>
+
+  <!-- FORGOT PASSWORD -->
+  <div class="login-box" id="forgotBox" style="display:none;margin-top:20px;">
+    <div class="login-top">
+      <div class="login-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
+      <div class="login-sub">Reset your password</div>
+    </div>
+    <div class="login-form">
+      <label class="fl">Email Address</label>
+      <input type="email" class="fi" id="forgotEmail" placeholder="you@email.com"/>
+      <button class="btn-login" id="forgotBtn" onclick="doForgot()">Send Reset Link &rarr;</button>
+      <div class="login-note" id="forgotMsg" style="display:none;margin-top:8px;"></div>
+      <div class="login-create" style="margin-top:14px;"><a href="#" onclick="showLogin()">&#8592; Back to sign in</a></div>
     </div>
   </div>
 </div>
@@ -933,54 +951,114 @@ function loadHistory(){
 const saved=localStorage.getItem('tp_customer');
 if(saved){currentUser=JSON.parse(saved);showPortal();}
 
-// ── REGISTRATION ──
-function showRegister(){
-  document.getElementById('registerBox').style.display='block';
-  document.querySelector('.login-box:not(#registerBox)').style.display='none';
+// ── AUTH ──
+const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
+const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+
+function showBox(id){
+  ['registerBox','forgotBox'].forEach(b=>{
+    const el=document.getElementById(b);
+    if(el)el.style.display='none';
+  });
+  const loginBox=document.querySelector('#scLogin .login-box:first-of-type');
+  if(loginBox)loginBox.style.display='none';
+  if(id==='login'&&loginBox)loginBox.style.display='block';
+  else{const el=document.getElementById(id);if(el)el.style.display='block';}
 }
-function showLogin(){
-  document.getElementById('registerBox').style.display='none';
-  document.querySelector('.login-box:not(#registerBox)').style.display='block';
+function showRegister(){showBox('registerBox');}
+function showLogin(){showBox('login');}
+function showForgot(){showBox('forgotBox');}
+
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const errEl=document.getElementById('loginError');
+  const btn=document.querySelector('#scLogin .login-box:first-of-type .btn-login');
+  if(!email||!pass){if(errEl){errEl.textContent='Please enter your email and password.';errEl.style.display='block';}return;}
+  if(errEl)errEl.style.display='none';
+  if(btn){btn.textContent='Signing in...';btn.disabled=true;}
+  try{
+    const resp=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass})
+    });
+    const data=await resp.json();
+    if(!resp.ok||data.error){
+      const msg=data.error_description||data.message||'Invalid email or password.';
+      if(errEl){errEl.textContent=msg;errEl.style.display='block';}
+      if(btn){btn.textContent='Sign In →';btn.disabled=false;}
+      return;
+    }
+    // Signed in -- get user info
+    const user=data.user;
+    currentCustomer={name:user.user_metadata?.name||email.split('@')[0],email:user.email,id:user.id};
+    localStorage.setItem('tp_customer',JSON.stringify(currentCustomer));
+    localStorage.setItem('tp_access_token',data.access_token);
+    initPortal(currentCustomer);
+  }catch(e){
+    if(errEl){errEl.textContent='Could not connect. Try again.';errEl.style.display='block';}
+    if(btn){btn.textContent='Sign In →';btn.disabled=false;}
+  }
 }
+
 async function doRegister(){
   const name=document.getElementById('regName').value.trim();
   const email=document.getElementById('regEmail').value.trim();
-  const phone=document.getElementById('regPhone').value.replace(/\D/g,'');
-  const company=document.getElementById('regCompany').value.trim();
+  const pass=document.getElementById('regPass').value;
+  const passConfirm=document.getElementById('regPassConfirm').value;
+  const phone=document.getElementById('regPhone').value.trim();
   const errEl=document.getElementById('regError');
   const btn=document.getElementById('regBtn');
-  if(!name){errEl.textContent='Please enter your name.';errEl.style.display='block';return;}
-  if(!email||!email.includes('@')){errEl.textContent='Please enter a valid email.';errEl.style.display='block';return;}
-  if(!phone||phone.length<10){errEl.textContent='Please enter a valid phone number.';errEl.style.display='block';return;}
+  if(!name){errEl.textContent='Please enter your full name.';errEl.style.display='block';return;}
+  if(!email||!email.includes('@')){errEl.textContent='Please enter a valid email address.';errEl.style.display='block';return;}
+  if(!pass||pass.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
+  if(pass!==passConfirm){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
   errEl.style.display='none';
   btn.textContent='Creating account...';btn.disabled=true;
   try{
-    const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
-    const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
-    const resp=await fetch(SB+'/rest/v1/customers',{
+    const resp=await fetch(SB_URL+'/auth/v1/signup',{
       method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'},
-      body:JSON.stringify({name,email,phone,company:company||null,created_at:new Date().toISOString()})
+      headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass,data:{name,phone}})
     });
-    if(!resp.ok){
-      const err=await resp.text();
-      // If customers table doesn't exist yet, log them in with the info they provided
-      console.warn('Supabase error:',err);
-      currentCustomer={name,email,phone,company};
-      localStorage.setItem('tp_customer',JSON.stringify(currentCustomer));
-      initPortal(currentCustomer);
+    const data=await resp.json();
+    if(!resp.ok||data.error){
+      const msg=data.error_description||data.message||'Could not create account.';
+      errEl.textContent=msg;errEl.style.display='block';
+      btn.textContent='Create Account →';btn.disabled=false;
       return;
     }
-    const customers=await resp.json();
-    const customer=customers[0]||{name,email,phone,company};
-    currentCustomer=customer;
-    localStorage.setItem('tp_customer',JSON.stringify(customer));
-    initPortal(customer);
-  }catch(e){
-    // Fallback -- log in with provided info
-    currentCustomer={name,email,phone,company};
+    // Account created -- log them in automatically
+    currentCustomer={name,email,phone,id:data.user?.id};
     localStorage.setItem('tp_customer',JSON.stringify(currentCustomer));
+    if(data.access_token)localStorage.setItem('tp_access_token',data.access_token);
     initPortal(currentCustomer);
+  }catch(e){
+    errEl.textContent='Could not connect. Try again.';errEl.style.display='block';
+    btn.textContent='Create Account →';btn.disabled=false;
+  }
+}
+
+async function doForgot(){
+  const email=document.getElementById('forgotEmail').value.trim();
+  const msgEl=document.getElementById('forgotMsg');
+  const btn=document.getElementById('forgotBtn');
+  if(!email||!email.includes('@')){msgEl.textContent='Please enter a valid email.';msgEl.style.color='#ff6b6b';msgEl.style.display='block';return;}
+  btn.textContent='Sending...';btn.disabled=true;
+  try{
+    await fetch(SB_URL+'/auth/v1/recover',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email})
+    });
+    msgEl.textContent='Reset link sent! Check your email.';
+    msgEl.style.color='var(--green)';msgEl.style.display='block';
+    btn.textContent='Send Reset Link →';btn.disabled=false;
+  }catch(e){
+    msgEl.textContent='Could not send reset email. Try again.';
+    msgEl.style.color='#ff6b6b';msgEl.style.display='block';
+    btn.textContent='Send Reset Link →';btn.disabled=false;
   }
 }
 </script>
