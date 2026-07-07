@@ -470,13 +470,9 @@ function buildRoutes(){
   btn.disabled=true;
   btn.innerHTML='&#9650; Sorting... <span class="build-badge">SmartSort running</span>';
   setTimeout(()=>{
-    // Sort geographically by address, group into routes of max 7 stops
+    // One route -- all packages sequenced for this driver
     const sorted=[...packages].sort((a,b)=>a.address.localeCompare(b.address));
-    const maxPerRoute=7;
-    const groups=[];
-    for(let i=0;i<sorted.length;i+=maxPerRoute){
-      groups.push(sorted.slice(i,i+maxPerRoute));
-    }
+    const groups=[sorted];
     // Build routes with SmartSort TP identifiers
     routes=groups.map((stops,ri)=>{
       const routeId='RT-'+String(ri+1).padStart(3,'0');
