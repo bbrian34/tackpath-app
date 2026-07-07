@@ -1028,8 +1028,15 @@ async function acceptOffer(){
   currentJob.status='customer_confirmed';
   try{await sbPatch('jobs?id=eq.'+currentJob.id,{status:'customer_confirmed',driver_name:driver.name,customer_confirmed:true});}catch(e){}
   scannedPackages=[];
+  // Detect Surge job
+  if(currentJob.job_type==='surge'&&currentJob.surge_stops&&currentJob.surge_stops.length>0){
+    isSurgeJob=true;surgeStops=currentJob.surge_stops;currentSurgeStop=0;
+    toast('Surge job! '+surgeStops.length+' stops. Navigate to pickup.','ok');
+  }else{
+    isSurgeJob=false;surgeStops=[];
+    toast('Job accepted! Navigate to pickup.','ok');
+  }
   renderJobScreen();showScreen('scJob');
-  toast('Job accepted! Navigate to pickup.','ok');
   startDispatchPoll();startJobStatusPoll();
 }
 
