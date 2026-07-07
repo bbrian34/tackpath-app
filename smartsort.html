@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SmartSort — TackPath</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--red:#ff3b30;
+  --purple:#8d5cff;--yellow:#ffd23d;
+  --bg:#02060e;--card:#07101e;--card2:#0b1728;--card3:#0f1e32;
+  --border:rgba(25,183,239,.07);--border2:rgba(255,255,255,.04);
+  --text:#d8eeff;--muted:rgba(216,238,255,.38);--faint:rgba(216,238,255,.15);
+  --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;--cond:'Barlow Condensed',sans-serif;
+}
+html,body{height:100%;margin:0;padding:0;}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);font-size:13px;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(25,183,239,.04),transparent),
+              radial-gradient(ellipse 40% 30% at 80% 80%,rgba(141,92,255,.03),transparent);
+  pointer-events:none;z-index:0;}
+
+/* ── TOPBAR ── */
+#topbar{
+  height:52px;display:flex;align-items:center;padding:0 18px;
+  background:rgba(2,6,14,.96);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(24px);gap:16px;flex-shrink:0;z-index:200;position:relative;
+}
+.tb-brand{display:flex;align-items:center;gap:10px;}
+.tb-wm{font-family:var(--cond);font-size:22px;font-weight:800;letter-spacing:-.5px;}
+.tb-wm .t{color:#fff;}.tb-wm .p{color:var(--blue);}
+.tb-divider{width:1px;height:22px;background:var(--border2);}
+.tb-product{font-family:var(--mono);font-size:11px;font-weight:600;
+  color:var(--green);letter-spacing:.12em;text-transform:uppercase;
+  background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.15);
+  border-radius:6px;padding:4px 10px;}
+.tb-back{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted);
+  text-decoration:none;letter-spacing:.08em;display:flex;align-items:center;gap:6px;}
+.tb-back:hover{color:var(--blue);}
+
+/* ── LAYOUT ── */
+#app{display:flex;height:calc(100vh - 52px);position:relative;z-index:1;}
+
+/* ── LEFT PANEL ── */
+#left{
+  width:420px;flex-shrink:0;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.panel-hdr{
+  padding:16px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.panel-title{font-family:var(--cond);font-size:18px;font-weight:700;color:#fff;}
+.panel-sub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
+.panel-body{flex:1;overflow-y:auto;padding:16px;}
+
+/* ── UPLOAD ZONE ── */
+#dropZone{
+  border:2px dashed rgba(25,183,239,.25);
+  border-radius:14px;padding:40px 20px;
+  text-align:center;cursor:pointer;
+  background:rgba(25,183,239,.03);
+  transition:all .2s;margin-bottom:16px;
+  position:relative;
+}
+#dropZone:hover,#dropZone.drag{
+  border-color:rgba(25,183,239,.6);
+  background:rgba(25,183,239,.07);
+}
+#dropZone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.dz-icon{font-size:36px;margin-bottom:12px;opacity:.6;}
+.dz-title{font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;}
+.dz-sub{font-size:12px;color:var(--muted);line-height:1.5;}
+.dz-sub code{font-family:var(--mono);font-size:10px;color:var(--blue);
+  background:rgba(25,183,239,.08);padding:2px 6px;border-radius:4px;}
+
+/* ── CSV TEMPLATE ── */
+.template-btn{
+  width:100%;padding:10px;border-radius:10px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border2);
+  color:var(--muted);font-size:12px;cursor:pointer;
+  font-family:var(--sans);display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-bottom:16px;transition:all .15s;
+}
+.template-btn:hover{background:rgba(25,183,239,.06);border-color:rgba(25,183,239,.2);color:var(--blue);}
+
+/* ── PACKAGE TABLE ── */
+#packageTable{display:none;}
+.pkg-header{
+  display:grid;grid-template-columns:80px 1fr 120px 60px;
+  gap:8px;padding:8px 12px;
+  font-family:var(--mono);font-size:9px;color:var(--muted);
+  letter-spacing:.1em;text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+}
+.pkg-row{
+  display:grid;grid-template-columns:80px 1fr 120px 60px;
+  gap:8px;padding:10px 12px;border-bottom:1px solid var(--border2);
+  align-items:center;transition:background .1s;
+}
+.pkg-row:hover{background:rgba(255,255,255,.02);}
+.pkg-id{font-family:var(--mono);font-size:10px;color:var(--blue);}
+.pkg-name{font-size:12px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pkg-addr{font-size:11px;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pkg-count{font-family:var(--mono);font-size:11px;color:var(--orange);text-align:center;}
+.pkg-flag{display:inline-block;width:6px;height:6px;border-radius:50%;margin-left:4px;}
+.flag-ok{background:var(--green);}
+.flag-warn{background:var(--orange);}
+
+/* ── BUILD BUTTON ── */
+#buildBtn{
+  width:100%;padding:16px;border-radius:12px;
+  background:linear-gradient(135deg,var(--green),#22aa55);
+  border:none;color:#02060e;font-size:15px;font-weight:800;
+  cursor:pointer;font-family:var(--sans);
+  box-shadow:0 8px 28px rgba(83,255,136,.2);
+  display:none;margin-top:16px;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+#buildBtn:hover{box-shadow:0 10px 36px rgba(83,255,136,.35);transform:translateY(-1px);}
+#buildBtn:disabled{opacity:.5;pointer-events:none;}
+.build-count{
+  background:rgba(0,0,0,.2);border-radius:20px;
+  padding:3px 10px;font-size:12px;
+}
+
+/* ── STATS ROW ── */
+#statsRow{
+  display:none;
+  grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;
+}
+.stat-card{
+  padding:12px;border-radius:10px;background:var(--card);
+  border:1px solid var(--border);text-align:center;
+}
+.stat-n{font-family:var(--cond);font-size:28px;font-weight:700;line-height:1;}
+.stat-l{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:4px;}
+
+/* ── RIGHT PANEL ── */
+#right{
+  flex:1;display:flex;flex-direction:column;overflow:hidden;
+}
+.right-hdr{
+  padding:16px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.right-body{flex:1;overflow-y:auto;padding:16px;}
+
+/* ── EMPTY STATE ── */
+#emptyState{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:16px;opacity:.4;
+}
+.es-icon{font-size:56px;}
+.es-title{font-family:var(--cond);font-size:20px;font-weight:700;color:#fff;}
+.es-sub{font-size:12px;color:var(--muted);text-align:center;max-width:280px;line-height:1.6;}
+
+/* ── ROUTE CARDS ── */
+#routeGrid{display:none;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.route-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;position:relative;
+}
+.route-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+.rc-blue::before{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.rc-green::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.rc-orange::before{background:linear-gradient(90deg,transparent,var(--orange),transparent);}
+.rc-purple::before{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
+.rc-top{padding:14px 16px;border-bottom:1px solid var(--border);}
+.rc-top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.rc-id{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.08em;}
+.rc-badge{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;padding:3px 8px;border-radius:10px;
+  background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);}
+.rc-stats{display:flex;gap:16px;}
+.rc-stat{display:flex;flex-direction:column;gap:2px;}
+.rc-stat-n{font-family:var(--cond);font-size:22px;font-weight:700;color:#fff;line-height:1;}
+.rc-stat-l{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.rc-stops{padding:12px 16px;}
+.rc-stop{display:flex;align-items:flex-start;gap:10px;padding:6px 0;
+  border-bottom:1px solid var(--border2);}
+.rc-stop:last-child{border-bottom:none;}
+.stop-num{width:20px;height:20px;border-radius:50%;
+  background:var(--card2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9px;font-weight:600;color:var(--blue);
+  flex-shrink:0;margin-top:1px;}
+.stop-info{flex:1;min-width:0;}
+.stop-name{font-size:12px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stop-addr{font-size:10px;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.stop-pkgs{font-family:var(--mono);font-size:9px;color:var(--orange);flex-shrink:0;margin-top:2px;}
+.rc-footer{padding:10px 16px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;}
+.rc-dist{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.rc-assign{padding:6px 14px;border-radius:8px;
+  background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);
+  color:var(--blue);font-size:11px;font-weight:600;cursor:pointer;
+  font-family:var(--sans);transition:all .15s;}
+.rc-assign:hover{background:rgba(25,183,239,.15);}
+
+/* ── BARCODE ── */
+.rc-barcode{padding:10px 16px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;}
+.barcode-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.barcode-val{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.04em;}
+
+/* ── TOAST ── */
+.tw{position:fixed;top:64px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;
+  display:flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.5);
+  animation:tIn .3s ease;}
+.t-ok{background:var(--card);border:1px solid rgba(83,255,136,.4);color:var(--green);}
+.t-warn{background:var(--card);border:1px solid rgba(255,150,30,.4);color:var(--orange);}
+@keyframes tIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="tb-brand">
+    <div class="tb-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
+    <div class="tb-divider"></div>
+    <div class="tb-product">SmartSort</div>
+  </div>
+  <a class="tb-back" href="/dispatcher.html">&#8592; Dispatcher</a>
+</div>
+
+<div id="app">
+
+  <!-- LEFT: Upload + Package List -->
+  <div id="left">
+    <div class="panel-hdr">
+      <div>
+        <div class="panel-title">Package Import</div>
+        <div class="panel-sub">Upload CSV &middot; SmartSort builds your routes</div>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <!-- Stats -->
+      <div id="statsRow">
+        <div class="stat-card">
+          <div class="stat-n" id="statPkgs" style="color:var(--blue);">0</div>
+          <div class="stat-l">Packages</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-n" id="statStops" style="color:var(--green);">0</div>
+          <div class="stat-l">Stops</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-n" id="statRoutes" style="color:var(--orange);">0</div>
+          <div class="stat-l">Routes</div>
+        </div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div id="dropZone">
+        <input type="file" accept=".csv" id="csvInput" onchange="handleFile(this.files[0])"/>
+        <div class="dz-icon">&#9783;</div>
+        <div class="dz-title">Drop your CSV here</div>
+        <div class="dz-sub">
+          or click to browse<br/><br/>
+          Required columns:<br/>
+          <code>order_id</code> <code>recipient</code> <code>address</code> <code>packages</code><br/>
+          Optional: <code>notes</code> <code>priority</code>
+        </div>
+      </div>
+
+      <!-- Template download -->
+      <button class="template-btn" onclick="downloadTemplate()">
+        &#8659; Download CSV Template
+      </button>
+
+      <!-- Package table -->
+      <div id="packageTable">
+        <div class="pkg-header">
+          <div>Order ID</div>
+          <div>Recipient / Address</div>
+          <div>Address</div>
+          <div>Pkgs</div>
+        </div>
+        <div id="pkgRows"></div>
+      </div>
+
+      <!-- Build button -->
+      <button id="buildBtn" onclick="buildRoutes()" style="display:none;">
+        &#9650; Run SmartSort
+        <span class="build-count" id="buildCount"></span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: Route Cards -->
+  <div id="right">
+    <div class="right-hdr">
+      <div>
+        <div class="panel-title" id="rightTitle">Routes</div>
+        <div class="panel-sub" id="rightSub">Upload a CSV to generate optimized routes</div>
+      </div>
+      <div id="rightActions" style="display:none;gap:8px;display:none;">
+        <button onclick="exportRoutes()" style="padding:8px 16px;border-radius:8px;background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">Export Routes</button>
+        <button onclick="resetAll()" style="padding:8px 16px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--border2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">Reset</button>
+      </div>
+    </div>
+    <div class="right-body">
+      <div id="emptyState">
+        <div class="es-icon">&#9650;</div>
+        <div class="es-title">SmartSort Ready</div>
+        <div class="es-sub">Upload a CSV of packages and SmartSort will build optimized routes automatically. One scan loads the entire route.</div>
+      </div>
+      <div id="routeGrid" style="display:none;"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="tw" id="tw"></div>
+
+<script>
+let packages = [];
+let routes = [];
+const COLORS = ['rc-blue','rc-green','rc-orange','rc-purple'];
+
+// ── CSV PARSE ──
+function handleFile(file){
+  if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file','warn');return;}
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file);
+}
+
+function parseCSV(text){
+  const lines = text.trim().split('\n');
+  if(lines.length < 2){toast('CSV must have a header row and at least one package','warn');return;}
+  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
+  const idxMap = {
+    order_id: headers.indexOf('order_id'),
+    recipient: headers.indexOf('recipient'),
+    address: headers.indexOf('address'),
+    packages: headers.indexOf('packages'),
+    notes: headers.indexOf('notes'),
+    priority: headers.indexOf('priority')
+  };
+  if(idxMap.order_id<0||idxMap.recipient<0||idxMap.address<0){
+    toast('CSV missing required columns: order_id, recipient, address','warn');return;
+  }
+  packages = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = lines[i].split(',').map(c=>c.trim().replace(/"/g,''));
+    if(!cols[idxMap.address])continue;
+    packages.push({
+      order_id: cols[idxMap.order_id]||('TP-'+(8000+i)),
+      recipient: cols[idxMap.recipient]||'Unknown',
+      address: cols[idxMap.address],
+      packages: parseInt(cols[idxMap.packages])||1,
+      notes: idxMap.notes>=0?cols[idxMap.notes]:'',
+      priority: idxMap.priority>=0?cols[idxMap.priority]:'normal',
+      idx: i-1
+    });
+  }
+  if(!packages.length){toast('No valid packages found in CSV','warn');return;}
+  renderPackageTable();
+  toast(packages.length+' packages loaded','ok');
+}
+
+function renderPackageTable(){
+  const table = document.getElementById('packageTable');
+  const rows = document.getElementById('pkgRows');
+  const buildBtn = document.getElementById('buildBtn');
+  const stats = document.getElementById('statsRow');
+  table.style.display='block';
+  stats.style.display='grid';
+  buildBtn.style.display='flex';
+  document.getElementById('dropZone').style.display='none';
+  document.getElementById('buildCount').textContent=packages.length+' packages';
+  document.getElementById('statPkgs').textContent=packages.reduce((s,p)=>s+p.packages,0);
+  document.getElementById('statStops').textContent=packages.length;
+  document.getElementById('statRoutes').textContent='--';
+  rows.innerHTML=packages.map(p=>`
+    <div class="pkg-row">
+      <div class="pkg-id">${p.order_id}</div>
+      <div>
+        <div class="pkg-name">${p.recipient}</div>
+        <div class="pkg-addr">${p.address}</div>
+      </div>
+      <div class="pkg-addr">${p.address.split(',').slice(-2).join(',').trim()}</div>
+      <div class="pkg-count">${p.packages}</div>
+    </div>`).join('');
+}
+
+// ── SMARTSORT -- group into routes by geographic clustering ──
+function buildRoutes(){
+  const btn=document.getElementById('buildBtn');
+  btn.disabled=true;btn.innerHTML='&#9650; Sorting... <span class="build-count">Running SmartSort</span>';
+
+  setTimeout(()=>{
+    // Group packages into routes of max 8 stops each
+    // In production this uses real geocoding + optimization
+    // For now: group by zip code / last part of address, then sequence
+    const groups = [];
+    const maxPerRoute = 8;
+    let current = [];
+    
+    // Sort by address to simulate geographic clustering
+    const sorted = [...packages].sort((a,b)=>a.address.localeCompare(b.address));
+    
+    sorted.forEach((pkg,i)=>{
+      current.push(pkg);
+      if(current.length>=maxPerRoute||(i===sorted.length-1&&current.length)){
+        groups.push([...current]);
+        current=[];
+      }
+    });
+
+    routes = groups.map((stops,i)=>({
+      id:'RT-'+String(i+1).padStart(3,'0'),
+      barcode:'TP-SORT-'+Math.random().toString(36).substr(2,8).toUpperCase(),
+      stops,
+      total_packages:stops.reduce((s,p)=>s+p.packages,0),
+      est_distance:(2.1+stops.length*1.4).toFixed(1)+' mi',
+      color:COLORS[i%COLORS.length]
+    }));
+
+    document.getElementById('statRoutes').textContent=routes.length;
+    renderRoutes();
+    btn.disabled=false;
+    btn.innerHTML='&#10003; Routes Built <span class="build-count">'+routes.length+' routes</span>';
+    toast(routes.length+' optimized routes built by SmartSort','ok');
+  },1200);
+}
+
+function renderRoutes(){
+  const grid=document.getElementById('routeGrid');
+  const empty=document.getElementById('emptyState');
+  const actions=document.getElementById('rightActions');
+  empty.style.display='none';
+  grid.style.display='grid';
+  actions.style.display='flex';
+  document.getElementById('rightTitle').textContent='SmartSort Routes';
+  document.getElementById('rightSub').textContent=routes.length+' optimized routes &middot; '+packages.length+' stops &middot; '+packages.reduce((s,p)=>s+p.packages,0)+' packages';
+
+  grid.innerHTML=routes.map(r=>`
+    <div class="route-card ${r.color}">
+      <div class="rc-top">
+        <div class="rc-top-row">
+          <div class="rc-id">${r.id}</div>
+          <div class="rc-badge">SmartSort &#9650;</div>
+        </div>
+        <div class="rc-stats">
+          <div class="rc-stat">
+            <div class="rc-stat-n" style="color:var(--blue);">${r.stops.length}</div>
+            <div class="rc-stat-l">Stops</div>
+          </div>
+          <div class="rc-stat">
+            <div class="rc-stat-n" style="color:var(--orange);">${r.total_packages}</div>
+            <div class="rc-stat-l">Packages</div>
+          </div>
+          <div class="rc-stat">
+            <div class="rc-stat-n" style="color:var(--green);">${r.est_distance}</div>
+            <div class="rc-stat-l">Est. Distance</div>
+          </div>
+        </div>
+      </div>
+      <div class="rc-stops">
+        ${r.stops.map((s,i)=>`
+          <div class="rc-stop">
+            <div class="stop-num">${i+1}</div>
+            <div class="stop-info">
+              <div class="stop-name">${s.recipient}</div>
+              <div class="stop-addr">${s.address}</div>
+            </div>
+            <div class="stop-pkgs">${s.packages} pkg${s.packages!==1?'s':''}</div>
+          </div>`).join('')}
+      </div>
+      <div class="rc-barcode">
+        <div>
+          <div class="barcode-label">Master Scan Code</div>
+          <div class="barcode-val">${r.barcode}</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);font-family:var(--mono);">1 scan loads route</div>
+      </div>
+      <div class="rc-footer">
+        <div class="rc-dist">&#9654; ${r.est_distance} total</div>
+        <button class="rc-assign" onclick="assignRoute('${r.id}')">Assign Driver &rarr;</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── ASSIGN ──
+function assignRoute(id){
+  const route=routes.find(r=>r.id===id);
+  if(!route)return;
+  toast(route.id+' ready to assign — dispatcher coming soon','ok');
+}
+
+// ── TEMPLATE ──
+function downloadTemplate(){
+  const csv=`order_id,recipient,address,packages,notes,priority
+TP-8001,Marcus Johnson,"142 Peachtree St NW, Atlanta GA 30303",2,Fragile,high
+TP-8002,Sarah Williams,"890 Marietta St NW, Atlanta GA 30318",1,,normal
+TP-8003,David Chen,"1180 Peachtree St NE, Atlanta GA 30309",3,Signature required,normal
+TP-8004,Jennifer Davis,"75 5th St NW, Atlanta GA 30308",1,,low
+TP-8005,Robert Miller,"400 W Peachtree St NW, Atlanta GA 30308",2,,normal`;
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='smartsort_template.csv';
+  a.click();
+  toast('Template downloaded','ok');
+}
+
+// ── EXPORT ──
+function exportRoutes(){
+  if(!routes.length){toast('No routes to export','warn');return;}
+  const lines=['route_id,stop,order_id,recipient,address,packages,master_barcode'];
+  routes.forEach(r=>{
+    r.stops.forEach((s,i)=>{
+      lines.push(`${r.id},${i+1},${s.order_id},"${s.recipient}","${s.address}",${s.packages},${r.barcode}`);
+    });
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='smartsort_routes.csv';
+  a.click();
+  toast('Routes exported','ok');
+}
+
+// ── RESET ──
+function resetAll(){
+  packages=[];routes=[];
+  document.getElementById('packageTable').style.display='none';
+  document.getElementById('dropZone').style.display='block';
+  document.getElementById('buildBtn').style.display='none';
+  document.getElementById('statsRow').style.display='none';
+  document.getElementById('routeGrid').style.display='none';
+  document.getElementById('emptyState').style.display='flex';
+  document.getElementById('rightActions').style.display='none';
+  document.getElementById('rightTitle').textContent='Routes';
+  document.getElementById('rightSub').textContent='Upload a CSV to generate optimized routes';
+  document.getElementById('statRoutes').textContent='0';
+  document.getElementById('statPkgs').textContent='0';
+  document.getElementById('statStops').textContent='0';
+  document.getElementById('buildBtn').innerHTML='&#9650; Run SmartSort <span class="build-count"></span>';
+  document.getElementById('csvInput').value='';
+  toast('Reset complete','ok');
+}
+
+// ── DRAG DROP ──
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+
+// ── TOAST ──
+function toast(msg,type='ok'){
+  const wrap=document.getElementById('tw');
+  const el=document.createElement('div');
+  el.className='toast t-'+(type==='error'?'warn':type);
+  el.textContent=(type==='ok'?'✓':'⚠')+' '+msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(),4000);
+}
+</script>
+</body>
+</html>
