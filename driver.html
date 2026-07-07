@@ -558,6 +558,18 @@ button,a,input,textarea{font-family:var(--sans);}
     </div>
     <!-- Primary action button -->
     <button class="job-action ja-wait" id="jobBtn" onclick="handleJobAction()">Waiting...</button>
+    <!-- Surge stop info -- shows during multi-stop delivery -->
+    <div id="surgeStopCard" style="display:none;background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.15);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+      <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.5);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;" id="surgeStopLabel">STOP 1 OF 20</div>
+      <div style="font-size:13px;font-weight:900;color:#fff;margin-bottom:2px;" id="surgeStopTP"></div>
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:2px;" id="surgeStopName"></div>
+      <div style="font-size:12px;color:rgba(255,255,255,.65);" id="surgeStopAddr"></div>
+      <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--orange);" id="surgeStopPkgs"></span>
+        <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4);" id="surgeStopProgress"></span>
+      </div>
+    </div>
+
     <!-- Swipe to confirm pickup -- shows after arriving -->
     <div class="swipe-row" id="swipeRow">
       <div class="swipe-fill" id="swipeFill"></div>
@@ -756,6 +768,7 @@ let rejectedIds=new Set(),pollInterval=null,offerTimerInt=null,offerAlertInt=nul
 let jobStatusInterval=null,dispatchMsgInterval=null,commsInterval=null;
 let lastSeenMsgId=null,isOnline=true,earnings=0,jobCount=0;
 let scannedPackages=[],scanStream=null,barcodeInterval=null;
+let surgeStops=[],currentSurgeStop=0,isSurgeJob=false;
 let gpsWatcher=null,prevScreen='scHome',speechUnlocked=false;
 let podStream=null,podPhotoData=null,podTab='sig',sigCtxPad=null;
 
@@ -1191,9 +1204,15 @@ async function startDelivery(){
   try{
     await sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name});
     currentJob.status='in_transit';
-    renderJobScreen();
-    toast('Package collected! Navigate to dropoff.','ok');
     startGPS();
+    // Check if Surge multi-stop job
+    if(isSurgeJob&&surgeStops.length>0){
+      currentSurgeStop=0;
+      renderSurgeStop();
+    }else{
+      renderJobScreen();
+      toast('Package collected! Navigate to dropoff.','ok');
+    }
   }catch(e){toast('Could not update: '+e.message.slice(0,50),'warn');}
 }
 
@@ -1442,8 +1461,23 @@ function updateScanUI(){
 function doneScanningAll(){
   if(!scannedPackages.length)return;
   stopCamera();
-  // After scanning, mark arrived at pickup and show swipe
   currentJob.status='arrived_pickup';
+
+  // If job has surge stops from SmartSort, load them
+  if(currentJob.surge_stops&&currentJob.surge_stops.length>0){
+    loadSurgeRoute(currentJob.surge_stops);
+  }else if(scannedPackages.length>1){
+    // Multiple packages scanned -- treat as surge, use scanned packages as stops
+    const stops=scannedPackages.map((p,i)=>({
+      order_id:p.barcode,
+      smart_id:p.barcode+'-'+(i+1)+'-1',
+      recipient:'Package '+(i+1),
+      address:currentJob.dropoff_address||'',
+      packages:1
+    }));
+    loadSurgeRoute(stops);
+  }
+
   showScreen('scJob');renderJobScreen();
   toast(scannedPackages.length+' packages scanned. Swipe to confirm pickup.','ok');
 }
@@ -1547,6 +1581,91 @@ function toast(msg,type='ok'){
   wrap.appendChild(el);setTimeout(()=>el.remove(),5000);
 }
 
+// ── SURGE MULTI-STOP FLOW ──
+function renderSurgeStop(){
+  if(!surgeStops.length)return;
+  const stop=surgeStops[currentSurgeStop];
+  const total=surgeStops.length;
+  const idx=currentSurgeStop;
+
+  // Show surge stop card
+  document.getElementById('surgeStopCard').style.display='block';
+  document.getElementById('surgeStopLabel').textContent='STOP '+(idx+1)+' OF '+total;
+  document.getElementById('surgeStopTP').textContent=stop.smart_id||stop.order_id;
+  document.getElementById('surgeStopName').textContent=stop.recipient;
+  document.getElementById('surgeStopAddr').textContent=stop.address;
+  document.getElementById('surgeStopPkgs').textContent=stop.packages+' package'+(stop.packages!==1?'s':'');
+  document.getElementById('surgeStopProgress').textContent=(total-idx-1)+' stops remaining';
+
+  // Update map and main UI for this stop
+  const destLbl=document.getElementById('destLbl');
+  const destAddr=document.getElementById('destAddr');
+  if(destLbl)destLbl.textContent='STOP '+(idx+1)+' — NAVIGATE TO DROPOFF';
+  if(destAddr)destAddr.textContent=stop.address;
+
+  // Update nav link
+  const navLink=document.getElementById('navLink');
+  if(navLink)navLink.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.address||'');
+
+  // Update map iframe
+  const iframe=document.getElementById('jobMap');
+  const src='https://maps.google.com/maps?q='+encodeURIComponent(stop.address||'')+'&output=embed';
+  if(iframe&&iframe.src!==src)iframe.src=src;
+
+  // Set badge
+  const badge=document.getElementById('mapStatus');
+  if(badge){
+    badge.textContent='Stop '+(idx+1)+'/'+total;
+    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(141,92,255,.4);color:var(--purple);';
+  }
+
+  // Set main button -- navigate to this stop
+  const btn=document.getElementById('jobBtn');
+  if(btn){
+    btn.style.display='block';
+    btn.textContent='Navigate to Stop '+(idx+1);
+    btn.className='job-action ja-nav';
+    btn.disabled=false;
+    btn.onclick=()=>window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.address||''),'_blank');
+  }
+
+  // Add confirm delivery button
+  let confBtn=document.getElementById('surgeConfirmBtn');
+  if(!confBtn){
+    confBtn=document.createElement('button');
+    confBtn.id='surgeConfirmBtn';
+    confBtn.className='job-action ja-deliver';
+    confBtn.style.marginTop='-6px';
+    btn.parentNode.insertBefore(confBtn,btn.nextSibling);
+  }
+  confBtn.style.display='block';
+  confBtn.textContent=idx===total-1?'Confirm Final Delivery →':'Confirm Delivery → Next Stop';
+  confBtn.onclick=confirmSurgeStop;
+
+  toast('Stop '+(idx+1)+' of '+total+': '+stop.recipient,'ok');
+}
+
+function confirmSurgeStop(){
+  const total=surgeStops.length;
+  if(currentSurgeStop>=total-1){
+    // Last stop -- go to POD
+    document.getElementById('surgeStopCard').style.display='none';
+    const confBtn=document.getElementById('surgeConfirmBtn');
+    if(confBtn)confBtn.style.display='none';
+    showScreen('scPOD');
+  }else{
+    currentSurgeStop++;
+    renderSurgeStop();
+  }
+}
+
+function loadSurgeRoute(stops){
+  surgeStops=stops;
+  isSurgeJob=true;
+  currentSurgeStop=0;
+  toast('Surge route loaded: '+stops.length+' stops','ok');
+}
+
 // ── GPS ──
 function startGPS(){
   if(!navigator.geolocation||!currentJob)return;
@@ -1586,6 +1705,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 </script>
 </body>
 </html>
+
 
 
 
