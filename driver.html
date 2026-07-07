@@ -1734,21 +1734,49 @@ function renderSurgeStop(){
     btn.parentNode.insertBefore(confBtn,btn.nextSibling);
   }
   confBtn.style.display='block';
-  confBtn.textContent=idx===total-1?'Confirm Final Delivery →':'Confirm Delivery → Next Stop';
-  confBtn.onclick=confirmSurgeStop;
+  // Two step -- arrived then confirm
+  confBtn.textContent='Arrived at Stop '+(idx+1);
+  confBtn.className='job-action ja-start';
+  confBtn.onclick=()=>{
+    // Change to confirm delivery
+    confBtn.textContent=idx===total-1?'Confirm Final Delivery →':'Delivered ✓ → Next Stop';
+    confBtn.className='job-action ja-deliver';
+    confBtn.onclick=confirmSurgeStop;
+    // Update badge
+    const badge=document.getElementById('mapStatus');
+    if(badge){
+      badge.textContent='At Stop '+(idx+1);
+      badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(83,255,136,.4);color:var(--green);';
+    }
+    toast('At Stop '+(idx+1)+'. Confirm when delivered.','ok');
+  };
 
   toast('Stop '+(idx+1)+' of '+total+': '+stop.recipient,'ok');
 }
 
 function confirmSurgeStop(){
   const total=surgeStops.length;
+  const stop=surgeStops[currentSurgeStop];
+
+  // Log this stop as delivered in Supabase
+  if(currentJob&&currentJob.id){
+    sbPost('messages',{
+      job_id:currentJob.id,
+      sender:driver.name,
+      sender_role:'driver',
+      body:'Delivered: '+stop.smart_id+' to '+stop.recipient+' (Stop '+(currentSurgeStop+1)+' of '+total+')'
+    }).catch(()=>{});
+  }
+
   if(currentSurgeStop>=total-1){
-    // Last stop -- go to POD
+    // Last stop -- full POD
     document.getElementById('surgeStopCard').style.display='none';
     const confBtn=document.getElementById('surgeConfirmBtn');
     if(confBtn)confBtn.style.display='none';
     showScreen('scPOD');
   }else{
+    // Next stop
+    toast('Stop '+(currentSurgeStop+1)+' delivered ✓','ok');
     currentSurgeStop++;
     renderSurgeStop();
   }
