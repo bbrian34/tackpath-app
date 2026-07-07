@@ -983,9 +983,15 @@ function stopOfferAlert(){
 
 function showOffer(job){
   document.getElementById('offerPickup').textContent=job.pickup_address||'--';
-  document.getElementById('offerDropoff').textContent=job.dropoff_address||'--';
+  document.getElementById('offerDropoff').textContent=
+    job.job_type==='surge'?
+    (job.total_stops+' stops — '+job.total_packages+' packages'):
+    (job.dropoff_address||'--');
   document.getElementById('offerPay').textContent='$'+(job.price||'--');
-  document.getElementById('offerDist').textContent=(job.distance_miles||'--')+' mi';
+  document.getElementById('offerDist').textContent=
+    job.job_type==='surge'?
+    (job.distance_miles||'--')+' mi — Surge':
+    (job.distance_miles||'--')+' mi';
   // Load map showing pickup
   const mapSrc='https://maps.google.com/maps?q='+encodeURIComponent(job.pickup_address||'Atlanta GA')+'&output=embed';
   document.getElementById('offerMap').src=mapSrc;
