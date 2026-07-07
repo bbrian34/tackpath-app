@@ -969,7 +969,7 @@ function goBack(){showScreen(prevScreen||'scHome');}
 
 // ── ONLINE ──
 function toggleOnline(){
-  unlockSpeech();isOnline=!isOnline;
+  unlockSpeech();unlockAudio();isOnline=!isOnline;
   const dot=document.getElementById('pillDot'),lbl=document.getElementById('pillLbl'),pill=document.getElementById('onlinePill');
   if(isOnline){
     dot.style.cssText='width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(83,255,136,.7);animation:blink 2s infinite;';
