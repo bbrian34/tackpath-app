@@ -562,8 +562,62 @@ function renderRoutes(){
     </div>`).join('');
 }
 
-function assignRoute(id){
-  toast(id+' ready to assign to driver','ok');
+async function assignRoute(routeId){
+  const route=routes.find(r=>r.id===routeId);
+  if(!route){toast('Route not found','warn');return;}
+
+  const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+  const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+
+  // Build job record
+  const job={
+    title:'Surge Route '+route.id,
+    job_type:'surge',
+    status:'pending',
+    pickup_address: route.stops[0]?.address||'See route',
+    dropoff_address: route.stops[route.stops.length-1]?.address||'See route',
+    surge_stops: route.stops.map((s,i)=>({
+      order_id: s.order_id,
+      smart_id: s.smart_id,
+      recipient: s.recipient,
+      address: s.address,
+      packages: s.packages,
+      stop_number: i+1
+    })),
+    master_code: route.master_code,
+    total_stops: route.stops.length,
+    total_packages: route.total_packages,
+    price: (route.stops.length * 8 + route.total_packages * 2).toFixed(2),
+    distance_miles: parseFloat(route.est_miles)||0,
+    created_at: new Date().toISOString()
+  };
+
+  try{
+    const resp=await fetch(SB+'/rest/v1/jobs',{
+      method:'POST',
+      headers:{
+        'apikey':KEY,
+        'Authorization':'Bearer '+KEY,
+        'Content-Type':'application/json',
+        'Prefer':'return=representation'
+      },
+      body:JSON.stringify(job)
+    });
+    if(!resp.ok){
+      const err=await resp.text();
+      toast('Could not assign: '+err.slice(0,60),'warn');
+      return;
+    }
+    const created=await resp.json();
+    const jobId=created[0]?.id||'unknown';
+    toast(route.id+' assigned — job '+jobId+' sent to drivers','ok');
+
+    // Update button to show assigned
+    const btn=document.querySelector(`button[onclick="assignRoute('${routeId}')"]`);
+    if(btn){btn.textContent='✓ Assigned';btn.style.background='rgba(34,170,85,.15)';btn.style.borderColor='rgba(34,170,85,.3)';btn.style.color='var(--green)';btn.disabled=true;}
+  }catch(e){
+    toast('Connection error: '+e.message.slice(0,60),'warn');
+  }
 }
 
 // ── DEMO ──
