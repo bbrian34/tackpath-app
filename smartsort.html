@@ -48,7 +48,7 @@ body.light{
 .btn-theme{padding:8px 14px;border-radius:8px;
   background:var(--card2);border:1px solid var(--border);
   color:var(--muted);font-size:13px;cursor:pointer;}
-.btn-back{font-family:var(--mono);font-size:10px;color:var(--muted);
+.btn-back{font-family:var(--mono);font-size:10px;color:#334155;
   text-decoration:none;padding:8px 14px;border-radius:8px;
   border:1px solid var(--border);}
 .btn-back:hover{color:var(--blue);}
@@ -68,7 +68,7 @@ body.light{
   display:flex;align-items:center;justify-content:space-between;
 }
 .panel-title{font-family:var(--cond);font-size:20px;font-weight:700;color:var(--text);}
-.panel-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.panel-sub{font-size:11px;color:#334155;margin-top:2px;}
 .panel-body{flex:1;padding:18px;overflow-y:auto;}
 
 /* ── STATS ── */
@@ -76,7 +76,7 @@ body.light{
 .stat-card{padding:14px;border-radius:10px;background:var(--card);
   border:1px solid var(--border);text-align:center;}
 .stat-n{font-family:var(--cond);font-size:32px;font-weight:800;line-height:1;color:var(--text);}
-.stat-l{font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono);
+.stat-l{font-size:10px;color:#334155;margin-top:4px;font-family:var(--mono);
   letter-spacing:.08em;text-transform:uppercase;}
 
 /* ── DROP ZONE ── */
@@ -90,7 +90,7 @@ body.light{
 #dropZone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 .dz-icon{font-size:40px;margin-bottom:12px;}
 .dz-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;}
-.dz-sub{font-size:12px;color:var(--muted);line-height:1.7;}
+.dz-sub{font-size:12px;color:#334155;line-height:1.7;}
 .dz-sub code{font-family:var(--mono);font-size:10px;color:var(--blue);
   background:rgba(25,183,239,.1);padding:2px 6px;border-radius:4px;}
 
@@ -121,7 +121,7 @@ body.light{
 .pkg-hdr{
   display:grid;grid-template-columns:160px 1fr 50px;
   gap:8px;padding:8px 12px;
-  font-family:var(--mono);font-size:9px;color:var(--muted);
+  font-family:var(--mono);font-size:9px;color:#334155;
   letter-spacing:.12em;text-transform:uppercase;
   border-bottom:1px solid var(--border);
 }
@@ -133,11 +133,11 @@ body.light{
 }
 .pkg-row:hover{background:rgba(255,255,255,.02);}
 body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
-.pkg-tp{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blue);}
-.pkg-name{font-size:12px;font-weight:600;color:var(--text);}
-.pkg-addr{font-size:11px;color:var(--muted);margin-top:1px;}
-.pkg-count{font-family:var(--mono);font-size:12px;font-weight:600;
-  color:var(--orange);text-align:center;}
+.pkg-tp{font-family:var(--mono);font-size:11px;font-weight:700;color:#0f172a;}
+.pkg-name{font-size:12px;font-weight:700;color:#0f172a;}
+.pkg-addr{font-size:11px;color:#334155;margin-top:1px;}
+.pkg-count{font-family:var(--mono);font-size:12px;font-weight:700;
+  color:#c05000;text-align:center;}
 
 /* ── RIGHT ── */
 #right{flex:1;display:flex;flex-direction:column;}
@@ -155,7 +155,7 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
 }
 .es-icon{font-size:56px;}
 .es-title{font-family:var(--cond);font-size:22px;font-weight:700;color:var(--text);}
-.es-sub{font-size:13px;color:var(--muted);max-width:300px;line-height:1.6;}
+.es-sub{font-size:13px;color:#334155;max-width:300px;line-height:1.6;}
 
 /* ── ROUTE GRID ── */
 #routeGrid{display:none;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
@@ -177,7 +177,7 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
 .rc-nums{display:flex;gap:20px;}
 .rc-num{text-align:center;}
 .rc-num-n{font-family:var(--cond);font-size:28px;font-weight:800;line-height:1;color:var(--text);}
-.rc-num-l{font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}
+.rc-num-l{font-size:9px;color:#334155;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}
 
 /* ── STOP LIST ── */
 .rc-stops{padding:12px 16px;}
@@ -190,8 +190,8 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
   font-family:var(--mono);font-size:9px;font-weight:700;flex-shrink:0;}
 .si{flex:1;min-width:0;}
 .si-tp{font-family:var(--mono);font-size:12px;font-weight:700;margin-bottom:3px;}
-.si-name{font-size:13px;font-weight:700;color:var(--text);}
-.si-addr{font-size:11px;color:var(--muted);margin-top:1px;
+.si-name{font-size:13px;font-weight:700;color:#0f172a;}
+.si-addr{font-size:11px;color:#334155;margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .si-pkgs{font-family:var(--mono);font-size:10px;font-weight:700;
   color:#fff;background:var(--orange);
@@ -200,15 +200,15 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
 /* ── MASTER CODE ── */
 .rc-master{padding:12px 16px;border-top:1px solid var(--border);
   background:rgba(25,183,239,.04);}
-.mc-label{font-family:var(--mono);font-size:8px;color:var(--muted);
+.mc-label{font-family:var(--mono);font-size:8px;color:#334155;
   letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
 .mc-code{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);}
-.mc-hint{font-size:10px;color:var(--muted);margin-top:3px;}
+.mc-hint{font-size:10px;color:#334155;margin-top:3px;}
 
 /* ── FOOTER ── */
 .rc-footer{padding:10px 16px;border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;}
-.rc-dist{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.rc-dist{font-family:var(--mono);font-size:10px;color:#334155;}
 .btn-assign{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;
   background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);
   color:var(--blue);cursor:pointer;font-family:var(--sans);transition:all .15s;}
@@ -541,7 +541,7 @@ function renderRoutes(){
             <div class="sn">${i+1}</div>
             <div class="si">
               <div class="si-tp">
-                <span style="color:var(--text);">${s.order_id}</span><span style="color:var(--blue);">-${i+1}</span><span style="color:var(--red);">-${s.packages}</span>
+                <span style="color:#0f172a;">${s.order_id}</span><span style="color:#0077cc;font-weight:900;">-${i+1}</span><span style="color:#cc1100;font-weight:900;">-${s.packages}</span>
               </div>
               <div class="si-name">${s.recipient}</div>
               <div class="si-addr">${s.address}</div>
