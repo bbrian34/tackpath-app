@@ -493,6 +493,7 @@ function buildRoutes(){
       };
     });
     document.getElementById('statRoutes').textContent=routes.length;
+    document.getElementById('left').style.display='none';
     renderRoutes();
     btn.disabled=false;
     btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+routes.length+' routes</span>';
@@ -685,6 +686,7 @@ function resetAll(){
   document.getElementById('buildBtn').style.display='none';
   document.getElementById('statsRow').style.display='none';
   document.getElementById('routeGrid').style.display='none';
+  document.getElementById('left').style.display='flex';
   document.getElementById('routeGrid').innerHTML='';
   document.getElementById('emptyState').style.display='flex';
   document.getElementById('rightActions').style.display='none';
