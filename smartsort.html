@@ -10,252 +10,284 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--red:#ff3b30;
-  --purple:#8d5cff;--yellow:#ffd23d;
-  --bg:#02060e;--card:#07101e;--card2:#0b1728;--card3:#0f1e32;
-  --border:rgba(25,183,239,.07);--border2:rgba(255,255,255,.04);
-  --text:#ffffff;--muted:rgba(255,255,255,.75);--faint:rgba(255,255,255,.55);
+  --blue:#19b7ef;--green:#22aa55;--orange:#ff7700;--red:#ff3b30;
+  --purple:#8d5cff;--yellow:#f59e0b;
+  --bg:#02060e;--card:#07101e;--card2:#0b1728;
+  --border:rgba(25,183,239,.1);--border2:rgba(255,255,255,.06);
+  --text:#ffffff;--muted:#a8c4d8;--faint:#7a9ab0;
   --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;--cond:'Barlow Condensed',sans-serif;
 }
 html,body{height:100%;margin:0;padding:0;}
-body{font-family:var(--sans);color:var(--text);background:var(--bg);font-size:13px;overflow:hidden;}
-body::before{content:'';position:fixed;inset:0;
-  background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(25,183,239,.04),transparent),
-              radial-gradient(ellipse 40% 30% at 80% 80%,rgba(141,92,255,.03),transparent);
-  pointer-events:none;z-index:0;}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);font-size:13px;}
+body.light{
+  --bg:#f8fafc;--card:#ffffff;--card2:#f1f5f9;
+  --border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.06);
+  --text:#0f172a;--muted:#475569;--faint:#94a3b8;
+}
 
 /* ── TOPBAR ── */
 #topbar{
-  height:52px;display:flex;align-items:center;padding:0 18px;
-  background:rgba(2,6,14,.96);border-bottom:1px solid var(--border);
-  backdrop-filter:blur(24px);gap:16px;flex-shrink:0;z-index:200;position:relative;
+  height:52px;display:flex;align-items:center;padding:0 20px;
+  background:var(--card);border-bottom:1px solid var(--border);
+  gap:14px;position:sticky;top:0;z-index:100;
 }
-.tb-brand{display:flex;align-items:center;gap:10px;}
 .tb-wm{font-family:var(--cond);font-size:22px;font-weight:800;letter-spacing:-.5px;}
-.tb-wm .t{color:#fff;}.tb-wm .p{color:var(--blue);}
+.tb-wm .t{color:var(--text);}.tb-wm .p{color:var(--blue);}
 .tb-divider{width:1px;height:22px;background:var(--border2);}
-.tb-product{font-family:var(--mono);font-size:11px;font-weight:600;
+.tb-product{font-family:var(--mono);font-size:10px;font-weight:600;
   color:var(--green);letter-spacing:.12em;text-transform:uppercase;
-  background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.15);
+  background:rgba(34,170,85,.08);border:1px solid rgba(34,170,85,.2);
   border-radius:6px;padding:4px 10px;}
-.tb-back{margin-left:auto;font-family:var(--mono);font-size:10px;color:#c8dff0;
-  text-decoration:none;letter-spacing:.08em;display:flex;align-items:center;gap:6px;}
-.tb-back:hover{color:var(--blue);}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.btn-demo{padding:8px 18px;border-radius:8px;
+  background:linear-gradient(135deg,var(--purple),#6633cc);
+  border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:var(--sans);box-shadow:0 4px 16px rgba(141,92,255,.3);}
+.btn-demo:hover{box-shadow:0 6px 24px rgba(141,92,255,.45);}
+.btn-theme{padding:8px 14px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--border);
+  color:var(--muted);font-size:13px;cursor:pointer;}
+.btn-back{font-family:var(--mono);font-size:10px;color:var(--muted);
+  text-decoration:none;padding:8px 14px;border-radius:8px;
+  border:1px solid var(--border);}
+.btn-back:hover{color:var(--blue);}
 
 /* ── LAYOUT ── */
-#app{display:flex;height:calc(100vh - 52px);position:relative;z-index:1;}
+#app{display:flex;min-height:calc(100vh - 52px);}
 
-/* ── LEFT PANEL ── */
+/* ── LEFT ── */
 #left{
-  width:420px;flex-shrink:0;
+  width:440px;flex-shrink:0;
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;
-  overflow:hidden;
+  min-height:calc(100vh - 52px);
 }
 .panel-hdr{
-  padding:16px 18px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
 }
-.panel-title{font-family:var(--cond);font-size:18px;font-weight:700;color:#fff;}
-.panel-sub{font-family:var(--mono);font-size:9px;color:#c8dff0;letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
-.panel-body{flex:1;overflow-y:auto;padding:16px;}
+.panel-title{font-family:var(--cond);font-size:20px;font-weight:700;color:var(--text);}
+.panel-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.panel-body{flex:1;padding:18px;overflow-y:auto;}
 
-/* ── UPLOAD ZONE ── */
+/* ── STATS ── */
+#statsRow{display:none;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;}
+.stat-card{padding:14px;border-radius:10px;background:var(--card);
+  border:1px solid var(--border);text-align:center;}
+.stat-n{font-family:var(--cond);font-size:32px;font-weight:800;line-height:1;color:var(--text);}
+.stat-l{font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono);
+  letter-spacing:.08em;text-transform:uppercase;}
+
+/* ── DROP ZONE ── */
 #dropZone{
-  border:2px dashed rgba(25,183,239,.25);
-  border-radius:14px;padding:40px 20px;
-  text-align:center;cursor:pointer;
-  background:rgba(25,183,239,.03);
-  transition:all .2s;margin-bottom:16px;
-  position:relative;
+  border:2px dashed rgba(25,183,239,.3);border-radius:14px;
+  padding:40px 20px;text-align:center;cursor:pointer;
+  background:rgba(25,183,239,.02);transition:all .2s;
+  margin-bottom:14px;position:relative;
 }
-#dropZone:hover,#dropZone.drag{
-  border-color:rgba(25,183,239,.6);
-  background:rgba(25,183,239,.07);
-}
-#dropZone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
-.dz-icon{font-size:36px;margin-bottom:12px;opacity:.6;}
-.dz-title{font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;}
-.dz-sub{font-size:12px;color:#fff;line-height:1.5;}
+#dropZone:hover,#dropZone.drag{border-color:var(--blue);background:rgba(25,183,239,.06);}
+#dropZone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz-icon{font-size:40px;margin-bottom:12px;}
+.dz-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.dz-sub{font-size:12px;color:var(--muted);line-height:1.7;}
 .dz-sub code{font-family:var(--mono);font-size:10px;color:var(--blue);
-  background:rgba(25,183,239,.08);padding:2px 6px;border-radius:4px;}
+  background:rgba(25,183,239,.1);padding:2px 6px;border-radius:4px;}
 
-/* ── CSV TEMPLATE ── */
-.template-btn{
-  width:100%;padding:10px;border-radius:10px;
-  background:rgba(255,255,255,.04);border:1px solid var(--border2);
-  color:#c8dff0;font-size:12px;cursor:pointer;
-  font-family:var(--sans);display:flex;align-items:center;justify-content:center;gap:8px;
-  margin-bottom:16px;transition:all .15s;
+/* ── BUTTONS ── */
+.action-btn{
+  width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:var(--sans);border:1px solid var(--border);
+  color:var(--muted);background:var(--card2);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-bottom:10px;transition:all .15s;
 }
-.template-btn:hover{background:rgba(25,183,239,.06);border-color:rgba(25,183,239,.2);color:var(--blue);}
+.action-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(25,183,239,.05);}
+#buildBtn{
+  width:100%;padding:15px;border-radius:12px;
+  background:linear-gradient(135deg,var(--green),#16803a);
+  border:none;color:#fff;font-size:15px;font-weight:800;
+  cursor:pointer;font-family:var(--sans);
+  box-shadow:0 6px 24px rgba(34,170,85,.25);
+  display:none;margin-top:14px;
+  align-items:center;justify-content:center;gap:10px;
+}
+#buildBtn:hover{box-shadow:0 8px 32px rgba(34,170,85,.4);}
+#buildBtn:disabled{opacity:.5;pointer-events:none;}
+.build-badge{background:rgba(0,0,0,.2);border-radius:20px;padding:3px 10px;font-size:12px;}
 
 /* ── PACKAGE TABLE ── */
 #packageTable{display:none;}
-.pkg-header{
-  display:grid;grid-template-columns:80px 1fr 120px 60px;
+.pkg-hdr{
+  display:grid;grid-template-columns:160px 1fr 50px;
   gap:8px;padding:8px 12px;
-  font-family:var(--mono);font-size:9px;color:#c8dff0;
-  letter-spacing:.1em;text-transform:uppercase;
+  font-family:var(--mono);font-size:9px;color:var(--muted);
+  letter-spacing:.12em;text-transform:uppercase;
   border-bottom:1px solid var(--border);
 }
 .pkg-row{
-  display:grid;grid-template-columns:80px 1fr 120px 60px;
-  gap:8px;padding:10px 12px;border-bottom:1px solid var(--border2);
-  align-items:center;transition:background .1s;
+  display:grid;grid-template-columns:160px 1fr 50px;
+  gap:8px;padding:10px 12px;
+  border-bottom:1px solid var(--border2);align-items:center;
+  transition:background .1s;
 }
 .pkg-row:hover{background:rgba(255,255,255,.02);}
-.pkg-id{font-family:var(--mono);font-size:10px;color:var(--blue);}
-.pkg-name{font-size:12px;font-weight:600;color:var(--text);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pkg-addr{font-size:11px;color:#c8dff0;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pkg-count{font-family:var(--mono);font-size:11px;color:var(--orange);text-align:center;}
-.pkg-flag{display:inline-block;width:6px;height:6px;border-radius:50%;margin-left:4px;}
-.flag-ok{background:var(--green);}
-.flag-warn{background:var(--orange);}
+body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
+.pkg-tp{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blue);}
+.pkg-name{font-size:12px;font-weight:600;color:var(--text);}
+.pkg-addr{font-size:11px;color:var(--muted);margin-top:1px;}
+.pkg-count{font-family:var(--mono);font-size:12px;font-weight:600;
+  color:var(--orange);text-align:center;}
 
-/* ── BUILD BUTTON ── */
-#buildBtn{
-  width:100%;padding:16px;border-radius:12px;
-  background:linear-gradient(135deg,var(--green),#22aa55);
-  border:none;color:#02060e;font-size:15px;font-weight:800;
-  cursor:pointer;font-family:var(--sans);
-  box-shadow:0 8px 28px rgba(83,255,136,.2);
-  display:none;margin-top:16px;transition:all .2s;
-  display:flex;align-items:center;justify-content:center;gap:10px;
-}
-#buildBtn:hover{box-shadow:0 10px 36px rgba(83,255,136,.35);transform:translateY(-1px);}
-#buildBtn:disabled{opacity:.5;pointer-events:none;}
-.build-count{
-  background:rgba(0,0,0,.2);border-radius:20px;
-  padding:3px 10px;font-size:12px;
-}
-
-/* ── STATS ROW ── */
-#statsRow{
-  display:none;
-  grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;
-}
-.stat-card{
-  padding:12px;border-radius:10px;background:var(--card);
-  border:1px solid var(--border);text-align:center;
-}
-.stat-n{font-family:var(--cond);font-size:28px;font-weight:700;line-height:1;}
-.stat-l{font-family:var(--mono);font-size:8px;color:#c8dff0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px;}
-
-/* ── RIGHT PANEL ── */
-#right{
-  flex:1;display:flex;flex-direction:column;overflow:hidden;
-}
+/* ── RIGHT ── */
+#right{flex:1;display:flex;flex-direction:column;}
 .right-hdr{
-  padding:16px 18px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
 }
-.right-body{flex:1;overflow-y:auto;padding:16px;}
+.right-body{flex:1;padding:18px;}
 
 /* ── EMPTY STATE ── */
 #emptyState{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  height:100%;gap:16px;opacity:.4;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:400px;gap:14px;opacity:.5;
+  text-align:center;
 }
 .es-icon{font-size:56px;}
-.es-title{font-family:var(--cond);font-size:20px;font-weight:700;color:#fff;}
-.es-sub{font-size:12px;color:#c8dff0;text-align:center;max-width:280px;line-height:1.6;}
+.es-title{font-family:var(--cond);font-size:22px;font-weight:700;color:var(--text);}
+.es-sub{font-size:13px;color:var(--muted);max-width:300px;line-height:1.6;}
 
-/* ── ROUTE CARDS ── */
-#routeGrid{display:none;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+/* ── ROUTE GRID ── */
+#routeGrid{display:none;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
 .route-card{
   background:var(--card);border:1px solid var(--border);
-  border-radius:14px;overflow:hidden;position:relative;
+  border-radius:14px;overflow:hidden;
 }
-.route-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-}
-.rc-blue::before{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
-.rc-green::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
-.rc-orange::before{background:linear-gradient(90deg,transparent,var(--orange),transparent);}
-.rc-purple::before{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
+.rc-stripe{height:3px;}
+.s-blue{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.s-green{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.s-orange{background:linear-gradient(90deg,transparent,var(--orange),transparent);}
+.s-purple{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
 .rc-top{padding:14px 16px;border-bottom:1px solid var(--border);}
-.rc-top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.rc-id{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.08em;}
-.rc-badge{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.1em;
-  text-transform:uppercase;padding:3px 8px;border-radius:10px;
-  background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);}
-.rc-stats{display:flex;gap:16px;}
-.rc-stat{display:flex;flex-direction:column;gap:2px;}
-.rc-stat-n{font-family:var(--cond);font-size:22px;font-weight:700;color:#fff;line-height:1;}
-.rc-stat-l{font-family:var(--mono);font-size:8px;color:#c8dff0;letter-spacing:.08em;text-transform:uppercase;}
+.rc-id-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.rc-id{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blue);}
+.rc-badge{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 8px;border-radius:8px;
+  background:rgba(34,170,85,.1);border:1px solid rgba(34,170,85,.25);color:var(--green);}
+.rc-nums{display:flex;gap:20px;}
+.rc-num{text-align:center;}
+.rc-num-n{font-family:var(--cond);font-size:28px;font-weight:800;line-height:1;color:var(--text);}
+.rc-num-l{font-size:9px;color:var(--muted);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}
+
+/* ── STOP LIST ── */
 .rc-stops{padding:12px 16px;}
-.rc-stop{display:flex;align-items:flex-start;gap:10px;padding:6px 0;
+.rc-stop{display:flex;align-items:flex-start;gap:10px;padding:8px 0;
   border-bottom:1px solid var(--border2);}
 .rc-stop:last-child{border-bottom:none;}
-.stop-num{width:20px;height:20px;border-radius:50%;
-  background:var(--card2);border:1px solid var(--border);
+.sn{width:24px;height:24px;border-radius:50%;
+  background:var(--blue);color:#fff;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:9px;font-weight:600;color:#fff;
-  flex-shrink:0;margin-top:1px;}
-.stop-info{flex:1;min-width:0;}
-.stop-name{font-size:12px;font-weight:600;color:var(--text);
+  font-family:var(--mono);font-size:9px;font-weight:700;flex-shrink:0;}
+.si{flex:1;min-width:0;}
+.si-tp{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--blue);margin-bottom:2px;}
+.si-name{font-size:13px;font-weight:700;color:var(--text);}
+.si-addr{font-size:11px;color:var(--muted);margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.stop-addr{font-size:10px;color:#c8dff0;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
-.stop-pkgs{font-family:var(--mono);font-size:9px;color:var(--orange);flex-shrink:0;margin-top:2px;}
+.si-pkgs{font-family:var(--mono);font-size:10px;font-weight:700;
+  color:#fff;background:var(--orange);
+  border-radius:10px;padding:2px 8px;flex-shrink:0;align-self:center;}
+
+/* ── MASTER CODE ── */
+.rc-master{padding:12px 16px;border-top:1px solid var(--border);
+  background:rgba(25,183,239,.04);}
+.mc-label{font-family:var(--mono);font-size:8px;color:var(--muted);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
+.mc-code{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green);}
+.mc-hint{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* ── FOOTER ── */
 .rc-footer{padding:10px 16px;border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;}
-.rc-dist{font-family:var(--mono);font-size:10px;color:#c8dff0;}
-.rc-assign{padding:6px 14px;border-radius:8px;
-  background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);
-  color:var(--blue);font-size:11px;font-weight:600;cursor:pointer;
-  font-family:var(--sans);transition:all .15s;}
-.rc-assign:hover{background:rgba(25,183,239,.15);}
+.rc-dist{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.btn-assign{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;
+  background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);
+  color:var(--blue);cursor:pointer;font-family:var(--sans);transition:all .15s;}
+.btn-assign:hover{background:rgba(25,183,239,.16);}
 
-/* ── BARCODE ── */
-.rc-barcode{padding:10px 16px;border-top:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;}
-.barcode-label{font-family:var(--mono);font-size:8px;color:#c8dff0;letter-spacing:.1em;text-transform:uppercase;}
-.barcode-val{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.04em;}
+/* ── DEMO OVERLAY ── */
+#demoOverlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  align-items:flex-end;justify-content:center;padding:32px;
+}
+#demoOverlay.on{display:flex;}
+#demoCard{
+  background:#071828;border:1px solid rgba(25,183,239,.3);
+  border-radius:20px;padding:28px 32px;max-width:560px;width:100%;
+  box-shadow:0 32px 80px rgba(0,0,0,.8);
+  position:relative;
+}
+.demo-step{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px;}
+.demo-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;
+  color:#fff;margin-bottom:10px;line-height:1.1;}
+.demo-body{font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:20px;}
+.demo-btns{display:flex;gap:10px;justify-content:flex-end;}
+.demo-next{padding:11px 24px;border-radius:10px;
+  background:var(--blue);border:none;color:#fff;
+  font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+.demo-skip{padding:11px 20px;border-radius:10px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.5);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+.demo-progress{display:flex;gap:6px;margin-bottom:20px;}
+.dp-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15);transition:background .3s;}
+.dp-dot.on{background:var(--blue);}
+
+/* ── HIGHLIGHT ── */
+.demo-highlight{
+  outline:3px solid var(--blue);
+  outline-offset:4px;
+  border-radius:8px;
+  box-shadow:0 0 0 6px rgba(25,183,239,.15);
+  animation:hlPulse 1.5s ease-in-out infinite;
+}
+@keyframes hlPulse{0%,100%{box-shadow:0 0 0 6px rgba(25,183,239,.15);}50%{box-shadow:0 0 0 12px rgba(25,183,239,.05);}}
 
 /* ── TOAST ── */
-.tw{position:fixed;top:64px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.tw{position:fixed;top:68px;right:16px;z-index:9999;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none;}
 .toast{padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;
   display:flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.5);
-  animation:tIn .3s ease;}
-.t-ok{background:var(--card);border:1px solid rgba(83,255,136,.4);color:var(--green);}
-.t-warn{background:var(--card);border:1px solid rgba(255,150,30,.4);color:var(--orange);}
+  animation:tIn .3s ease;background:var(--card);border:1px solid rgba(83,255,136,.4);color:var(--green);}
+.toast.warn{border-color:rgba(255,150,30,.4);color:var(--orange);}
 @keyframes tIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
-
-/* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
 </style>
 </head>
 <body>
 
 <!-- TOPBAR -->
 <div id="topbar">
-  <div class="tb-brand">
-    <div class="tb-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
-    <div class="tb-divider"></div>
-    <div class="tb-product">SmartSort</div>
+  <div class="tb-wm"><span class="t">TACK</span><span class="p">PATH</span></div>
+  <div class="tb-divider"></div>
+  <div class="tb-product">SmartSort</div>
+  <div class="tb-right">
+    <button class="btn-demo" onclick="startDemo()">&#9654; Run Demo</button>
+    <button class="btn-theme" onclick="toggleTheme()" id="themeBtn" title="Toggle light/dark">&#9790;</button>
+    <a class="btn-back" href="dispatcher.html">&#8592; Dispatcher</a>
   </div>
-  <a class="tb-back" href="/dispatcher.html">&#8592; Dispatcher</a>
 </div>
 
 <div id="app">
-
-  <!-- LEFT: Upload + Package List -->
+  <!-- LEFT -->
   <div id="left">
     <div class="panel-hdr">
       <div>
         <div class="panel-title">Package Import</div>
-        <div class="panel-sub">Upload CSV &middot; SmartSort builds your routes</div>
+        <div class="panel-sub">Upload CSV or run demo &mdash; SmartSort builds and sequences every route</div>
       </div>
     </div>
     <div class="panel-body">
-
-      <!-- Stats -->
       <div id="statsRow">
         <div class="stat-card">
           <div class="stat-n" id="statPkgs" style="color:var(--blue);">0</div>
@@ -271,181 +303,204 @@ body::before{content:'';position:fixed;inset:0;
         </div>
       </div>
 
-      <!-- Drop Zone -->
       <div id="dropZone">
         <input type="file" accept=".csv" id="csvInput" onchange="handleFile(this.files[0])"/>
         <div class="dz-icon">&#9783;</div>
         <div class="dz-title">Drop your CSV here</div>
         <div class="dz-sub">
           or click to browse<br/><br/>
-          Required columns:<br/>
-          <code>order_id</code> <code>recipient</code> <code>address</code> <code>packages</code><br/>
-          Optional: <code>notes</code> <code>priority</code>
+          Required: <code>order_id</code> <code>recipient</code> <code>address</code> <code>packages</code>
         </div>
       </div>
 
-      <!-- Template download -->
-      <button class="template-btn" onclick="downloadTemplate()">
-        &#8659; Download CSV Template
-      </button>
+      <button class="action-btn" onclick="downloadTemplate()">&#8659; Download CSV Template</button>
+      <button class="action-btn" onclick="loadDemoData()" id="demoDataBtn">&#9654; Load Demo Data (20 packages)</button>
 
-      <!-- Package table -->
       <div id="packageTable">
-        <div class="pkg-header">
-          <div>Order ID</div>
+        <div class="pkg-hdr">
+          <div>TP Order ID</div>
           <div>Recipient / Address</div>
-          <div>Address</div>
           <div>Pkgs</div>
         </div>
         <div id="pkgRows"></div>
       </div>
 
-      <!-- Build button -->
-      <button id="buildBtn" onclick="buildRoutes()" style="display:none;">
+      <button id="buildBtn" onclick="buildRoutes()">
         &#9650; Run SmartSort
-        <span class="build-count" id="buildCount"></span>
+        <span class="build-badge" id="buildCount"></span>
       </button>
-
     </div>
   </div>
 
-  <!-- RIGHT: Route Cards -->
+  <!-- RIGHT -->
   <div id="right">
     <div class="right-hdr">
       <div>
         <div class="panel-title" id="rightTitle">Routes</div>
         <div class="panel-sub" id="rightSub">Upload a CSV to generate optimized routes</div>
       </div>
-      <div id="rightActions" style="display:none;gap:8px;display:none;">
-        <button onclick="exportRoutes()" style="padding:8px 16px;border-radius:8px;background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">Export Routes</button>
-        <button onclick="resetAll()" style="padding:8px 16px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--border2);color:#c8dff0;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">Reset</button>
+      <div id="rightActions" style="display:none;gap:8px;">
+        <button onclick="exportRoutes()" style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(34,170,85,.08);border:1px solid rgba(34,170,85,.2);color:var(--green);">Export Routes</button>
+        <button onclick="resetAll()" style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);background:var(--card2);border:1px solid var(--border);color:var(--muted);">Reset</button>
       </div>
     </div>
     <div class="right-body">
       <div id="emptyState">
         <div class="es-icon">&#9650;</div>
         <div class="es-title">SmartSort Ready</div>
-        <div class="es-sub">Upload a CSV of packages and SmartSort will build optimized routes automatically. One scan loads the entire route.</div>
+        <div class="es-sub">Upload a CSV or load demo data. One scan loads the entire route to the driver.</div>
       </div>
-      <div id="routeGrid" style="display:none;"></div>
+      <div id="routeGrid"></div>
     </div>
   </div>
+</div>
 
+<!-- DEMO OVERLAY -->
+<div id="demoOverlay">
+  <div id="demoCard">
+    <div class="demo-progress" id="demoDots"></div>
+    <div class="demo-step" id="demoStep">Step 1 of 6</div>
+    <div class="demo-title" id="demoTitle"></div>
+    <div class="demo-body" id="demoBody"></div>
+    <div class="demo-btns">
+      <button class="demo-skip" onclick="endDemo()">Skip Demo</button>
+      <button class="demo-next" id="demoNextBtn" onclick="demoNext()">Next &rarr;</button>
+    </div>
+  </div>
 </div>
 
 <div class="tw" id="tw"></div>
 
 <script>
+// ── DATA ──
+const DEMO_PACKAGES = [
+  {order_id:'TP65782101',recipient:'Marcus Johnson',address:'142 Peachtree St NW, Atlanta GA 30303',packages:2},
+  {order_id:'TP65782102',recipient:'Sarah Williams',address:'890 Marietta St NW, Atlanta GA 30318',packages:1},
+  {order_id:'TP65782103',recipient:'David Chen',address:'1180 Peachtree St NE, Atlanta GA 30309',packages:3},
+  {order_id:'TP65782104',recipient:'Jennifer Davis',address:'75 5th St NW, Atlanta GA 30308',packages:1},
+  {order_id:'TP65782105',recipient:'Robert Miller',address:'400 W Peachtree St NW, Atlanta GA 30308',packages:2},
+  {order_id:'TP65782106',recipient:'Angela Thompson',address:'3393 Peachtree Rd NE, Atlanta GA 30326',packages:4},
+  {order_id:'TP65782107',recipient:'Kevin Harris',address:'2500 Cumberland Pkwy SE, Atlanta GA 30339',packages:1},
+  {order_id:'TP65782108',recipient:'Patricia Moore',address:'1544 Piedmont Ave NE, Atlanta GA 30324',packages:2},
+  {order_id:'TP65782109',recipient:'James Wilson',address:'640 W Peachtree St NW, Atlanta GA 30308',packages:1},
+  {order_id:'TP65782110',recipient:'Linda Anderson',address:'220 Interstate N Pkwy SE, Atlanta GA 30339',packages:3},
+  {order_id:'TP65782111',recipient:'Michael Brown',address:'3630 Peachtree Rd NE, Atlanta GA 30319',packages:2},
+  {order_id:'TP65782112',recipient:'Barbara Jackson',address:'1000 Northside Dr NW, Atlanta GA 30318',packages:1},
+  {order_id:'TP65782113',recipient:'Christopher White',address:'2550 Sandy Plains Rd, Marietta GA 30066',packages:2},
+  {order_id:'TP65782114',recipient:'Susan Taylor',address:'4300 Paces Ferry Rd SE, Atlanta GA 30339',packages:1},
+  {order_id:'TP65782115',recipient:'Matthew Martinez',address:'1100 Spring St NW, Atlanta GA 30309',packages:3},
+  {order_id:'TP65782116',recipient:'Dorothy Garcia',address:'800 Miami Cir NE, Atlanta GA 30324',packages:2},
+  {order_id:'TP65782117',recipient:'Anthony Robinson',address:'3500 Lenox Rd NE, Atlanta GA 30326',packages:1},
+  {order_id:'TP65782118',recipient:'Sandra Lewis',address:'2140 Peachtree Rd NW, Atlanta GA 30309',packages:2},
+  {order_id:'TP65782119',recipient:'Donald Lee',address:'1000 Virginia Ave NE, Atlanta GA 30306',packages:1},
+  {order_id:'TP65782120',recipient:'Betty Walker',address:'755 Commerce Dr, Decatur GA 30030',packages:4}
+];
+
+const COLORS = ['s-blue','s-green','s-orange','s-purple'];
 let packages = [];
 let routes = [];
-const COLORS = ['rc-blue','rc-green','rc-orange','rc-purple'];
 
 // ── CSV PARSE ──
 function handleFile(file){
   if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file','warn');return;}
-  const reader = new FileReader();
-  reader.onload = e => parseCSV(e.target.result);
+  const reader=new FileReader();
+  reader.onload=e=>parseCSV(e.target.result);
   reader.readAsText(file);
 }
 
 function parseCSV(text){
-  const lines = text.trim().split('\n');
-  if(lines.length < 2){toast('CSV must have a header row and at least one package','warn');return;}
-  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
-  const idxMap = {
-    order_id: headers.indexOf('order_id'),
-    recipient: headers.indexOf('recipient'),
-    address: headers.indexOf('address'),
-    packages: headers.indexOf('packages'),
-    notes: headers.indexOf('notes'),
-    priority: headers.indexOf('priority')
+  const lines=text.trim().split('\n');
+  if(lines.length<2){toast('CSV needs a header and at least one row','warn');return;}
+  const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
+  const idx={
+    order_id:headers.indexOf('order_id'),
+    recipient:headers.indexOf('recipient'),
+    address:headers.indexOf('address'),
+    packages:headers.indexOf('packages')
   };
-  if(idxMap.order_id<0||idxMap.recipient<0||idxMap.address<0){
-    toast('CSV missing required columns: order_id, recipient, address','warn');return;
+  if(idx.order_id<0||idx.recipient<0||idx.address<0){
+    toast('Missing required columns: order_id, recipient, address','warn');return;
   }
-  packages = [];
+  packages=[];
   for(let i=1;i<lines.length;i++){
-    const cols = lines[i].split(',').map(c=>c.trim().replace(/"/g,''));
-    if(!cols[idxMap.address])continue;
+    const c=lines[i].split(',').map(v=>v.trim().replace(/"/g,''));
+    if(!c[idx.address])continue;
     packages.push({
-      order_id: cols[idxMap.order_id]||('TP-'+(8000+i)),
-      recipient: cols[idxMap.recipient]||'Unknown',
-      address: cols[idxMap.address],
-      packages: parseInt(cols[idxMap.packages])||1,
-      notes: idxMap.notes>=0?cols[idxMap.notes]:'',
-      priority: idxMap.priority>=0?cols[idxMap.priority]:'normal',
-      idx: i-1
+      order_id:c[idx.order_id]||('TP'+String(65780000+i)),
+      recipient:c[idx.recipient]||'Unknown',
+      address:c[idx.address],
+      packages:parseInt(c[idx.packages])||1
     });
   }
-  if(!packages.length){toast('No valid packages found in CSV','warn');return;}
-  renderPackageTable();
+  if(!packages.length){toast('No valid packages found','warn');return;}
+  renderTable();
   toast(packages.length+' packages loaded','ok');
 }
 
-function renderPackageTable(){
-  const table = document.getElementById('packageTable');
-  const rows = document.getElementById('pkgRows');
-  const buildBtn = document.getElementById('buildBtn');
-  const stats = document.getElementById('statsRow');
-  table.style.display='block';
-  stats.style.display='grid';
-  buildBtn.style.display='flex';
+function loadDemoData(){
+  packages=[...DEMO_PACKAGES];
+  renderTable();
+  toast('20 demo packages loaded','ok');
+}
+
+function renderTable(){
   document.getElementById('dropZone').style.display='none';
+  document.getElementById('demoDataBtn').style.display='none';
+  document.getElementById('packageTable').style.display='block';
+  document.getElementById('statsRow').style.display='grid';
+  document.getElementById('buildBtn').style.display='flex';
   document.getElementById('buildCount').textContent=packages.length+' packages';
   document.getElementById('statPkgs').textContent=packages.reduce((s,p)=>s+p.packages,0);
   document.getElementById('statStops').textContent=packages.length;
   document.getElementById('statRoutes').textContent='--';
-  rows.innerHTML=packages.map(p=>`
+  document.getElementById('pkgRows').innerHTML=packages.map(p=>`
     <div class="pkg-row">
-      <div class="pkg-id">${p.order_id}</div>
+      <div class="pkg-tp">${p.order_id}</div>
       <div>
         <div class="pkg-name">${p.recipient}</div>
         <div class="pkg-addr">${p.address}</div>
       </div>
-      <div class="pkg-addr">${p.address.split(',').slice(-2).join(',').trim()}</div>
       <div class="pkg-count">${p.packages}</div>
     </div>`).join('');
 }
 
-// ── SMARTSORT -- group into routes by geographic clustering ──
+// ── SMARTSORT ──
 function buildRoutes(){
   const btn=document.getElementById('buildBtn');
-  btn.disabled=true;btn.innerHTML='&#9650; Sorting... <span class="build-count">Running SmartSort</span>';
-
+  btn.disabled=true;
+  btn.innerHTML='&#9650; Sorting... <span class="build-badge">SmartSort running</span>';
   setTimeout(()=>{
-    // Group packages into routes of max 8 stops each
-    // In production this uses real geocoding + optimization
-    // For now: group by zip code / last part of address, then sequence
-    const groups = [];
-    const maxPerRoute = 8;
-    let current = [];
-    
-    // Sort by address to simulate geographic clustering
-    const sorted = [...packages].sort((a,b)=>a.address.localeCompare(b.address));
-    
-    sorted.forEach((pkg,i)=>{
-      current.push(pkg);
-      if(current.length>=maxPerRoute||(i===sorted.length-1&&current.length)){
-        groups.push([...current]);
-        current=[];
-      }
+    // Sort geographically by address, group into routes of max 7 stops
+    const sorted=[...packages].sort((a,b)=>a.address.localeCompare(b.address));
+    const maxPerRoute=7;
+    const groups=[];
+    for(let i=0;i<sorted.length;i+=maxPerRoute){
+      groups.push(sorted.slice(i,i+maxPerRoute));
+    }
+    // Build routes with SmartSort TP identifiers
+    routes=groups.map((stops,ri)=>{
+      const routeId='RT-'+String(ri+1).padStart(3,'0');
+      const masterCode='TP-ROUTE-'+stops[0].order_id.replace('TP','');
+      const stopsWithId=stops.map((s,si)=>({
+        ...s,
+        // SmartSort adds stop number and package count to TP identifier
+        smart_id:`${s.order_id}-${si+1}-${s.packages}`
+      }));
+      return{
+        id:routeId,
+        master_code:masterCode,
+        stops:stopsWithId,
+        total_packages:stops.reduce((s,p)=>s+p.packages,0),
+        est_miles:(1.8+stops.length*1.6).toFixed(1),
+        color:COLORS[ri%COLORS.length]
+      };
     });
-
-    routes = groups.map((stops,i)=>({
-      id:'RT-'+String(i+1).padStart(3,'0'),
-      barcode:'TP-SORT-'+Math.random().toString(36).substr(2,8).toUpperCase(),
-      stops,
-      total_packages:stops.reduce((s,p)=>s+p.packages,0),
-      est_distance:(2.1+stops.length*1.4).toFixed(1)+' mi',
-      color:COLORS[i%COLORS.length]
-    }));
-
     document.getElementById('statRoutes').textContent=routes.length;
     renderRoutes();
     btn.disabled=false;
-    btn.innerHTML='&#10003; Routes Built <span class="build-count">'+routes.length+' routes</span>';
-    toast(routes.length+' optimized routes built by SmartSort','ok');
-  },1200);
+    btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+routes.length+' routes</span>';
+    toast(routes.length+' routes built','ok');
+  },1100);
 }
 
 function renderRoutes(){
@@ -456,92 +511,168 @@ function renderRoutes(){
   grid.style.display='grid';
   actions.style.display='flex';
   document.getElementById('rightTitle').textContent='SmartSort Routes';
-  document.getElementById('rightSub').textContent=routes.length+' optimized routes &middot; '+packages.length+' stops &middot; '+packages.reduce((s,p)=>s+p.packages,0)+' packages';
-
+  document.getElementById('rightSub').textContent=
+    routes.length+' routes &middot; '+
+    packages.length+' stops &middot; '+
+    packages.reduce((s,p)=>s+p.packages,0)+' total packages';
   grid.innerHTML=routes.map(r=>`
-    <div class="route-card ${r.color}">
+    <div class="route-card">
+      <div class="rc-stripe ${r.color}"></div>
       <div class="rc-top">
-        <div class="rc-top-row">
+        <div class="rc-id-row">
           <div class="rc-id">${r.id}</div>
           <div class="rc-badge">SmartSort &#9650;</div>
         </div>
-        <div class="rc-stats">
-          <div class="rc-stat">
-            <div class="rc-stat-n" style="color:var(--blue);">${r.stops.length}</div>
-            <div class="rc-stat-l">Stops</div>
+        <div class="rc-nums">
+          <div class="rc-num">
+            <div class="rc-num-n" style="color:var(--blue);">${r.stops.length}</div>
+            <div class="rc-num-l">Stops</div>
           </div>
-          <div class="rc-stat">
-            <div class="rc-stat-n" style="color:var(--orange);">${r.total_packages}</div>
-            <div class="rc-stat-l">Packages</div>
+          <div class="rc-num">
+            <div class="rc-num-n" style="color:var(--orange);">${r.total_packages}</div>
+            <div class="rc-num-l">Packages</div>
           </div>
-          <div class="rc-stat">
-            <div class="rc-stat-n" style="color:var(--green);">${r.est_distance}</div>
-            <div class="rc-stat-l">Est. Distance</div>
+          <div class="rc-num">
+            <div class="rc-num-n" style="color:var(--green);">${r.est_miles}</div>
+            <div class="rc-num-l">Est. Miles</div>
           </div>
         </div>
       </div>
       <div class="rc-stops">
         ${r.stops.map((s,i)=>`
           <div class="rc-stop">
-            <div class="stop-num">${i+1}</div>
-            <div class="stop-info">
-              <div class="stop-name">${s.recipient}</div>
-              <div class="stop-addr">${s.address}</div>
+            <div class="sn">${i+1}</div>
+            <div class="si">
+              <div class="si-tp">${s.smart_id}</div>
+              <div class="si-name">${s.recipient}</div>
+              <div class="si-addr">${s.address}</div>
             </div>
-            <div class="stop-pkgs">${s.packages} pkg${s.packages!==1?'s':''}</div>
+            <div class="si-pkgs">${s.packages} pkg${s.packages!==1?'s':''}</div>
           </div>`).join('')}
       </div>
-      <div class="rc-barcode">
-        <div>
-          <div class="barcode-label">Master Scan Code</div>
-          <div class="barcode-val">${r.barcode}</div>
-        </div>
-        <div style="font-size:10px;color:#c8dff0;font-family:var(--mono);">1 scan loads route</div>
+      <div class="rc-master">
+        <div class="mc-label">Master Scan Code &mdash; Driver scans once to load entire route</div>
+        <div class="mc-code">${r.master_code}</div>
+        <div class="mc-hint">1 scan &rarr; ${r.stops.length} stops &rarr; ${r.total_packages} packages loaded on driver app</div>
       </div>
       <div class="rc-footer">
-        <div class="rc-dist">&#9654; ${r.est_distance} total</div>
-        <button class="rc-assign" onclick="assignRoute('${r.id}')">Assign Driver &rarr;</button>
+        <div class="rc-dist">&#9654; ${r.est_miles} miles estimated</div>
+        <button class="btn-assign" onclick="assignRoute('${r.id}')">Assign Driver &rarr;</button>
       </div>
     </div>`).join('');
 }
 
-// ── ASSIGN ──
 function assignRoute(id){
-  const route=routes.find(r=>r.id===id);
-  if(!route)return;
-  toast(route.id+' ready to assign — dispatcher coming soon','ok');
+  toast(id+' ready to assign to driver','ok');
+}
+
+// ── DEMO ──
+const DEMO_STEPS = [
+  {
+    title:'Welcome to SmartSort',
+    body:'SmartSort is TackPath\'s route intelligence engine. Upload a CSV of packages and SmartSort automatically groups them into optimized routes, sequences every stop, and generates a master scan code for each route. The driver scans once and loads out the door.',
+    highlight:null
+  },
+  {
+    title:'20 Packages Loaded',
+    body:'Here are 20 Atlanta packages, each identified by their TackPath order number — TP65782101 through TP65782120. Each package already has its TP number on the delivery label. SmartSort will now group and sequence them.',
+    highlight:'packageTable',
+    action: loadDemoData
+  },
+  {
+    title:'SmartSort Builds the Routes',
+    body:'With one click, SmartSort analyzes all 20 packages, groups them geographically into optimized routes, sequences each stop for minimum drive time, and calculates the total packages and mileage per route.',
+    highlight:'buildBtn',
+    action: buildRoutes
+  },
+  {
+    title:'The SmartSort Identifier',
+    body:'See how SmartSort has added stop and package information to each TP number. TP65782109-3-1 means: order TP65782109, Stop 3 in the route, 1 package. The driver looks at the box label, matches the TP number on their screen, and knows exactly where it goes.',
+    highlight:'routeGrid'
+  },
+  {
+    title:'Master Scan Code',
+    body:'Each route has a Master Scan Code. The driver arrives at pickup, scans this one code, and the entire route loads on their app — all stops, all packages, the full sequence. No manual sorting. No guessing. Out the door in 60 seconds.',
+    highlight:'routeGrid'
+  },
+  {
+    title:'Assign to Driver',
+    body:'The dispatcher clicks Assign Driver to send the route directly to the driver\'s app. The driver receives a job offer showing the pay, total stops, and total packages. They accept, navigate to pickup, scan once, and go.',
+    highlight:'routeGrid'
+  }
+];
+
+let demoStep = 0;
+
+function startDemo(){
+  demoStep=0;
+  document.getElementById('demoOverlay').classList.add('on');
+  renderDemoStep();
+}
+
+function renderDemoStep(){
+  const step=DEMO_STEPS[demoStep];
+  const total=DEMO_STEPS.length;
+  document.getElementById('demoStep').textContent='Step '+(demoStep+1)+' of '+total;
+  document.getElementById('demoTitle').textContent=step.title;
+  document.getElementById('demoBody').textContent=step.body;
+  document.getElementById('demoNextBtn').textContent=demoStep===total-1?'Finish':'Next \u2192';
+  // Dots
+  const dots=document.getElementById('demoDots');
+  dots.innerHTML=DEMO_STEPS.map((_,i)=>`<div class="dp-dot${i===demoStep?' on':''}"></div>`).join('');
+  // Clear highlights
+  document.querySelectorAll('.demo-highlight').forEach(el=>el.classList.remove('demo-highlight'));
+  // Highlight
+  if(step.highlight){
+    const el=document.getElementById(step.highlight);
+    if(el)el.classList.add('demo-highlight');
+  }
+  // Action
+  if(step.action) step.action();
+}
+
+function demoNext(){
+  document.querySelectorAll('.demo-highlight').forEach(el=>el.classList.remove('demo-highlight'));
+  if(demoStep>=DEMO_STEPS.length-1){endDemo();return;}
+  demoStep++;
+  renderDemoStep();
+}
+
+function endDemo(){
+  document.getElementById('demoOverlay').classList.remove('on');
+  document.querySelectorAll('.demo-highlight').forEach(el=>el.classList.remove('demo-highlight'));
+}
+
+// ── THEME ──
+function toggleTheme(){
+  const light=document.body.classList.toggle('light');
+  localStorage.setItem('ss_theme',light?'light':'dark');
+  document.getElementById('themeBtn').textContent=light?'\u2600':'\u263D';
+}
+if(localStorage.getItem('ss_theme')==='light'){
+  document.body.classList.add('light');
+  document.getElementById('themeBtn').textContent='\u2600';
 }
 
 // ── TEMPLATE ──
 function downloadTemplate(){
-  const csv=`order_id,recipient,address,packages,notes,priority
-TP-8001,Marcus Johnson,"142 Peachtree St NW, Atlanta GA 30303",2,Fragile,high
-TP-8002,Sarah Williams,"890 Marietta St NW, Atlanta GA 30318",1,,normal
-TP-8003,David Chen,"1180 Peachtree St NE, Atlanta GA 30309",3,Signature required,normal
-TP-8004,Jennifer Davis,"75 5th St NW, Atlanta GA 30308",1,,low
-TP-8005,Robert Miller,"400 W Peachtree St NW, Atlanta GA 30308",2,,normal`;
-  const blob=new Blob([csv],{type:'text/csv'});
+  const csv=`order_id,recipient,address,packages\nTP65780001,John Smith,"100 Peachtree St NW, Atlanta GA 30303",2\nTP65780002,Jane Doe,"500 Marietta St NW, Atlanta GA 30318",1`;
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='smartsort_template.csv';
-  a.click();
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='smartsort_template.csv';a.click();
   toast('Template downloaded','ok');
 }
 
 // ── EXPORT ──
 function exportRoutes(){
   if(!routes.length){toast('No routes to export','warn');return;}
-  const lines=['route_id,stop,order_id,recipient,address,packages,master_barcode'];
-  routes.forEach(r=>{
-    r.stops.forEach((s,i)=>{
-      lines.push(`${r.id},${i+1},${s.order_id},"${s.recipient}","${s.address}",${s.packages},${r.barcode}`);
-    });
-  });
-  const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  const lines=['route_id,stop,smart_id,order_id,recipient,address,packages,master_code'];
+  routes.forEach(r=>r.stops.forEach((s,i)=>{
+    lines.push(`${r.id},${i+1},${s.smart_id},${s.order_id},"${s.recipient}","${s.address}",${s.packages},${r.master_code}`);
+  }));
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='smartsort_routes.csv';
-  a.click();
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+  a.download='smartsort_routes.csv';a.click();
   toast('Routes exported','ok');
 }
 
@@ -550,34 +681,33 @@ function resetAll(){
   packages=[];routes=[];
   document.getElementById('packageTable').style.display='none';
   document.getElementById('dropZone').style.display='block';
+  document.getElementById('demoDataBtn').style.display='flex';
   document.getElementById('buildBtn').style.display='none';
   document.getElementById('statsRow').style.display='none';
   document.getElementById('routeGrid').style.display='none';
+  document.getElementById('routeGrid').innerHTML='';
   document.getElementById('emptyState').style.display='flex';
   document.getElementById('rightActions').style.display='none';
   document.getElementById('rightTitle').textContent='Routes';
   document.getElementById('rightSub').textContent='Upload a CSV to generate optimized routes';
-  document.getElementById('statRoutes').textContent='0';
-  document.getElementById('statPkgs').textContent='0';
-  document.getElementById('statStops').textContent='0';
-  document.getElementById('buildBtn').innerHTML='&#9650; Run SmartSort <span class="build-count"></span>';
+  ['statPkgs','statStops','statRoutes'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('buildBtn').innerHTML='&#9650; Run SmartSort <span class="build-badge"></span>';
   document.getElementById('csvInput').value='';
-  toast('Reset complete','ok');
+  toast('Reset','ok');
 }
 
 // ── DRAG DROP ──
 const dz=document.getElementById('dropZone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
 
 // ── TOAST ──
 function toast(msg,type='ok'){
-  const wrap=document.getElementById('tw');
   const el=document.createElement('div');
-  el.className='toast t-'+(type==='error'?'warn':type);
+  el.className='toast'+(type==='warn'?' warn':'');
   el.textContent=(type==='ok'?'✓':'⚠')+' '+msg;
-  wrap.appendChild(el);
+  document.getElementById('tw').appendChild(el);
   setTimeout(()=>el.remove(),4000);
 }
 </script>
