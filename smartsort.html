@@ -20,9 +20,10 @@
 html,body{height:100%;margin:0;padding:0;}
 body{font-family:var(--sans);color:var(--text);background:var(--bg);font-size:13px;}
 body.light{
-  --bg:#f8fafc;--card:#ffffff;--card2:#f1f5f9;
-  --border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.06);
-  --text:#0f172a;--muted:#475569;--faint:#94a3b8;
+  --bg:#f5f7fa;--card:#ffffff;--card2:#eef1f5;
+  --border:rgba(0,0,0,.12);--border2:rgba(0,0,0,.07);
+  --text:#0f172a;--muted:#334155;--faint:#64748b;
+  --blue:#0077cc;--green:#16803a;--orange:#c05000;--red:#cc1100;
 }
 
 /* ── TOPBAR ── */
@@ -169,7 +170,7 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
 .s-purple{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
 .rc-top{padding:14px 16px;border-bottom:1px solid var(--border);}
 .rc-id-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.rc-id{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blue);}
+.rc-id{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);}
 .rc-badge{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;
   padding:3px 8px;border-radius:8px;
   background:rgba(34,170,85,.1);border:1px solid rgba(34,170,85,.25);color:var(--green);}
@@ -184,11 +185,11 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
   border-bottom:1px solid var(--border2);}
 .rc-stop:last-child{border-bottom:none;}
 .sn{width:24px;height:24px;border-radius:50%;
-  background:var(--blue);color:#fff;
+  background:var(--blue);color:#fff;font-weight:800;
   display:flex;align-items:center;justify-content:center;
   font-family:var(--mono);font-size:9px;font-weight:700;flex-shrink:0;}
 .si{flex:1;min-width:0;}
-.si-tp{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--blue);margin-bottom:2px;}
+.si-tp{font-family:var(--mono);font-size:12px;font-weight:700;margin-bottom:3px;}
 .si-name{font-size:13px;font-weight:700;color:var(--text);}
 .si-addr{font-size:11px;color:var(--muted);margin-top:1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -201,7 +202,7 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
   background:rgba(25,183,239,.04);}
 .mc-label{font-family:var(--mono);font-size:8px;color:var(--muted);
   letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
-.mc-code{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--green);}
+.mc-code{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);}
 .mc-hint{font-size:10px;color:var(--muted);margin-top:3px;}
 
 /* ── FOOTER ── */
@@ -540,7 +541,7 @@ function renderRoutes(){
             <div class="sn">${i+1}</div>
             <div class="si">
               <div class="si-tp">
-                <span style="color:#fff;">${s.order_id}</span><span style="color:var(--blue);">-${i+1}</span><span style="color:var(--red);">-${s.packages}</span>
+                <span style="color:var(--text);">${s.order_id}</span><span style="color:var(--blue);">-${i+1}</span><span style="color:var(--red);">-${s.packages}</span>
               </div>
               <div class="si-name">${s.recipient}</div>
               <div class="si-addr">${s.address}</div>
