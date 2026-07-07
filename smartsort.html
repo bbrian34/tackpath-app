@@ -540,7 +540,7 @@ function renderRoutes(){
             <div class="sn">${i+1}</div>
             <div class="si">
               <div class="si-tp">
-                <span style="color:#fff;">${s.order_id}</span><span style="color:var(--red);">-${i+1}</span><span style="color:var(--blue);">-${s.packages}</span>
+                <span style="color:#fff;">${s.order_id}</span><span style="color:var(--blue);">-${i+1}</span><span style="color:var(--red);">-${s.packages}</span>
               </div>
               <div class="si-name">${s.recipient}</div>
               <div class="si-addr">${s.address}</div>
@@ -647,7 +647,8 @@ function toggleTheme(){
   localStorage.setItem('ss_theme',light?'light':'dark');
   document.getElementById('themeBtn').textContent=light?'\u2600':'\u263D';
 }
-if(localStorage.getItem('ss_theme')==='light'){
+// Default to light mode
+if(localStorage.getItem('ss_theme')!=='dark'){
   document.body.classList.add('light');
   document.getElementById('themeBtn').textContent='\u2600';
 }
