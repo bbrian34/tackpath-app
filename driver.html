@@ -661,6 +661,31 @@ button,a,input,textarea{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- SURGE ROUTE MAP -- shows all stops after scan ──-->
+<div class="screen" id="scSurgeMap">
+  <div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;z-index:10;">
+    <!-- Header -->
+    <div style="padding:14px 18px;background:var(--card);border-bottom:1px solid rgba(25,183,239,.1);flex-shrink:0;">
+      <div style="font-family:var(--mono);font-size:9px;color:#4a6e88;letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px;" id="surgeMapTitle">ROUTE LOADED</div>
+      <div style="font-size:20px;font-weight:900;color:#fff;" id="surgeMapSub">20 stops · 38 packages</div>
+    </div>
+    <!-- Map with stop pins -->
+    <div style="flex:1;position:relative;overflow:hidden;">
+      <iframe id="surgeMapFrame" src="about:blank" style="position:absolute;inset:0;width:100%;height:100%;border:0;filter:hue-rotate(195deg) saturate(.85) brightness(.7);"></iframe>
+      <!-- Stop list overlay -->
+      <div style="position:absolute;top:12px;left:12px;right:12px;display:flex;flex-wrap:wrap;gap:6px;" id="surgeStopPins"></div>
+    </div>
+    <!-- Stop list scroll -->
+    <div style="max-height:240px;overflow-y:auto;border-top:1px solid rgba(25,183,239,.1);" id="surgeStopList"></div>
+    <!-- OK button -->
+    <div style="padding:14px 18px;padding-bottom:calc(14px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid rgba(25,183,239,.1);flex-shrink:0;">
+      <button onclick="confirmSurgeLoad()" style="width:100%;padding:20px;border-radius:18px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:18px;font-weight:900;border:none;cursor:pointer;box-shadow:0 10px 28px rgba(83,255,136,.28);">
+        OK &mdash; Load Packages &amp; Go
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- POD -->
 <div class="screen" id="scPOD">
   <div class="pod-hdr">
@@ -1444,10 +1469,23 @@ function stopCamera(){
   if(barcodeInterval){clearInterval(barcodeInterval);barcodeInterval=null;}
 }
 function processScan(barcode){
+  if(navigator.vibrate)navigator.vibrate([60,30,60]);
+
+  // ── SURGE: Check if this TP belongs to the current surge job ──
+  if(isSurgeJob&&surgeStops.length>0){
+    const match=surgeStops.find(s=>s.order_id===barcode||barcode.startsWith(s.order_id));
+    if(match){
+      // Any TP from this batch identifies the entire route
+      stopCamera();
+      showSurgeRouteMap();
+      return;
+    }
+  }
+
+  // Sprint -- normal single package scan
   if(scannedPackages.find(p=>p.barcode===barcode)){toast('Already scanned','warn');return;}
   const pkg={barcode,recipient:'Package '+(scannedPackages.length+1),address:barcode};
   scannedPackages.push(pkg);
-  if(navigator.vibrate)navigator.vibrate([60,30,60]);
   document.getElementById('lastScanBarcode').textContent=barcode;
   document.getElementById('lastScanRecipient').textContent=pkg.recipient;
   const conf=document.getElementById('scanConfirm');
@@ -1456,6 +1494,50 @@ function processScan(barcode){
   const s=document.getElementById('scanStatus');
   if(s){s.textContent=barcode+' scanned';s.style.color='var(--green)';setTimeout(()=>{s.textContent='Point camera at barcode to scan';s.style.color='rgba(255,255,255,.4)';},1800);}
   updateScanUI();
+}
+
+function showSurgeRouteMap(){
+  const total=surgeStops.length;
+  const totalPkgs=surgeStops.reduce((s,p)=>s+p.packages,0);
+
+  // Update header
+  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED — '+currentJob.title||'Surge Route';
+  document.getElementById('surgeMapSub').textContent=total+' stops · '+totalPkgs+' packages';
+
+  // Load map centered on first stop
+  const firstAddr=encodeURIComponent(surgeStops[0].address||'Atlanta GA');
+  document.getElementById('surgeMapFrame').src='https://maps.google.com/maps?q='+firstAddr+'&output=embed';
+
+  // Build stop pins
+  document.getElementById('surgeStopPins').innerHTML=surgeStops.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:4px;background:rgba(25,183,239,.15);border:1px solid rgba(25,183,239,.3);border-radius:12px;padding:3px 8px;">
+      <div style="width:16px;height:16px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:7px;font-weight:700;color:#fff;flex-shrink:0;">${i+1}</div>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--blue);">${s.order_id}</span>
+    </div>`).join('');
+
+  // Build stop list
+  document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+      <div style="width:24px;height:24px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;color:#fff;flex-shrink:0;margin-top:2px;">${i+1}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);margin-bottom:2px;">${s.smart_id||s.order_id}</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;">${s.recipient}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.address}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--orange);flex-shrink:0;">${s.packages} pkg${s.packages!==1?'s':''}</div>
+    </div>`).join('');
+
+  showScreen('scSurgeMap');
+}
+
+function confirmSurgeLoad(){
+  // Driver confirmed -- load packages, start Stop 1
+  currentJob.status='in_transit';
+  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  startGPS();
+  currentSurgeStop=0;
+  showScreen('scJob');
+  renderSurgeStop();
 }
 function manualScan(){const inp=document.getElementById('manualBarcodeInp');const val=inp.value.trim();if(!val)return;inp.value='';processScan(val);}
 function updateScanUI(){
@@ -1718,6 +1800,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 </script>
 </body>
 </html>
+
 
 
 
