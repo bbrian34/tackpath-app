@@ -539,7 +539,9 @@ function renderRoutes(){
           <div class="rc-stop">
             <div class="sn">${i+1}</div>
             <div class="si">
-              <div class="si-tp">${s.smart_id}</div>
+              <div class="si-tp">
+                <span style="color:#fff;">${s.order_id}</span><span style="color:var(--blue);">-${i+1}</span><span style="color:var(--red);">-${s.packages}</span>
+              </div>
               <div class="si-name">${s.recipient}</div>
               <div class="si-addr">${s.address}</div>
             </div>
