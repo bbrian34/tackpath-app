@@ -1636,6 +1636,13 @@ async function submitPOD(){
   if(!recipient){toast('Enter recipient name','warn');return;}
   if(podTab==='photo'&&!podPhotoData){toast('Take a photo first','warn');return;}
   const btn=document.getElementById('podSubmitBtn');if(btn){btn.textContent='Submitting...';btn.disabled=true;}
+  // Surge mode -- confirm this stop and move to next
+  if(window._surgePODMode){
+    stopPODCamera();
+    if(btn){btn.textContent=currentSurgeStop>=surgeStops.length-1?'✓ Confirm Final Delivery':'✓ Confirm & Next Stop';btn.disabled=false;}
+    confirmSurgeStop();
+    return;
+  }
   try{
     const resp=await fetch(SB+'/rest/v1/jobs?id=eq.'+currentJob.id,{
       method:'PATCH',
@@ -1739,9 +1746,9 @@ function renderSurgeStop(){
   confBtn.className='job-action ja-start';
   confBtn.onclick=()=>{
     // Change to confirm delivery
-    confBtn.textContent=idx===total-1?'Confirm Final Delivery →':'Delivered ✓ → Next Stop';
+    confBtn.textContent=idx===total-1?'Confirm Final Delivery →':'Delivered ✓ → Sign & Next Stop';
     confBtn.className='job-action ja-deliver';
-    confBtn.onclick=confirmSurgeStop;
+    confBtn.onclick=openSurgePOD;
     // Update badge
     const badge=document.getElementById('mapStatus');
     if(badge){
@@ -1754,11 +1761,27 @@ function renderSurgeStop(){
   toast('Stop '+(idx+1)+' of '+total+': '+stop.recipient,'ok');
 }
 
+function openSurgePOD(){
+  // Open POD for this stop -- signature or photo required before next stop
+  const stop=surgeStops[currentSurgeStop];
+  // Pre-fill recipient
+  const recEl=document.getElementById('podRecipient');
+  if(recEl)recEl.value=stop.recipient||'';
+  // Set flag so submitPOD knows this is a surge stop
+  window._surgePODMode=true;
+  initSig();
+  showScreen('scPOD');
+  // Update POD submit button text
+  const total=surgeStops.length;
+  const btn=document.getElementById('podSubmitBtn');
+  if(btn)btn.textContent=currentSurgeStop>=total-1?'✓ Confirm Final Delivery':'✓ Confirm & Next Stop';
+}
+
 function confirmSurgeStop(){
   const total=surgeStops.length;
   const stop=surgeStops[currentSurgeStop];
 
-  // Log this stop as delivered in Supabase
+  // Log this stop as delivered
   if(currentJob&&currentJob.id){
     sbPost('messages',{
       job_id:currentJob.id,
@@ -1768,16 +1791,23 @@ function confirmSurgeStop(){
     }).catch(()=>{});
   }
 
+  window._surgePODMode=false;
+
   if(currentSurgeStop>=total-1){
-    // Last stop -- full POD
-    document.getElementById('surgeStopCard').style.display='none';
-    const confBtn=document.getElementById('surgeConfirmBtn');
-    if(confBtn)confBtn.style.display='none';
-    showScreen('scPOD');
+    // All stops done -- complete the job
+    sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name}).catch(()=>{});
+    const pay=currentJob.price||0;
+    earnings+=parseFloat(pay);jobCount++;
+    stopDispatchPoll();clearInterval(jobStatusInterval);
+    stopWakeWord();
+    currentJob=null;scannedPackages=[];surgeStops=[];isSurgeJob=false;
+    const earnEl=document.getElementById('homeEarnings');
+    if(earnEl)earnEl.textContent='$'+earnings+' today';
+    showHome();toast('All '+total+' deliveries complete! +$'+pay,'ok');
   }else{
-    // Next stop
     toast('Stop '+(currentSurgeStop+1)+' delivered ✓','ok');
     currentSurgeStop++;
+    showScreen('scJob');
     renderSurgeStop();
   }
 }
