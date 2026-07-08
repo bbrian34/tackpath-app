@@ -1493,13 +1493,16 @@ function surgeTapStop(i){
 }
 
 function confirmSurgeLoad(){
-  // Driver confirmed -- load packages, start Stop 1
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   startGPS();
   currentSurgeStop=0;
-  showScreen('scJob');
-  renderSurgeStop();
+  const beginRow=document.getElementById('surgeBeginRow');
+  if(beginRow)beginRow.style.display='none';
+  const sw=document.getElementById('swipeRow');if(sw)sw.style.display='none';
+  const sr=document.getElementById('srBtn');if(sr)sr.style.display='none';
+  renderSurgeList();
+  navigateInApp(surgeStops[0].address);
 }
 function manualScan(){const inp=document.getElementById('manualBarcodeInp');const val=inp.value.trim();if(!val)return;inp.value='';processScan(val);}
 function updateScanUI(){
@@ -1744,35 +1747,28 @@ function openSurgePOD(){
 function confirmSurgeStop(){
   const total=surgeStops.length;
   const stop=surgeStops[currentSurgeStop];
-
-  // Log this stop as delivered
   if(currentJob&&currentJob.id){
-    sbPost('messages',{
-      job_id:currentJob.id,
-      sender:driver.name,
-      sender_role:'driver',
-      body:'Delivered: '+stop.smart_id+' to '+stop.recipient+' (Stop '+(currentSurgeStop+1)+' of '+total+')'
+    sbPost('messages',{job_id:currentJob.id,sender:driver.name,sender_role:'driver',
+      body:'Delivered: '+(stop.smart_id||stop.order_id)+' to '+stop.recipient+' (Stop '+(currentSurgeStop+1)+' of '+total+')'
     }).catch(()=>{});
   }
-
   window._surgePODMode=false;
-
   if(currentSurgeStop>=total-1){
-    // All stops done -- complete the job
     sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name}).catch(()=>{});
     const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
-    stopDispatchPoll();clearInterval(jobStatusInterval);
-    stopWakeWord();
-    currentJob=null;scannedPackages=[];surgeStops=[];isSurgeJob=false;
+    stopDispatchPoll();clearInterval(jobStatusInterval);stopWakeWord();
+    currentJob=null;scannedPackages=[];surgeStops=[];isSurgeJob=false;currentSurgeStop=0;
     const earnEl=document.getElementById('homeEarnings');
     if(earnEl)earnEl.textContent='$'+earnings+' today';
     showHome();
   }else{
-    
     currentSurgeStop++;
-    showScreen('scJob');
-    renderSurgeStop();
+    renderSurgeList();
+    const nextRow=document.getElementById('surgeRow'+currentSurgeStop);
+    if(nextRow)nextRow.scrollIntoView({behavior:'smooth',block:'center'});
+    navigateInApp(surgeStops[currentSurgeStop].address);
+    showScreen('scSurgeMap');
   }
 }
 
