@@ -1501,8 +1501,9 @@ function confirmSurgeLoad(){
   if(beginRow)beginRow.style.display='none';
   const sw=document.getElementById('swipeRow');if(sw)sw.style.display='none';
   const sr=document.getElementById('srBtn');if(sr)sr.style.display='none';
-  renderSurgeList();
-  navigateInApp(surgeStops[0].address);
+  // Go to job screen and start Stop 1
+  showScreen('scJob');
+  renderSurgeStop();
 }
 function manualScan(){const inp=document.getElementById('manualBarcodeInp');const val=inp.value.trim();if(!val)return;inp.value='';processScan(val);}
 function updateScanUI(){
@@ -1764,11 +1765,8 @@ function confirmSurgeStop(){
     showHome();
   }else{
     currentSurgeStop++;
-    renderSurgeList();
-    const nextRow=document.getElementById('surgeRow'+currentSurgeStop);
-    if(nextRow)nextRow.scrollIntoView({behavior:'smooth',block:'center'});
-    navigateInApp(surgeStops[currentSurgeStop].address);
-    showScreen('scSurgeMap');
+    showScreen('scJob');
+    renderSurgeStop();
   }
 }
 
