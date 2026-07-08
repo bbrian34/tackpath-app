@@ -653,25 +653,22 @@ button,a,input,textarea{font-family:var(--sans);}
 
 <!-- SURGE ROUTE MAP -- SmartSort style view ──-->
 <div class="screen" id="scSurgeMap">
-  <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;z-index:10;">
+  <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;">
     <!-- Header -->
     <div style="padding:14px 18px;background:#fff;border-bottom:1px solid rgba(0,0,0,.1);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
       <div>
-        <div style="font-family:var(--mono);font-size:9px;color:#475569;letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px;" id="surgeMapTitle">ROUTE LOADED</div>
-        <div style="font-size:20px;font-weight:900;color:#0f172a;" id="surgeMapSub">20 stops · 38 packages</div>
+        <div style="font-family:var(--mono);font-size:9px;color:#475569;letter-spacing:.16em;text-transform:uppercase;margin-bottom:2px;" id="surgeMapTitle">ROUTE LOADED</div>
+        <div style="font-size:18px;font-weight:900;color:#0f172a;" id="surgeMapSub">20 stops</div>
       </div>
-      <div style="text-align:right;">
-        <div style="font-family:var(--mono);font-size:10px;color:#0077cc;font-weight:700;" id="surgeMapRoute">RT-001</div>
-        <div style="font-family:var(--mono);font-size:9px;color:#475569;margin-top:2px;" id="surgeMapDist"></div>
-      </div>
+      <div style="font-family:var(--mono);font-size:10px;color:#0077cc;font-weight:700;" id="surgeMapRoute"></div>
     </div>
-    <!-- SmartSort style stop list -->
+    <!-- Persistent stop list -- stays visible entire delivery -->
     <div style="flex:1;overflow-y:auto;" id="surgeStopList"></div>
-    <!-- OK button -->
-    <div style="padding:14px 18px;padding-bottom:calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid rgba(0,0,0,.1);flex-shrink:0;">
-      <div style="font-size:12px;color:#475569;text-align:center;margin-bottom:10px;">Review your stops, load vehicle in reverse order (last stop first)</div>
-      <button onclick="confirmSurgeLoad()" style="width:100%;padding:20px;border-radius:18px;background:linear-gradient(135deg,#19b7ef,#0060cc);color:#fff;font-size:18px;font-weight:900;border:none;cursor:pointer;box-shadow:0 10px 28px rgba(25,183,239,.3);">
-        Ready &mdash; Begin Route
+    <!-- Begin Route button -- only shown before route starts -->
+    <div id="surgeBeginRow" style="padding:14px 18px;padding-bottom:calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid rgba(0,0,0,.1);flex-shrink:0;">
+      <div style="font-size:12px;color:#475569;text-align:center;margin-bottom:10px;">Load vehicle — last stop first. Tap Begin Route when ready.</div>
+      <button onclick="confirmSurgeLoad()" style="width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,#19b7ef,#0060cc);color:#fff;font-size:17px;font-weight:900;border:none;cursor:pointer;">
+        Begin Route
       </button>
     </div>
   </div>
@@ -1448,7 +1445,7 @@ function processScan(barcode){
 }
 
 function showSurgeRouteMap(){
-  // Ensure surgeStops is loaded
+  // Ensure surgeStops loaded
   if(!surgeStops||!surgeStops.length){
     if(currentJob&&currentJob.surge_stops){
       let st=currentJob.surge_stops;
@@ -1457,39 +1454,42 @@ function showSurgeRouteMap(){
       isSurgeJob=surgeStops.length>0;
     }
   }
-  if(!surgeStops||!surgeStops.length){
-    toast('No route data found','warn');return;
-  }
+  if(!surgeStops||!surgeStops.length)return;
+  renderSurgeList();
+  showScreen('scSurgeMap');
+}
+
+function renderSurgeList(){
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
-
-  // Update header
-  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED — '+currentJob.title||'Surge Route';
+  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
   document.getElementById('surgeMapSub').textContent=total+' stops · '+totalPkgs+' packages';
-
-  // Load map centered on first stop
-  const firstAddr=encodeURIComponent(surgeStops[0].address||'Atlanta GA');
-  document.getElementById('surgeMapFrame').src='https://maps.google.com/maps?q='+firstAddr+'&output=embed';
-
-  // SmartSort style stop list -- white background, readable
-  document.getElementById('surgeMapRoute').textContent=currentJob.title||'Surge Route';
-  document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>`
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.07);background:#fff;margin-bottom:2px;">
-      <!-- Stop number circle -->
-      <div style="width:28px;height:28px;border-radius:50%;background:#0077cc;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:2px;">${i+1}</div>
-      <!-- Info -->
+  document.getElementById('surgeMapRoute').textContent=currentJob&&currentJob.title||'';
+  document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>{
+    const done=i<currentSurgeStop;
+    const active=i===currentSurgeStop&&currentJob&&currentJob.status==='in_transit';
+    return `<div id="surgeRow${i}" onclick="surgeTapStop(${i})" style="display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(0,0,0,.07);background:${done?'#f1f5f9':'#fff'};cursor:pointer;opacity:${done?'0.45':'1'};">
+      <div style="width:28px;height:28px;border-radius:50%;background:${done?'#94a3b8':active?'#0077cc':'#0077cc'};display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:2px;">${done?'&#10003;':i+1}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:var(--mono);font-size:13px;font-weight:800;margin-bottom:3px;">
-          <span style="color:#0f172a;">${s.order_id||s.smart_id?.split('-')[0]||''}</span><span style="color:#0077cc;font-weight:900;">-${i+1}</span><span style="color:#cc1100;font-weight:900;">-${s.packages}</span>
+        <div style="font-family:var(--mono);font-size:13px;font-weight:800;margin-bottom:3px;text-decoration:${done?'line-through':'none'};">
+          <span style="color:#0f172a;">${s.order_id||''}</span><span style="color:#0077cc;">-${i+1}</span><span style="color:#cc1100;">-${s.packages||1}</span>
         </div>
-        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:2px;">${s.recipient}</div>
-        <div style="font-size:12px;color:#334155;">${s.address}</div>
+        <div style="font-size:14px;font-weight:800;color:${done?'#94a3b8':'#0f172a'};margin-bottom:1px;">${s.recipient||''}</div>
+        <div style="font-size:12px;color:#64748b;">${s.address||''}</div>
       </div>
-      <!-- Package count badge -->
-      <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;background:#ff7700;border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${s.packages} pkg${s.packages!==1?'s':''}</div>
-    </div>`).join('');
+      <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;background:${done?'#94a3b8':'#ff7700'};border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${s.packages||1} pkg${(s.packages||1)!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+}
 
-  showScreen('scSurgeMap');
+function surgeTapStop(i){
+  // Only allow tapping current or future stops
+  if(i<currentSurgeStop)return;
+  if(currentJob&&currentJob.status!=='in_transit')return;
+  // Navigate to this stop
+  const stop=surgeStops[i];
+  currentSurgeStop=i;
+  navigateInApp(stop.address);
 }
 
 function confirmSurgeLoad(){
@@ -1863,6 +1863,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 </script>
 </body>
 </html>
+
 
 
 
