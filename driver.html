@@ -691,10 +691,19 @@ button,a,input,textarea{font-family:var(--sans);}
       <iframe id="sdMap" src="about:blank" style="position:absolute;inset:0;width:100%;height:100%;border:0;filter:hue-rotate(195deg) saturate(.85) brightness(.7);"></iframe>
       <div style="position:absolute;top:12px;left:12px;background:rgba(2,6,14,.9);border:1px solid rgba(25,183,239,.3);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);" id="sdPkgBadge">2 packages</div>
     </div>
-    <!-- Delivered button -->
-    <div style="padding:16px 18px;padding-bottom:calc(16px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid rgba(25,183,239,.1);flex-shrink:0;">
-      <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5);text-align:center;margin-bottom:10px;" id="sdTP"></div>
-      <button onclick="openSurgePOD()" style="width:100%;padding:20px;border-radius:16px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:18px;font-weight:900;border:none;cursor:pointer;box-shadow:0 8px 24px rgba(83,255,136,.28);">
+    <!-- Step buttons: At Stop → Scan → Delivered -->
+    <div style="padding:14px 18px;padding-bottom:calc(14px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid rgba(25,183,239,.1);flex-shrink:0;">
+      <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:10px;" id="sdTP"></div>
+      <!-- Step 1: At Stop -->
+      <button id="sdAtStopBtn" onclick="sdAtStop()" style="width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--blue),#0060cc);color:#fff;font-size:17px;font-weight:900;border:none;cursor:pointer;box-shadow:0 6px 20px rgba(25,183,239,.28);">
+        At Stop &#9660;
+      </button>
+      <!-- Step 2: Scan package (hidden until At Stop tapped) -->
+      <button id="sdScanBtn" onclick="sdScanPackage()" style="display:none;width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--orange),#c05000);color:#fff;font-size:17px;font-weight:900;border:none;cursor:pointer;margin-top:10px;">
+        Scan Package &#9638;
+      </button>
+      <!-- Step 3: Delivered (hidden until scan complete) -->
+      <button id="sdDeliveredBtn" onclick="openSurgePOD()" style="display:none;width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:17px;font-weight:900;border:none;cursor:pointer;margin-top:10px;box-shadow:0 6px 20px rgba(83,255,136,.28);">
         Delivered &#10003;
       </button>
     </div>
@@ -1446,6 +1455,12 @@ function stopCamera(){
 function processScan(barcode){
   if(navigator.vibrate)navigator.vibrate([60,30,60]);
 
+  // ── SURGE DROPOFF SCAN -- driver scanning package at delivery address ──
+  if(window._sdScanMode){
+    sdScanConfirmed();
+    return;
+  }
+
   // ── SURGE: load stops from job if not already loaded ──
   if(!surgeStops||!surgeStops.length){
     if(currentJob&&currentJob.surge_stops){
@@ -1524,6 +1539,29 @@ function renderSurgeList(){
       <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;background:${done?'#22aa55':'#ff7700'};border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${done?'Done':s.packages+'pkg'}</div>
     </div></div>`;
   }).join('');
+}
+
+// ── SURGE DELIVERY STEP FUNCTIONS ──
+function sdAtStop(){
+  // Driver confirmed they are at the stop -- show scan button
+  document.getElementById('sdAtStopBtn').style.display='none';
+  document.getElementById('sdScanBtn').style.display='block';
+}
+
+function sdScanPackage(){
+  // Open camera to scan package at delivery address
+  // When scan matches a TP in current stop -- show Delivered button
+  window._sdScanMode=true;
+  openScanner();
+}
+
+function sdScanConfirmed(){
+  // Package scanned at dropoff -- show Delivered button
+  window._sdScanMode=false;
+  stopCamera();
+  document.getElementById('sdScanBtn').style.display='none';
+  document.getElementById('sdDeliveredBtn').style.display='block';
+  showScreen('scSurgeDelivery');
 }
 
 function surgeTapStop(i){
