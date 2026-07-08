@@ -202,16 +202,7 @@ button,a,input,textarea{font-family:var(--sans);}
 .ja-deliver{background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;
   box-shadow:0 10px 28px rgba(83,255,136,.28);}
 /* Swipe to confirm -- Uber style */
-.swipe-row{position:relative;height:64px;border-radius:32px;
-  background:rgba(83,255,136,.08);border:2px solid rgba(83,255,136,.25);
-  overflow:hidden;margin-bottom:12px;cursor:grab;touch-action:none;display:none;}
-.swipe-fill{position:absolute;inset:0;background:rgba(83,255,136,.15);width:0%;transition:width .05s;}
-.swipe-thumb{position:absolute;top:4px;left:4px;width:52px;height:52px;border-radius:50%;
-  background:var(--green);display:flex;align-items:center;justify-content:center;
-  font-size:22px;box-shadow:0 4px 16px rgba(83,255,136,.4);user-select:none;}
-.swipe-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);
-  letter-spacing:.08em;pointer-events:none;}
+/* swipe replaced with button */
 /* Tool row */
 .job-tools{display:grid;grid-template-columns:1fr 1fr 1fr 64px;gap:8px;
   padding-bottom:calc(14px + env(safe-area-inset-bottom));}
@@ -570,12 +561,10 @@ button,a,input,textarea{font-family:var(--sans);}
       </div>
     </div>
 
-    <!-- Swipe to confirm pickup -- shows after arriving -->
-    <div class="swipe-row" id="swipeRow">
-      <div class="swipe-fill" id="swipeFill"></div>
-      <div class="swipe-thumb" id="swipeThumb">&#9654;</div>
-      <div class="swipe-lbl">Swipe &mdash; I have the package</div>
-    </div>
+    <!-- Confirm pickup button -- replaces swipe -->
+    <button id="swipeRow" onclick="startDelivery()" style="display:none;width:100%;padding:20px;border-radius:18px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:18px;font-weight:900;border:none;cursor:pointer;box-shadow:0 10px 28px rgba(83,255,136,.28);margin-bottom:12px;">
+      &#10003; I Have the Packages
+    </button>
     <!-- Tool row -->
     <div class="job-tools">
       <a id="navLink" href="#" target="_blank" class="job-tool jt-nav">
@@ -1124,17 +1113,27 @@ function renderJobScreen(){
     });
     if(scanTile)scanTile.style.display='flex';
 
-  // ── STEP 2: At pickup -- swipe to confirm ──
+  // ── STEP 2: At pickup -- scan then confirm ──
   }else if(s==='arrived_pickup'){
     setDest('AT PICKUP',currentJob.pickup_address);
     setMap(currentJob.pickup_address);
     setBadge('At Pickup','var(--yellow)','rgba(255,210,61,.4)');
-    if(scannedPackages.length>0){
-      // Already scanned -- show swipe
+    if(scannedPackages.length>0||isSurgeJob){
+      // Scanned -- show green confirm button
       btn.style.display='none';
-      if(swipeRow)swipeRow.style.display='block';
-      if(sb){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
-      initSwipe();
+      if(swipeRow){
+        swipeRow.style.display='block';
+        // For Surge -- button text reflects route
+        if(isSurgeJob){
+          swipeRow.textContent='';
+          swipeRow.innerHTML='&#10003; I Have All Packages &mdash; Show Route';
+          swipeRow.onclick=showSurgeRouteMap;
+        }else{
+          swipeRow.innerHTML='&#10003; I Have the Packages';
+          swipeRow.onclick=startDelivery;
+        }
+      }
+      if(sb&&scannedPackages.length>0){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
     }else{
       setBtn('Scan Packages','ja-start',openScanner);
       if(scanTile)scanTile.style.display='flex';
@@ -1183,54 +1182,7 @@ function handleJobAction(){
   const b=document.getElementById('jobBtn');if(b&&b.onclick)b.onclick();
 }
 
-// ── SWIPE TO CONFIRM PICKUP -- Uber style ──
-function initSwipe(){
-  const row=document.getElementById('swipeRow');
-  const thumb=document.getElementById('swipeThumb');
-  const fill=document.getElementById('swipeFill');
-  if(!row||!thumb)return;
-  thumb.style.left='4px';fill.style.width='0%';
-  let startX=0,active=false,rowRect=null;
-
-  function onStart(e){
-    active=true;rowRect=row.getBoundingClientRect();
-    const touch=e.touches?e.touches[0]:e;startX=touch.clientX;
-    thumb.style.transition='none';fill.style.transition='none';
-    if(e.cancelable)e.preventDefault();
-  }
-  function onMove(e){
-    if(!active)return;if(e.cancelable)e.preventDefault();
-    const touch=e.touches?e.touches[0]:e;
-    const dx=touch.clientX-startX;
-    const max=rowRect.width-60;
-    const clamped=Math.max(0,Math.min(dx,max));
-    thumb.style.left=(4+clamped)+'px';
-    fill.style.width=(clamped/max*100)+'%';
-    if(clamped/max>0.5){row.style.borderColor='rgba(83,255,136,.6)';}
-    else{row.style.borderColor='rgba(83,255,136,.25)';}
-  }
-  function onEnd(e){
-    if(!active)return;active=false;
-    const touch=e.changedTouches?e.changedTouches[0]:e;
-    const dx=touch.clientX-startX;
-    const max=rowRect?rowRect.width-60:200;
-    if(dx/max>0.7){
-      // Confirmed -- start delivery
-      thumb.style.transition='left .2s';thumb.style.left=max+'px';
-      fill.style.width='100%';
-      setTimeout(()=>startDelivery(),300);
-    }else{
-      thumb.style.transition='left .3s';thumb.style.left='4px';fill.style.width='0%';
-      row.style.borderColor='rgba(83,255,136,.25)';
-    }
-  }
-  row.addEventListener('touchstart',onStart,{passive:false});
-  row.addEventListener('touchmove',onMove,{passive:false});
-  row.addEventListener('touchend',onEnd,{passive:false});
-  row.addEventListener('mousedown',onStart);
-  window.addEventListener('mousemove',e=>{if(active)onMove(e);});
-  window.addEventListener('mouseup',e=>{if(active)onEnd(e);});
-}
+// initSwipe removed -- replaced with green button
 
 async function arrivedAtPickup(){
   if(!currentJob)return;
@@ -1246,13 +1198,8 @@ async function startDelivery(){
     startGPS();
     // Check if Surge multi-stop job
     if(isSurgeJob&&surgeStops.length>0){
-      // Only reset to 0 if just starting -- don't reset if already in progress
-      if(currentJob.status==='in_transit'&&currentSurgeStop===0){
-        renderSurgeStop();
-      }else if(currentSurgeStop===0){
-        renderSurgeStop();
-      }
-      // If currentSurgeStop > 0 we're already in the route -- don't reset
+      currentSurgeStop=0;
+      renderSurgeStop();
     }else{
       renderJobScreen();
       toast('Package collected! Navigate to dropoff.','ok');
@@ -1563,13 +1510,21 @@ function doneScanningAll(){
   stopCamera();
   currentJob.status='arrived_pickup';
 
-  // For Surge jobs -- show the SmartSort route list screen
-  if(isSurgeJob&&surgeStops.length>0){
-    showSurgeRouteMap();
-    return;
+  // If job has surge stops from SmartSort, load them
+  if(currentJob.surge_stops&&currentJob.surge_stops.length>0){
+    loadSurgeRoute(currentJob.surge_stops);
+  }else if(scannedPackages.length>1){
+    // Multiple packages scanned -- treat as surge, use scanned packages as stops
+    const stops=scannedPackages.map((p,i)=>({
+      order_id:p.barcode,
+      smart_id:p.barcode+'-'+(i+1)+'-1',
+      recipient:'Package '+(i+1),
+      address:currentJob.dropoff_address||'',
+      packages:1
+    }));
+    loadSurgeRoute(stops);
   }
 
-  // Sprint -- normal flow
   showScreen('scJob');renderJobScreen();
   toast(scannedPackages.length+' packages scanned. Swipe to confirm pickup.','ok');
 }
@@ -1851,15 +1806,6 @@ if(localStorage.getItem('tp_theme')==='light'){
 // ── BOOT ──
 const saved=localStorage.getItem('tp_drv');
 if(saved){driver=JSON.parse(saved);initApp();}
-// Unlock audio on any first touch anywhere on the page
-document.addEventListener('touchstart', function unlockOnTouch(){
-  unlockAudio();
-  document.removeEventListener('touchstart', unlockOnTouch);
-}, {once:true, passive:true});
-document.addEventListener('click', function unlockOnClick(){
-  unlockAudio();
-  document.removeEventListener('click', unlockOnClick);
-}, {once:true});
 if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
 </script>
 </body>
