@@ -172,7 +172,7 @@ button,a,input,textarea{font-family:var(--sans);}
 
 /* ── ACTIVE JOB -- map fills screen, sheet slides up ── */
 #scJob{background:var(--bg);}
-.job-map{flex:1;position:relative;overflow:hidden;min-height:0;}
+.job-map{flex:1.8;position:relative;overflow:hidden;min-height:0;}
 .job-map iframe{position:absolute;inset:0;width:100%;height:100%;border:0;
   filter:hue-rotate(195deg) saturate(.85) brightness(.7);}
 .map-pill{position:absolute;top:14px;left:14px;padding:6px 13px;border-radius:20px;
@@ -1656,11 +1656,11 @@ function renderSurgeStop(){
   document.getElementById('surgeStopPkgs').textContent=stop.packages+' package'+(stop.packages!==1?'s':'');
   document.getElementById('surgeStopProgress').textContent=(total-idx-1)+' stops remaining';
 
-  // Update map and main UI for this stop
+  // Hide duplicate address -- already shown in surge stop card
   const destLbl=document.getElementById('destLbl');
   const destAddr=document.getElementById('destAddr');
-  if(destLbl)destLbl.textContent='STOP '+(idx+1)+' — NAVIGATE TO DROPOFF';
-  if(destAddr)destAddr.textContent=stop.address;
+  if(destLbl)destLbl.style.display='none';
+  if(destAddr)destAddr.style.display='none';
 
   // Update nav link
   const navLink=document.getElementById('navLink');
@@ -1716,6 +1716,27 @@ function renderSurgeStop(){
   };
 
   toast('Stop '+(idx+1)+' of '+total+': '+stop.recipient,'ok');
+}
+
+function surgeArrived(idx,total){
+  // Driver arrived -- change Stop button to Delivered
+  const btnRow=document.getElementById('surgeBtnRow');
+  if(!btnRow)return;
+  const stop=surgeStops[idx];
+  const badge=document.getElementById('mapStatus');
+  if(badge){
+    badge.textContent='At Stop '+(idx+1);
+    badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(83,255,136,.4);color:var(--green);';
+  }
+  btnRow.innerHTML=`
+    <button onclick="navigateInApp('${(stop.address||'').replace(/'/g,"\'")}')"
+      style="flex:1;padding:16px 10px;border-radius:14px;background:linear-gradient(135deg,var(--blue),#0060cc);color:#fff;font-size:15px;font-weight:900;border:none;cursor:pointer;">
+      Nav ${idx+1}
+    </button>
+    <button onclick="openSurgePOD()"
+      style="flex:1;padding:16px 10px;border-radius:14px;background:linear-gradient(135deg,var(--red),#aa1100);color:#fff;font-size:15px;font-weight:900;border:none;cursor:pointer;">
+      ${idx===total-1?'Final':'Delivered'}
+    </button>`;
 }
 
 function openSurgePOD(){
