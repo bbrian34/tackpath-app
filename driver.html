@@ -1124,7 +1124,11 @@ function renderJobScreen(){
       // Scanned -- show green confirm button
       btn.style.display='none';
       if(swipeRow){
-        swipeRow.style.display='block';
+        swipeRow.style.display='none';
+        const sr=document.getElementById('srBtn');
+        if(sr)sr.style.display='flex';
+        if(sr)sr.style.alignItems='center';
+        if(sr)sr.style.justifyContent='center';
       }
       if(sb&&scannedPackages.length>0){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
     }else{
