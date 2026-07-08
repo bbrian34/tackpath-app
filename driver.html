@@ -1125,13 +1125,24 @@ function renderJobScreen(){
       btn.style.display='none';
       if(swipeRow){
         swipeRow.style.display='block';
-        if(isSurgeJob){
-          swipeRow.textContent='Show Route';
-          swipeRow.onclick=function(){showSurgeRouteMap();};
-        }else{
-          swipeRow.textContent='I Have the Packages';
-          swipeRow.onclick=function(){startDelivery();};
-        }
+        swipeRow.textContent='Show Route';
+        swipeRow.onclick=function(){
+          if(surgeStops&&surgeStops.length>0){
+            showSurgeRouteMap();
+          } else if(currentJob&&currentJob.surge_stops){
+            // Try loading from job directly
+            let st=currentJob.surge_stops;
+            if(typeof st==='string')try{st=JSON.parse(st);}catch(e){st=[];}
+            if(st&&st.length>0){
+              isSurgeJob=true;surgeStops=st;
+              showSurgeRouteMap();
+            } else {
+              startDelivery();
+            }
+          } else {
+            startDelivery();
+          }
+        };
       }
       if(sb&&scannedPackages.length>0){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
     }else{
