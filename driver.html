@@ -966,12 +966,12 @@ function toggleOnline(){
     dot.style.cssText='width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(83,255,136,.7);animation:blink 2s infinite;';
     lbl.textContent='Online';
     pill.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:24px;background:rgba(83,255,136,.1);border:2px solid rgba(83,255,136,.25);font-size:15px;font-weight:800;color:var(--green);cursor:pointer;';
-    startPolling();toast('Online','ok');
+    startPolling();
   }else{
     dot.style.cssText='width:10px;height:10px;border-radius:50%;background:#3a5a72;';
     lbl.textContent='Offline';
     pill.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:24px;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);font-size:15px;font-weight:800;color:#6a8ea8;cursor:pointer;';
-    clearInterval(pollInterval);pollInterval=null;toast('Offline','warn');
+    clearInterval(pollInterval);pollInterval=null;
   }
 }
 
@@ -1062,7 +1062,7 @@ function declineOffer(){
   stopOfferAlert();
   if(pendingJob)rejectedIds.add(pendingJob.id);
   pendingJob=null;setTimeout(()=>rejectedIds.clear(),60000);
-  showHome();toast('Job declined','warn');
+  showHome();
 }
 
 // ── ACTIVE JOB -- 5-step Uber-style flow ──
@@ -1200,7 +1200,7 @@ async function startDelivery(){
       renderSurgeStop();
     }else{
       renderJobScreen();
-      toast('Package collected! Navigate to dropoff.','ok');
+      
     }
   }catch(e){toast('Could not update: '+e.message.slice(0,50),'warn');}
 }
@@ -1208,7 +1208,7 @@ async function startDelivery(){
 async function arrivedAtDropoff(){
   if(!currentJob)return;
   currentJob.status='arrived_dropoff';
-  renderJobScreen();toast('At dropoff. Confirm delivery.','ok');
+  renderJobScreen();
 }
 
 // ── JOB STATUS POLL ──
@@ -1224,7 +1224,7 @@ function startJobStatusPoll(){
       // Local statuses (arrived_pickup, arrived_dropoff) are not in DB
       if(ns==='customer_confirmed'&&currentJob.status==='assigned'){
         currentJob.status='customer_confirmed';renderJobScreen();
-        toast('Job confirmed! Navigate to pickup.','ok');playAlert();
+        playAlert();
       }else if(ns==='cancelled'){
         clearInterval(jobStatusInterval);stopDispatchPoll();
         currentJob=null;showHome();toast('Order cancelled','warn');
@@ -1583,7 +1583,7 @@ function capturePODPhoto(){
   podPhotoData=canvas.toDataURL('image/jpeg',0.8);stopPODCamera();
   const preview=document.getElementById('podPhotoPreview');preview.src=podPhotoData;preview.style.display='block';
   v.style.display='none';document.getElementById('podCaptureBtn').style.display='none';
-  document.getElementById('podRetakeBtn').style.display='flex';toast('Photo captured','ok');
+  document.getElementById('podRetakeBtn').style.display='flex';
 }
 function retakePODPhoto(){
   podPhotoData=null;document.getElementById('podPhotoPreview').style.display='none';
@@ -1780,7 +1780,7 @@ function loadSurgeRoute(stops){
   surgeStops=stops;
   isSurgeJob=true;
   currentSurgeStop=0;
-  toast('Surge route loaded: '+stops.length+' stops','ok');
+  
 }
 
 // ── GPS ──
