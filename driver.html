@@ -674,6 +674,33 @@ button,a,input,textarea{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- SURGE DELIVERY SCREEN -- map + stop info + delivered button ──-->
+<div class="screen" id="scSurgeDelivery">
+  <div style="position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;">
+    <!-- Header -->
+    <div style="padding:12px 18px;background:var(--card);border-bottom:1px solid rgba(25,183,239,.1);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.5);letter-spacing:.14em;text-transform:uppercase;margin-bottom:2px;" id="sdStopLabel">STOP 1 OF 20</div>
+        <div style="font-size:16px;font-weight:900;color:#fff;" id="sdRecipient">Barbara Jackson</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:1px;" id="sdAddress">1000 Northside Dr NW</div>
+      </div>
+      <button onclick="showScreen('scSurgeMap')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">&#8592; List</button>
+    </div>
+    <!-- Map -->
+    <div style="flex:1;position:relative;overflow:hidden;">
+      <iframe id="sdMap" src="about:blank" style="position:absolute;inset:0;width:100%;height:100%;border:0;filter:hue-rotate(195deg) saturate(.85) brightness(.7);"></iframe>
+      <div style="position:absolute;top:12px;left:12px;background:rgba(2,6,14,.9);border:1px solid rgba(25,183,239,.3);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);" id="sdPkgBadge">2 packages</div>
+    </div>
+    <!-- Delivered button -->
+    <div style="padding:16px 18px;padding-bottom:calc(16px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid rgba(25,183,239,.1);flex-shrink:0;">
+      <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.5);text-align:center;margin-bottom:10px;" id="sdTP"></div>
+      <button onclick="openSurgePOD()" style="width:100%;padding:20px;border-radius:16px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:18px;font-weight:900;border:none;cursor:pointer;box-shadow:0 8px 24px rgba(83,255,136,.28);">
+        Delivered &#10003;
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- POD -->
 <div class="screen" id="scPOD">
   <div class="pod-hdr">
@@ -1500,30 +1527,22 @@ function renderSurgeList(){
 }
 
 function surgeTapStop(i){
-  if(i<currentSurgeStop)return; // completed stop
+  if(i<currentSurgeStop)return;
   if(!currentJob||currentJob.status!=='in_transit')return;
   currentSurgeStop=i;
   const stop=surgeStops[i];
   const total=surgeStops.length;
-  // Navigate in-app (map updates in background)
-  navigateInApp(stop.address);
-  // Update this row to show Delivered button inline
-  const row=document.getElementById('surgeRow'+i);
-  if(row){
-    row.style.background='#eff6ff';
-    row.style.borderLeft='4px solid #0077cc';
-    // Add delivered button to row
-    let delivBtn=document.getElementById('surgeDelivBtn'+i);
-    if(!delivBtn){
-      delivBtn=document.createElement('button');
-      delivBtn.id='surgeDelivBtn'+i;
-      delivBtn.style.cssText='margin-top:8px;width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:15px;font-weight:900;border:none;cursor:pointer;';
-      delivBtn.textContent=i===total-1?'Final Delivery - Confirm':'Delivered - Confirm';
-      delivBtn.onclick=function(e){e.stopPropagation();openSurgePOD();};
-      row.appendChild(delivBtn);
-      row.scrollIntoView({behavior:'smooth',block:'center'});
-    }
-  }
+  // Populate delivery screen
+  document.getElementById('sdStopLabel').textContent='STOP '+(i+1)+' OF '+total;
+  document.getElementById('sdRecipient').textContent=stop.recipient||'';
+  document.getElementById('sdAddress').textContent=stop.address||'';
+  document.getElementById('sdPkgBadge').textContent=(stop.packages||1)+' package'+((stop.packages||1)!==1?'s':'');
+  document.getElementById('sdTP').textContent=(stop.order_id||'')+'  •  Stop '+(i+1)+'→'+(i+1)+'  •  '+(stop.packages||1)+' pkg';
+  // Load map
+  const iframe=document.getElementById('sdMap');
+  if(iframe)iframe.src='https://maps.google.com/maps?q='+encodeURIComponent(stop.address||'')+'&output=embed';
+  // Go to delivery screen
+  showScreen('scSurgeDelivery');
 }
 
 function confirmSurgeLoad(){
@@ -1804,9 +1823,10 @@ function confirmSurgeStop(){
     currentSurgeStop++;
     showScreen('scSurgeMap');
     renderSurgeList();
-    // Auto scroll to next stop
-    const nextRow=document.getElementById('surgeRow'+currentSurgeStop);
-    if(nextRow)nextRow.scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(()=>{
+      const nextRow=document.getElementById('surgeRow'+currentSurgeStop);
+      if(nextRow)nextRow.scrollIntoView({behavior:'smooth',block:'center'});
+    },200);
   }
 }
 
