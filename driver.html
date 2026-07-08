@@ -1461,8 +1461,20 @@ function processScan(barcode){
 }
 
 function showSurgeRouteMap(){
+  // Ensure surgeStops is loaded
+  if(!surgeStops||!surgeStops.length){
+    if(currentJob&&currentJob.surge_stops){
+      let st=currentJob.surge_stops;
+      if(typeof st==='string')try{st=JSON.parse(st);}catch(e){st=[];}
+      surgeStops=st||[];
+      isSurgeJob=surgeStops.length>0;
+    }
+  }
+  if(!surgeStops||!surgeStops.length){
+    toast('No route data found','warn');return;
+  }
   const total=surgeStops.length;
-  const totalPkgs=surgeStops.reduce((s,p)=>s+p.packages,0);
+  const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
 
   // Update header
   document.getElementById('surgeMapTitle').textContent='ROUTE LOADED — '+currentJob.title||'Surge Route';
