@@ -1786,8 +1786,32 @@ function startGPS(){
   );
 }
 
-// Show Route tap -- just show the surge map screen
+// Show Route tap -- load stops and show screen
 function swipeRow_tap(){
+  // Load surge stops from job if not already loaded
+  if(!surgeStops||!surgeStops.length){
+    let st=currentJob&&currentJob.surge_stops;
+    if(typeof st==='string')try{st=JSON.parse(st);}catch(e){st=[];}
+    if(st&&st.length){surgeStops=st;isSurgeJob=true;}
+  }
+  // Render the stop list
+  const total=surgeStops.length;
+  const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
+  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
+  document.getElementById('surgeMapSub').textContent=total+' stops · '+totalPkgs+' packages';
+  document.getElementById('surgeMapRoute').textContent=currentJob&&currentJob.title||'Surge Route';
+  document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.07);background:#fff;margin-bottom:2px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:#0077cc;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:2px;">${i+1}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--mono);font-size:13px;font-weight:800;margin-bottom:3px;">
+          <span style="color:#0f172a;">${s.order_id||''}</span><span style="color:#0077cc;font-weight:900;">-${i+1}</span><span style="color:#cc1100;font-weight:900;">-${s.packages||1}</span>
+        </div>
+        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:2px;">${s.recipient||''}</div>
+        <div style="font-size:12px;color:#334155;">${s.address||''}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;background:#ff7700;border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${s.packages||1} pkg${(s.packages||1)!==1?'s':''}</div>
+    </div>`).join('');
   showScreen('scSurgeMap');
 }
 
