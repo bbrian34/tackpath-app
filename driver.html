@@ -1678,42 +1678,23 @@ function renderSurgeStop(){
     badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(141,92,255,.4);color:var(--purple);';
   }
 
-  // Set main button -- navigate to this stop
+  // Side-by-side compact buttons
   const btn=document.getElementById('jobBtn');
-  if(btn){
-    btn.style.display='block';
-    btn.textContent='Navigate to Stop '+(idx+1);
-    btn.className='job-action ja-nav';
-    btn.disabled=false;
-    btn.onclick=()=>navigateInApp(stop.address);
+  if(btn)btn.style.display='none';
+  let btnRow=document.getElementById('surgeBtnRow');
+  if(!btnRow){
+    btnRow=document.createElement('div');
+    btnRow.id='surgeBtnRow';
+    btnRow.style.cssText='display:flex;gap:10px;margin-bottom:10px;';
+    document.getElementById('jobBtn').parentNode.insertBefore(btnRow,document.getElementById('jobBtn'));
   }
-
-  // Add confirm delivery button
+  btnRow.style.display='flex';
+  const stopAddr=(stop.address||'').replace(/'/g,"\'");
+  btnRow.innerHTML=
+    '<button onclick="navigateInApp(surgeStops['+idx+'].address)" style="flex:1;padding:16px 8px;border-radius:14px;background:linear-gradient(135deg,var(--blue),#0060cc);color:#fff;font-size:16px;font-weight:900;border:none;cursor:pointer;">Nav '+(idx+1)+'</button>'+
+    '<button onclick="surgeArrived('+idx+','+total+')" style="flex:1;padding:16px 8px;border-radius:14px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:16px;font-weight:900;border:none;cursor:pointer;">Stop '+(idx+1)+'</button>';
   let confBtn=document.getElementById('surgeConfirmBtn');
-  if(!confBtn){
-    confBtn=document.createElement('button');
-    confBtn.id='surgeConfirmBtn';
-    confBtn.className='job-action ja-deliver';
-    confBtn.style.marginTop='-6px';
-    btn.parentNode.insertBefore(confBtn,btn.nextSibling);
-  }
-  confBtn.style.display='block';
-  // Two step -- arrived then confirm
-  confBtn.textContent='Arrived at Stop '+(idx+1);
-  confBtn.className='job-action ja-start';
-  confBtn.onclick=()=>{
-    // Change to confirm delivery
-    confBtn.textContent=idx===total-1?'Confirm Final Delivery →':'Delivered ✓ → Sign & Next Stop';
-    confBtn.className='job-action ja-deliver';
-    confBtn.onclick=openSurgePOD;
-    // Update badge
-    const badge=document.getElementById('mapStatus');
-    if(badge){
-      badge.textContent='At Stop '+(idx+1);
-      badge.style.cssText='position:absolute;top:14px;right:14px;padding:6px 13px;border-radius:20px;background:rgba(2,6,14,.92);font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid rgba(83,255,136,.4);color:var(--green);';
-    }
-    toast('At Stop '+(idx+1)+'. Confirm when delivered.','ok');
-  };
+  if(confBtn)confBtn.style.display='none';
 
   toast('Stop '+(idx+1)+' of '+total+': '+stop.recipient,'ok');
 }
