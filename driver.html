@@ -1091,7 +1091,7 @@ function renderJobScreen(){
   function setDest(lbl,addr){destLbl.textContent=lbl;destAddr.textContent=addr||'--';}
   function setMap(addr){
     document.getElementById('mapSig').textContent='TP-'+(currentJob.id?currentJob.id.slice(0,8):'--');
-    document.getElementById('navLink').href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(addr||'');
+    document.getElementById('navLink').href='#';document.getElementById('navLink').onclick=function(e){e.preventDefault();navigateInApp(addr);};
     const iframe=document.getElementById('jobMap');
     const src='https://maps.google.com/maps?q='+encodeURIComponent(addr||'')+'&output=embed';
     if(iframe.src!==src)iframe.src=src;
@@ -1111,7 +1111,7 @@ function renderJobScreen(){
     setMap(currentJob.pickup_address);
     setBadge('En Route','var(--blue)','rgba(25,183,239,.35)');
     setBtn('Navigate to Pickup','ja-nav',()=>{
-      window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(currentJob.pickup_address||''),'_blank');
+      navigateInApp(currentJob.pickup_address);
     });
     if(scanTile)scanTile.style.display='flex';
 
@@ -1138,7 +1138,7 @@ function renderJobScreen(){
     setMap(currentJob.dropoff_address);
     setBadge('In Transit','var(--purple)','rgba(141,92,255,.4)');
     setBtn('Navigate to Dropoff','ja-nav',()=>{
-      window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(currentJob.dropoff_address||''),'_blank');
+      navigateInApp(currentJob.dropoff_address);
     });
     // Show arrived button below
     let arr=document.getElementById('arrivedDropBtn');
@@ -1685,7 +1685,7 @@ function renderSurgeStop(){
     btn.textContent='Navigate to Stop '+(idx+1);
     btn.className='job-action ja-nav';
     btn.disabled=false;
-    btn.onclick=()=>window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.address||''),'_blank');
+    btn.onclick=()=>navigateInApp(stop.address);
   }
 
   // Add confirm delivery button
@@ -1784,6 +1784,18 @@ function startGPS(){
     pos=>{if(!currentJob)return;sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed}).catch(()=>{});},
     err=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:15000}
   );
+}
+
+// ── IN-APP NAVIGATION ──
+function navigateInApp(address){
+  if(!address)return;
+  const iframe=document.getElementById('jobMap');
+  if(iframe){
+    // Use Google Maps embed with directions mode
+    const dest=encodeURIComponent(address);
+    iframe.src='https://maps.google.com/maps?q='+dest+'&output=embed&z=15';
+  }
+  toast('Navigating to '+address.split(',')[0],'ok');
 }
 
 // Show Route tap -- load stops and show screen
