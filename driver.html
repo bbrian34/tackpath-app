@@ -1181,7 +1181,7 @@ function handleJobAction(){
 async function arrivedAtPickup(){
   if(!currentJob)return;
   currentJob.status='arrived_pickup';
-  renderJobScreen();toast('At pickup. Scan packages then swipe to confirm.','ok');
+  renderJobScreen();
 }
 
 async function startDelivery(){
@@ -1196,7 +1196,7 @@ async function startDelivery(){
       renderSurgeStop();
     }else{
       renderJobScreen();
-      toast('Package collected! Navigate to dropoff.','ok');
+      
     }
   }catch(e){toast('Could not update: '+e.message.slice(0,50),'warn');}
 }
@@ -1204,7 +1204,7 @@ async function startDelivery(){
 async function arrivedAtDropoff(){
   if(!currentJob)return;
   currentJob.status='arrived_dropoff';
-  renderJobScreen();toast('At dropoff. Confirm delivery.','ok');
+  renderJobScreen();
 }
 
 // ── JOB STATUS POLL ──
@@ -1643,7 +1643,7 @@ function toast(msg,type='ok'){
   const wrap=document.getElementById('tw');
   const el=document.createElement('div');el.className='toast t-'+(type==='error'?'warn':type);
   el.textContent=(type==='ok'?'✓':type==='info'?'ℹ':'⚠')+' '+msg;
-  wrap.appendChild(el);setTimeout(()=>el.remove(),5000);
+  wrap.appendChild(el);setTimeout(()=>el.remove(),1500);
 }
 
 // ── SURGE MULTI-STOP FLOW ──
@@ -1782,7 +1782,7 @@ function loadSurgeRoute(stops){
   surgeStops=stops;
   isSurgeJob=true;
   currentSurgeStop=0;
-  toast('Surge route loaded: '+stops.length+' stops','ok');
+  
 }
 
 // ── GPS ──
@@ -1804,7 +1804,7 @@ function navigateInApp(address){
     const dest=encodeURIComponent(address);
     iframe.src='https://maps.google.com/maps?q='+dest+'&output=embed&z=15';
   }
-  toast('Navigating to '+address.split(',')[0],'ok');
+  
 }
 
 // Show Route tap -- load stops and show screen
