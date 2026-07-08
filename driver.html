@@ -580,7 +580,7 @@ button,a,input,textarea{font-family:var(--sans);}
         <span class="jt-lbl">Scan</span>
       </button>
       <button class="ruby-btn" id="rubyJobBtn" onclick="activateRuby()">Ruby</button>
-      <button id="srBtn" onclick="swipeRow_tap()" style="display:none;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--green),#1aaa55);border:none;color:#02060e;font-size:12px;font-weight:900;cursor:pointer;box-shadow:0 4px 18px rgba(83,255,136,.35);font-family:var(--mono);color:#fff;">SR</button>
+      <span id="srBtn" onclick="swipeRow_tap()" style="display:none;color:var(--green);font-size:14px;font-weight:900;cursor:pointer;font-family:var(--mono);padding:8px;">SR</span>
     </div>
   </div>
 </div>
@@ -1701,7 +1701,7 @@ function renderSurgeStop(){
   let confBtn=document.getElementById('surgeConfirmBtn');
   if(confBtn)confBtn.style.display='none';
 
-  toast('Stop '+(idx+1)+' of '+total+': '+stop.recipient,'ok');
+  
 }
 
 function surgeArrived(idx,total){
@@ -1769,7 +1769,7 @@ function confirmSurgeStop(){
     if(earnEl)earnEl.textContent='$'+earnings+' today';
     showHome();
   }else{
-    toast('Stop '+(currentSurgeStop+1)+' delivered ✓','ok');
+    
     currentSurgeStop++;
     showScreen('scJob');
     renderSurgeStop();
