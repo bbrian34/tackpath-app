@@ -1482,8 +1482,11 @@ function renderSurgeList(){
   document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>{
     const done=i<currentSurgeStop;
     const active=i===currentSurgeStop&&currentJob&&currentJob.status==='in_transit';
-    return `<div id="surgeRow${i}" onclick="surgeTapStop(${i})" style="display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(0,0,0,.07);background:${done?'#f1f5f9':'#fff'};cursor:pointer;opacity:${done?'0.45':'1'};">
-      <div style="width:28px;height:28px;border-radius:50%;background:${done?'#94a3b8':active?'#0077cc':'#0077cc'};display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:2px;">${done?'&#10003;':i+1}</div>
+    const bg=done?'#f1f5f9':active?'#eff6ff':'#fff';
+    const border=active?'border-left:4px solid #0077cc;':'';
+    return `<div id="surgeRow${i}" onclick="surgeTapStop(${i})" style="display:flex;flex-direction:column;gap:0;padding:13px 16px;border-bottom:1px solid rgba(0,0,0,.07);background:${bg};cursor:pointer;opacity:${done?'0.45':'1'};${border}">
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <div style="width:28px;height:28px;border-radius:50%;background:${done?'#22aa55':'#0077cc'};display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:2px;">${done?'&#10003;':i+1}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-family:var(--mono);font-size:13px;font-weight:800;margin-bottom:3px;text-decoration:${done?'line-through':'none'};">
           <span style="color:#0f172a;">${s.order_id||''}</span><span style="color:#0077cc;">-${i+1}</span><span style="color:#cc1100;">-${s.packages||1}</span>
@@ -1491,19 +1494,36 @@ function renderSurgeList(){
         <div style="font-size:14px;font-weight:800;color:${done?'#94a3b8':'#0f172a'};margin-bottom:1px;">${s.recipient||''}</div>
         <div style="font-size:12px;color:#64748b;">${s.address||''}</div>
       </div>
-      <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;background:${done?'#94a3b8':'#ff7700'};border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${s.packages||1} pkg${(s.packages||1)!==1?'s':''}</div>
-    </div>`;
+      <div style="font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;background:${done?'#22aa55':'#ff7700'};border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${done?'Done':s.packages+'pkg'}</div>
+    </div></div>`;
   }).join('');
 }
 
 function surgeTapStop(i){
-  // Only allow tapping current or future stops
-  if(i<currentSurgeStop)return;
-  if(currentJob&&currentJob.status!=='in_transit')return;
-  // Navigate to this stop
-  const stop=surgeStops[i];
+  if(i<currentSurgeStop)return; // completed stop
+  if(!currentJob||currentJob.status!=='in_transit')return;
   currentSurgeStop=i;
+  const stop=surgeStops[i];
+  const total=surgeStops.length;
+  // Navigate in-app (map updates in background)
   navigateInApp(stop.address);
+  // Update this row to show Delivered button inline
+  const row=document.getElementById('surgeRow'+i);
+  if(row){
+    row.style.background='#eff6ff';
+    row.style.borderLeft='4px solid #0077cc';
+    // Add delivered button to row
+    let delivBtn=document.getElementById('surgeDelivBtn'+i);
+    if(!delivBtn){
+      delivBtn=document.createElement('button');
+      delivBtn.id='surgeDelivBtn'+i;
+      delivBtn.style.cssText='margin-top:8px;width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:15px;font-weight:900;border:none;cursor:pointer;';
+      delivBtn.textContent=i===total-1?'Final Delivery - Confirm':'Delivered - Confirm';
+      delivBtn.onclick=function(e){e.stopPropagation();openSurgePOD();};
+      row.appendChild(delivBtn);
+      row.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  }
 }
 
 function confirmSurgeLoad(){
@@ -1511,13 +1531,16 @@ function confirmSurgeLoad(){
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   startGPS();
   currentSurgeStop=0;
+  // Hide Begin Route button
   const beginRow=document.getElementById('surgeBeginRow');
   if(beginRow)beginRow.style.display='none';
   const sw=document.getElementById('swipeRow');if(sw)sw.style.display='none';
   const sr=document.getElementById('srBtn');if(sr)sr.style.display='none';
-  // Go to job screen and start Stop 1
-  showScreen('scJob');
-  renderSurgeStop();
+  // Stay on list -- re-render to show active state on Stop 1
+  renderSurgeList();
+  // Auto-scroll to Stop 1
+  const row=document.getElementById('surgeRow0');
+  if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function manualScan(){const inp=document.getElementById('manualBarcodeInp');const val=inp.value.trim();if(!val)return;inp.value='';processScan(val);}
 function updateScanUI(){
@@ -1779,8 +1802,11 @@ function confirmSurgeStop(){
     showHome();
   }else{
     currentSurgeStop++;
-    showScreen('scJob');
-    renderSurgeStop();
+    showScreen('scSurgeMap');
+    renderSurgeList();
+    // Auto scroll to next stop
+    const nextRow=document.getElementById('surgeRow'+currentSurgeStop);
+    if(nextRow)nextRow.scrollIntoView({behavior:'smooth',block:'center'});
   }
 }
 
