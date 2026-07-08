@@ -1246,8 +1246,13 @@ async function startDelivery(){
     startGPS();
     // Check if Surge multi-stop job
     if(isSurgeJob&&surgeStops.length>0){
-      currentSurgeStop=0;
-      renderSurgeStop();
+      // Only reset to 0 if just starting -- don't reset if already in progress
+      if(currentJob.status==='in_transit'&&currentSurgeStop===0){
+        renderSurgeStop();
+      }else if(currentSurgeStop===0){
+        renderSurgeStop();
+      }
+      // If currentSurgeStop > 0 we're already in the route -- don't reset
     }else{
       renderJobScreen();
       toast('Package collected! Navigate to dropoff.','ok');
@@ -1558,21 +1563,13 @@ function doneScanningAll(){
   stopCamera();
   currentJob.status='arrived_pickup';
 
-  // If job has surge stops from SmartSort, load them
-  if(currentJob.surge_stops&&currentJob.surge_stops.length>0){
-    loadSurgeRoute(currentJob.surge_stops);
-  }else if(scannedPackages.length>1){
-    // Multiple packages scanned -- treat as surge, use scanned packages as stops
-    const stops=scannedPackages.map((p,i)=>({
-      order_id:p.barcode,
-      smart_id:p.barcode+'-'+(i+1)+'-1',
-      recipient:'Package '+(i+1),
-      address:currentJob.dropoff_address||'',
-      packages:1
-    }));
-    loadSurgeRoute(stops);
+  // For Surge jobs -- show the SmartSort route list screen
+  if(isSurgeJob&&surgeStops.length>0){
+    showSurgeRouteMap();
+    return;
   }
 
+  // Sprint -- normal flow
   showScreen('scJob');renderJobScreen();
   toast(scannedPackages.length+' packages scanned. Swipe to confirm pickup.','ok');
 }
@@ -1854,10 +1851,20 @@ if(localStorage.getItem('tp_theme')==='light'){
 // ── BOOT ──
 const saved=localStorage.getItem('tp_drv');
 if(saved){driver=JSON.parse(saved);initApp();}
+// Unlock audio on any first touch anywhere on the page
+document.addEventListener('touchstart', function unlockOnTouch(){
+  unlockAudio();
+  document.removeEventListener('touchstart', unlockOnTouch);
+}, {once:true, passive:true});
+document.addEventListener('click', function unlockOnClick(){
+  unlockAudio();
+  document.removeEventListener('click', unlockOnClick);
+}, {once:true});
 if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
 </script>
 </body>
 </html>
+
 
 
 
