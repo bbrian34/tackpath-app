@@ -38,7 +38,7 @@ body.light-mode .wc-lbl{color:#6b7280;}
 body.light-mode .wc-state{color:#111827;}
 body.light-mode .dest-lbl{color:#6b7280;}
 body.light-mode .dest-addr{color:#111827;}
-body.light-mode .job-sheet{border-top:1px solid rgba(0,0,0,.1);}
+body.light-mode .job-sheet{border-top:1px solid rgba(25,183,239,.1);flex:1;overflow-y:auto;padding:18px 18px 0;}
 body.light-mode .job-tool{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);}
 body.light-mode .map-pill{background:rgba(255,255,255,.95);color:var(--blue);}
 body.light-mode .offer-card{background:#ffffff;border-top:2px solid rgba(0,0,0,.08);}
@@ -171,8 +171,8 @@ button,a,input,textarea{font-family:var(--sans);}
   cursor:pointer;box-shadow:0 8px 24px rgba(83,255,136,.15);}
 
 /* ── ACTIVE JOB -- map fills screen, sheet slides up ── */
-#scJob{background:var(--bg);}
-.job-map{height:220px;flex-shrink:0;position:relative;overflow:hidden;}
+#scJob{background:var(--bg);display:flex;flex-direction:column;}
+.job-map{height:200px;flex-shrink:0;position:relative;overflow:hidden;}
 
 .job-map iframe{position:absolute;inset:0;width:100%;height:100%;border:0;
   filter:hue-rotate(195deg) saturate(.85) brightness(.7);}
