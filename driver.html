@@ -1419,11 +1419,25 @@ function stopCamera(){
 function processScan(barcode){
   if(navigator.vibrate)navigator.vibrate([60,30,60]);
 
-  // ── SURGE: Check if this TP belongs to the current surge job ──
+  // ── SURGE: load stops from job if not already loaded ──
+  if(!surgeStops||!surgeStops.length){
+    if(currentJob&&currentJob.surge_stops){
+      let st=currentJob.surge_stops;
+      if(typeof st==='string')try{st=JSON.parse(st);}catch(e){st=[];}
+      if(st&&st.length){surgeStops=st;isSurgeJob=true;}
+    }
+  }
+
+  // Check if scanned TP belongs to surge route
   if(isSurgeJob&&surgeStops.length>0){
-    const match=surgeStops.find(s=>s.order_id===barcode||barcode.startsWith(s.order_id));
+    const match=surgeStops.find(s=>barcode===s.order_id||barcode.startsWith(s.order_id)||s.order_id.startsWith(barcode));
     if(match){
-      // Any TP from this batch identifies the entire route
+      stopCamera();
+      showSurgeRouteMap();
+      return;
+    }
+    // Even if no exact match -- if it's a surge job, any scan loads the route
+    if(currentJob&&currentJob.job_type==='surge'){
       stopCamera();
       showSurgeRouteMap();
       return;
