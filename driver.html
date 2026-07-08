@@ -1049,10 +1049,10 @@ async function acceptOffer(){
   if(typeof surgeSt==='string'){try{surgeSt=JSON.parse(surgeSt);}catch(e){surgeSt=[];}}
   if(currentJob.job_type==='surge'&&surgeSt&&surgeSt.length>0){
     isSurgeJob=true;surgeStops=surgeSt;currentSurgeStop=0;
-    toast('Surge job! '+surgeStops.length+' stops. Navigate to pickup.','ok');
+    
   }else{
     isSurgeJob=false;surgeStops=[];
-    toast('Job accepted! Navigate to pickup.','ok');
+    
   }
   renderJobScreen();showScreen('scJob');
   startDispatchPoll();startJobStatusPoll();
@@ -1185,7 +1185,7 @@ function handleJobAction(){
 async function arrivedAtPickup(){
   if(!currentJob)return;
   currentJob.status='arrived_pickup';
-  renderJobScreen();toast('At pickup. Scan packages then swipe to confirm.','ok');
+  renderJobScreen();
 }
 
 async function startDelivery(){
@@ -1536,7 +1536,7 @@ function doneScanningAll(){
   }
 
   showScreen('scJob');renderJobScreen();
-  toast(scannedPackages.length+' packages scanned. Swipe to confirm pickup.','ok');
+  
 }
 
 // ── POD ──
@@ -1619,7 +1619,7 @@ async function submitPOD(){
     earnings+=pay;jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);
       currentJob=null;scannedPackages=[];podPhotoData=null;
-    showHome();toast('Delivered! +$'+pay,'ok');
+    showHome();
   }catch(e){
     toast('Submission failed: '+e.message.slice(0,60),'warn');
     if(btn){btn.textContent='Confirm Delivery';btn.disabled=false;}
@@ -1767,7 +1767,7 @@ function confirmSurgeStop(){
     currentJob=null;scannedPackages=[];surgeStops=[];isSurgeJob=false;
     const earnEl=document.getElementById('homeEarnings');
     if(earnEl)earnEl.textContent='$'+earnings+' today';
-    showHome();toast('All '+total+' deliveries complete! +$'+pay,'ok');
+    showHome();
   }else{
     toast('Stop '+(currentSurgeStop+1)+' delivered ✓','ok');
     currentSurgeStop++;
@@ -1802,7 +1802,7 @@ function navigateInApp(address){
     const dest=encodeURIComponent(address);
     iframe.src='https://maps.google.com/maps?q='+dest+'&output=embed&z=15';
   }
-  toast('Navigating to '+address.split(',')[0],'ok');
+  
 }
 
 // Show Route tap -- load stops and show screen
