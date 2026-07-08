@@ -38,7 +38,7 @@ body.light-mode .wc-lbl{color:#6b7280;}
 body.light-mode .wc-state{color:#111827;}
 body.light-mode .dest-lbl{color:#6b7280;}
 body.light-mode .dest-addr{color:#111827;}
-body.light-mode .job-sheet{background:var(--card);border-top:2px solid rgba(25,183,239,.1);padding:18px 18px 0;flex:1;overflow-y:auto;}
+body.light-mode .job-sheet{border-top:1px solid rgba(0,0,0,.1);}
 body.light-mode .job-tool{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);}
 body.light-mode .map-pill{background:rgba(255,255,255,.95);color:var(--blue);}
 body.light-mode .offer-card{background:#ffffff;border-top:2px solid rgba(0,0,0,.08);}
@@ -171,9 +171,8 @@ button,a,input,textarea{font-family:var(--sans);}
   cursor:pointer;box-shadow:0 8px 24px rgba(83,255,136,.15);}
 
 /* ── ACTIVE JOB -- map fills screen, sheet slides up ── */
-#scJob{background:var(--bg);display:flex;flex-direction:column;height:100dvh;}
-.job-map{height:35%;flex-shrink:0;position:relative;overflow:hidden;}
-
+#scJob{background:var(--bg);}
+.job-map{flex:1;position:relative;overflow:hidden;min-height:0;}
 .job-map iframe{position:absolute;inset:0;width:100%;height:100%;border:0;
   filter:hue-rotate(195deg) saturate(.85) brightness(.7);}
 .map-pill{position:absolute;top:14px;left:14px;padding:6px 13px;border-radius:20px;
@@ -1181,7 +1180,7 @@ function handleJobAction(){
 async function arrivedAtPickup(){
   if(!currentJob)return;
   currentJob.status='arrived_pickup';
-  renderJobScreen();
+  renderJobScreen();toast('At pickup. Scan packages then swipe to confirm.','ok');
 }
 
 async function startDelivery(){
@@ -1196,7 +1195,7 @@ async function startDelivery(){
       renderSurgeStop();
     }else{
       renderJobScreen();
-      
+      toast('Package collected! Navigate to dropoff.','ok');
     }
   }catch(e){toast('Could not update: '+e.message.slice(0,50),'warn');}
 }
@@ -1204,7 +1203,7 @@ async function startDelivery(){
 async function arrivedAtDropoff(){
   if(!currentJob)return;
   currentJob.status='arrived_dropoff';
-  renderJobScreen();
+  renderJobScreen();toast('At dropoff. Confirm delivery.','ok');
 }
 
 // ── JOB STATUS POLL ──
@@ -1489,16 +1488,11 @@ function showSurgeRouteMap(){
 }
 
 function confirmSurgeLoad(){
+  // Driver confirmed -- load packages, start Stop 1
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   startGPS();
   currentSurgeStop=0;
-  // Hide Show Route button -- driver is now on the route
-  const sr=document.getElementById('swipeRow');
-  if(sr)sr.style.display='none';
-  // Expand map -- reduce job sheet height
-  const sheet=document.getElementById('jobSheet')||document.querySelector('.job-sheet');
-  if(sheet)sheet.style.maxHeight='200px';
   showScreen('scJob');
   renderSurgeStop();
 }
@@ -1643,15 +1637,12 @@ function toast(msg,type='ok'){
   const wrap=document.getElementById('tw');
   const el=document.createElement('div');el.className='toast t-'+(type==='error'?'warn':type);
   el.textContent=(type==='ok'?'✓':type==='info'?'ℹ':'⚠')+' '+msg;
-  wrap.appendChild(el);setTimeout(()=>el.remove(),1500);
+  wrap.appendChild(el);setTimeout(()=>el.remove(),5000);
 }
 
 // ── SURGE MULTI-STOP FLOW ──
 function renderSurgeStop(){
   if(!surgeStops.length)return;
-  // Expand map for navigation
-  const jobMap=document.getElementById('jobMap')?.parentElement;
-  
   const stop=surgeStops[currentSurgeStop];
   const total=surgeStops.length;
   const idx=currentSurgeStop;
@@ -1782,7 +1773,7 @@ function loadSurgeRoute(stops){
   surgeStops=stops;
   isSurgeJob=true;
   currentSurgeStop=0;
-  
+  toast('Surge route loaded: '+stops.length+' stops','ok');
 }
 
 // ── GPS ──
@@ -1804,7 +1795,7 @@ function navigateInApp(address){
     const dest=encodeURIComponent(address);
     iframe.src='https://maps.google.com/maps?q='+dest+'&output=embed&z=15';
   }
-  
+  toast('Navigating to '+address.split(',')[0],'ok');
 }
 
 // Show Route tap -- load stops and show screen
