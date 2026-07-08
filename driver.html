@@ -173,6 +173,7 @@ button,a,input,textarea{font-family:var(--sans);}
 /* ── ACTIVE JOB -- map fills screen, sheet slides up ── */
 #scJob{background:var(--bg);}
 .job-map{flex:1;position:relative;overflow:hidden;min-height:0;}
+.job-map.surge-nav{flex:2;}
 .job-map iframe{position:absolute;inset:0;width:100%;height:100%;border:0;
   filter:hue-rotate(195deg) saturate(.85) brightness(.7);}
 .map-pill{position:absolute;top:14px;left:14px;padding:6px 13px;border-radius:20px;
@@ -1488,11 +1489,16 @@ function showSurgeRouteMap(){
 }
 
 function confirmSurgeLoad(){
-  // Driver confirmed -- load packages, start Stop 1
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   startGPS();
   currentSurgeStop=0;
+  // Hide Show Route button -- driver is now on the route
+  const sr=document.getElementById('swipeRow');
+  if(sr)sr.style.display='none';
+  // Expand map -- reduce job sheet height
+  const sheet=document.getElementById('jobSheet')||document.querySelector('.job-sheet');
+  if(sheet)sheet.style.maxHeight='200px';
   showScreen('scJob');
   renderSurgeStop();
 }
@@ -1643,6 +1649,9 @@ function toast(msg,type='ok'){
 // ── SURGE MULTI-STOP FLOW ──
 function renderSurgeStop(){
   if(!surgeStops.length)return;
+  // Expand map for navigation
+  const jobMap=document.getElementById('jobMap')?.parentElement;
+  if(jobMap)jobMap.classList.add('surge-nav');
   const stop=surgeStops[currentSurgeStop];
   const total=surgeStops.length;
   const idx=currentSurgeStop;
