@@ -1123,14 +1123,12 @@ function renderJobScreen(){
       btn.style.display='none';
       if(swipeRow){
         swipeRow.style.display='block';
-        // For Surge -- button text reflects route
         if(isSurgeJob){
-          swipeRow.textContent='';
-          swipeRow.innerHTML='&#10003; I Have All Packages &mdash; Show Route';
-          swipeRow.onclick=showSurgeRouteMap;
+          swipeRow.textContent='Show Route';
+          swipeRow.onclick=function(){showSurgeRouteMap();};
         }else{
-          swipeRow.innerHTML='&#10003; I Have the Packages';
-          swipeRow.onclick=startDelivery;
+          swipeRow.textContent='I Have the Packages';
+          swipeRow.onclick=function(){startDelivery();};
         }
       }
       if(sb&&scannedPackages.length>0){sb.style.display='flex';document.getElementById('scanBadgeTxt').textContent=scannedPackages.length+' package'+(scannedPackages.length!==1?'s':'')+' loaded';}
