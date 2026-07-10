@@ -1581,6 +1581,14 @@ function surgeTapStop(i){
   // Load map
   const iframe=document.getElementById('sdMap');
   if(iframe)iframe.src='https://maps.google.com/maps?q='+encodeURIComponent(stop.address||'')+'&output=embed';
+  // Reset step buttons to At Stop for every stop
+  const atStopBtn=document.getElementById('sdAtStopBtn');
+  const scanBtn=document.getElementById('sdScanBtn');
+  const deliveredBtn=document.getElementById('sdDeliveredBtn');
+  if(atStopBtn){atStopBtn.style.display='';}
+  if(scanBtn){scanBtn.style.display='none';}
+  if(deliveredBtn){deliveredBtn.style.display='none';}
+  window._sdScanMode=false;
   // Go to delivery screen
   showScreen('scSurgeDelivery');
 }
