@@ -702,9 +702,7 @@ button,a,input,textarea{font-family:var(--sans);}
         <button id="sdScanBtn" onclick="sdScanPackage()" style="display:none;flex:1;padding:12px 8px;border-radius:14px;background:linear-gradient(135deg,var(--orange),#c05000);color:#fff;font-size:14px;font-weight:900;border:none;cursor:pointer;">
           Scan Package &#9638;
         </button>
-        <button id="sdDeliveredBtn" onclick="openSurgePOD()" style="display:none;flex:1;padding:12px 8px;border-radius:14px;background:linear-gradient(135deg,var(--green),#1aaa55);color:#02060e;font-size:14px;font-weight:900;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(83,255,136,.28);">
-          Confirm &amp; Next &#10003;
-        </button>
+        <!-- Confirm button removed -- POD submit goes straight to next stop -->
       </div>
       <!-- Right half: Ruby always visible -->
       <button class="ruby-btn" onclick="activateRuby()" style="flex:1;height:auto;min-height:80px;border-radius:14px;font-size:18px;font-weight:900;width:auto;">Ruby</button>
@@ -715,7 +713,7 @@ button,a,input,textarea{font-family:var(--sans);}
 <!-- POD -->
 <div class="screen" id="scPOD">
   <div class="pod-hdr">
-    <button class="back-btn" onclick="showScreen('scJob')">&#8592;</button>
+    <button class="back-btn" onclick="window._surgePODMode?showScreen('scSurgeDelivery'):showScreen('scJob')">&#8592;</button>
     <div style="font-size:17px;font-weight:800;">Proof of Delivery</div>
   </div>
   <div class="pod-body">
@@ -1558,12 +1556,11 @@ function sdScanPackage(){
 }
 
 function sdScanConfirmed(){
-  // Package scanned at dropoff -- show Delivered button
   window._sdScanMode=false;
   stopCamera();
   document.getElementById('sdScanBtn').style.display='none';
-  document.getElementById('sdDeliveredBtn').style.display='block';
-  showScreen('scSurgeDelivery');
+  // Go straight to POD -- no intermediate button
+  openSurgePOD();
 }
 
 function surgeTapStop(i){
@@ -1587,7 +1584,6 @@ function surgeTapStop(i){
   const deliveredBtn=document.getElementById('sdDeliveredBtn');
   if(atStopBtn){atStopBtn.style.display='';}
   if(scanBtn){scanBtn.style.display='none';}
-  if(deliveredBtn){deliveredBtn.style.display='none';}
   window._sdScanMode=false;
   // Go to delivery screen
   showScreen('scSurgeDelivery');
