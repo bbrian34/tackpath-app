@@ -1095,8 +1095,12 @@ async function acceptOffer(){
   document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
   document.getElementById('surgeMapSub').textContent=total+' stop'+(total!==1?'s':'')+' · '+totalPkgs+' package'+(totalPkgs!==1?'s':'');
   document.getElementById('surgeMapRoute').textContent=currentJob.title||'Delivery Route';
+  // Hide Begin Route -- skip straight to stop list identical to surge
+  const beginRow=document.getElementById('surgeBeginRow');
+  if(beginRow)beginRow.style.display='none';
   renderSurgeList();
   showScreen('scSurgeMap');
+  startGPS();
   startDispatchPoll();startJobStatusPoll();
 }
 
