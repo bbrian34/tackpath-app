@@ -930,7 +930,7 @@ Analyze and return ONLY a JSON object, no markdown, with these fields:
   }catch(e){ /* silent — agent must never crash the dashboard */ }
 }
 
-function runAIAgent(){
+async function runAIAgent(){
   document.getElementById('lastScan').textContent='Claude scanning — '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
   const active=jobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status));
   if(!active.length){
@@ -1074,7 +1074,7 @@ async function init(){
   addFeed('Symphony+ initialized — Claude AI agent online','var(--gold)');
   addFeed('Connecting to Supabase data layer...','var(--muted)');
   await loadData();
-  addFeed('Data loaded — <strong>'+jobs.length+' signals</strong>','var(--green)')');
+  addFeed('Data loaded — <strong>'+jobs.length+' signals</strong>','var(--green)');
   await runAIAgent();
   pollInterval=setInterval(loadData,15000);
   agentInterval=setInterval(runAIAgent,30000);
