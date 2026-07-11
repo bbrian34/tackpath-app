@@ -1075,11 +1075,11 @@ async function init(){
   addFeed('Connecting to Supabase data layer...','var(--muted)');
   await loadData();
   addFeed('Data loaded — <strong>'+jobs.length+' signals</strong>','var(--green)');
-  await runAIAgent();
+  // Run AI agent in background -- never block page load
+  runAIAgent().catch(()=>{});
   pollInterval=setInterval(loadData,15000);
   agentInterval=setInterval(runAIAgent,30000);
   setInterval(runIntakeAgent,10000);runIntakeAgent();
-  // Check escalations every minute
   escalationInterval=setInterval(()=>{
     renderIncidents();renderIncidentStats();updateIncidentBadge();
   },60000);
