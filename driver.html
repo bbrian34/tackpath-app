@@ -1194,7 +1194,7 @@ function renderJobScreen(){
     setDest('AT DROPOFF',currentJob.dropoff_address);
     setMap(currentJob.dropoff_address);
     setBadge('At Dropoff','var(--green)','rgba(83,255,136,.4)');
-    setBtn('Confirm Delivery','ja-deliver',()=>showScreen('scPOD'));
+    setBtn('At Stop','ja-deliver',()=>surgeTapStop(0));
     const arr=document.getElementById('arrivedDropBtn');if(arr)arr.style.display='none';
 
   // ── WAITING ──
