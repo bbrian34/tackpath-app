@@ -28,12 +28,13 @@ body.light{
 
 /* ── TOPBAR ── */
 #topbar{
-  height:52px;display:flex;align-items:center;padding:0 20px;
+  height:52px;display:flex;align-items:center;padding:0 14px;
   background:var(--card);border-bottom:1px solid var(--border);
-  gap:14px;position:sticky;top:0;z-index:100;
+  gap:10px;position:sticky;top:0;z-index:100;flex-wrap:nowrap;
 }
-.tb-wm{font-family:var(--cond);font-size:22px;font-weight:800;letter-spacing:-.5px;}
+.tb-wm{display:flex;align-items:center;gap:7px;flex-shrink:0;}
 .tb-wm .t{color:var(--text);}.tb-wm .p{color:var(--blue);}
+@media(max-width:480px){.btn-demo span{display:none;}.btn-back{display:none;}}
 .tb-divider{width:1px;height:22px;background:var(--border2);}
 .tb-product{font-family:var(--mono);font-size:10px;font-weight:600;
   color:var(--green);letter-spacing:.12em;text-transform:uppercase;
@@ -269,13 +270,21 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
 
 <!-- TOPBAR -->
 <div id="topbar">
-  <div class="tb-wm"><span style="font-family:'Montserrat',sans-serif;font-size:16px;font-weight:600;letter-spacing:1px;line-height:1;white-space:nowrap;"><span style="color:#ffffff;">TACK</span><span style="color:#19b7ef;">PATH</span></span></div>
+  <div class="tb-wm">
+    <svg width="14" height="24" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+    </svg>
+    <span style="font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;line-height:1;white-space:nowrap;"><span style="color:#0f172a;">TACK</span><span style="color:#19b7ef;">PATH</span></span>
+  </div>
   <div class="tb-divider"></div>
   <div class="tb-product"><span style="color:#0060aa;">Smart</span><span style="color:#19b7ef;">Sort</span></div>
   <div class="tb-right">
-    <button class="btn-demo" onclick="startDemo()">&#9654; Run Demo</button>
+    <button class="btn-demo" onclick="startDemo()"><span>&#9654; Run Demo</span></button>
     <button class="btn-theme" onclick="toggleTheme()" id="themeBtn" title="Toggle light/dark">&#9790;</button>
-    <a class="btn-back" href="dispatcher.html">&#8592; Dispatcher</a>
+    <a class="btn-back" href="dispatcher.html">&#8592; Back</a>
   </div>
 </div>
 
