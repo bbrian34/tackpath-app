@@ -1079,12 +1079,28 @@ async function acceptOffer(){
   if(typeof surgeSt==='string'){try{surgeSt=JSON.parse(surgeSt);}catch(e){surgeSt=[];}}
   if(currentJob.job_type==='surge'&&surgeSt&&surgeSt.length>0){
     isSurgeJob=true;surgeStops=surgeSt;currentSurgeStop=0;
-    
   }else{
-    isSurgeJob=false;surgeStops=[];
-    
+    // Sprint -- single stop, runs identical to surge
+    isSurgeJob=true;currentSurgeStop=0;
+    surgeStops=[{
+      order_id: currentJob.id ? currentJob.id.slice(0,8) : 'SP-001',
+      smart_id: currentJob.id ? 'TP-'+currentJob.id.slice(0,8) : 'TP-SP01',
+      recipient: currentJob.customer_name || currentJob.dropoff_name || 'Customer',
+      address: currentJob.dropoff_address || '',
+      packages: parseInt(currentJob.packages)||1,
+      job_type: 'sprint'
+    }];
   }
-  renderJobScreen();showScreen('scJob');
+  // All jobs go straight to surge map -- identical flow regardless of job type
+  currentJob.status='in_transit';
+  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  const total=surgeStops.length;
+  const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
+  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
+  document.getElementById('surgeMapSub').textContent=total+' stop'+(total!==1?'s':'')+' · '+totalPkgs+' package'+(totalPkgs!==1?'s':'');
+  document.getElementById('surgeMapRoute').textContent=currentJob.title||'Delivery Route';
+  renderSurgeList();
+  showScreen('scSurgeMap');
   startDispatchPoll();startJobStatusPoll();
 }
 
