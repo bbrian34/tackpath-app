@@ -875,7 +875,63 @@ async function sendAutoResponse(){
 }
 
 // ── TRUE AI AGENT ──
-async function runAIAgent(){
+async // ── INTAKE AGENT ──
+// Watches for new jobs. Validates, classifies, flags problems, logs decisions.
+let intakeSeenIds = new Set();
+let intakeFirstRun = true;
+
+async function runIntakeAgent(){
+  try{
+    const recent = await sbGet('jobs?select=*&order=created_at.desc&limit=25');
+    const newJobs = recent.filter(j => !intakeSeenIds.has(j.id));
+    recent.forEach(j => intakeSeenIds.add(j.id));
+
+    // First run: just index existing jobs, don't process them
+    if(intakeFirstRun){ intakeFirstRun = false; return; }
+    if(!newJobs.length) return;
+
+    for(const job of newJobs){
+      addFeed('INTAKE AGENT: new job detected — '+(job.title||job.id.slice(0,8)),'var(--gold)');
+
+      const prompt = `You are the TackPath Intake Agent. A new delivery job just arrived. Validate and classify it.
+
+Job: ${JSON.stringify({
+        title: job.title, job_type: job.job_type, status: job.status,
+        pickup: job.pickup_address, dropoff: job.dropoff_address,
+        packages: job.packages, price: job.price, customer: job.customer_name
+      })}
+
+Analyze and return ONLY a JSON object, no markdown, with these fields:
+- valid: true/false (are pickup and dropoff addresses plausible Atlanta-metro addresses?)
+- classification: "sprint" | "surge" | "unknown"
+- priority: "standard" | "rush" | "review"
+- issues: array of strings (empty if none) — missing address, suspicious price, unclear package count, etc.
+- summary: one sentence describing this job for a dispatcher`;
+
+      const result = await askClaude(prompt);
+      let parsed = null;
+      try{ parsed = JSON.parse(result.replace(/```json|```/g,'').trim()); }catch(e){}
+
+      if(parsed){
+        if(parsed.issues && parsed.issues.length){
+          parsed.issues.forEach(iss => addFeed('INTAKE AGENT ⚠ '+(job.title||job.id.slice(0,8))+': '+iss,'var(--orange)'));
+        }
+        addFeed('INTAKE AGENT ✓ '+(parsed.classification||'job')+' · '+(parsed.priority||'standard')+' — '+(parsed.summary||''),'var(--green)');
+        // Log agent decision to Supabase messages as an audit trail
+        sbPost('messages',{job_id:job.id,sender:'IntakeAgent',sender_role:'agent',
+          body:'Intake: '+(parsed.classification||'?')+' | '+(parsed.priority||'?')+(parsed.issues&&parsed.issues.length?' | Issues: '+parsed.issues.join('; '):' | Clean')
+        }).catch(()=>{});
+        actionCount++;
+        const ac=document.getElementById('actionCount');
+        if(ac)ac.textContent=actionCount;
+      }else{
+        addFeed('INTAKE AGENT: processed '+(job.title||job.id.slice(0,8))+' (unstructured result)','var(--muted)');
+      }
+    }
+  }catch(e){ /* silent — agent must never crash the dashboard */ }
+}
+
+function runAIAgent(){
   document.getElementById('lastScan').textContent='Claude scanning — '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
   const active=jobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status));
   if(!active.length){
@@ -1023,6 +1079,7 @@ async function init(){
   await runAIAgent();
   pollInterval=setInterval(loadData,15000);
   agentInterval=setInterval(runAIAgent,30000);
+  setInterval(runIntakeAgent,10000);runIntakeAgent();
   // Check escalations every minute
   escalationInterval=setInterval(()=>{
     renderIncidents();renderIncidentStats();updateIncidentBadge();
