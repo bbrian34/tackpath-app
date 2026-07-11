@@ -624,7 +624,7 @@ function addFeed(text,dotColor='var(--gold)'){
   renderFeed();
 }
 function renderFeed(){
-  const feed=document.getElementById('agentFeed');
+  const feed=document.getElementById('tw');
   if(!agentLog.length){feed.innerHTML='<div class="empty">Agent feed will appear here</div>';return;}
   feed.innerHTML=agentLog.map(e=>`<div class="af-entry"><div class="af-dot" style="background:${e.dotColor};"></div><div class="af-text">${e.text}</div><div class="af-time">${e.time}</div></div>`).join('');
 }
@@ -753,7 +753,7 @@ function renderFleet(){
 
 // ── KPI ──
 function renderKPIs(){
-  document.getElementById('kpiClients').textContent=orgs.length||0;
+  document.getElementById('kpiP1').textContent=orgs.length||0;
   const drivers=new Set(jobs.filter(j=>j.driver_name).map(j=>j.driver_name));
   document.getElementById('kpiDrivers').textContent=drivers.size||0;
   document.getElementById('kpiJobs').textContent=jobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status)).length||0;
