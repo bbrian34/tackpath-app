@@ -1164,6 +1164,93 @@ function renderAnalytics(){
 }
 
 // ── LOAD DATA ──
+// ── AGENT DATA LOADER ──
+// Pulls from OCA Edge Function tables: work_items, agent_audit_log, bcl_snapshots
+async function loadAgentData(){
+  try{
+    // Load work items (pending recommendations from OCA)
+    const wItems=await sbGet('work_items?status=eq.pending&order=created_at.desc&limit=50');
+    renderWorkItems(wItems||[]);
+
+    // Load audit trail (recent agent decisions)
+    const aLog=await sbGet('agent_audit_log?order=created_at.desc&limit=30');
+    renderAgentAudit(aLog||[]);
+
+    // Load latest BCL snapshot for health status
+    const snapshots=await sbGet('bcl_snapshots?order=created_at.desc&limit=1');
+    if(snapshots&&snapshots.length){
+      const snap=snapshots[0];
+      const lastScanEl=document.getElementById('lastScan');
+      if(lastScanEl){
+        const ago=Math.floor((Date.now()-new Date(snap.created_at).getTime())/1000);
+        lastScanEl.textContent='OCA last ran '+ago+'s ago · '+snap.exceptions+' exception'+(snap.exceptions!==1?'s':'');
+      }
+    }
+  }catch(e){
+    // Silent -- agent tables may not exist yet
+    console.warn('Agent data load:',e.message);
+  }
+}
+
+function renderWorkItems(items){
+  const q=document.getElementById('alertQueue');
+  if(!q)return;
+  const pending=items.filter(i=>i.status==='pending');
+  const badge=document.getElementById('alertBadge');
+  if(badge)badge.textContent=pending.length+' OPEN';
+  const p1=document.getElementById('kpiP1');
+  if(p1)p1.textContent=pending.filter(i=>i.priority==='critical'||i.priority==='high').length;
+  if(!pending.length){q.innerHTML='<div class="empty">No exceptions · All systems healthy</div>';return;}
+  const priorityColor={critical:'var(--p1)',high:'var(--p2)',standard:'var(--gold)',low:'var(--muted)'};
+  q.innerHTML=pending.map(item=>`
+    <div style="padding:12px 16px;border-bottom:1px solid rgba(201,168,76,.08);display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${priorityColor[item.priority]||'var(--gold)'};margin-top:5px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;">${item.title||'Work Item'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${item.description||''}</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-family:var(--mono);font-size:9px;color:${priorityColor[item.priority]||'var(--gold)'};text-transform:uppercase;">${item.priority}</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--muted);">Confidence: ${Math.round((item.confidence_score||0)*100)}%</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--muted);">${new Date(item.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button onclick="approveWorkItem('${item.id}')" style="font-size:10px;padding:4px 10px;border-radius:6px;background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.3);color:#4caf7d;cursor:pointer;font-family:var(--mono);">Approve</button>
+        <button onclick="rejectWorkItem('${item.id}')" style="font-size:10px;padding:4px 10px;border-radius:6px;background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--p1);cursor:pointer;font-family:var(--mono);">Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderAgentAudit(log){
+  const trail=document.getElementById('auditTrail');
+  if(!trail)return;
+  if(!log.length){trail.innerHTML='<div class="empty">No agent actions yet</div>';return;}
+  trail.innerHTML=log.map(a=>{
+    const dec=a.decision_json||{};
+    const statusColor={executed:'var(--green)',pending:'var(--gold)',rejected:'var(--p1)',rolled_back:'var(--p2)'};
+    return `<div style="display:flex;gap:7px;font-size:10px;padding:6px 0;border-bottom:1px solid rgba(201,168,76,.06);">
+      <div style="width:6px;height:6px;border-radius:50%;background:${statusColor[a.outcome]||'var(--muted)'};margin-top:3px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text);font-weight:600;">${a.agent_name} · ${a.action_type}</div>
+        <div style="color:var(--muted);font-size:9px;margin-top:2px;">${dec.summary||'Agent scan completed'}</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--faint);margin-top:2px;">${new Date(a.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})} · conf ${Math.round((a.confidence_score||0)*100)}%</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveWorkItem(id){
+  await sbPatch('work_items?id=eq.'+id,{status:'approved'}).catch(()=>{});
+  addFeed('Work item approved','var(--green)');
+  loadAgentData();
+}
+
+async function rejectWorkItem(id){
+  await sbPatch('work_items?id=eq.'+id,{status:'rejected'}).catch(()=>{});
+  addFeed('Work item rejected','var(--muted)');
+  loadAgentData();
+}
+
 async function loadData(){
   try{
     jobs=await sbGet('jobs?select=*&order=created_at.desc&limit=200');
@@ -1171,6 +1258,8 @@ async function loadData(){
     renderClientTabs();
     renderFleet();
     renderKPIs();
+    // Load OCA agent data alongside job data
+    loadAgentData();
     if(document.getElementById('tab-map').classList.contains('on')) renderMapDrivers();
     if(document.getElementById('tab-comms').classList.contains('on')) loadCommsList();
   }catch(e){
