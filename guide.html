@@ -235,6 +235,60 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
     </div>
   </div>
   <div class="guide-badge">&#9889; TackPath One Platform</div>
+  <button onclick="toggleAssist()" id="assistBtn"
+    style="padding:7px 16px;border-radius:20px;background:rgba(25,183,239,.12);
+    border:1px solid rgba(25,183,239,.3);color:var(--blue);font-size:11px;font-weight:700;
+    cursor:pointer;font-family:var(--mono);display:flex;align-items:center;gap:6px;
+    transition:all .2s;white-space:nowrap;">
+    &#9889; TackPath Assist
+  </button>
+</div>
+
+<!-- ASSIST PANEL -->
+<div id="assistPanel" style="display:none;position:fixed;top:65px;right:20px;width:420px;
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 16px 48px rgba(0,0,0,.6);z-index:500;overflow:hidden;
+  backdrop-filter:blur(20px);">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);
+    background:var(--card2);display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:2px;">&#9889; TackPath Assist</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);">Ask anything about TackPath</div>
+    </div>
+    <button onclick="toggleAssist()" style="background:none;border:none;color:var(--muted);
+      font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;">&#10005;</button>
+  </div>
+  <div style="padding:14px 16px;">
+    <div style="position:relative;margin-bottom:10px;">
+      <input id="askInput" type="text" placeholder="How do I delete a job? What is Ruby? What is OCA?"
+        style="width:100%;padding:12px 54px 12px 14px;border-radius:10px;
+        border:1px solid var(--border);background:var(--bg);color:var(--text);
+        font-size:12px;font-family:var(--sans);outline:none;"
+        onkeydown="if(event.key==='Enter')askTackPath()"
+        onfocus="this.style.borderColor='var(--blue)'"
+        onblur="this.style.borderColor='var(--border)'"/>
+      <button onclick="askTackPath()" id="askBtn"
+        style="position:absolute;right:6px;top:50%;transform:translateY(-50%);
+        padding:5px 12px;border-radius:7px;background:var(--blue);border:none;
+        color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono);">Ask</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">How do I delete a job?</button>
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">What is the OCA?</button>
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">What is Ruby?</button>
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Sprint vs Surge?</button>
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">How does billing work?</button>
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Driver sign in?</button>
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Upload a manifest?</button>
+      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Confidence score?</button>
+    </div>
+    <div id="askLoading" style="display:none;padding:12px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);">
+      <div style="display:inline-flex;align-items:center;gap:8px;"><div class="spin"></div>Looking up answer...</div>
+    </div>
+    <div id="askAnswer" style="display:none;max-height:300px;overflow-y:auto;
+      background:var(--bg);border:1px solid var(--border2);border-radius:10px;
+      padding:14px 16px;line-height:1.8;font-size:12px;color:var(--text);"></div>
+  </div>
 </div>
 
 <div class="layout">
@@ -1019,40 +1073,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
   </div>
 
 
-  <div class="divider"></div>
-  <div class="section" id="ask" style="display:none;">
-    <div class="section-tag">Support</div>
-    <div class="section-title">TackPath Assist</div>
-    <div class="section-sub">Have a question about how something works? Type it below and get an immediate answer.</div>
-    <div style="position:relative;margin-bottom:20px;">
-      <input id="askInput" type="text" placeholder="e.g. How do I contact a driver? What does the OCA do? How do I delete a job?"
-        style="width:100%;padding:16px 60px 16px 20px;border-radius:12px;border:1px solid var(--border);
-        background:var(--card);color:var(--text);font-size:14px;font-family:var(--sans);outline:none;"
-        onkeydown="if(event.key==='Enter')askTackPath()"
-        onfocus="this.style.borderColor='var(--blue)'"
-        onblur="this.style.borderColor='var(--border)'"/>
-      <button onclick="askTackPath()" id="askBtn"
-        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
-        padding:8px 16px;border-radius:8px;background:var(--blue);border:none;
-        color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);">Ask</button>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;">
-      <button onclick="quickAsk(this)" class="quick-q">How do I contact a driver?</button>
-      <button onclick="quickAsk(this)" class="quick-q">What is the exception queue?</button>
-      <button onclick="quickAsk(this)" class="quick-q">How does a driver sign in?</button>
-      <button onclick="quickAsk(this)" class="quick-q">What is the OCA?</button>
-      <button onclick="quickAsk(this)" class="quick-q">What is the difference between Sprint and Surge?</button>
-      <button onclick="quickAsk(this)" class="quick-q">How do I delete a job?</button>
-      <button onclick="quickAsk(this)" class="quick-q">What does a confidence score mean?</button>
-      <button onclick="quickAsk(this)" class="quick-q">How does billing work?</button>
-      <button onclick="quickAsk(this)" class="quick-q">What is Ruby?</button>
-      <button onclick="quickAsk(this)" class="quick-q">How do I upload a manifest?</button>
-    </div>
-    <div id="askAnswer" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;line-height:1.8;font-size:14px;color:var(--text);"></div>
-    <div id="askLoading" style="display:none;padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);">
-      <div style="display:inline-flex;align-items:center;gap:10px;"><div class="spin"></div>Looking up answer...</div>
-    </div>
-  </div>
+
 
   <!-- FOOTER -->
   <div style="margin-top:48px;padding:24px 0;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
@@ -1117,8 +1138,6 @@ function jumpTo(el){
     setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'start'}),200);
   }
 }
-
-if(window.innerWidth>768){var askEl=document.getElementById("ask");if(askEl)askEl.style.display="block";}
 
 // Smooth scroll for TOC
 document.querySelectorAll('.toc a').forEach(a=>{
@@ -1196,6 +1215,11 @@ function askTackPath(){
     if(loadingEl) loadingEl.style.display = 'none';
     if(btn){btn.disabled=false;btn.textContent='Ask';}
   });
+}
+
+function toggleAssist(){
+  var panel = document.getElementById('assistPanel');
+  if(panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
 function quickAsk(el){
