@@ -1,4 +1,13 @@
-<!DOCTYPE html>
+<div class="lbox-top" style="text-align:center;padding-bottom:4px;">
+      <svg width="28" height="48" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 10px;">
+        <defs><linearGradient id="tpgdd" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgdd)"/>
+        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgdd)" opacity=".75"/>
+        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgdd)" opacity=".5"/>
+      </svg>
+      <div class="wm"><span style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
+      <div class="lbox-badge">Dispatcher Portal</div>
+    </div><!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -533,25 +542,26 @@ body::after{content:'';position:fixed;inset:0;
   <div class="lbox">
     <div class="lbox-top" style="text-align:center;padding-bottom:4px;">
       <svg width="28" height="48" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 10px;">
-        <defs><linearGradient id="tpgdd" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
-        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgdd)"/>
-        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgdd)" opacity=".75"/>
-        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgdd)" opacity=".5"/>
+        <defs><linearGradient id="tpgl" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgl)"/>
+        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgl)" opacity=".75"/>
+        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgl)" opacity=".5"/>
       </svg>
-      <div class="wm"><span style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
-      <div class="lbox-badge">Dispatcher Portal</div>
+      <div class="lbox-logo"><span style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
+      <div class="lbox-ver">Dispatcher Portal</div>
+      <div class="lbox-ver">Command Intelligence · v3.0</div>
+      <div class="lbox-desc">Real-time dispatch · SmartPath AI · Fleet tracking · Analytics</div>
     </div>
     <div class="lbox-form" id="dispPhasePhone">
-      <label class="fl">Mobile Number</label>
-      <input class="fi" type="tel" id="dispPhone" placeholder="+1 (404) 555-0100" autocomplete="tel"/>
-      <button class="fb" onclick="dispRequestCode()">Send Code</button>
+      <label class="lf-lbl">Mobile Number</label>
+      <input class="fi" type="tel" id="dispPhone" placeholder="+1 (404) 555-0100" autocomplete="tel" onkeydown="if(event.key==='Enter')dispRequestCode()"/>
+      <button class="lf-btn" onclick="dispRequestCode()">Send Code &#8594;</button>
       <div class="fn">TackPath Dispatcher &middot; Atlanta Metro</div>
     </div>
     <div class="lbox-form" id="dispPhaseCode" style="display:none;">
-      <label class="fl">Verification Code</label>
+      <label class="lf-lbl">Verification Code</label>
       <div style="font-family:var(--mono);font-size:11px;color:#4a6e88;margin-bottom:12px;">Enter any 6-digit code</div>
-      <input class="fi" type="number" id="dispCode" placeholder="000000" style="font-size:28px;font-weight:900;letter-spacing:8px;text-align:center;"/>
-      <button class="fb" onclick="dispVerifyCode()">Verify &amp; Sign In</button>
+      <input class="fi" type="number" id="dispCode" placeholder="000000" style="font-size:28px;font-weight:900;letter-spacing:8px;text-align:center;" onkeydown="if(event.key==='Enter')dispVerifyCode()"/>
+      <button class="lf-btn" onclick="dispVerifyCode()">Verify &amp; Sign In &#8594;</button>
       <button onclick="document.getElementById('dispPhasePhone').style.display='block';document.getElementById('dispPhaseCode').style.display='none';" style="width:100%;padding:14px;border-radius:12px;background:none;border:1px solid rgba(255,255,255,.08);color:#4a6e88;font-size:14px;cursor:pointer;margin-top:10px;">Change number</button>
     </div>
-  </div>
