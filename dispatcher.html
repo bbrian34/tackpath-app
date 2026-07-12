@@ -1835,6 +1835,8 @@ function openDrawer(id){
   const j=jobs.find(x=>x.id===id);
   if(!j)return;
   currentJobId=id;
+  selectedJobId=id;
+  loadDrawerCommLog(id);
   const shortId=j.id?j.id.slice(0,8):'—';
   document.getElementById('drTitle').textContent='TP-'+shortId;
   const sd=document.getElementById('drStatusDisplay');if(sd)sd.textContent=(j.status||'pending').replace(/_/g,' ');
