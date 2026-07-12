@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath Operator Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#010e21;--card:#071828;--card2:#0d2135;
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--gold:#c9a84c;
+  --text:#eef2f8;--muted:rgba(238,242,248,.7);--border:rgba(25,183,239,.12);
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+
+/* HEADER */
+.guide-hdr{
+  background:rgba(1,14,33,.98);border-bottom:1px solid var(--border);
+  padding:20px 40px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;backdrop-filter:blur(20px);
+}
+.guide-logo{display:flex;align-items:center;gap:10px;}
+.guide-logo svg{flex-shrink:0;}
+.guide-wordmark{font-family:var(--sans);font-size:18px;font-weight:700;letter-spacing:1px;}
+.guide-title{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.guide-badge{padding:5px 14px;border-radius:20px;background:rgba(25,183,239,.1);
+  border:1px solid rgba(25,183,239,.2);font-family:var(--mono);font-size:10px;
+  font-weight:600;color:var(--blue);}
+
+/* TOC SIDEBAR */
+.layout{display:grid;grid-template-columns:220px 1fr;gap:0;min-height:calc(100vh - 65px);}
+.toc{
+  padding:24px 20px;border-right:1px solid var(--border);
+  position:sticky;top:65px;height:calc(100vh - 65px);overflow-y:auto;
+}
+.toc-section{font-family:var(--mono);font-size:8px;color:var(--muted);
+  letter-spacing:.16em;text-transform:uppercase;margin:16px 0 6px;padding:0 8px;}
+.toc a{display:block;padding:6px 10px;border-radius:7px;font-size:12px;
+  color:var(--muted);text-decoration:none;transition:all .15s;font-weight:500;}
+.toc a:hover{background:rgba(25,183,239,.06);color:var(--text);}
+.toc a.active{background:rgba(25,183,239,.1);color:var(--blue);border-left:2px solid var(--blue);border-radius:0 7px 7px 0;}
+
+/* MAIN CONTENT */
+.content{padding:40px 48px;max-width:960px;}
+
+/* SECTIONS */
+.section{margin-bottom:64px;}
+.section-tag{font-family:var(--mono);font-size:9px;color:var(--blue);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px;}
+.section-title{font-size:28px;font-weight:800;margin-bottom:8px;line-height:1.2;}
+.section-sub{font-size:15px;color:var(--muted);line-height:1.7;max-width:620px;margin-bottom:32px;}
+.divider{height:1px;background:var(--border);margin:32px 0;}
+
+/* STEP CARDS */
+.steps{display:flex;flex-direction:column;gap:32px;}
+.step{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+.step.reverse{direction:rtl;}
+.step.reverse > *{direction:ltr;}
+.step-text{padding:4px 0;}
+.step-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.step-title{font-size:18px;font-weight:800;margin-bottom:8px;}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.8;}
+.step-tip{margin-top:12px;padding:10px 14px;border-radius:9px;
+  background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.15);
+  font-size:12px;color:var(--green);line-height:1.6;}
+.step-tip strong{color:var(--green);}
+
+/* UI MOCKUPS */
+.mockup{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.4);
+}
+.mockup-bar{
+  height:36px;background:var(--card2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:8px;
+}
+.mockup-dot{width:8px;height:8px;border-radius:50%;}
+.mockup-url{flex:1;background:rgba(255,255,255,.04);border-radius:5px;
+  height:20px;margin:0 8px;display:flex;align-items:center;padding:0 10px;
+  font-family:var(--mono);font-size:9px;color:var(--muted);}
+.mockup-body{padding:16px;}
+
+/* CALLOUT SYSTEM */
+.callout-wrap{position:relative;}
+.callout-wrap .highlight{
+  position:absolute;border-radius:8px;border:2px solid var(--orange);
+  box-shadow:0 0 0 3px rgba(255,150,30,.2);pointer-events:none;
+  animation:calloutPulse 2s infinite;
+}
+@keyframes calloutPulse{0%,100%{box-shadow:0 0 0 3px rgba(255,150,30,.2);}50%{box-shadow:0 0 0 6px rgba(255,150,30,0);}}
+.callout-arrow{
+  position:absolute;font-size:20px;color:var(--orange);
+  filter:drop-shadow(0 0 4px rgba(255,150,30,.5));
+}
+.callout-label{
+  position:absolute;background:var(--orange);color:#000;
+  font-size:10px;font-weight:800;padding:3px 8px;border-radius:5px;
+  white-space:nowrap;font-family:var(--mono);
+}
+
+/* UI ELEMENTS (simulated) */
+.ui-nav{display:flex;gap:2px;padding:8px 12px;background:rgba(6,20,35,.98);border-bottom:1px solid var(--border);}
+.ui-tab{padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;color:var(--muted);cursor:default;}
+.ui-tab.active{background:rgba(25,183,239,.1);color:var(--blue);border:1px solid rgba(25,183,239,.2);}
+.ui-job-card{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.ui-job-id{font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;}
+.ui-job-name{font-size:11px;font-weight:700;}
+.ui-job-meta{font-size:9px;color:var(--muted);}
+.ui-status{padding:2px 8px;border-radius:5px;font-family:var(--mono);font-size:8px;font-weight:700;margin-left:auto;}
+.s-pending{background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.2);color:var(--orange);}
+.s-transit{background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);color:#8d5cff;}
+.s-delivered{background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);}
+.ui-btn{padding:6px 14px;border-radius:7px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:5px;cursor:default;}
+.btn-blue{background:rgba(25,183,239,.12);border:1px solid rgba(25,183,239,.3);color:var(--blue);}
+.btn-green{background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.3);color:var(--green);}
+.btn-orange{background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.3);color:var(--orange);}
+.btn-red{background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.3);color:#ff4444;}
+.btn-gold{background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);}
+.ui-driver-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card2);border-radius:8px;margin-bottom:6px;}
+.ui-avatar{width:30px;height:30px;border-radius:8px;background:rgba(25,183,239,.15);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue);flex-shrink:0;}
+.ui-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.ui-kpi{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.ui-kpi-val{font-size:22px;font-weight:900;line-height:1;}
+.ui-kpi-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.1em;}
+.ui-feed-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;}
+.ui-feed-dot{width:6px;height:6px;border-radius:50%;margin-top:3px;flex-shrink:0;}
+.ui-exc-item{padding:10px 12px;border-left:3px solid var(--orange);background:rgba(255,150,30,.04);border-radius:0 8px 8px 0;margin-bottom:6px;}
+.ui-exc-title{font-size:11px;font-weight:700;margin-bottom:2px;}
+.ui-exc-desc{font-size:9px;color:var(--muted);}
+.ui-phone{
+  width:200px;background:#1a1a1a;border-radius:24px;overflow:hidden;
+  border:3px solid #333;box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+.ui-phone-bar{height:20px;background:#000;display:flex;align-items:center;justify-content:center;}
+.ui-phone-notch{width:60px;height:12px;background:#1a1a1a;border-radius:0 0 8px 8px;}
+.ui-phone-screen{padding:12px;background:var(--card);}
+.ui-comms-msg{padding:8px 12px;border-radius:10px;font-size:10px;line-height:1.5;margin-bottom:6px;max-width:80%;}
+.msg-in{background:#e5e5ea;color:#000;}
+.msg-out{background:var(--blue);color:#fff;margin-left:auto;}
+.ui-input-row{display:flex;gap:6px;padding:8px;background:#f8f9fa;border-top:1px solid #ddd;}
+.ui-input{flex:1;padding:6px 10px;border-radius:14px;border:1px solid #ddd;font-size:10px;background:#fff;color:#000;}
+.ui-send{padding:6px 10px;border-radius:14px;background:var(--blue);border:none;color:#fff;font-size:10px;font-weight:700;}
+
+/* FEATURE GRID */
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;}
+.fc-icon{font-size:24px;margin-bottom:10px;}
+.fc-title{font-size:13px;font-weight:700;margin-bottom:5px;}
+.fc-desc{font-size:11px;color:var(--muted);line-height:1.7;}
+
+/* QUICK REF TABLE */
+.ref-table{width:100%;border-collapse:collapse;margin-top:16px;}
+.ref-table th{padding:10px 14px;text-align:left;font-family:var(--mono);font-size:9px;
+  color:var(--muted);letter-spacing:.14em;text-transform:uppercase;
+  border-bottom:1px solid var(--border);background:var(--card2);}
+.ref-table td{padding:10px 14px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04);}
+.ref-table tr:hover td{background:rgba(25,183,239,.03);}
+.ref-tag{padding:2px 8px;border-radius:5px;font-family:var(--mono);font-size:9px;font-weight:700;}
+
+/* ANNOTATION BOXES */
+.annotation{
+  display:flex;gap:16px;padding:20px;border-radius:12px;margin:20px 0;
+  background:rgba(25,183,239,.04);border:1px solid rgba(25,183,239,.12);
+}
+.ann-icon{font-size:24px;flex-shrink:0;}
+.ann-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.ann-text{font-size:12px;color:var(--muted);line-height:1.7;}
+.annotation.warn{background:rgba(255,150,30,.04);border-color:rgba(255,150,30,.15);}
+.annotation.success{background:rgba(83,255,136,.04);border-color:rgba(83,255,136,.15);}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr;}
+  .toc{display:none;}
+  .content{padding:24px 20px;}
+  .step{grid-template-columns:1fr;}
+  .feature-grid{grid-template-columns:1fr;}
+  .ui-kpi-row{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="guide-hdr">
+  <div class="guide-logo">
+    <svg width="18" height="30" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+    </svg>
+    <div>
+      <div class="guide-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+      <div class="guide-title">Operator Guide</div>
+    </div>
+  </div>
+  <div class="guide-badge">&#9889; TackPath One Platform</div>
+</div>
+
+<div class="layout">
+
+<!-- TOC -->
+<div class="toc">
+  <div class="toc-section">Getting Started</div>
+  <a href="#overview" class="active">What is TackPath?</a>
+  <a href="#roles">Who uses what</a>
+
+  <div class="toc-section">Dispatcher</div>
+  <a href="#dispatcher-jobs">Managing Jobs</a>
+  <a href="#dispatcher-comms">Messaging Drivers</a>
+  <a href="#dispatcher-exceptions">Handling Exceptions</a>
+  <a href="#smartsort">SmartSort Routes</a>
+
+  <div class="toc-section">Driver App</div>
+  <a href="#driver-login">Signing In</a>
+  <a href="#driver-accept">Accepting a Job</a>
+  <a href="#driver-delivery">Making the Delivery</a>
+  <a href="#driver-ruby">Using Ruby (AI)</a>
+
+  <div class="toc-section">Customer Portal</div>
+  <a href="#customer-order">Placing an Order</a>
+  <a href="#customer-track">Tracking a Delivery</a>
+
+  <div class="toc-section">Command Center</div>
+  <a href="#symphony">Symphony+</a>
+  <a href="#tackpath1">TackPath 1</a>
+
+  <div class="toc-section">Reference</div>
+  <a href="#statuses">Job Statuses</a>
+  <a href="#agents">AI Agents</a>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- OVERVIEW -->
+  <div class="section" id="overview">
+    <div class="section-tag">Getting Started</div>
+    <div class="section-title">What is TackPath?</div>
+    <div class="section-sub">TackPath is an AI-powered dispatch platform built for small courier companies. It handles order intake, driver dispatch, real-time tracking, proof of delivery, and invoicing -- with AI agents working in the background so your team can focus on the deliveries, not the admin.</div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="fc-icon">&#128666;</div>
+        <div class="fc-title">Dispatcher Portal</div>
+        <div class="fc-desc">Create and manage jobs, broadcast to drivers, monitor deliveries in real time, and communicate with your fleet.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#128101;</div>
+        <div class="fc-title">Driver App</div>
+        <div class="fc-desc">Drivers receive job offers, navigate to stops, scan packages, collect proof of delivery, and stay in touch with dispatch.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#128172;</div>
+        <div class="fc-title">Customer Portal</div>
+        <div class="fc-desc">Customers place delivery orders and track their packages in real time without needing to call your office.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#9889;</div>
+        <div class="fc-title">Symphony+</div>
+        <div class="fc-desc">The operations command center. Fleet overview, live AI agent feed, incident management, comms hub, and billing -- all in one screen.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#129504;</div>
+        <div class="fc-title">TackPath 1</div>
+        <div class="fc-desc">The owner dashboard. Revenue, client health, agent decisions, work items needing approval. The business at a glance.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#128204;</div>
+        <div class="fc-title">SmartSort</div>
+        <div class="fc-desc">Upload a manifest CSV and TackPath automatically organizes packages into optimized routes ready to broadcast to your drivers.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHO USES WHAT -->
+  <div class="section" id="roles">
+    <div class="section-tag">Getting Started</div>
+    <div class="section-title">Who uses what</div>
+    <div class="section-sub">TackPath has different tools for different people on your team. Here is where everyone starts.</div>
+    <table class="ref-table">
+      <thead><tr><th>Role</th><th>Their Tool</th><th>URL</th><th>What they do there</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Owner</strong></td><td><span class="ref-tag" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold);">TackPath 1</span></td><td style="font-family:var(--mono);font-size:10px;">/tackpathone.html</td><td style="color:var(--muted);">Review revenue, approve AI decisions, monitor client health</td></tr>
+        <tr><td><strong>Dispatcher</strong></td><td><span class="ref-tag" style="background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);">Dispatcher Portal</span></td><td style="font-family:var(--mono);font-size:10px;">/dispatcher.html</td><td style="color:var(--muted);">Create jobs, assign drivers, manage active deliveries</td></tr>
+        <tr><td><strong>Senior Dispatcher</strong></td><td><span class="ref-tag" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold);">Symphony+</span></td><td style="font-family:var(--mono);font-size:10px;">/symphony.html</td><td style="color:var(--muted);">Full operations overview, AI feed, incidents, comms, billing</td></tr>
+        <tr><td><strong>Driver</strong></td><td><span class="ref-tag" style="background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);">Driver App</span></td><td style="font-family:var(--mono);font-size:10px;">/driver.html</td><td style="color:var(--muted);">Receive jobs, navigate routes, scan packages, collect POD</td></tr>
+        <tr><td><strong>Customer</strong></td><td><span class="ref-tag" style="background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);color:#8d5cff;">Customer Portal</span></td><td style="font-family:var(--mono);font-size:10px;">/customer.html</td><td style="color:var(--muted);">Place orders, track deliveries, view history</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- DISPATCHER: MANAGING JOBS -->
+  <div class="section" id="dispatcher-jobs">
+    <div class="section-tag">Dispatcher</div>
+    <div class="section-title">Managing Jobs</div>
+    <div class="section-sub">The Dispatcher Portal is your command screen for every active delivery. Here is how to read it and what to do when something needs attention.</div>
+
+    <div class="steps">
+
+      <!-- STEP 1: The job list -->
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; Reading the Job List</div>
+          <div class="step-title">Every delivery at a glance</div>
+          <div class="step-desc">When you open the Dispatcher Portal, you see every active job on the left. Each card shows the job ID, customer name, driver assigned, and current status. Jobs are color-coded: orange means waiting for a driver, purple means in transit, green means delivered.</div>
+          <div class="step-tip"><strong>Tip:</strong> Use the Dispatch, SmartPath, and SmartTrack tabs at the top to switch between views. Dispatch shows all jobs. SmartPath shows routing. SmartTrack shows live driver locations.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">tackpath.com/dispatcher.html</div>
+          </div>
+          <div class="mockup-body">
+            <div class="ui-nav">
+              <div class="ui-tab active">Dispatch</div>
+              <div class="ui-tab">SmartPath</div>
+              <div class="ui-tab">SmartTrack</div>
+              <div class="ui-tab">Command</div>
+              <div class="ui-tab">Analytics</div>
+            </div>
+            <div style="padding:10px 0;">
+              <div class="ui-job-card">
+                <div><div class="ui-job-id">TP-3F8A2C</div><div class="ui-job-name">AtlantaLab Medical</div><div class="ui-job-meta">Driver: Marcus T. &middot; 3 stops</div></div>
+                <div class="ui-status s-transit">IN TRANSIT</div>
+              </div>
+              <div class="ui-job-card" style="border-color:rgba(255,150,30,.3);">
+                <div><div class="ui-job-id">TP-9B1D44</div><div class="ui-job-name">Zelurco LLC</div><div class="ui-job-meta">No driver assigned &middot; 12 packages</div></div>
+                <div class="ui-status s-pending">PENDING</div>
+              </div>
+              <div class="ui-job-card">
+                <div><div class="ui-job-id">TP-2E7F91</div><div class="ui-job-name">Metro Parts Supply</div><div class="ui-job-meta">Driver: Dana K. &middot; 1 stop</div></div>
+                <div class="ui-status s-delivered">DELIVERED</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Opening a job -->
+      <div class="step reverse">
+        <div class="step-text">
+          <div class="step-num">02 &mdash; Opening a Job</div>
+          <div class="step-title">Tap any job to see the detail</div>
+          <div class="step-desc">Tap or click any job card and a detail panel slides in from the right. You can see the full delivery address, which driver is assigned, the current status, customer communication log, and action buttons for contacting the driver or notifying the customer.</div>
+          <div class="step-tip"><strong>Tip:</strong> The Customer Updates section at the bottom of the detail panel shows every message the customer has received so far -- so you always know what they know.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">Job Detail Panel</div>
+          </div>
+          <div class="mockup-body" style="position:relative;">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;">SIGNAL DETAIL</div>
+            <div style="font-size:16px;font-weight:800;margin-bottom:10px;">TP-9B1D44</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;font-size:10px;">
+              <div style="background:var(--card2);padding:7px 10px;border-radius:7px;"><div style="color:var(--muted);margin-bottom:2px;">Customer</div><div style="font-weight:700;">Zelurco LLC</div></div>
+              <div style="background:var(--card2);padding:7px 10px;border-radius:7px;"><div style="color:var(--muted);margin-bottom:2px;">Driver</div><div style="font-weight:700;">Unassigned</div></div>
+              <div style="background:var(--card2);padding:7px 10px;border-radius:7px;"><div style="color:var(--muted);margin-bottom:2px;">Packages</div><div style="font-weight:700;">12</div></div>
+              <div style="background:var(--card2);padding:7px 10px;border-radius:7px;"><div style="color:var(--muted);margin-bottom:2px;">Status</div><div style="font-weight:700;color:var(--orange);">Pending</div></div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:10px;">
+              <div class="ui-btn btn-blue">&#128222; Contact Driver</div>
+              <div class="ui-btn btn-orange">&#128226; Notify Customer</div>
+            </div>
+            <!-- Callout highlight on Notify Customer -->
+            <div style="position:relative;margin-top:8px;">
+              <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.1em;">&#128172; Customer Updates</div>
+              <div style="background:rgba(25,183,239,.03);border:1px solid rgba(25,183,239,.08);border-radius:8px;padding:8px 10px;font-size:9px;color:var(--muted);">&#10003; Order received &middot; 10:14 AM<br/>&#10003; Driver assigned &middot; 10:22 AM</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DISPATCHER: COMMS -->
+  <div class="section" id="dispatcher-comms">
+    <div class="section-tag">Dispatcher</div>
+    <div class="section-title">Messaging Drivers</div>
+    <div class="section-sub">Need to reach a driver on a live delivery? TackPath has a built-in comms channel so you never have to use a personal number.</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; Opening the Comms Hub</div>
+          <div class="step-title">In Symphony+ &rarr; click Comms</div>
+          <div class="step-desc">From Symphony+, click the <strong>Comms</strong> tab in the top navigation. You will see every active driver on the left. Click any driver name to open their message thread. Type your message at the bottom and hit Send. The driver sees it instantly in their app.</div>
+          <div class="step-tip"><strong>AI Response:</strong> Hit the AI Response button and Claude will automatically write a context-aware message based on that driver's current job status -- no typing needed.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">Symphony+ &rarr; Comms</div>
+          </div>
+          <div class="mockup-body" style="padding:0;">
+            <div class="ui-nav">
+              <div class="ui-tab">&#9889; Dispatch</div>
+              <div class="ui-tab">&#127759; Fleet Map</div>
+              <div class="ui-tab active">&#128172; Comms</div>
+              <div class="ui-tab">&#128274; Incidents</div>
+            </div>
+            <div style="display:grid;grid-template-columns:130px 1fr;height:160px;">
+              <div style="border-right:1px solid var(--border);padding:8px;">
+                <div style="font-size:9px;font-weight:700;padding:4px 6px;margin-bottom:4px;">Driver Channels</div>
+                <div style="padding:7px 8px;border-radius:6px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);">
+                  <div style="font-size:10px;font-weight:700;">Marcus T.</div>
+                  <div style="font-size:8px;color:var(--muted);">In transit &middot; Stop 2/4</div>
+                </div>
+                <div style="padding:7px 8px;margin-top:4px;">
+                  <div style="font-size:10px;font-weight:700;">Dana K.</div>
+                  <div style="font-size:8px;color:var(--muted);">Available</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;">
+                <div style="padding:6px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+                  <div><div style="font-size:11px;font-weight:700;">Marcus T.</div><div style="font-size:8px;color:var(--muted);">Stop 2 of 4 &middot; AtlantaLab</div></div>
+                  <div class="ui-btn btn-gold" style="font-size:8px;padding:3px 8px;">&#9889; AI Response</div>
+                </div>
+                <div style="flex:1;padding:8px;background:#fff;display:flex;flex-direction:column;gap:5px;">
+                  <div class="ui-comms-msg msg-in">Running about 5 min behind on Stop 2</div>
+                  <div class="ui-comms-msg msg-out">No problem, customer has been notified</div>
+                </div>
+                <div class="ui-input-row">
+                  <div class="ui-input">Message Marcus...</div>
+                  <div class="ui-send">Send</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISPATCHER: EXCEPTIONS -->
+  <div class="section" id="dispatcher-exceptions">
+    <div class="section-tag">Dispatcher</div>
+    <div class="section-title">Handling Exceptions</div>
+    <div class="section-sub">TackPath's AI automatically flags problems before they become failures. Here is where they appear and what to do.</div>
+
+    <div class="steps">
+      <div class="step reverse">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; The Exception Queue</div>
+          <div class="step-title">Right column in Dispatch view</div>
+          <div class="step-desc">The Exception Queue is the right column on the Dispatch screen in Symphony+. It shows every flag raised by the Operations Coordinator Agent -- stalled deliveries, jobs pending too long with no driver, SLA risks. Each item shows the problem, the job affected, and the AI confidence score.</div>
+          <div class="step-desc" style="margin-top:8px;">Tap <strong>&#10003; Approve</strong> to execute the recommendation, or <strong>&#10005; Reject</strong> to dismiss it. The AI learns from your decisions over time.</div>
+          <div class="step-tip"><strong>Note:</strong> Items expire after 2 hours if not actioned. High priority items are flagged in orange, critical in red.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">Exception Queue</div>
+          </div>
+          <div class="mockup-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-size:11px;font-weight:700;">&#9888; Exception Queue</div>
+              <div class="ref-tag" style="background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.2);color:#ff4444;">2 OPEN</div>
+            </div>
+            <div class="ui-exc-item">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <div class="ref-tag" style="background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.2);color:#ff4444;font-size:7px;">HIGH</div>
+                <div style="font-family:var(--mono);font-size:7px;color:var(--muted);">&#129504; OCA &middot; 94% confidence</div>
+              </div>
+              <div class="ui-exc-title">Stalled: TP-3F8A2C</div>
+              <div class="ui-exc-desc">No status update for 34 minutes while in transit. Driver may need assistance at Stop 3.</div>
+              <div style="display:flex;gap:5px;margin-top:7px;">
+                <div class="ui-btn btn-green" style="font-size:8px;padding:3px 8px;">&#10003; Approve</div>
+                <div class="ui-btn btn-red" style="font-size:8px;padding:3px 8px;">&#10005; Reject</div>
+              </div>
+            </div>
+            <div class="ui-exc-item" style="border-left-color:var(--orange);">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <div class="ref-tag" style="background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.2);color:var(--orange);font-size:7px;">STANDARD</div>
+                <div style="font-family:var(--mono);font-size:7px;color:var(--muted);">&#129504; OCA &middot; 88% confidence</div>
+              </div>
+              <div class="ui-exc-title">Long Pending: TP-9B1D44</div>
+              <div class="ui-exc-desc">No driver accepted in 18 minutes. Consider broadcasting to additional drivers.</div>
+              <div style="display:flex;gap:5px;margin-top:7px;">
+                <div class="ui-btn btn-green" style="font-size:8px;padding:3px 8px;">&#10003; Approve</div>
+                <div class="ui-btn btn-red" style="font-size:8px;padding:3px 8px;">&#10005; Reject</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMARTSORT -->
+  <div class="section" id="smartsort">
+    <div class="section-tag">Dispatcher</div>
+    <div class="section-title">SmartSort: Uploading a Route Manifest</div>
+    <div class="section-sub">Have a list of deliveries to run? Upload your manifest CSV and SmartSort builds the routes automatically and broadcasts them to your drivers.</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; Upload Your CSV</div>
+          <div class="step-title">Go to SmartSort &rarr; upload your file</div>
+          <div class="step-desc">Navigate to <strong>smartsort.html</strong>. Click the upload area and select your CSV file -- or drag and drop it directly onto the page. Your file should include order ID, recipient name, delivery address, and package count at minimum. Not sure of the format? Click <strong>Download CSV Template</strong> to get the exact layout.</div>
+          <div class="step-tip"><strong>Tip:</strong> SmartSort reads barcodes directly from your existing manifests. Whatever barcode is on the package will be used for scanning during delivery.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">tackpath.com/smartsort.html</div>
+          </div>
+          <div class="mockup-body">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <svg width="12" height="20" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpgs" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgs)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgs)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgs)" opacity=".5"/></svg>
+              <span style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:600;"><span style="color:#fff;">TACK</span><span style="color:#19b7ef;">PATH</span></span>
+              <span style="background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);padding:2px 8px;border-radius:5px;font-family:var(--mono);font-size:8px;font-weight:700;">SmartSort</span>
+            </div>
+            <div style="border:2px dashed rgba(25,183,239,.3);border-radius:10px;padding:24px;text-align:center;margin-bottom:10px;">
+              <div style="font-size:24px;margin-bottom:6px;">&#128196;</div>
+              <div style="font-size:11px;font-weight:700;margin-bottom:4px;">Drop your manifest CSV here</div>
+              <div style="font-size:9px;color:var(--muted);">or click to browse files</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <div class="ui-btn btn-blue" style="font-size:9px;">&#8659; Download CSV Template</div>
+              <div class="ui-btn btn-gold" style="font-size:9px;">&#9650; Run SmartSort</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step reverse">
+        <div class="step-text">
+          <div class="step-num">02 &mdash; Assign and Broadcast</div>
+          <div class="step-title">Review routes then send to drivers</div>
+          <div class="step-desc">After SmartSort processes your manifest it groups the stops into optimized routes. Review each route, then click <strong>Assign Driver</strong> to broadcast that route to your available drivers. The first driver to accept gets the route. They receive it instantly in their app.</div>
+          <div class="step-tip"><strong>Tip:</strong> You can export routes as a PDF or CSV before broadcasting if you need a printed copy for your records.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">SmartSort &rarr; Routes</div>
+          </div>
+          <div class="mockup-body">
+            <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <div><div style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">ROUTE RT-001</div><div style="font-size:11px;font-weight:700;">North Atlanta Loop</div><div style="font-size:9px;color:var(--muted);">8 stops &middot; 14 packages &middot; ~2.5 hrs</div></div>
+                <div class="ui-btn btn-blue" style="font-size:9px;">Assign Driver &rarr;</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:9px;"><div style="width:16px;height:16px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;">1</div><div>AtlantaLab Medical &middot; 1250 W Peachtree</div></div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:9px;"><div style="width:16px;height:16px;border-radius:50%;background:rgba(25,183,239,.3);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;">2</div><div style="color:var(--muted);">Metro Parts Supply &middot; 430 Spring St</div></div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:9px;"><div style="width:16px;height:16px;border-radius:50%;background:rgba(25,183,239,.3);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;">3</div><div style="color:var(--muted);">Zelurco LLC &middot; 892 Marietta Blvd</div></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <div class="ui-btn btn-blue" style="font-size:9px;">Export Routes</div>
+              <div class="ui-btn" style="background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:#ff4444;font-size:9px;">Reset</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- DRIVER: LOGIN -->
+  <div class="section" id="driver-login">
+    <div class="section-tag">Driver App</div>
+    <div class="section-title">Driver Sign In</div>
+    <div class="section-sub">Drivers sign in with their phone number. No email address or password needed.</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; Phone Number Sign In</div>
+          <div class="step-title">Open driver.html on any phone</div>
+          <div class="step-desc">Drivers open <strong>tackpath.com/driver.html</strong> in their phone's browser. They enter their mobile number and tap <strong>Send Code</strong>. A verification code is sent to their phone. They enter the code and tap <strong>Verify &amp; Sign In</strong>. That is it -- no app download required.</div>
+          <div class="step-tip"><strong>Tip:</strong> Drivers should bookmark the driver app on their home screen so it opens like a native app. In Safari: Share &rarr; Add to Home Screen. In Chrome: Menu &rarr; Add to Home Screen.</div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="ui-phone">
+            <div class="ui-phone-bar"><div class="ui-phone-notch"></div></div>
+            <div class="ui-phone-screen">
+              <div style="text-align:center;padding:16px 8px;">
+                <svg width="24" height="40" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto 10px;display:block;"><defs><linearGradient id="tpgd" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgd)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgd)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgd)" opacity=".5"/></svg>
+                <div style="font-size:14px;font-weight:800;margin-bottom:2px;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+                <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:16px;">DRIVER</div>
+                <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;font-size:11px;text-align:left;margin-bottom:6px;">+1 (404) 555-0192</div>
+                <div style="background:var(--blue);border-radius:8px;padding:8px;font-size:11px;font-weight:700;color:#fff;margin-bottom:10px;">Send Code</div>
+                <div style="font-size:9px;color:var(--muted);">Enter your mobile number to receive a sign-in code</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRIVER: ACCEPTING A JOB -->
+  <div class="section" id="driver-accept">
+    <div class="section-tag">Driver App</div>
+    <div class="section-title">Accepting a Job</div>
+    <div class="section-sub">When a route is broadcast, every available driver gets an offer. First to accept gets the job.</div>
+
+    <div class="steps">
+      <div class="step reverse">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; The Job Offer</div>
+          <div class="step-title">Accept or Decline</div>
+          <div class="step-desc">When a new job is broadcast, it appears on the driver's screen automatically with a sound alert. The offer shows the pickup address, dropoff address, number of stops, and estimated pay. The driver taps <strong>&#10003; Accept</strong> to take the job or <strong>&#10005; Decline</strong> to pass. If they decline, the offer goes to the next available driver.</div>
+          <div class="step-tip"><strong>Important:</strong> Once a driver accepts, the job is theirs. The route loads immediately and they can begin navigation to the first stop.</div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="ui-phone">
+            <div class="ui-phone-bar"><div class="ui-phone-notch"></div></div>
+            <div class="ui-phone-screen" style="padding:10px;">
+              <div style="font-family:var(--mono);font-size:7px;color:var(--orange);font-weight:700;text-align:center;margin-bottom:8px;animation:blink 1s infinite;">&#9889; NEW JOB OFFER</div>
+              <div style="background:var(--card2);border:1px solid rgba(255,150,30,.3);border-radius:10px;padding:10px;margin-bottom:8px;">
+                <div style="font-size:10px;font-weight:700;margin-bottom:6px;">Surge Route RT-001</div>
+                <div style="font-size:8px;color:var(--muted);margin-bottom:3px;">&#128205; Pickup: 1250 W Peachtree St</div>
+                <div style="font-size:8px;color:var(--muted);margin-bottom:3px;">&#9873; 8 stops &middot; 14 packages</div>
+                <div style="font-size:8px;color:var(--green);font-weight:700;">Est. pay: $48.00</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <div style="background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.3);border-radius:8px;padding:8px;text-align:center;font-size:10px;font-weight:700;color:#ff4444;">&#10005; Decline</div>
+                <div style="background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.3);border-radius:8px;padding:8px;text-align:center;font-size:10px;font-weight:700;color:var(--green);">&#10003; Accept</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRIVER: DELIVERY -->
+  <div class="section" id="driver-delivery">
+    <div class="section-tag">Driver App</div>
+    <div class="section-title">Making the Delivery</div>
+    <div class="section-sub">After accepting, the driver works through every stop in order. The same flow applies whether it is one package or twenty.</div>
+
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; The Route List</div>
+          <div class="step-title">All stops in order</div>
+          <div class="step-desc">After accepting, the driver sees the full route list -- every stop in delivery order, with the address and package count for each. Completed stops show a green checkmark. Tap any stop to navigate to it and start the delivery flow for that address.</div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="ui-phone">
+            <div class="ui-phone-bar"><div class="ui-phone-notch"></div></div>
+            <div class="ui-phone-screen" style="padding:8px;">
+              <div style="font-family:var(--mono);font-size:8px;color:var(--blue);font-weight:700;margin-bottom:6px;">ROUTE LOADED &middot; 8 stops &middot; 14 pkgs</div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.2);border-radius:7px;">
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#000;">&#10003;</div>
+                  <div><div style="font-size:9px;font-weight:700;text-decoration:line-through;color:var(--muted);">AtlantaLab Medical</div><div style="font-size:8px;color:var(--muted);">1250 W Peachtree</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.3);border-radius:7px;">
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;">2</div>
+                  <div><div style="font-size:9px;font-weight:700;">Metro Parts Supply</div><div style="font-size:8px;color:var(--muted);">430 Spring St &middot; 3 pkgs</div></div>
+                  <div style="margin-left:auto;font-family:var(--mono);font-size:8px;color:var(--orange);">&#9654; Nav</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card2);border-radius:7px;opacity:.6;">
+                  <div style="width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted);">3</div>
+                  <div><div style="font-size:9px;font-weight:700;color:var(--muted);">Zelurco LLC</div><div style="font-size:8px;color:var(--muted);">892 Marietta Blvd</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step reverse">
+        <div class="step-text">
+          <div class="step-num">02 &mdash; At Stop &rarr; Scan &rarr; POD</div>
+          <div class="step-title">Three taps per delivery</div>
+          <div class="step-desc">When the driver arrives at a stop they tap <strong>At Stop</strong> to confirm arrival. Then tap <strong>Scan Package</strong> to scan the barcode on the package using their phone camera. Once scanned, they tap <strong>Confirm &amp; Next &#10003;</strong> which opens the Proof of Delivery screen -- they collect either a signature or a photo, then submit. The stop is marked complete and they move to the next one.</div>
+          <div class="step-tip"><strong>Ruby AI:</strong> The purple Ruby button is always visible. If the driver has a question or problem at any stop, they can tap Ruby and speak to the AI assistant for help.</div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="ui-phone">
+            <div class="ui-phone-bar"><div class="ui-phone-notch"></div></div>
+            <div class="ui-phone-screen" style="padding:8px;">
+              <div style="font-size:10px;font-weight:800;margin-bottom:4px;">Stop 2 of 8</div>
+              <div style="font-size:8px;color:var(--muted);margin-bottom:10px;">Metro Parts Supply &middot; 430 Spring St NW</div>
+              <div style="background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.15);border-radius:8px;padding:8px;margin-bottom:8px;font-size:8px;">
+                <div style="font-weight:700;margin-bottom:3px;">TP-9B1D44-2-3</div>
+                <div style="color:var(--muted);">3 packages &middot; Metal brackets (heavy)</div>
+              </div>
+              <div style="display:flex;gap:5px;margin-bottom:0;">
+                <div style="flex:1;background:linear-gradient(135deg,var(--blue),#0060cc);border-radius:10px;padding:10px 6px;text-align:center;font-size:10px;font-weight:900;color:#fff;">At Stop &#9660;</div>
+                <div style="flex:1;background:linear-gradient(135deg,var(--orange),#c05000);border-radius:10px;padding:10px 6px;text-align:center;font-size:10px;font-weight:900;color:#fff;display:none;">Scan &#9638;</div>
+                <div style="flex:1;background:linear-gradient(135deg,#8d5cff,#5a2ed1);border-radius:10px;padding:10px 6px;text-align:center;font-size:10px;font-weight:900;color:#fff;">Ruby</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">03 &mdash; Proof of Delivery</div>
+          <div class="step-title">Signature or photo -- driver's choice</div>
+          <div class="step-desc">The POD screen gives the driver two options. <strong>Signature</strong> -- the recipient signs directly on the driver's phone screen. <strong>Photo</strong> -- the driver takes a photo of the delivered package at the door. Either option is accepted and stored automatically in TackPath. Once submitted, the stop is marked with a green checkmark in the route list.</div>
+          <div class="step-tip"><strong>Important:</strong> POD is required before a stop can be confirmed. A delivery cannot be marked complete without it.</div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="ui-phone">
+            <div class="ui-phone-bar"><div class="ui-phone-notch"></div></div>
+            <div class="ui-phone-screen" style="padding:10px;">
+              <div style="font-size:11px;font-weight:800;margin-bottom:8px;">Proof of Delivery</div>
+              <div style="font-size:8px;color:var(--muted);margin-bottom:10px;">Metro Parts Supply &middot; Stop 2 of 8</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+                <div style="background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);border-radius:8px;padding:12px 6px;text-align:center;">
+                  <div style="font-size:16px;margin-bottom:4px;">&#9997;</div>
+                  <div style="font-size:9px;font-weight:700;color:var(--blue);">Signature</div>
+                </div>
+                <div style="background:rgba(141,92,255,.08);border:1px solid rgba(141,92,255,.2);border-radius:8px;padding:12px 6px;text-align:center;">
+                  <div style="font-size:16px;margin-bottom:4px;">&#128247;</div>
+                  <div style="font-size:9px;font-weight:700;color:#8d5cff;">Photo</div>
+                </div>
+              </div>
+              <div style="background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);border-radius:8px;padding:8px;text-align:center;font-size:9px;font-weight:700;color:var(--green);">&#10003; Submit &amp; Complete Stop</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DRIVER: RUBY -->
+  <div class="section" id="driver-ruby">
+    <div class="section-tag">Driver App</div>
+    <div class="section-title">Ruby &mdash; AI Assistant</div>
+    <div class="section-sub">Ruby is TackPath's AI assistant built into the driver app. It is always one tap away, no matter where the driver is in the delivery flow.</div>
+
+    <div class="annotation">
+      <div class="ann-icon">&#128172;</div>
+      <div>
+        <div class="ann-title">What Ruby can do</div>
+        <div class="ann-text">Drivers tap the purple <strong>Ruby</strong> button at any time to speak or type a question. Ruby can answer questions about the current delivery, help with navigation issues, contact dispatch, flag a problem at a stop, or provide guidance on handling exceptions. Ruby is context-aware -- it already knows which job the driver is on, which stop they are at, and what has been delivered so far.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- CUSTOMER: ORDER -->
+  <div class="section" id="customer-order">
+    <div class="section-tag">Customer Portal</div>
+    <div class="section-title">Placing an Order</div>
+    <div class="section-sub">Customers can place delivery orders directly without calling your office. The portal is accessible from any browser, no app download needed.</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">01 &mdash; Filling Out the Order Form</div>
+          <div class="step-title">Pickup, dropoff, package details</div>
+          <div class="step-desc">The customer opens the Customer Portal and fills in the pickup address, delivery address, recipient name, package type, and any special notes. They select a priority level -- Standard, Priority, or Critical -- which affects dispatch speed. When ready, they tap <strong>Request Quote</strong> to see the price, then <strong>Confirm &amp; Dispatch</strong> to place the order.</div>
+          <div class="step-tip"><strong>Note:</strong> Once an order is placed it immediately appears in the Dispatcher Portal and Symphony+ as a new pending job. Your team will see it within seconds.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">tackpath.com/customer.html</div>
+          </div>
+          <div class="mockup-body">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div style="font-size:12px;font-weight:800;">New Delivery Request</div>
+              <div class="ref-tag" style="background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-size:8px;">SPRINT</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+              <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:7px 10px;font-size:10px;"><span style="color:var(--muted);">Pickup: </span>1250 W Peachtree St NW</div>
+              <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:7px 10px;font-size:10px;"><span style="color:var(--muted);">Dropoff: </span>430 Spring St NW</div>
+              <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:7px 10px;font-size:10px;"><span style="color:var(--muted);">Recipient: </span>Marcus Johnson</div>
+            </div>
+            <div style="display:flex;gap:5px;margin-bottom:10px;">
+              <div style="flex:1;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,.1);text-align:center;font-size:9px;font-weight:600;color:var(--muted);">Standard</div>
+              <div style="flex:1;padding:6px;border-radius:7px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.3);text-align:center;font-size:9px;font-weight:700;color:var(--orange);">Priority</div>
+              <div style="flex:1;padding:6px;border-radius:7px;border:1px solid rgba(255,255,255,.1);text-align:center;font-size:9px;font-weight:600;color:var(--muted);">Critical</div>
+            </div>
+            <div class="ui-btn btn-blue" style="width:100%;justify-content:center;">Request Quote &rarr;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER: TRACKING -->
+  <div class="section" id="customer-track">
+    <div class="section-tag">Customer Portal</div>
+    <div class="section-title">Tracking a Delivery</div>
+    <div class="section-sub">Once an order is placed, customers can track it in real time. The Communication Agent automatically sends them updates at every status change.</div>
+
+    <div class="annotation success">
+      <div class="ann-icon">&#128172;</div>
+      <div>
+        <div class="ann-title">Automatic Customer Updates</div>
+        <div class="ann-text">Customers do not need to refresh or call to find out what is happening. TackPath's Communication Agent automatically updates the customer portal and delivery timeline every time the job status changes -- driver assigned, picked up, in transit, approaching, and delivered. Every update is timestamped and visible in the Delivery Updates log on the portal.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SYMPHONY+ -->
+  <div class="section" id="symphony">
+    <div class="section-tag">Command Center</div>
+    <div class="section-title">Symphony+</div>
+    <div class="section-sub">Symphony+ is the operations command center for senior dispatchers and managers. It gives you a full view of the business -- fleet status, AI agent activity, incidents, communications, and billing -- all on one screen.</div>
+
+    <table class="ref-table">
+      <thead><tr><th>Tab</th><th>What it shows</th><th>Most useful for</th></tr></thead>
+      <tbody>
+        <tr><td><strong>&#9889; Dispatch</strong></td><td>Fleet cards, Claude AI feed, exception queue</td><td style="color:var(--muted);">Real-time operations overview</td></tr>
+        <tr><td><strong>&#127759; Fleet Map</strong></td><td>Live driver locations on Atlanta map</td><td style="color:var(--muted);">Tracking driver positions</td></tr>
+        <tr><td><strong>&#128172; Comms</strong></td><td>Message threads with every active driver</td><td style="color:var(--muted);">Driver communication</td></tr>
+        <tr><td><strong>&#128274; Incidents</strong></td><td>P1/P2/P3 incident log with AI escalation</td><td style="color:var(--muted);">Handling delivery problems</td></tr>
+        <tr><td><strong>&#128200; Analytics</strong></td><td>Client health scores, delivery performance</td><td style="color:var(--muted);">Weekly performance review</td></tr>
+        <tr><td><strong>&#129534; Billing</strong></td><td>Invoice queue, billing agent, audit trail</td><td style="color:var(--muted);">End of day billing review</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TACKPATH 1 -->
+  <div class="section" id="tackpath1">
+    <div class="section-tag">Command Center</div>
+    <div class="section-title">TackPath 1</div>
+    <div class="section-sub">TackPath 1 is the owner's intelligence dashboard. It is not an operations tool -- it is how the owner sees the health of the entire business in under 60 seconds.</div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="fc-icon">&#128184;</div>
+        <div class="fc-title">Revenue Today</div>
+        <div class="fc-desc">Total estimated revenue from delivered jobs. Updates every 15 seconds. Click Run Billing Agent to prepare invoices.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#129504;</div>
+        <div class="fc-title">Agent Decisions</div>
+        <div class="fc-desc">How many AI decisions have been made this session. Shows full audit trail of what each agent did and why.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#128203;</div>
+        <div class="fc-title">Needs Approval</div>
+        <div class="fc-desc">Work items from the OCA waiting for the owner's decision. Approve or reject with one tap. The AI learns from every decision.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#129505;</div>
+        <div class="fc-title">Client Health</div>
+        <div class="fc-desc">Health score per client based on delivery completion rate. Shows who is performing well and who needs attention.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#9889;</div>
+        <div class="fc-title">Agent Status</div>
+        <div class="fc-desc">Which AI agents are live, which are ready on demand, and which are pending setup. Shows live/ready/pending status per agent.</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">&#128200;</div>
+        <div class="fc-title">Weekly Revenue Chart</div>
+        <div class="fc-desc">Day by day revenue breakdown for the current week. Today is highlighted in blue. Shows uninvoiced total ready to bill.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- JOB STATUSES -->
+  <div class="section" id="statuses">
+    <div class="section-tag">Reference</div>
+    <div class="section-title">Job Statuses</div>
+    <div class="section-sub">Every job moves through these statuses in order. You will see them in the Dispatcher Portal, Symphony+, and the Customer Portal.</div>
+    <table class="ref-table">
+      <thead><tr><th>Status</th><th>Meaning</th><th>Who triggers it</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ref-tag s-pending" style="background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.2);color:var(--orange);">PENDING</span></td><td>Job created, waiting for a driver to accept</td><td style="color:var(--muted);">Customer or dispatcher</td></tr>
+        <tr><td><span class="ref-tag" style="background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);">ASSIGNED</span></td><td>A driver has accepted the job</td><td style="color:var(--muted);">Driver (auto)</td></tr>
+        <tr><td><span class="ref-tag" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold);">CONFIRMED</span></td><td>Driver confirmed and heading to pickup</td><td style="color:var(--muted);">Driver (auto)</td></tr>
+        <tr><td><span class="ref-tag s-transit" style="background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);color:#8d5cff;">IN TRANSIT</span></td><td>Package picked up, delivery in progress</td><td style="color:var(--muted);">Driver (auto)</td></tr>
+        <tr><td><span class="ref-tag s-delivered" style="background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);">DELIVERED</span></td><td>All stops completed, POD collected</td><td style="color:var(--muted);">Driver (after POD)</td></tr>
+        <tr><td><span class="ref-tag" style="background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.2);color:#ff4444;">CANCELLED</span></td><td>Job was cancelled before delivery</td><td style="color:var(--muted);">Dispatcher or customer</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- AI AGENTS -->
+  <div class="section" id="agents">
+    <div class="section-tag">Reference</div>
+    <div class="section-title">AI Agents</div>
+    <div class="section-sub">TackPath runs AI agents in the background so your team can focus on deliveries. Here is what each agent does and when it runs.</div>
+    <table class="ref-table">
+      <thead><tr><th>Agent</th><th>What it does</th><th>When it runs</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Operations Coordinator (OCA)</strong></td>
+          <td style="color:var(--muted);">Watches all active jobs and drivers. Detects stalled deliveries, unassigned jobs, SLA risks. Creates work items for the owner.</td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--muted);">Every 60 seconds</td>
+          <td><span class="ref-tag" style="background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);">LIVE</span></td>
+        </tr>
+        <tr>
+          <td><strong>Communication Agent</strong></td>
+          <td style="color:var(--muted);">Sends automatic delivery updates to customers when job status changes. Logs every message sent.</td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--muted);">On every status change</td>
+          <td><span class="ref-tag" style="background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);">LIVE</span></td>
+        </tr>
+        <tr>
+          <td><strong>Intake Agent</strong></td>
+          <td style="color:var(--muted);">Validates and classifies every new job. Flags missing addresses, unusual pricing, and incomplete orders before dispatch.</td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--muted);">Every 10 seconds</td>
+          <td><span class="ref-tag" style="background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);">LIVE</span></td>
+        </tr>
+        <tr>
+          <td><strong>Billing Agent</strong></td>
+          <td style="color:var(--muted);">Reviews completed deliveries, verifies POD, and prepares invoice line items for owner approval.</td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--muted);">On demand</td>
+          <td><span class="ref-tag" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold);">READY</span></td>
+        </tr>
+        <tr>
+          <td><strong>Dispatch Agent (SmartPath)</strong></td>
+          <td style="color:var(--muted);">Assigns optimal drivers based on location, workload, and real-time traffic. Requires Google Maps API.</td>
+          <td style="font-family:var(--mono);font-size:10px;color:var(--muted);">On job creation</td>
+          <td><span class="ref-tag" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);">PENDING</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="annotation warn" style="margin-top:20px;">
+      <div class="ann-icon">&#9888;&#65039;</div>
+      <div>
+        <div class="ann-title">About AI Decisions</div>
+        <div class="ann-text">Every AI recommendation appears as a work item in TackPath 1 and Symphony+ before anything is executed. The AI suggests, you decide. Nothing is done automatically without your approval unless you have specifically enabled autonomous actions for that agent.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:48px;padding:24px 0;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg width="14" height="22" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpgf" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgf)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgf)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgf)" opacity=".5"/></svg>
+      <span style="font-family:var(--sans);font-size:13px;font-weight:700;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span>
+    </div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--muted);">Operator Guide &middot; Version 1.0 &middot; Atlanta, GA</div>
+    <a href="mailto:hello@tackpath.com" style="font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;">hello@tackpath.com</a>
+  </div>
+
+</div><!-- /content -->
+</div><!-- /layout -->
+
+<script>
+// Smooth scroll for TOC
+document.querySelectorAll('.toc a').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(a.getAttribute('href'));
+    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+    document.querySelectorAll('.toc a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+  });
+});
+
+// Active TOC on scroll
+const sections=document.querySelectorAll('.section[id]');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const id=e.target.getAttribute('id');
+      document.querySelectorAll('.toc a').forEach(a=>{
+        a.classList.toggle('active',a.getAttribute('href')==='#'+id);
+      });
+    }
+  });
+},{threshold:0.3});
+sections.forEach(s=>observer.observe(s));
+</script>
+</body>
+</html>
