@@ -529,7 +529,7 @@ body::after{content:'';position:fixed;inset:0;
 
 <!-- LOGIN -->
 <div class="demo-badge">&#9889; Demo — any credentials work</div>
-<div id="loginScreen">
+<div id="loginScreen" style="display:none;">
   <div class="lbox">
     <div class="lbox-top" style="text-align:center;padding-bottom:4px;">
       <svg width="28" height="48" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 10px;">
@@ -1856,7 +1856,7 @@ async function saveStatus(){
   }catch(e){toast('Failed to update status');console.error(e);}
 }
 
-async async function deleteJob(){
+async async async function deleteJob(){
   if(!currentJobId)return;
   if(!confirm('Delete this job permanently?'))return;
   try{
@@ -2033,6 +2033,7 @@ function toast(msg){
   el.textContent=msg;el.style.display='block';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
+document.addEventListener('DOMContentLoaded',doLogin);
 </script>
 </body>
 </html>
