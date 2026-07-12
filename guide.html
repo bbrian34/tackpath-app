@@ -180,7 +180,36 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
   .step{grid-template-columns:1fr;}
   .feature-grid{grid-template-columns:1fr;}
   .ui-kpi-row{grid-template-columns:1fr 1fr;}
+  .mob-jump{display:flex!important;}
+  .guide-hdr{padding:14px 18px;}
 }
+
+/* MOBILE JUMP MENU */
+.mob-jump{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;z-index:300;
+  background:rgba(1,14,33,.98);border-top:1px solid var(--border);
+  backdrop-filter:blur(20px);
+  flex-direction:column;
+}
+.mob-jump-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;cursor:pointer;
+}
+.mob-jump-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;}
+.mob-jump-arrow{font-size:12px;color:var(--muted);transition:transform .2s;}
+.mob-jump-arrow.open{transform:rotate(180deg);}
+.mob-jump-list{
+  max-height:0;overflow:hidden;transition:max-height .3s ease;
+  padding:0 18px;
+}
+.mob-jump-list.open{max-height:70vh;overflow-y:auto;padding:8px 18px 16px;}
+.mob-jump-section{font-family:var(--mono);font-size:8px;color:var(--muted);
+  letter-spacing:.16em;text-transform:uppercase;padding:10px 0 4px;}
+.mob-jump-link{display:block;padding:8px 0;font-size:13px;font-weight:600;
+  color:var(--text);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.04);}
+.mob-jump-link:last-child{border-bottom:none;}
+.mob-jump-link:active{color:var(--blue);}
 </style>
 </head>
 <body>
@@ -968,7 +997,57 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
 </div><!-- /content -->
 </div><!-- /layout -->
 
+<!-- MOBILE JUMP MENU -->
+<div class="mob-jump" id="mobJump">
+  <div class="mob-jump-bar" onclick="toggleMobJump()">
+    <div class="mob-jump-label">&#9776; Jump to Section</div>
+    <div class="mob-jump-arrow" id="mobArrow">&#9650;</div>
+  </div>
+  <div class="mob-jump-list" id="mobList">
+    <div class="mob-jump-section">Getting Started</div>
+    <a class="mob-jump-link" href="#overview" onclick="jumpTo(this)">What is TackPath?</a>
+    <a class="mob-jump-link" href="#roles" onclick="jumpTo(this)">Who uses what</a>
+    <div class="mob-jump-section">Dispatcher</div>
+    <a class="mob-jump-link" href="#dispatcher-jobs" onclick="jumpTo(this)">Managing Jobs</a>
+    <a class="mob-jump-link" href="#dispatcher-comms" onclick="jumpTo(this)">Messaging Drivers</a>
+    <a class="mob-jump-link" href="#dispatcher-exceptions" onclick="jumpTo(this)">Handling Exceptions</a>
+    <a class="mob-jump-link" href="#smartsort" onclick="jumpTo(this)">SmartSort Routes</a>
+    <div class="mob-jump-section">Driver App</div>
+    <a class="mob-jump-link" href="#driver-login" onclick="jumpTo(this)">Signing In</a>
+    <a class="mob-jump-link" href="#driver-accept" onclick="jumpTo(this)">Accepting a Job</a>
+    <a class="mob-jump-link" href="#driver-delivery" onclick="jumpTo(this)">Making the Delivery</a>
+    <a class="mob-jump-link" href="#driver-ruby" onclick="jumpTo(this)">Using Ruby (AI)</a>
+    <div class="mob-jump-section">Customer Portal</div>
+    <a class="mob-jump-link" href="#customer-order" onclick="jumpTo(this)">Placing an Order</a>
+    <a class="mob-jump-link" href="#customer-track" onclick="jumpTo(this)">Tracking a Delivery</a>
+    <div class="mob-jump-section">Command Center</div>
+    <a class="mob-jump-link" href="#symphony" onclick="jumpTo(this)">Symphony+</a>
+    <a class="mob-jump-link" href="#tackpath1" onclick="jumpTo(this)">TackPath 1</a>
+    <div class="mob-jump-section">Reference</div>
+    <a class="mob-jump-link" href="#statuses" onclick="jumpTo(this)">Job Statuses</a>
+    <a class="mob-jump-link" href="#agents" onclick="jumpTo(this)">AI Agents</a>
+  </div>
+</div>
+
 <script>
+function toggleMobJump(){
+  const list=document.getElementById('mobList');
+  const arrow=document.getElementById('mobArrow');
+  list.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+function jumpTo(el){
+  el.preventDefault ? el.preventDefault() : null;
+  const href=el.getAttribute('href');
+  const target=document.querySelector(href);
+  if(target){
+    // Close menu first
+    document.getElementById('mobList').classList.remove('open');
+    document.getElementById('mobArrow').classList.remove('open');
+    setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'start'}),200);
+  }
+}
+
 // Smooth scroll for TOC
 document.querySelectorAll('.toc a').forEach(a=>{
   a.addEventListener('click',e=>{
