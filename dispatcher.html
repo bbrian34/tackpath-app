@@ -545,17 +545,10 @@ body::after{content:'';position:fixed;inset:0;
     </div>
     <div class="lbox-form">
       <label class="lf-lbl">Operator ID</label>
-      <input class="lf-in" type="text" value="dispatch_ops_atl" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <label class="lf-lbl">Password</label>
-      <input class="lf-in" type="password" value="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <div class="lf-hub">
-        <div class="hub-tag">ATL HUB 01</div>
-        <div class="hub-note">Atlanta Metro Operations</div>
-      </div>
+      <input class="lf-in" type="text" id="dispOpId" value="dispatch_ops_atl" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="lf-btn" onclick="doLogin()">Access Operations Center &#8594;</button>
-      <div class="lf-note">Secured · Role-based · TackPath OPS v3.0</div>
+      <div class="lf-note">Secured · TackPath ATL HUB 01</div>
     </div>
-  </div>
 </div>
 
 <!-- SHELL -->
