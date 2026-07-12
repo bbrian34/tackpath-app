@@ -188,6 +188,11 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
   cursor:pointer;border:1px solid var(--border);background:var(--card);
   color:var(--muted);transition:all .15s;font-family:var(--sans);}
 .quick-q:hover{border-color:var(--blue);color:var(--blue);background:rgba(25,183,239,.06);}
+.faq-item{padding:10px 14px;border-bottom:1px solid var(--border2);cursor:pointer;transition:background .12s;}
+.faq-item:last-child{border-bottom:none;}
+.faq-item:hover{background:rgba(25,183,239,.04);}
+.faq-q{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.faq-a{font-size:10px;color:var(--muted);line-height:1.6;}
 @media(max-width:768px){
   #ask{display:none!important;}
   #assistBtn{display:none!important;}
@@ -281,15 +286,61 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
         padding:5px 12px;border-radius:7px;background:var(--blue);border:none;
         color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono);">Ask</button>
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">How do I delete a job?</button>
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">What is the OCA?</button>
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">What is Ruby?</button>
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Sprint vs Surge?</button>
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">How does billing work?</button>
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Driver sign in?</button>
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Upload a manifest?</button>
-      <button onclick="quickAsk(this)" class="quick-q" style="font-size:10px;padding:4px 10px;">Confidence score?</button>
+    <div style="margin-bottom:12px;max-height:200px;overflow-y:auto;border:1px solid var(--border2);border-radius:10px;">
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border2);background:var(--card2);font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;">Frequently Asked</div>
+
+      <div class="faq-item" onclick="quickAsk(this)" data-q="How do I delete a job?">
+        <div class="faq-q">How do I delete a job?</div>
+        <div class="faq-a">Click the job card in the dispatcher to open the detail drawer, scroll to the bottom and click the red Delete Job button.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What is the OCA and what does it do?">
+        <div class="faq-q">What is the OCA?</div>
+        <div class="faq-a">The Operations Coordinator Agent runs every 60 seconds. It watches all active jobs and drivers, detects problems like stalled deliveries or unassigned jobs, and creates work items for you to approve.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What is Ruby and how does a driver use it?">
+        <div class="faq-q">What is Ruby?</div>
+        <div class="faq-a">Ruby is the AI assistant built into the driver app. The purple Ruby button is always visible on the delivery screen. Drivers tap it to ask questions, report problems, or get help at any stop.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What is the difference between Sprint and Surge job types?">
+        <div class="faq-q">What is the difference between Sprint and Surge?</div>
+        <div class="faq-a">Sprint is a single pickup to a single dropoff -- one package, one stop, created via the Customer Portal. Surge is a multi-stop block route with multiple packages and stops, created via SmartSort.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="How do I contact a driver from the dispatcher?">
+        <div class="faq-q">How do I contact a driver?</div>
+        <div class="faq-a">Open the job drawer by clicking the job, then click Contact Driver. For a full message thread, go to Symphony+ and click the Comms tab -- select the driver on the left to open their channel.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What is the exception queue and what should I do when something appears there?">
+        <div class="faq-q">What is the exception queue?</div>
+        <div class="faq-a">The exception queue is the right column in Symphony+ Dispatch view. It shows AI-detected problems -- stalled jobs, long-pending orders, SLA risks. Click Approve to action the recommendation or Reject to dismiss it.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="How does a driver sign in to the driver app?">
+        <div class="faq-q">How does a driver sign in?</div>
+        <div class="faq-a">Drivers open driver.html on their phone browser, enter their mobile number, tap Send Code, enter the verification code sent to their phone, and tap Verify and Sign In. No password or app download needed.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="How do I upload a delivery manifest in SmartSort?">
+        <div class="faq-q">How do I upload a manifest in SmartSort?</div>
+        <div class="faq-a">Go to smartsort.html, drag and drop your CSV file onto the page or click to browse. Click Download CSV Template first if you need the correct column format. Then click Run SmartSort to build routes.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="How does billing work in TackPath?">
+        <div class="faq-q">How does billing work?</div>
+        <div class="faq-a">Go to Symphony+ and click the Billing tab. Click Run Billing Agent -- Claude reviews all delivered jobs, verifies proof of delivery exists, and prepares invoice line items. You approve each one before it is sent.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What does a confidence score mean on an AI recommendation?">
+        <div class="faq-q">What does a confidence score mean?</div>
+        <div class="faq-a">Every AI decision includes a confidence score. 90%+ means the agent is highly certain. 75-89% means it needs your approval before acting. Below 75% means the agent is uncertain and requires you to make the call.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What is the difference between Symphony+ and TackPath 1?">
+        <div class="faq-q">What is the difference between Symphony+ and TackPath 1?</div>
+        <div class="faq-a">Symphony+ is the operations command center for dispatchers -- fleet status, comms, incidents, billing. TackPath 1 is the owner intelligence dashboard -- revenue, agent decisions, client health, work items needing approval.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What is proof of delivery and why is it required?">
+        <div class="faq-q">What is proof of delivery (POD)?</div>
+        <div class="faq-a">POD is required at every stop before it can be marked complete. The driver collects either a signature (recipient signs on the phone screen) or a photo (picture of the package at the door). Without POD the stop cannot be confirmed.</div>
+      </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="What do I do when a job has been pending too long with no driver accepting?">
+        <div class="faq-q">What do I do when no driver accepts a job?</div>
+        <div class="faq-a">If a job stays pending for 15+ minutes the OCA will automatically flag it in the exception queue. You can also check driver availability in Symphony+ Fleet Map and rebroadcast the job to get it picked up faster.</div>
+      </div>
     </div>
     <div id="askLoading" style="display:none;padding:12px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);">
       <div style="display:inline-flex;align-items:center;gap:8px;"><div class="spin"></div>Looking up answer...</div>
@@ -1233,7 +1284,8 @@ function toggleAssist(){
 
 function quickAsk(el){
   var input = document.getElementById('askInput');
-  if(input) input.value = el.textContent;
+  var q = el.getAttribute('data-q') || el.textContent;
+  if(input) input.value = q;
   askTackPath();
 }
 
