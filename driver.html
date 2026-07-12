@@ -943,8 +943,9 @@ async function requestCode(){
   document.getElementById('loginCode').focus();
 }
 async function verifyCode(){
+  const entered=(document.getElementById('loginCode').value||'').trim().replace(/\D/g,'');
+  if(entered.length!==6){toast('Enter a 6-digit code','warn');return;}
   const phone=pendingPhone||'0000000000';
-  const nameParts=['Driver'];
   driver={id:'drv-'+phone,phone:phone,name:'Driver',email:'',first:'Driver'};
   localStorage.setItem('tp_drv',JSON.stringify(driver));
   unlockSpeech();initApp();
