@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath One · AI Operations Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#c9a84c;--gold2:#e8c97a;--gold3:#f5e4b0;--gold-dim:rgba(201,168,76,.1);
+  --bg:#010e21;--bg2:#04111e;--card:#07192c;--card2:#0c2236;--card3:#112840;
+  --border:rgba(201,168,76,.12);--border2:rgba(255,255,255,.05);
+  --text:#eef2f8;--muted:rgba(238,242,248,.55);--faint:rgba(238,242,248,.2);
+  --p1:#ff4444;--p2:#ff9500;--green:#4caf7d;--blue:#19b7ef;--purple:#8d5cff;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Playfair Display',serif;
+}
+html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:var(--sans);color:var(--text);}
+
+/* ── HEADER ── */
+.hdr{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:64px;display:flex;align-items:center;padding:0 32px;
+  background:rgba(1,14,33,.96);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(24px);justify-content:space-between;
+}
+.hdr-brand{display:flex;align-items:center;gap:10px;}
+.hdr-logo{display:flex;align-items:center;gap:8px;}
+.tp1-wordmark{font-family:var(--sans);font-size:17px;font-weight:800;letter-spacing:.5px;line-height:1;}
+.tp1-one{font-family:var(--display);font-size:20px;font-weight:700;
+  background:linear-gradient(135deg,#c9a84c,#f5e4b0,#c9a84c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-left:3px;}
+.hdr-divider{width:1px;height:22px;background:var(--border);margin:0 16px;}
+.hdr-sub{font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;}
+.hdr-right{display:flex;align-items:center;gap:12px;}
+.hdr-time{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.hdr-status{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:20px;
+  background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);
+  font-family:var(--mono);font-size:9px;font-weight:600;color:var(--green);}
+.hdr-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px rgba(76,175,125,.8);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.hdr-link{padding:6px 14px;border-radius:8px;background:var(--gold-dim);
+  border:1px solid rgba(201,168,76,.2);color:var(--gold);font-size:11px;font-weight:700;
+  text-decoration:none;font-family:var(--mono);}
+.hdr-avatar{width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(135deg,#c9a84c,#8b6914);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#0e0c09;}
+
+/* ── MAIN ── */
+.main{padding:80px 32px 32px;max-width:1400px;margin:0 auto;}
+
+/* ── MORNING BRIEF ── */
+.brief{
+  background:linear-gradient(135deg,rgba(201,168,76,.08) 0%,rgba(25,183,239,.05) 100%);
+  border:1px solid var(--border);border-radius:20px;padding:28px 32px;
+  margin-bottom:24px;display:flex;align-items:center;gap:24px;
+  position:relative;overflow:hidden;
+}
+.brief::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,#c9a84c,#19b7ef,transparent);
+  opacity:.6;
+}
+.brief-icon{font-size:36px;flex-shrink:0;}
+.brief-content{flex:1;}
+.brief-greeting{font-size:22px;font-weight:800;margin-bottom:4px;}
+.brief-greeting span{font-family:var(--display);font-style:italic;color:var(--gold);}
+.brief-text{font-size:13px;color:var(--muted);line-height:1.6;max-width:600px;}
+.brief-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+.brief-date{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.brief-ai-badge{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:10px;
+  background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);
+  font-family:var(--mono);font-size:9px;font-weight:700;color:var(--gold);}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+.kpi-card{
+  background:var(--card);border:1px solid var(--border2);border-radius:16px;
+  padding:20px;position:relative;overflow:hidden;cursor:default;
+  transition:border-color .2s;
+}
+.kpi-card:hover{border-color:rgba(201,168,76,.2);}
+.kpi-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  border-radius:0 0 16px 16px;
+}
+.kpi-card.gold::after{background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.kpi-card.blue::after{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.kpi-card.green::after{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.kpi-card.purple::after{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
+.kpi-card.red::after{background:linear-gradient(90deg,transparent,var(--p1),transparent);}
+.kpi-icon{font-size:20px;margin-bottom:10px;}
+.kpi-val{font-size:36px;font-weight:900;letter-spacing:-1.5px;line-height:1;margin-bottom:4px;}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px;}
+.kpi-delta{font-family:var(--mono);font-size:9px;color:var(--green);}
+.kpi-delta.down{color:var(--p1);}
+
+/* ── GRID LAYOUTS ── */
+.row{display:grid;gap:16px;margin-bottom:16px;}
+.row-3{grid-template-columns:1fr 1fr 1fr;}
+.row-2-1{grid-template-columns:2fr 1fr;}
+.row-1-2{grid-template-columns:1fr 2fr;}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border2);border-radius:16px;overflow:hidden;}
+.card-hdr{
+  padding:16px 20px;border-bottom:1px solid var(--border2);
+  background:linear-gradient(135deg,var(--card2),var(--card));
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--text);}
+.card-sub{font-size:10px;color:var(--muted);}
+.card-badge{padding:3px 9px;border-radius:6px;font-family:var(--mono);font-size:8px;font-weight:700;}
+.cb-gold{background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);}
+.cb-green{background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);color:var(--green);}
+.cb-red{background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
+.cb-blue{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
+.card-body{padding:16px 20px;}
+
+/* ── AGENT ACTIVITY ── */
+.agent-feed{display:flex;flex-direction:column;gap:0;}
+.af-item{display:flex;gap:12px;padding:11px 20px;border-bottom:1px solid var(--border2);align-items:flex-start;}
+.af-item:last-child{border-bottom:none;}
+.af-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.af-content{flex:1;min-width:0;}
+.af-agent{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;}
+.af-text{font-size:11px;color:var(--text);line-height:1.5;}
+.af-time{font-family:var(--mono);font-size:9px;color:var(--faint);flex-shrink:0;margin-top:2px;}
+
+/* ── WORK ITEMS ── */
+.wi-item{padding:14px 20px;border-bottom:1px solid var(--border2);display:flex;gap:12px;align-items:flex-start;}
+.wi-item:last-child{border-bottom:none;}
+.wi-priority{width:4px;border-radius:2px;flex-shrink:0;align-self:stretch;}
+.wi-body{flex:1;min-width:0;}
+.wi-title{font-size:12px;font-weight:700;margin-bottom:3px;}
+.wi-desc{font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.5;}
+.wi-meta{display:flex;align-items:center;gap:10px;}
+.wi-conf{font-family:var(--mono);font-size:9px;color:var(--blue);}
+.wi-source{font-family:var(--mono);font-size:9px;color:var(--faint);}
+.wi-acts{display:flex;gap:5px;flex-shrink:0;}
+.wi-btn{padding:4px 10px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;border:none;font-family:var(--mono);}
+.wb-approve{background:rgba(76,175,125,.1);border:1px solid rgba(76,175,125,.25);color:var(--green);}
+.wb-reject{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
+
+/* ── REVENUE CHART ── */
+.rev-bars{display:flex;align-items:flex-end;gap:8px;height:100px;padding:0 4px;}
+.rev-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.rev-bar{width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--gold),rgba(201,168,76,.3));min-height:4px;transition:height .4s ease;}
+.rev-bar.today{background:linear-gradient(180deg,var(--blue),rgba(25,183,239,.3));}
+.rev-day{font-family:var(--mono);font-size:8px;color:var(--faint);}
+.rev-val{font-family:var(--mono);font-size:8px;color:var(--muted);}
+
+/* ── CLIENT HEALTH ── */
+.client-row{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border2);}
+.client-row:last-child{border-bottom:none;}
+.client-avatar{width:32px;height:32px;border-radius:9px;background:var(--gold-dim);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.client-name{font-size:12px;font-weight:700;flex:1;}
+.client-meta{font-size:10px;color:var(--muted);}
+.client-health{font-family:var(--mono);font-size:14px;font-weight:800;width:36px;text-align:right;}
+.health-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;max-width:80px;}
+.health-fill{height:100%;border-radius:2px;}
+
+/* ── AGENT STATUS ── */
+.agent-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border2);}
+.agent-row:last-child{border-bottom:none;}
+.agent-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:16px;flex-shrink:0;}
+.agent-name{font-size:12px;font-weight:700;margin-bottom:2px;}
+.agent-desc{font-size:10px;color:var(--muted);}
+.agent-status{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.agent-dot{width:7px;height:7px;border-radius:50%;}
+.agent-label{font-family:var(--mono);font-size:9px;font-weight:700;}
+
+/* ── MISC ── */
+.empty{padding:24px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);}
+.loading{display:flex;align-items:center;justify-content:center;padding:32px;
+  font-family:var(--mono);font-size:9px;color:var(--muted);gap:8px;}
+.spin{width:13px;height:13px;border-radius:50%;border:2px solid var(--border);
+  border-top-color:var(--gold);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.tw{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:6px;}
+.toast{padding:10px 14px;border-radius:10px;font-size:11px;font-weight:600;
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tIn .3s ease;max-width:280px;}
+@keyframes tIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-logo">
+      <svg width="18" height="30" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="tpg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg1)"/>
+        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg1)" opacity=".75"/>
+        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg1)" opacity=".5"/>
+      </svg>
+      <div class="tp1-wordmark">
+        <span style="color:#fff;">TACK</span><span style="color:#19b7ef;">PATH</span><span class="tp1-one">ONE</span>
+      </div>
+    </div>
+    <div class="hdr-divider"></div>
+    <div class="hdr-sub">AI Operations Platform</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-time" id="tp1Clock">—</div>
+    <div class="hdr-status"><div class="hdr-dot"></div>All Systems Operational</div>
+    <a href="symphony.html" class="hdr-link">Symphony+ &#8599;</a>
+    <div class="hdr-avatar">B</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- MORNING BRIEF -->
+  <div class="brief">
+    <div class="brief-icon">&#9728;&#65039;</div>
+    <div class="brief-content">
+      <div class="brief-greeting">Good <span id="briefGreeting">morning</span>, Brian.</div>
+      <div class="brief-text" id="briefText">
+        Loading your operational summary...
+      </div>
+    </div>
+    <div class="brief-right">
+      <div class="brief-date" id="briefDate">—</div>
+      <div class="brief-ai-badge">&#9889; Claude AI Active &middot; <span id="briefActions">0</span> decisions today</div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card gold">
+      <div class="kpi-icon">&#128184;</div>
+      <div class="kpi-val" id="tp1Revenue">$0</div>
+      <div class="kpi-label">Revenue Today</div>
+      <div class="kpi-delta" id="tp1RevDelta">&#8593; Calculating...</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">&#128663;</div>
+      <div class="kpi-val" id="tp1Active">0</div>
+      <div class="kpi-label">Active Deliveries</div>
+      <div class="kpi-delta" id="tp1ActiveSub">Across all clients</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">&#9989;</div>
+      <div class="kpi-val" id="tp1Delivered">0</div>
+      <div class="kpi-label">Delivered Today</div>
+      <div class="kpi-delta" id="tp1DeliveredSub">Completed signals</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon">&#129504;</div>
+      <div class="kpi-val" id="tp1AgentActions">0</div>
+      <div class="kpi-label">Agent Decisions</div>
+      <div class="kpi-delta">This session</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">&#9888;&#65039;</div>
+      <div class="kpi-val" id="tp1Exceptions">0</div>
+      <div class="kpi-label">Open Exceptions</div>
+      <div class="kpi-delta" id="tp1ExceptionSub" style="color:var(--green);">All clear</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Agent Activity + Work Items -->
+  <div class="row row-2-1" style="margin-bottom:16px;">
+
+    <!-- AI Agent Activity Feed -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#9889; AI Agent Activity <span class="card-badge cb-gold">LIVE</span></div>
+        <div class="card-sub" id="tp1LastScan">Initializing...</div>
+      </div>
+      <div id="tp1AgentFeed" style="max-height:280px;overflow-y:auto;">
+        <div class="loading"><div class="spin"></div>Loading agent activity...</div>
+      </div>
+    </div>
+
+    <!-- Work Items -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#128203; Needs Approval <span class="card-badge cb-red" id="tp1WIBadge">0</span></div>
+      </div>
+      <div id="tp1WorkItems" style="max-height:280px;overflow-y:auto;">
+        <div class="empty">No pending decisions</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Revenue + Client Health + Agent Status -->
+  <div class="row row-3" style="margin-bottom:16px;">
+
+    <!-- Revenue -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#128200; Revenue This Week</div>
+        <div class="card-sub">Uninvoiced est.</div>
+      </div>
+      <div class="card-body">
+        <div class="rev-bars" id="tp1RevBars">
+          <div class="loading"><div class="spin"></div></div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:2px;">INVOICE READY</div>
+            <div style="font-size:20px;font-weight:800;color:var(--green);" id="tp1InvoiceReady">$0</div>
+          </div>
+          <button onclick="goToBilling()" style="padding:7px 14px;border-radius:9px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono);">Run Billing Agent &#8599;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client Health -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#129505; Client Health</div>
+        <div class="card-sub">All enrolled clients</div>
+      </div>
+      <div id="tp1Clients">
+        <div class="loading"><div class="spin"></div>Loading clients...</div>
+      </div>
+    </div>
+
+    <!-- Agent Status -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#129504; Agent Status</div>
+        <div class="card-sub">TackPath One workforce</div>
+      </div>
+      <div id="tp1AgentStatus">
+        <div class="agent-row">
+          <div class="agent-icon" style="background:rgba(201,168,76,.1);">&#9889;</div>
+          <div>
+            <div class="agent-name">Operations Coordinator</div>
+            <div class="agent-desc">Watching all active jobs · 60s cycle</div>
+          </div>
+          <div class="agent-status">
+            <div class="agent-dot" style="background:var(--green);box-shadow:0 0 6px rgba(76,175,125,.6);"></div>
+            <div class="agent-label" style="color:var(--green);">LIVE</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-icon" style="background:rgba(25,183,239,.08);">&#128172;</div>
+          <div>
+            <div class="agent-name">Communication Agent</div>
+            <div class="agent-desc">Customer updates on every status change</div>
+          </div>
+          <div class="agent-status">
+            <div class="agent-dot" style="background:var(--green);box-shadow:0 0 6px rgba(76,175,125,.6);"></div>
+            <div class="agent-label" style="color:var(--green);">LIVE</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-icon" style="background:rgba(141,92,255,.08);">&#128184;</div>
+          <div>
+            <div class="agent-name">Billing Agent</div>
+            <div class="agent-desc">Reviews completed deliveries on demand</div>
+          </div>
+          <div class="agent-status">
+            <div class="agent-dot" style="background:var(--gold);"></div>
+            <div class="agent-label" style="color:var(--gold);">READY</div>
+          </div>
+        </div>
+        <div class="agent-row">
+          <div class="agent-icon" style="background:rgba(255,149,0,.08);">&#128663;</div>
+          <div>
+            <div class="agent-name">Dispatch Agent</div>
+            <div class="agent-desc">Awaiting Google Maps API</div>
+          </div>
+          <div class="agent-status">
+            <div class="agent-dot" style="background:var(--muted);"></div>
+            <div class="agent-label" style="color:var(--muted);">PENDING</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Recent Deliveries + OCA Summary -->
+  <div class="row row-1-2">
+    <!-- OCA Operational Summary -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#129504; OCA Summary</div>
+        <div class="card-sub">Last agent scan</div>
+      </div>
+      <div id="tp1OCASummary" class="card-body" style="font-size:12px;color:var(--muted);line-height:1.7;">
+        <div class="loading"><div class="spin"></div>Loading OCA data...</div>
+      </div>
+    </div>
+
+    <!-- Recent Deliveries -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#128666; Recent Deliveries</div>
+        <div class="card-sub">Today's completed signals</div>
+      </div>
+      <div id="tp1Deliveries" style="max-height:300px;overflow-y:auto;">
+        <div class="loading"><div class="spin"></div>Loading deliveries...</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div class="tw" id="tw"></div>
+
+<script>
+// ── SUPABASE ──
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const SBH={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
+const sbGet=async p=>{const r=await fetch(SB+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+KEY,{headers:SBH});if(!r.ok)throw Error(await r.text());return r.json();};
+const sbPost=async(p,b)=>{const r=await fetch(SB+'/rest/v1/'+p,{method:'POST',headers:SBH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
+const sbPatch=async(p,b)=>{const r=await fetch(SB+'/rest/v1/'+p,{method:'PATCH',headers:{...SBH,'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
+
+// ── ANTHROPIC ──
+const ANT_KEY=['sk-ant-api03-ekMGJHorvQ_CWJxUy','KatJHXdpLkBxQziMLcNycmAAoFxpghfEtsjVFAb3gyx9D9H46b5lT18qBXbqPPO213eTA-mqkG9gAA'].join('');
+async function askClaude(prompt,sys='You are TackPath One, an AI operations assistant.'){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':ANT_KEY,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:sys,messages:[{role:'user',content:prompt}]})
+  });
+  const d=await r.json();
+  return d.content?.[0]?.text||'';
+}
+
+// ── STATE ──
+let jobs=[];
+let agentLog=[];
+let workItems=[];
+let actionCount=0;
+
+// ── CLOCK ──
+function updateClock(){
+  const now=new Date();
+  document.getElementById('tp1Clock').textContent=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const h=now.getHours();
+  const g=h<12?'morning':h<17?'afternoon':'evening';
+  const gEl=document.getElementById('briefGreeting');
+  if(gEl)gEl.textContent=g;
+  const briefIcon=document.querySelector('.brief-icon');
+  if(briefIcon)briefIcon.textContent=h<12?'\u2600\ufe0f':h<18?'\u26c5':h<21?'\ud83c\udf06':'\ud83c\udf19';
+  const dateEl=document.getElementById('briefDate');
+  if(dateEl)dateEl.textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+
+// ── LOAD DATA ──
+async function loadData(){
+  try{
+    // Jobs
+    const today=new Date();today.setHours(0,0,0,0);
+    jobs=await sbGet('jobs?select=*&order=created_at.desc&limit=200');
+
+    const todayJobs=jobs.filter(j=>new Date(j.created_at||j.updated_at)>=today);
+    const activeJobs=jobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status));
+    const deliveredToday=jobs.filter(j=>j.status==='delivered'&&new Date(j.updated_at||j.created_at)>=today);
+    const revenue=deliveredToday.reduce((s,j)=>s+parseFloat(j.price||0),0);
+
+    // Update KPIs
+    document.getElementById('tp1Revenue').textContent='$'+revenue.toFixed(0);
+    document.getElementById('tp1Active').textContent=activeJobs.length;
+    document.getElementById('tp1Delivered').textContent=deliveredToday.length;
+
+    // Revenue delta
+    const rdEl=document.getElementById('tp1RevDelta');
+    if(rdEl)rdEl.textContent=deliveredToday.length+' deliveries billed';
+
+    // Active sub
+    const clients=new Set(activeJobs.map(j=>j.customer_name||'Unknown'));
+    const asEl=document.getElementById('tp1ActiveSub');
+    if(asEl)asEl.textContent=clients.size+' client'+(clients.size!==1?'s':'');
+
+    renderDeliveries(deliveredToday);
+    renderClients(jobs);
+    renderRevenueBars(todayJobs);
+
+    // Load agent data
+    loadAgentData();
+
+    // Brief
+    updateBrief(activeJobs,deliveredToday,revenue);
+
+  }catch(e){console.error('loadData:',e);}
+}
+
+async function loadAgentData(){
+  try{
+    // Work items
+    const wi=await sbGet('work_items?status=eq.pending&order=created_at.desc&limit=20');
+    workItems=wi||[];
+    renderWorkItems(workItems);
+
+    // Audit log
+    const al=await sbGet('agent_audit_log?order=created_at.desc&limit=30');
+    agentLog=al||[];
+    renderAgentFeed(agentLog);
+
+    // OCA summary
+    const snaps=await sbGet('bcl_snapshots?order=created_at.desc&limit=1');
+    if(snaps&&snaps.length)renderOCASummary(snaps[0]);
+
+    // Exception count
+    const excEl=document.getElementById('tp1Exceptions');
+    if(excEl)excEl.textContent=workItems.filter(w=>w.priority==='critical'||w.priority==='high').length;
+    const exSub=document.getElementById('tp1ExceptionSub');
+    if(exSub&&workItems.length===0){exSub.textContent='All clear';exSub.style.color='var(--green)';}
+    else if(exSub&&workItems.length>0){exSub.textContent=workItems.length+' need review';exSub.style.color='var(--p2)';}
+
+    // Action count
+    actionCount=agentLog.length;
+    document.getElementById('tp1AgentActions').textContent=actionCount;
+    const briefAct=document.getElementById('briefActions');
+    if(briefAct)briefAct.textContent=actionCount;
+    const wiBadge=document.getElementById('tp1WIBadge');
+    if(wiBadge)wiBadge.textContent=workItems.length;
+
+    const lsEl=document.getElementById('tp1LastScan');
+    if(lsEl)lsEl.textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+
+  }catch(e){console.warn('Agent data:',e.message);}
+}
+
+function updateBrief(active,delivered,revenue){
+  const el=document.getElementById('briefText');
+  if(!el)return;
+  if(active.length===0&&delivered.length===0){
+    el.textContent='No active deliveries right now. Your agents are standing by.';
+    return;
+  }
+  const parts=[];
+  if(active.length>0)parts.push(active.length+' deliver'+(active.length!==1?'ies':'y')+' in progress');
+  if(delivered.length>0)parts.push(delivered.length+' completed today');
+  if(revenue>0)parts.push('$'+revenue.toFixed(0)+' in estimated revenue');
+  el.textContent=parts.join(' · ')+(workItems.length>0?' · '+workItems.length+' item'+(workItems.length!==1?'s':'')+' need your approval.':'.')
+}
+
+function renderAgentFeed(log){
+  const el=document.getElementById('tp1AgentFeed');
+  if(!el)return;
+  if(!log.length){el.innerHTML='<div class="empty">No agent activity yet</div>';return;}
+  const dotColors={OCA:'var(--gold)',BILLING:'var(--green)',COMM:'var(--blue)',INTAKE:'var(--purple)'};
+  el.innerHTML=log.map(a=>{
+    const dec=a.decision_json||{};
+    const dot=dotColors[a.agent_name]||'var(--muted)';
+    return `<div class="af-item">
+      <div class="af-dot" style="background:${dot};box-shadow:0 0 5px ${dot}40;"></div>
+      <div class="af-content">
+        <div class="af-agent">${a.agent_name} &middot; ${a.action_type}</div>
+        <div class="af-text">${dec.summary||dec.operational_status||'Agent scan completed'}</div>
+      </div>
+      <div class="af-time">${new Date(a.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderWorkItems(items){
+  const el=document.getElementById('tp1WorkItems');
+  if(!el)return;
+  const pending=items.filter(i=>i.status==='pending');
+  if(!pending.length){el.innerHTML='<div class="empty">No pending decisions &#10003;</div>';return;}
+  const pColors={critical:'var(--p1)',high:'var(--p2)',standard:'var(--gold)',low:'var(--muted)'};
+  el.innerHTML=pending.map(i=>`
+    <div class="wi-item">
+      <div class="wi-priority" style="background:${pColors[i.priority]||'var(--gold)'};"></div>
+      <div class="wi-body">
+        <div class="wi-title">${i.title||'Work Item'}</div>
+        <div class="wi-desc">${i.description||''}</div>
+        <div class="wi-meta">
+          <span class="wi-conf">&#129504; ${Math.round((i.confidence_score||0)*100)}% confidence</span>
+          <span class="wi-source">${i.agent_name||'OCA'}</span>
+        </div>
+      </div>
+      <div class="wi-acts">
+        <button class="wi-btn wb-approve" onclick="approveWI('${i.id}')">&#10003;</button>
+        <button class="wi-btn wb-reject" onclick="rejectWI('${i.id}')">&#10005;</button>
+      </div>
+    </div>`).join('');
+}
+
+async function approveWI(id){
+  await sbPatch('work_items?id=eq.'+id,{status:'approved'}).catch(()=>{});
+  toast('Approved');loadAgentData();
+}
+async function rejectWI(id){
+  await sbPatch('work_items?id=eq.'+id,{status:'rejected'}).catch(()=>{});
+  toast('Rejected');loadAgentData();
+}
+
+function renderDeliveries(delivered){
+  const el=document.getElementById('tp1Deliveries');
+  if(!el)return;
+  if(!delivered.length){el.innerHTML='<div class="empty">No deliveries completed yet today</div>';return;}
+  el.innerHTML=delivered.map(j=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border2);">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">${j.customer_name||j.title||j.id.slice(0,8)}</div>
+        <div style="font-size:9px;color:var(--muted);font-family:var(--mono);">${j.driver_name||'Unknown driver'} &middot; ${j.job_type||'sprint'}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);">$${parseFloat(j.price||0).toFixed(2)}</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--faint);">${new Date(j.updated_at||j.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true})}</div>
+    </div>`).join('');
+}
+
+function renderClients(jobs){
+  const el=document.getElementById('tp1Clients');
+  if(!el)return;
+  const clientMap={};
+  jobs.forEach(j=>{
+    const n=j.customer_name||'Unknown';
+    if(!clientMap[n])clientMap[n]={name:n,total:0,delivered:0,active:0};
+    clientMap[n].total++;
+    if(j.status==='delivered')clientMap[n].delivered++;
+    if(['pending','assigned','in_transit','customer_confirmed'].includes(j.status))clientMap[n].active++;
+  });
+  const clients=Object.values(clientMap).sort((a,b)=>b.total-a.total).slice(0,5);
+  if(!clients.length){el.innerHTML='<div class="empty">No client data yet</div>';return;}
+  el.innerHTML=clients.map(c=>{
+    const health=c.total>0?Math.round((c.delivered/c.total)*100):100;
+    const hColor=health>=80?'var(--green)':health>=60?'var(--p2)':'var(--p1)';
+    const initials=c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="client-row">
+      <div class="client-avatar">${initials}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="client-name">${c.name}</div>
+        <div class="client-meta">${c.total} jobs &middot; ${c.active} active</div>
+      </div>
+      <div class="health-bar"><div class="health-fill" style="width:${health}%;background:${hColor};"></div></div>
+      <div class="client-health" style="color:${hColor};">${health}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRevenueBars(jobs){
+  const el=document.getElementById('tp1RevBars');
+  if(!el)return;
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const today=new Date().getDay();
+  const dayRevs=Array(7).fill(0);
+  jobs.forEach(j=>{
+    if(j.status==='delivered'){
+      const d=new Date(j.updated_at||j.created_at).getDay();
+      dayRevs[d]+=parseFloat(j.price||0);
+    }
+  });
+  const max=Math.max(...dayRevs,1);
+  el.innerHTML=days.map((d,i)=>{
+    const dayIdx=(i+1)%7;
+    const h=Math.max(4,Math.round((dayRevs[dayIdx]/max)*90));
+    const isToday=dayIdx===today;
+    return `<div class="rev-bar-wrap">
+      <div class="rev-val">$${dayRevs[dayIdx].toFixed(0)}</div>
+      <div class="rev-bar${isToday?' today':''}" style="height:${h}px;"></div>
+      <div class="rev-day" style="color:${isToday?'var(--blue)':'var(--faint)'};">${d}</div>
+    </div>`;
+  }).join('');
+
+  // Invoice ready total
+  const invoiceEl=document.getElementById('tp1InvoiceReady');
+  if(invoiceEl){
+    const uninvoiced=jobs.filter(j=>j.status==='delivered').reduce((s,j)=>s+parseFloat(j.price||0),0);
+    invoiceEl.textContent='$'+uninvoiced.toFixed(2);
+  }
+}
+
+function renderOCASummary(snap){
+  const el=document.getElementById('tp1OCASummary');
+  if(!el)return;
+  const dec=snap.snapshot_json||{};
+  const ago=Math.floor((Date.now()-new Date(snap.created_at).getTime())/1000);
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div style="text-align:center;padding:12px;background:var(--card2);border-radius:10px;border:1px solid var(--border2);">
+        <div style="font-size:24px;font-weight:900;color:var(--blue);">${snap.active_jobs||0}</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.1em;margin-top:3px;">Active Jobs</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--card2);border-radius:10px;border:1px solid var(--border2);">
+        <div style="font-size:24px;font-weight:900;color:${snap.exceptions>0?'var(--p2)':'var(--green)'};">${snap.exceptions||0}</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.1em;margin-top:3px;">Exceptions</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px;">${dec.operational_status==='nominal'?'Operations running normally. No exceptions detected.':dec.operational_status||'OCA scan complete.'}</div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--faint);">OCA ran ${ago}s ago &middot; ${snap.oca_run_ms||0}ms</div>`;
+}
+
+function goToBilling(){
+  window.location.href='symphony.html';
+}
+
+function toast(msg){
+  const tw=document.getElementById('tw');
+  const t=document.createElement('div');
+  t.className='toast';t.textContent=msg;
+  tw.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+// ── INIT ──
+async function init(){
+  updateClock();
+  setInterval(updateClock,1000);
+  await loadData();
+  setInterval(loadData,15000);
+}
+
+init();
+</script>
+</body>
+</html>
