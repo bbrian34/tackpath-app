@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Symphony+ · Managed Logistics Operations</title>
+<title>Symphony+ · Managed Logistics Operations Center</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -15,162 +15,150 @@
   --p1:#ff4444;--p2:#ff9500;--p3:#ffd23d;
   --green:#4caf7d;--blue:#19b7ef;--purple:#8d5cff;
   --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;--display:'Playfair Display',serif;
-  --sidebar-w:220px;
 }
-html,body{margin:0;padding:0;background:var(--bg);height:100%;}
-body{font-family:var(--sans);color:var(--text);min-height:100vh;line-height:1.5;display:flex;flex-direction:column;}
+html,body{margin:0;padding:0;background:var(--bg);height:100vh;overflow:hidden;}
+body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:column;}
 
-/* ── APP SHELL ── */
-.app{display:flex;height:100vh;overflow:hidden;}
-
-/* ── LEFT SIDEBAR ── */
-.sidebar{
-  width:var(--sidebar-w);flex-shrink:0;
-  background:rgba(1,10,22,.98);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;
-  overflow:hidden;z-index:100;
+/* ── HEADER ── */
+.hdr{
+  height:56px;flex-shrink:0;display:flex;align-items:center;
+  padding:0 24px;justify-content:space-between;
+  background:rgba(1,14,33,.98);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);z-index:200;
 }
-.sb-brand{
-  padding:20px 18px 16px;
-  border-bottom:1px solid var(--border2);
-  display:flex;flex-direction:column;gap:6px;
-}
-.sb-wordmark{
-  font-family:var(--display);font-size:20px;font-weight:700;
+.hdr-left{display:flex;align-items:center;gap:16px;}
+.wordmark{font-family:var(--display);font-size:22px;font-weight:700;
   background:linear-gradient(135deg,#c9a84c,#f5e4b0,#c9a84c);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  line-height:1;
-}
-.sb-sub{font-family:var(--mono);font-size:8px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase;}
-.sb-tp1{
-  display:flex;align-items:center;gap:6px;margin-top:4px;
-}
-.sb-tp1 svg{flex-shrink:0;}
-.sb-tp1-text{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;line-height:1;}
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.hdr-divider{width:1px;height:22px;background:var(--border);}
+.hdr-sub{font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase;}
+.hdr-right{display:flex;align-items:center;gap:12px;}
+.hdr-kpi{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--border2);}
+.hdr-kpi-val{font-family:var(--mono);font-size:14px;font-weight:800;}
+.hdr-kpi-lbl{font-family:var(--mono);font-size:8px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;}
+.hdr-status{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:20px;
+  background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);
+  font-family:var(--mono);font-size:9px;font-weight:600;color:var(--green);}
+.hdr-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px rgba(76,175,125,.8);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.hdr-ai{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:20px;
+  background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);
+  font-family:var(--mono);font-size:9px;font-weight:600;color:var(--gold);}
+.hdr-time{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.hdr-op{width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,#c9a84c,#8b6914);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#0e0c09;}
 
-/* Status panel */
-.sb-status{padding:14px 18px;border-bottom:1px solid var(--border2);}
-.sb-status-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.sb-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(76,175,125,.8);animation:blink 2s infinite;flex-shrink:0;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
-.sb-status-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);}
-.sb-kpis{display:flex;flex-direction:column;gap:6px;}
-.sb-kpi{display:flex;align-items:center;justify-content:space-between;}
-.sb-kpi-label{font-size:10px;color:var(--muted);}
-.sb-kpi-val{font-family:var(--mono);font-size:13px;font-weight:800;}
-
-/* Nav */
-.sb-nav{flex:1;padding:10px 10px;overflow-y:auto;}
-.sb-nav-section{font-family:var(--mono);font-size:8px;color:var(--faint);letter-spacing:.16em;text-transform:uppercase;padding:10px 8px 5px;}
-.nav-item{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 10px;border-radius:9px;
-  cursor:pointer;transition:all .15s;
-  margin-bottom:2px;color:var(--muted);
-  font-size:12px;font-weight:600;
-  border:1px solid transparent;
+/* ── NAV BAR ── */
+.nav{
+  height:42px;flex-shrink:0;display:flex;align-items:center;padding:0 24px;gap:2px;
+  background:rgba(6,20,35,.98);border-bottom:1px solid var(--border2);
 }
-.nav-item:hover{background:rgba(201,168,76,.05);color:var(--text);}
-.nav-item.active{
-  background:var(--gold-dim);
-  border-color:rgba(201,168,76,.2);
-  color:var(--gold);
-}
-.nav-item .nav-icon{font-size:14px;flex-shrink:0;width:18px;text-align:center;}
-.nav-badge{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:700;
-  padding:1px 6px;border-radius:5px;background:rgba(255,68,68,.15);
+.nav-tab{padding:7px 14px;border-radius:7px;font-size:11px;font-weight:600;
+  cursor:pointer;color:var(--muted);transition:all .15s;border:none;background:transparent;
+  font-family:var(--sans);display:flex;align-items:center;gap:6px;}
+.nav-tab.on{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.2);}
+.nav-tab:hover:not(.on){color:var(--text);}
+.nav-tab .nt-badge{font-family:var(--mono);font-size:8px;font-weight:700;
+  padding:1px 5px;border-radius:4px;background:rgba(255,68,68,.15);
   border:1px solid rgba(255,68,68,.25);color:var(--p1);}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.scan-label{font-family:var(--mono);font-size:9px;color:var(--faint);}
 
-/* Sidebar footer */
-.sb-footer{padding:12px 18px;border-top:1px solid var(--border2);}
-.sb-time{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:4px;}
-.sb-ai{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;color:var(--gold);}
-.sb-ai-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:blink 1.5s infinite;}
-
-/* ── MAIN CONTENT ── */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-
-/* Top bar */
-.topbar{
-  height:50px;flex-shrink:0;
-  background:rgba(1,14,33,.98);
-  border-bottom:1px solid var(--border2);
-  display:flex;align-items:center;
-  padding:0 20px;gap:14px;
+/* ── SOC LAYOUT ── */
+.soc{flex:1;display:grid;grid-template-columns:1fr 1fr 320px;overflow:hidden;}
+.soc-col{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border2);}
+.soc-col:last-child{border-right:none;}
+.col-hdr{
+  padding:10px 16px;flex-shrink:0;
+  background:var(--card2);border-bottom:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:space-between;
 }
-.topbar-title{font-size:13px;font-weight:700;color:var(--text);flex:1;}
-.topbar-badge{font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:6px;
-  background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);}
-.topbar-scan{font-family:var(--mono);font-size:9px;color:var(--faint);}
+.col-hdr-title{font-family:var(--mono);font-size:9px;font-weight:700;
+  color:var(--muted);letter-spacing:.14em;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;}
+.col-body{flex:1;overflow-y:auto;padding:12px;}
 
-/* Content area */
-.content{flex:1;overflow-y:auto;padding:18px 20px;}
-
-/* Tab pages */
-.page{display:none;}
-.page.active{display:block;}
-
-/* ── KPI ROW ── */
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
-.kpi{padding:14px 16px;border-radius:12px;background:var(--card);border:1px solid var(--border2);position:relative;overflow:hidden;}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.3;}
-.kpi-lbl{font-family:var(--mono);font-size:8px;font-weight:600;color:var(--muted);
-  letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;}
-.kpi-val{font-size:26px;font-weight:900;letter-spacing:-1px;line-height:1;}
-.kpi-sub{font-size:10px;color:var(--faint);margin-top:3px;}
-
-/* ── OPERATIONS GRID (dispatch page) ── */
-.ops-grid{display:grid;grid-template-columns:1fr 1fr 340px;gap:14px;}
-.ops-col{display:flex;flex-direction:column;gap:14px;}
+/* ── FULL PAGE TABS ── */
+.tab-content{display:none;flex:1;overflow-y:auto;padding:18px 24px;}
+.tab-content.on{display:flex;flex-direction:column;gap:14px;}
 
 /* ── PANEL ── */
-.panel{background:var(--card);border:1px solid var(--border2);border-radius:14px;overflow:hidden;}
-.panel-hdr{padding:13px 18px;border-bottom:1px solid var(--border2);background:var(--card2);
+.panel{background:var(--card);border:1px solid var(--border2);border-radius:12px;overflow:hidden;}
+.panel-hdr{padding:11px 16px;border-bottom:1px solid var(--border2);background:var(--card2);
   display:flex;align-items:center;justify-content:space-between;}
-.panel-title{font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;}
-.panel-sub{font-size:10px;color:var(--muted);}
-.panel-badge{padding:2px 8px;border-radius:6px;font-family:var(--mono);font-size:9px;font-weight:700;}
+.panel-title{font-size:11px;font-weight:700;display:flex;align-items:center;gap:7px;}
+.panel-sub{font-size:9px;color:var(--muted);}
+.panel-badge{padding:2px 7px;border-radius:5px;font-family:var(--mono);font-size:8px;font-weight:700;}
 .pb-gold{background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);}
 .pb-red{background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
 .pb-green{background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);color:var(--green);}
 .pb-blue{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
 
 /* ── CLIENT TABS ── */
-.client-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-.ct{padding:7px 14px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;
+.client-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.ct{padding:5px 12px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;
   border:1px solid var(--border2);background:var(--card);color:var(--muted);transition:all .15s;}
 .ct.on{background:var(--gold-dim);border-color:rgba(201,168,76,.25);color:var(--gold);}
-.ct-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px;}
+.ct-dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:5px;}
 
 /* ── FLEET CARDS ── */
-.fleet-card{background:var(--card);border:1px solid var(--border2);border-radius:12px;overflow:hidden;margin-bottom:10px;}
-.fc-hdr{padding:12px 16px;display:flex;align-items:center;gap:10px;background:var(--card2);border-bottom:1px solid var(--border2);}
-.fc-logo{width:32px;height:32px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gold);}
-.fc-name{font-size:13px;font-weight:700;}
-.fc-meta{font-size:10px;color:var(--muted);}
-.fc-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
-.fc-health{font-family:var(--mono);font-size:11px;font-weight:700;}
-.fc-status{padding:3px 9px;border-radius:8px;font-family:var(--mono);font-size:9px;font-weight:600;}
+.fleet-card{background:var(--card);border:1px solid var(--border2);border-radius:10px;overflow:hidden;margin-bottom:8px;}
+.fc-hdr{padding:10px 14px;display:flex;align-items:center;gap:9px;background:var(--card2);border-bottom:1px solid var(--border2);}
+.fc-logo{width:28px;height:28px;border-radius:7px;background:var(--gold-dim);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;color:var(--gold);}
+.fc-name{font-size:12px;font-weight:700;}
+.fc-meta{font-size:9px;color:var(--muted);}
+.fc-right{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.fc-health{font-family:var(--mono);font-size:10px;font-weight:700;}
+.fc-status{padding:2px 8px;border-radius:6px;font-family:var(--mono);font-size:8px;font-weight:600;}
 .fs-ok{background:rgba(76,175,125,.08);border:1px solid rgba(76,175,125,.2);color:var(--green);}
 .fs-warn{background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.2);color:var(--p2);}
 .fs-crit{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
-.fc-body{padding:12px 16px;}
-.driver-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border2);}
+.fc-body{padding:10px 14px;}
+.driver-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border2);}
 .driver-row:last-child{border-bottom:none;}
-.dr-av{width:26px;height:26px;border-radius:7px;background:var(--card2);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0;}
-.dr-name{font-size:11px;font-weight:600;flex:1;}
-.dr-job{font-size:10px;color:var(--muted);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dr-s{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;}
+.dr-av{width:24px;height:24px;border-radius:6px;background:var(--card2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.dr-name{font-size:10px;font-weight:600;flex:1;}
+.dr-job{font-size:9px;color:var(--muted);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dr-s{font-family:var(--mono);font-size:8px;font-weight:600;padding:2px 6px;border-radius:4px;}
 .ds-transit{background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);color:var(--purple);}
 .ds-assigned{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
 .ds-idle{background:rgba(245,240,232,.04);border:1px solid var(--border2);color:var(--muted);}
-.dr-eta{font-family:var(--mono);font-size:10px;color:var(--gold);margin-left:auto;flex-shrink:0;}
+.dr-eta{font-family:var(--mono);font-size:9px;color:var(--gold);margin-left:auto;flex-shrink:0;}
+
+/* ── AGENT FEED ── */
+.af-body{padding:10px 14px;display:flex;flex-direction:column;gap:6px;}
+.af-entry{display:flex;align-items:flex-start;gap:8px;font-size:10px;}
+.af-dot{width:5px;height:5px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.af-text{flex:1;color:var(--muted);line-height:1.5;}
+.af-text strong{color:var(--text);}
+.af-time{font-family:var(--mono);font-size:8px;color:var(--faint);flex-shrink:0;margin-top:2px;}
 
 /* ── EXCEPTION QUEUE ── */
+.exc-item{padding:10px 14px;border-bottom:1px solid var(--border2);position:relative;cursor:pointer;transition:background .12s;}
+.exc-item:hover{background:rgba(255,150,0,.02);}
+.exc-item:last-child{border-bottom:none;}
+.exc-bar{position:absolute;left:0;top:0;bottom:0;width:3px;}
+.exc-top{display:flex;align-items:center;gap:6px;padding-left:10px;margin-bottom:3px;}
+.exc-badge{font-family:var(--mono);font-size:8px;font-weight:700;padding:2px 5px;border-radius:4px;}
+.exc-critical{background:rgba(255,68,68,.12);border:1px solid rgba(255,68,68,.25);color:var(--p1);}
+.exc-high{background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.2);color:var(--p2);}
+.exc-standard{background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);}
+.exc-time{font-family:var(--mono);font-size:8px;color:var(--faint);margin-left:auto;}
+.exc-title{font-size:10px;font-weight:700;padding-left:10px;margin-bottom:2px;}
+.exc-desc{font-size:9px;color:var(--muted);padding-left:10px;line-height:1.5;margin-bottom:6px;}
+.exc-conf{font-family:var(--mono);font-size:8px;color:var(--blue);padding-left:10px;margin-bottom:5px;}
+.exc-acts{display:flex;gap:4px;padding-left:10px;}
+.exc-btn{padding:3px 9px;border-radius:5px;font-size:9px;font-weight:700;cursor:pointer;border:none;font-family:var(--sans);}
+.eb-approve{background:rgba(76,175,125,.1);border:1px solid rgba(76,175,125,.25);color:var(--green);}
+.eb-reject{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
+.eb-view{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
+
+/* ── ALERT ITEMS (legacy compat) ── */
 .alert-item{padding:12px 16px;border-bottom:1px solid var(--border2);cursor:pointer;transition:background .15s;position:relative;}
 .alert-item:hover{background:rgba(201,168,76,.02);}
 .alert-item:last-child{border-bottom:none;}
@@ -193,100 +181,72 @@ body{font-family:var(--sans);color:var(--text);min-height:100vh;line-height:1.5;
 .aib-msg{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
 .aib-esc{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
 
-/* ── AGENT FEED ── */
-.af-body{padding:12px 16px;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;}
-.af-entry{display:flex;align-items:flex-start;gap:9px;font-size:11px;}
-.af-dot{width:5px;height:5px;border-radius:50%;margin-top:5px;flex-shrink:0;}
-.af-text{flex:1;color:var(--muted);line-height:1.5;}
-.af-text strong{color:var(--text);}
-.af-time{font-family:var(--mono);font-size:9px;color:var(--faint);flex-shrink:0;margin-top:2px;}
-
-/* ── MAP TAB ── */
-.map-wrap{height:500px;border-radius:12px;overflow:hidden;border:1px solid var(--border2);position:relative;}
+/* ── MAP ── */
+.map-wrap{height:480px;border-radius:10px;overflow:hidden;border:1px solid var(--border2);position:relative;}
 .map-wrap iframe{width:100%;height:100%;border:0;filter:hue-rotate(195deg) saturate(0.8) brightness(0.7);}
-.map-legend{position:absolute;top:12px;right:12px;background:rgba(14,12,9,.9);
-  border:1px solid var(--border);border-radius:10px;padding:10px 14px;backdrop-filter:blur(10px);}
-.ml-item{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin-bottom:5px;}
+.map-legend{position:absolute;top:10px;right:10px;background:rgba(14,12,9,.92);
+  border:1px solid var(--border);border-radius:8px;padding:8px 12px;backdrop-filter:blur(10px);}
+.ml-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);margin-bottom:4px;}
 .ml-item:last-child{margin-bottom:0;}
-.ml-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ml-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 
-/* ── COMMS TAB ── */
-.comms-grid{display:grid;grid-template-columns:220px 1fr;gap:14px;height:540px;}
-.comms-sidebar{background:var(--card);border:1px solid var(--border2);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;}
-.cs-hdr{padding:12px 14px;border-bottom:1px solid var(--border2);background:var(--card2);font-size:12px;font-weight:700;}
+/* ── COMMS ── */
+.comms-grid{display:grid;grid-template-columns:200px 1fr;gap:12px;height:calc(100vh - 140px);}
+.comms-sidebar{background:var(--card);border:1px solid var(--border2);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+.cs-hdr{padding:10px 12px;border-bottom:1px solid var(--border2);background:var(--card2);font-size:11px;font-weight:700;}
 .cs-list{flex:1;overflow-y:auto;}
-.cs-item{padding:10px 14px;border-bottom:1px solid var(--border2);cursor:pointer;transition:background .15s;}
+.cs-item{padding:9px 12px;border-bottom:1px solid var(--border2);cursor:pointer;transition:background .15s;}
 .cs-item:hover,.cs-item.on{background:var(--gold-dim);}
-.cs-name{font-size:12px;font-weight:600;margin-bottom:2px;}
-.cs-last{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cs-badge{padding:2px 6px;border-radius:5px;font-family:var(--mono);font-size:8px;font-weight:700;
+.cs-name{font-size:11px;font-weight:600;margin-bottom:2px;}
+.cs-last{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cs-badge{padding:2px 5px;border-radius:4px;font-family:var(--mono);font-size:8px;font-weight:700;
   background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);margin-left:auto;}
-.comms-main{background:var(--card);border:1px solid var(--border2);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;}
-.cm-hdr{padding:12px 16px;border-bottom:1px solid var(--border2);background:var(--card2);
+.comms-main{background:var(--card);border:1px solid var(--border2);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+.cm-hdr{padding:10px 14px;border-bottom:1px solid var(--border2);background:var(--card2);
   display:flex;align-items:center;justify-content:space-between;}
-.cm-name{font-size:13px;font-weight:700;}
-.cm-sub{font-size:10px;color:var(--muted);}
-.cm-msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;background:#fff;}
+.cm-name{font-size:12px;font-weight:700;}
+.cm-sub{font-size:9px;color:var(--muted);}
+.cm-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:7px;background:#fff;}
 .cm-wrap{display:flex;flex-direction:column;gap:2px;}
-.cm-meta{font-family:var(--mono);font-size:10px;color:#666;padding:0 4px;}
+.cm-meta{font-family:var(--mono);font-size:9px;color:#666;padding:0 4px;}
 .cm-meta.r{text-align:right;}
-.cm-bubble{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;max-width:80%;}
+.cm-bubble{padding:9px 13px;border-radius:10px;font-size:12px;line-height:1.5;max-width:80%;}
 .cm-in{background:#e5e5ea;color:#000;}
 .cm-out{background:#19b7ef;color:#fff;align-self:flex-end;}
-.cm-sys{background:rgba(0,0,0,.06);color:#666;font-size:11px;text-align:center;
-  align-self:center;padding:5px 12px;border-radius:8px;max-width:100%;}
+.cm-sys{background:rgba(0,0,0,.06);color:#666;font-size:10px;text-align:center;
+  align-self:center;padding:4px 10px;border-radius:7px;max-width:100%;}
 .cm-auto{background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:#8b6914;
-  font-size:11px;text-align:center;align-self:center;padding:5px 12px;border-radius:8px;max-width:100%;}
-.cm-inp-row{padding:10px 14px;border-top:1px solid #e0e4ea;display:flex;gap:8px;background:#f8f9fa;}
-.cm-inp{flex:1;padding:10px 14px;border-radius:20px;border:1px solid #ddd;background:#fff;
-  color:#000;font-size:14px;font-family:var(--sans);outline:none;}
+  font-size:10px;text-align:center;align-self:center;padding:4px 10px;border-radius:7px;max-width:100%;}
+.cm-inp-row{padding:8px 12px;border-top:1px solid #e0e4ea;display:flex;gap:7px;background:#f8f9fa;}
+.cm-inp{flex:1;padding:9px 12px;border-radius:18px;border:1px solid #ddd;background:#fff;
+  color:#000;font-size:13px;font-family:var(--sans);outline:none;}
 .cm-inp:focus{border-color:#19b7ef;}
-.cm-send{padding:10px 18px;border-radius:20px;background:#19b7ef;border:none;
-  color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--sans);}
-.cm-auto-btn{padding:6px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;
+.cm-send{padding:9px 16px;border-radius:18px;background:#19b7ef;border:none;
+  color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);}
+.cm-auto-btn{padding:5px 10px;border-radius:7px;font-size:10px;font-weight:600;cursor:pointer;
   background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);font-family:var(--sans);}
 
-/* ── ANALYTICS ── */
-.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.stat-card{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:18px;}
-.sc-title{font-size:12px;font-weight:700;margin-bottom:14px;color:var(--muted);
-  font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;}
-.stat-row{display:flex;align-items:center;justify-content:space-between;
-  padding:9px 0;border-bottom:1px solid var(--border2);font-size:12px;}
-.stat-row:last-child{border-bottom:none;}
-.stat-label{color:var(--muted);}
-.stat-val{font-weight:700;font-family:var(--mono);}
-.bar-wrap{height:6px;background:var(--border2);border-radius:3px;margin-top:5px;overflow:hidden;}
-.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
-
-/* ── HEALTH ── */
-.health-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
-.health-card{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:16px;text-align:center;}
-.hc-name{font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;}
-.hc-score{font-size:36px;font-weight:900;letter-spacing:-1px;}
-.hc-label{font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono);}
-
 /* ── INCIDENTS ── */
-.inc-item{padding:13px 18px;border-bottom:1px solid var(--border2);position:relative;transition:background .15s;}
+.inc-item{padding:11px 16px;border-bottom:1px solid var(--border2);position:relative;transition:background .15s;}
 .inc-item:hover{background:rgba(201,168,76,.02);}
 .inc-item:last-child{border-bottom:none;}
 .inc-bar{position:absolute;left:0;top:0;bottom:0;width:3px;}
-.inc-top{display:flex;align-items:center;gap:7px;margin-bottom:5px;padding-left:10px;}
-.inc-id{font-family:var(--mono);font-size:9px;color:var(--faint);}
-.inc-sev{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;}
-.inc-type{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;
+.inc-top{display:flex;align-items:center;gap:6px;margin-bottom:4px;padding-left:10px;}
+.inc-id{font-family:var(--mono);font-size:8px;color:var(--faint);}
+.inc-sev{font-family:var(--mono);font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;}
+.inc-type{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;
   background:var(--gold-dim);border:1px solid rgba(201,168,76,.15);color:var(--gold);}
-.inc-age{font-family:var(--mono);font-size:9px;color:var(--faint);margin-left:auto;}
-.inc-title{font-size:12px;font-weight:700;padding-left:10px;margin-bottom:3px;}
-.inc-detail{font-size:11px;color:var(--muted);padding-left:10px;line-height:1.5;margin-bottom:6px;}
-.inc-meta{display:flex;align-items:center;gap:10px;padding-left:10px;margin-bottom:6px;}
-.inc-client{font-family:var(--mono);font-size:9px;color:var(--muted);}
-.inc-driver{font-family:var(--mono);font-size:9px;color:var(--blue);}
-.inc-timer{font-family:var(--mono);font-size:9px;color:var(--p2);
+.inc-age{font-family:var(--mono);font-size:8px;color:var(--faint);margin-left:auto;}
+.inc-title{font-size:11px;font-weight:700;padding-left:10px;margin-bottom:2px;}
+.inc-detail{font-size:10px;color:var(--muted);padding-left:10px;line-height:1.5;margin-bottom:5px;}
+.inc-meta{display:flex;align-items:center;gap:8px;padding-left:10px;margin-bottom:5px;}
+.inc-client{font-family:var(--mono);font-size:8px;color:var(--muted);}
+.inc-driver{font-family:var(--mono);font-size:8px;color:var(--blue);}
+.inc-timer{font-family:var(--mono);font-size:8px;color:var(--p2);
   background:rgba(255,149,0,.06);border:1px solid rgba(255,149,0,.15);
-  padding:2px 7px;border-radius:4px;margin-left:auto;}
-.inc-acts{display:flex;gap:5px;padding-left:10px;flex-wrap:wrap;}
-.inc-btn{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;
+  padding:2px 6px;border-radius:4px;margin-left:auto;}
+.inc-acts{display:flex;gap:4px;padding-left:10px;flex-wrap:wrap;}
+.inc-btn{padding:3px 9px;border-radius:5px;font-size:9px;font-weight:700;
   cursor:pointer;border:none;font-family:var(--sans);transition:all .12s;}
 .inc-btn:active{transform:scale(.96);}
 .ibt-resolve{background:rgba(76,175,125,.1);border:1px solid rgba(76,175,125,.25);color:var(--green);}
@@ -295,367 +255,300 @@ body{font-family:var(--sans);color:var(--text);min-height:100vh;line-height:1.5;
 .ibt-assign{background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);}
 .inc-resolved{opacity:.45;}
 .inc-resolved .inc-title{text-decoration:line-through;}
-.inc-filter-btn{padding:6px 13px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;
+.inc-filter-btn{padding:5px 11px;border-radius:7px;font-size:10px;font-weight:600;cursor:pointer;
   border:1px solid var(--border2);background:var(--card);color:var(--muted);transition:all .15s;font-family:var(--sans);}
 .inc-filter-btn.on{background:var(--gold-dim);border-color:rgba(201,168,76,.25);color:var(--gold);}
 .esc-pulse{animation:escPulse 2s infinite;}
 @keyframes escPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,68,68,.4);}50%{box-shadow:0 0 0 6px rgba(255,68,68,0);}}
 
+/* ── ANALYTICS ── */
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.stat-card{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:16px;}
+.sc-title{font-size:10px;font-weight:700;margin-bottom:12px;color:var(--muted);
+  font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;}
+.stat-row{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0;border-bottom:1px solid var(--border2);font-size:11px;}
+.stat-row:last-child{border-bottom:none;}
+.stat-label{color:var(--muted);}
+.stat-val{font-weight:700;font-family:var(--mono);}
+.bar-wrap{height:5px;background:var(--border2);border-radius:3px;margin-top:5px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.health-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.health-card{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px;text-align:center;}
+.hc-name{font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600;}
+.hc-score{font-size:32px;font-weight:900;letter-spacing:-1px;}
+.hc-label{font-size:9px;color:var(--muted);margin-top:3px;font-family:var(--mono);}
+
+/* ── BILLING ── */
+.billing-kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.billing-kpi{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:16px;}
+
 /* ── MISC ── */
-.empty{padding:24px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--faint);}
-.loading{display:flex;align-items:center;justify-content:center;padding:32px;
-  font-family:var(--mono);font-size:10px;color:var(--muted);gap:8px;}
-.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);
+.empty{padding:20px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);}
+.loading{display:flex;align-items:center;justify-content:center;padding:28px;
+  font-family:var(--mono);font-size:9px;color:var(--muted);gap:8px;}
+.spin{width:13px;height:13px;border-radius:50%;border:2px solid var(--border);
   border-top-color:var(--gold);animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.tw{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:7px;}
-.toast{padding:11px 15px;border-radius:11px;font-size:12px;font-weight:600;
+.tw{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:6px;}
+.toast{padding:10px 14px;border-radius:10px;font-size:11px;font-weight:600;
   background:var(--card2);border:1px solid var(--border);color:var(--text);
-  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tIn .3s ease;max-width:300px;}
-@keyframes tIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.divider{height:1px;background:var(--border2);margin:14px 0;}
-
-/* Legacy tab-content -- keep for JS compatibility */
-.tab-content{display:none;}.tab-content.on{display:block;}
-/* kpi-bar alias */
-.kpi-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
+  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tIn .3s ease;max-width:280px;}
+@keyframes tIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.divider{height:1px;background:var(--border2);margin:12px 0;}
 </style>
 </head>
 <body>
 
-<div class="app">
-
-  <!-- ── LEFT SIDEBAR ── -->
-  <div class="sidebar">
-    <div class="sb-brand">
-      <div class="sb-wordmark">Symphony+</div>
-      <div class="sb-sub">Managed Logistics Operations</div>
-      <div class="sb-tp1">
-        <svg width="14" height="22" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
-          <defs><linearGradient id="tpgs" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
-          <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgs)"/>
-          <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgs)" opacity=".75"/>
-          <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgs)" opacity=".5"/>
-        </svg>
-        <span class="sb-tp1-text">
-          <span style="color:#fff;">TACK</span><span style="color:#19b7ef;">PATH</span>&nbsp;<span style="font-family:'Playfair Display',serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#c9a84c,#f5e4b0,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">ONE</span>
-        </span>
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="wordmark">Symphony+</div>
+    <div class="hdr-divider"></div>
+    <div class="hdr-sub">Managed Logistics Operations Center</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-kpi">
+      <div>
+        <div class="hdr-kpi-val" id="kpiDrivers" style="color:var(--blue);">—</div>
+        <div class="hdr-kpi-lbl">Drivers</div>
       </div>
     </div>
-
-    <!-- Live Status -->
-    <div class="sb-status">
-      <div class="sb-status-row">
-        <div class="sb-dot"></div>
-        <div class="sb-status-label">Systems Nominal</div>
-      </div>
-      <div class="sb-kpis">
-        <div class="sb-kpi">
-          <span class="sb-kpi-label">Active Drivers</span>
-          <span class="sb-kpi-val" id="kpiDrivers" style="color:var(--blue);">—</span>
-        </div>
-        <div class="sb-kpi">
-          <span class="sb-kpi-label">Live Signals</span>
-          <span class="sb-kpi-val" id="kpiJobs" style="color:var(--purple);">—</span>
-        </div>
-        <div class="sb-kpi">
-          <span class="sb-kpi-label">Delivered Today</span>
-          <span class="sb-kpi-val" id="kpiDelivered" style="color:var(--green);">—</span>
-        </div>
-        <div class="sb-kpi">
-          <span class="sb-kpi-label">Open Alerts</span>
-          <span class="sb-kpi-val" id="kpiP1" style="color:var(--p1);">—</span>
-        </div>
+    <div class="hdr-kpi">
+      <div>
+        <div class="hdr-kpi-val" id="kpiJobs" style="color:var(--purple);">—</div>
+        <div class="hdr-kpi-lbl">Active</div>
       </div>
     </div>
-
-    <!-- Navigation -->
-    <div class="sb-nav">
-      <div class="sb-nav-section">Operations</div>
-      <div class="nav-item active" onclick="showPage('dispatch',this)">
-        <span class="nav-icon">&#9889;</span>
-        <span>Dispatch</span>
-      </div>
-      <div class="nav-item" onclick="showPage('map',this)">
-        <span class="nav-icon">&#127759;</span>
-        <span>Fleet Map</span>
-      </div>
-      <div class="nav-item" onclick="showPage('comms',this)">
-        <span class="nav-icon">&#128172;</span>
-        <span>Comms</span>
-      </div>
-
-      <div class="sb-nav-section">Management</div>
-      <div class="nav-item" onclick="showPage('incidents',this)">
-        <span class="nav-icon">&#128274;</span>
-        <span>Incidents</span>
-        <span class="nav-badge" id="incBadge" style="display:none;">0</span>
-      </div>
-      <div class="nav-item" onclick="showPage('billing',this)">
-        <span class="nav-icon">&#129534;</span>
-        <span>Billing</span>
-      </div>
-      <div class="nav-item" onclick="showPage('analytics',this)">
-        <span class="nav-icon">&#128200;</span>
-        <span>Analytics</span>
+    <div class="hdr-kpi">
+      <div>
+        <div class="hdr-kpi-val" id="kpiDelivered" style="color:var(--green);">—</div>
+        <div class="hdr-kpi-lbl">Delivered</div>
       </div>
     </div>
+    <div class="hdr-kpi">
+      <div>
+        <div class="hdr-kpi-val" id="kpiP1" style="color:var(--p1);">—</div>
+        <div class="hdr-kpi-lbl">Alerts</div>
+      </div>
+    </div>
+    <div class="hdr-status"><div class="hdr-dot"></div>Systems Nominal</div>
+    <div class="hdr-ai">&#9889; Claude AI Active</div>
+    <div class="hdr-time" id="hdrTime">—</div>
+    <div class="hdr-op">L</div>
+  </div>
+</div>
 
-    <!-- Footer -->
-    <div class="sb-footer">
-      <div class="sb-time" id="hdrTime">—</div>
-      <div class="sb-ai">
-        <div class="sb-ai-dot"></div>
-        <span>Claude AI Active</span>
-        <span id="kpiActions" style="margin-left:auto;color:var(--faint);">0 actions</span>
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-tab on" onclick="showTab('dispatch')">&#9889; Dispatch</button>
+  <button class="nav-tab" onclick="showTab('map')">&#127759; Fleet Map</button>
+  <button class="nav-tab" onclick="showTab('comms')">&#128172; Comms</button>
+  <button class="nav-tab" onclick="showTab('incidents')">&#128274; Incidents <span class="nt-badge" id="incBadge" style="display:none;">0</span></button>
+  <button class="nav-tab" onclick="showTab('analytics')">&#128200; Analytics</button>
+  <button class="nav-tab" onclick="showTab('billing')">&#129534; Billing</button>
+  <div class="nav-right">
+    <div class="scan-label" id="lastScan">Initializing...</div>
+    <a href="tackpathone.html" style="padding:5px 12px;border-radius:7px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);color:var(--gold);font-family:var(--mono);font-size:9px;font-weight:700;text-decoration:none;">TackPath ONE &#8599;</a>
+  </div>
+</div>
+
+<!-- DISPATCH TAB -- SOC 3 COLUMN -->
+<div class="tab-content on" id="tab-dispatch" style="padding:0;display:flex;flex-direction:column;">
+  <div style="padding:10px 16px;border-bottom:1px solid var(--border2);background:var(--bg2);display:flex;align-items:center;gap:8px;">
+    <div class="client-tabs" id="clientTabs" style="margin:0;">
+      <div class="ct on" onclick="filterClient('all')"><span class="ct-dot" style="background:var(--gold);"></span>All Clients</div>
+    </div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--faint);margin-left:auto;" id="kpiClients">— clients</div>
+  </div>
+  <div class="soc">
+    <!-- COL 1: FLEET -->
+    <div class="soc-col">
+      <div class="col-hdr">
+        <div class="col-hdr-title">&#128101; Fleet Status</div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--faint);">Active operators</div>
+      </div>
+      <div class="col-body" id="fleetGrid">
+        <div class="loading"><div class="spin"></div>Loading fleet...</div>
+      </div>
+    </div>
+    <!-- COL 2: AI AGENT FEED -->
+    <div class="soc-col">
+      <div class="col-hdr">
+        <div class="col-hdr-title">&#9889; Claude AI Feed <span class="panel-badge pb-gold">LIVE</span></div>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--faint);" id="kpiActions">0 actions</div>
+      </div>
+      <div class="col-body" id="agentFeed" style="padding:0;">
+        <div class="loading"><div class="spin"></div>Agent initializing...</div>
+      </div>
+      <!-- Audit Trail below feed -->
+      <div class="col-hdr" style="border-top:1px solid var(--border2);">
+        <div class="col-hdr-title">&#128203; Audit Trail</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px 12px;max-height:240px;" id="auditTrail">
+        <div class="empty">No actions yet</div>
+      </div>
+    </div>
+    <!-- COL 3: EXCEPTION QUEUE -->
+    <div class="soc-col">
+      <div class="col-hdr">
+        <div class="col-hdr-title">&#9888; Exception Queue <span class="panel-badge pb-red" id="alertBadge">0 OPEN</span></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;" id="alertQueue">
+        <div class="empty">No exceptions · All systems healthy</div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ── MAIN AREA ── -->
-  <div class="main">
-
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="topbar-title" id="pageTitle">Dispatch Operations</div>
-      <div class="topbar-badge" id="kpiClients">— clients</div>
-      <div class="topbar-scan" id="lastScan">Initializing...</div>
+<!-- MAP TAB -->
+<div class="tab-content" id="tab-map">
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">&#127759; Live Fleet Map <span class="panel-badge pb-blue">REAL-TIME</span></div>
+      <div style="font-size:10px;color:var(--muted);" id="mapDriverCount">Loading...</div>
     </div>
-
-    <!-- Content -->
-    <div class="content">
-
-      <!-- DISPATCH PAGE -->
-      <div class="page active" id="page-dispatch">
-        <div class="client-tabs" id="clientTabs">
-          <div class="ct on" onclick="filterClient('all')"><span class="ct-dot" style="background:var(--gold);"></span>All Clients</div>
+    <div style="padding:12px;">
+      <div class="map-wrap">
+        <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d106544!2d-84.3880!3d33.7490!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <div class="map-legend">
+          <div class="ml-item"><div class="ml-dot" style="background:var(--purple);"></div>In Transit</div>
+          <div class="ml-item"><div class="ml-dot" style="background:var(--blue);"></div>Assigned</div>
+          <div class="ml-item"><div class="ml-dot" style="background:var(--green);"></div>Available</div>
+          <div class="ml-item"><div class="ml-dot" style="background:var(--faint);"></div>Offline</div>
         </div>
-        <div class="ops-grid">
-          <!-- Col 1: Fleet -->
-          <div class="ops-col">
-            <div id="fleetGrid"><div class="loading"><div class="spin"></div>Loading fleet data...</div></div>
+      </div>
+      <div style="margin-top:12px;">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;">Active Driver Signals</div>
+        <div id="mapDriverList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMS TAB -->
+<div class="tab-content" id="tab-comms">
+  <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+    <button class="cm-auto-btn" onclick="sendAutoResponse()">&#9889; AI Auto-Response to All Active Drivers</button>
+    <div style="font-size:10px;color:var(--muted);">Claude generates context-aware messages per active job</div>
+  </div>
+  <div class="comms-grid">
+    <div class="comms-sidebar">
+      <div class="cs-hdr">Driver Channels</div>
+      <div class="cs-list" id="commsList"><div class="empty">No active drivers</div></div>
+    </div>
+    <div class="comms-main">
+      <div class="cm-hdr">
+        <div>
+          <div class="cm-name" id="commsDriverName">Select a driver</div>
+          <div class="cm-sub" id="commsDriverSub">—</div>
+        </div>
+        <button class="cm-auto-btn" id="autoResponseBtn" onclick="sendSingleAutoResponse()" style="display:none;">&#9889; AI Response</button>
+      </div>
+      <div class="cm-msgs" id="commsMessages"><div class="cm-sys">Select a driver from the left to view messages</div></div>
+      <div class="cm-inp-row">
+        <input class="cm-inp" id="commsInput" placeholder="Message driver..." onkeydown="if(event.key==='Enter')sendDispatchMsg();"/>
+        <button class="cm-send" onclick="sendDispatchMsg()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INCIDENTS TAB -->
+<div class="tab-content" id="tab-incidents">
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:12px;">
+    <div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="inc-filter-btn on" onclick="filterIncidents('all',this)">All</button>
+        <button class="inc-filter-btn" onclick="filterIncidents('P1',this)" style="color:var(--p1);border-color:rgba(255,68,68,.2);">P1 Critical</button>
+        <button class="inc-filter-btn" onclick="filterIncidents('P2',this)" style="color:var(--p2);border-color:rgba(255,149,0,.2);">P2 Warning</button>
+        <button class="inc-filter-btn" onclick="filterIncidents('P3',this)" style="color:var(--p3);border-color:rgba(255,210,61,.2);">P3 Notice</button>
+        <button class="inc-filter-btn" onclick="filterIncidents('resolved',this)" style="color:var(--green);border-color:rgba(76,175,125,.2);">Resolved</button>
+        <div style="margin-left:auto;">
+          <button onclick="createManualIncident()" style="padding:6px 12px;border-radius:7px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);color:var(--gold);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--sans);">+ New Incident</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">&#128274; Incident Log <span class="panel-badge pb-red" id="incBadge2">0 OPEN</span></div>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);" id="incLastScan">—</div>
+        </div>
+        <div id="incidentLog" style="max-height:calc(100vh - 240px);overflow-y:auto;"><div class="empty">No incidents · All systems nominal</div></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="panel">
+        <div class="panel-hdr"><div class="panel-title">&#128200; Incident Stats</div></div>
+        <div style="padding:12px 14px;" id="incStats"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><div class="panel-title">&#9889; Auto-Escalation</div></div>
+        <div style="padding:12px 14px;">
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;">
+              <span style="color:var(--muted);">P3 → P2 after</span><span style="font-family:var(--mono);color:var(--p3);">10 min</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;">
+              <span style="color:var(--muted);">P2 → P1 after</span><span style="font-family:var(--mono);color:var(--p2);">5 min</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;">
+              <span style="color:var(--muted);">P1 notify operator</span><span style="font-family:var(--mono);color:var(--p1);">Immediate</span>
+            </div>
           </div>
-          <!-- Col 2: Agent Feed -->
-          <div class="ops-col">
-            <div class="panel">
-              <div class="panel-hdr">
-                <div class="panel-title">&#9889; Claude AI Agent Feed <span class="panel-badge pb-gold">ACTIVE</span></div>
-              </div>
-              <div class="af-body" id="agentFeed"><div class="loading"><div class="spin"></div>Agent initializing...</div></div>
-            </div>
-            <!-- Audit Trail -->
-            <div class="panel">
-              <div class="panel-hdr">
-                <div class="panel-title">&#128203; Agent Audit Trail</div>
-              </div>
-              <div style="padding:14px 16px;max-height:240px;overflow-y:auto;" id="auditTrail">
-                <div class="empty">No actions yet</div>
-              </div>
-            </div>
-          </div>
-          <!-- Col 3: Exception Queue -->
-          <div class="ops-col">
-            <div class="panel" style="position:sticky;top:0;">
-              <div class="panel-hdr">
-                <div class="panel-title">&#9888; Exception Queue <span class="panel-badge pb-red" id="alertBadge">0 OPEN</span></div>
-              </div>
-              <div id="alertQueue" style="max-height:calc(100vh - 200px);overflow-y:auto;">
-                <div class="empty">No exceptions · All systems healthy</div>
-              </div>
-            </div>
+          <div style="margin-top:10px;padding:7px 9px;border-radius:7px;background:rgba(76,175,125,.06);border:1px solid rgba(76,175,125,.15);font-size:9px;color:var(--green);">
+            &#10003; Auto-escalation enabled
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
-      <!-- MAP PAGE -->
-      <div class="page" id="page-map">
-        <div class="panel" style="margin-bottom:14px;">
-          <div class="panel-hdr">
-            <div class="panel-title">&#127759; Live Fleet Map <span class="panel-badge pb-blue">REAL-TIME</span></div>
-            <div style="font-size:11px;color:var(--muted);" id="mapDriverCount">Loading...</div>
-          </div>
-          <div style="padding:14px;">
-            <div class="map-wrap">
-              <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d106544!2d-84.3880!3d33.7490!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
-              <div class="map-legend">
-                <div class="ml-item"><div class="ml-dot" style="background:var(--purple);"></div>In Transit</div>
-                <div class="ml-item"><div class="ml-dot" style="background:var(--blue);"></div>Assigned</div>
-                <div class="ml-item"><div class="ml-dot" style="background:var(--green);"></div>Available</div>
-                <div class="ml-item"><div class="ml-dot" style="background:var(--faint);"></div>Offline</div>
-              </div>
-            </div>
-            <div style="margin-top:14px;">
-              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Active Driver Signals</div>
-              <div id="mapDriverList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+<!-- ANALYTICS TAB -->
+<div class="tab-content" id="tab-analytics">
+  <div class="health-grid" id="healthGrid">
+    <div class="loading" style="grid-column:1/-1;"><div class="spin"></div>Loading client health scores...</div>
+  </div>
+  <div class="analytics-grid">
+    <div class="stat-card"><div class="sc-title">Delivery Performance</div><div id="perfStats"><div class="empty">Loading...</div></div></div>
+    <div class="stat-card"><div class="sc-title">Agent Summary</div><div id="agentStats"><div class="empty">Loading...</div></div></div>
+    <div class="stat-card"><div class="sc-title">Signal Volume by Client</div><div id="volumeStats"><div class="empty">Loading...</div></div></div>
+    <div class="stat-card"><div class="sc-title">Exception Breakdown</div><div id="exceptionStats"><div class="empty">Loading...</div></div></div>
+  </div>
+</div>
 
-      <!-- COMMS PAGE -->
-      <div class="page" id="page-comms">
-        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;">
-          <button class="cm-auto-btn" onclick="sendAutoResponse()">&#9889; Send AI Auto-Response to All Active Drivers</button>
-          <div style="font-size:11px;color:var(--muted);">Claude will generate context-aware messages for each active job</div>
-        </div>
-        <div class="comms-grid">
-          <div class="comms-sidebar">
-            <div class="cs-hdr">Driver Channels</div>
-            <div class="cs-list" id="commsList"><div class="empty">No active drivers</div></div>
-          </div>
-          <div class="comms-main">
-            <div class="cm-hdr">
-              <div>
-                <div class="cm-name" id="commsDriverName">Select a driver</div>
-                <div class="cm-sub" id="commsDriverSub">—</div>
-              </div>
-              <button class="cm-auto-btn" id="autoResponseBtn" onclick="sendSingleAutoResponse()" style="display:none;">&#9889; AI Response</button>
-            </div>
-            <div class="cm-msgs" id="commsMessages"><div class="cm-sys">Select a driver from the left to view messages</div></div>
-            <div class="cm-inp-row">
-              <input class="cm-inp" id="commsInput" placeholder="Message driver..." onkeydown="if(event.key==='Enter')sendDispatchMsg();"/>
-              <button class="cm-send" onclick="sendDispatchMsg()">Send</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- INCIDENTS PAGE -->
-      <div class="page" id="page-incidents">
-        <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-              <button class="inc-filter-btn on" onclick="filterIncidents('all',this)">All</button>
-              <button class="inc-filter-btn" onclick="filterIncidents('P1',this)" style="color:var(--p1);border-color:rgba(255,68,68,.2);">P1 Critical</button>
-              <button class="inc-filter-btn" onclick="filterIncidents('P2',this)" style="color:var(--p2);border-color:rgba(255,149,0,.2);">P2 Warning</button>
-              <button class="inc-filter-btn" onclick="filterIncidents('P3',this)" style="color:var(--p3);border-color:rgba(255,210,61,.2);">P3 Notice</button>
-              <button class="inc-filter-btn" onclick="filterIncidents('resolved',this)" style="color:var(--green);border-color:rgba(76,175,125,.2);">Resolved</button>
-              <div style="margin-left:auto;">
-                <button onclick="createManualIncident()" style="padding:7px 14px;border-radius:8px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.25);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">+ New Incident</button>
-              </div>
-            </div>
-            <div class="panel">
-              <div class="panel-hdr">
-                <div class="panel-title">&#128274; Incident Log <span class="panel-badge pb-red" id="incBadge2">0 OPEN</span></div>
-                <div style="font-family:var(--mono);font-size:9px;color:var(--muted);" id="incLastScan">—</div>
-              </div>
-              <div id="incidentLog" style="max-height:580px;overflow-y:auto;"><div class="empty">No incidents · All systems nominal</div></div>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <div class="panel">
-              <div class="panel-hdr"><div class="panel-title">&#128200; Incident Stats</div></div>
-              <div style="padding:14px 16px;" id="incStats"><div class="empty">Loading...</div></div>
-            </div>
-            <div class="panel">
-              <div class="panel-hdr"><div class="panel-title">&#9889; Auto-Escalation</div></div>
-              <div style="padding:14px 16px;">
-                <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:12px;">Escalation rules active:</div>
-                <div style="display:flex;flex-direction:column;gap:8px;">
-                  <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
-                    <span style="color:var(--muted);">P3 → P2 after</span><span style="font-family:var(--mono);color:var(--p3);">10 min</span>
-                  </div>
-                  <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
-                    <span style="color:var(--muted);">P2 → P1 after</span><span style="font-family:var(--mono);color:var(--p2);">5 min</span>
-                  </div>
-                  <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">
-                    <span style="color:var(--muted);">P1 notify operator</span><span style="font-family:var(--mono);color:var(--p1);">Immediate</span>
-                  </div>
-                </div>
-                <div style="margin-top:12px;padding:8px 10px;border-radius:8px;background:rgba(76,175,125,.06);border:1px solid rgba(76,175,125,.15);font-size:10px;color:var(--green);">
-                  &#10003; Auto-escalation enabled
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- BILLING PAGE -->
-      <div class="page" id="page-billing">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-          <div class="stat-card">
-            <div class="sc-title">Ready to Invoice</div>
-            <div id="billingReady" style="font-size:32px;font-weight:800;color:var(--green);padding:12px 0;">—</div>
-            <div style="font-size:11px;color:var(--muted);">Delivered jobs with POD · awaiting invoice</div>
-          </div>
-          <div class="stat-card">
-            <div class="sc-title">Est. Revenue Today</div>
-            <div id="billingRevenue" style="font-size:32px;font-weight:800;color:var(--gold);padding:12px 0;">—</div>
-            <div style="font-size:11px;color:var(--muted);">Based on job prices · uninvoiced</div>
-          </div>
-        </div>
-        <div class="panel" style="margin-bottom:16px;">
-          <div class="panel-hdr" style="display:flex;justify-content:space-between;align-items:center;">
-            <div><div class="panel-title">&#129534; Invoice Queue</div><div class="panel-sub">Completed deliveries ready for billing review</div></div>
-            <button onclick="runBillingAgent()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;border-radius:8px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold);cursor:pointer;">&#9654; Run Billing Agent</button>
-          </div>
-          <div id="billingQueue" style="max-height:400px;overflow-y:auto;"><div class="empty">Click Run Billing Agent to review completed deliveries</div></div>
-        </div>
-        <div class="panel">
-          <div class="panel-hdr"><div class="panel-title">Billing Audit Trail</div><div class="panel-sub">All billing agent decisions</div></div>
-          <div id="billingAudit" style="max-height:250px;overflow-y:auto;"><div class="empty">No billing actions yet</div></div>
-        </div>
-      </div>
-
-      <!-- ANALYTICS PAGE -->
-      <div class="page" id="page-analytics">
-        <div class="health-grid" id="healthGrid">
-          <div class="loading" style="grid-column:1/-1;"><div class="spin"></div>Loading client health scores...</div>
-        </div>
-        <div class="analytics-grid">
-          <div class="stat-card"><div class="sc-title">Delivery Performance</div><div id="perfStats"><div class="empty">Loading...</div></div></div>
-          <div class="stat-card"><div class="sc-title">Agent Summary</div><div id="agentStats"><div class="empty">Loading...</div></div></div>
-          <div class="stat-card"><div class="sc-title">Signal Volume by Client</div><div id="volumeStats"><div class="empty">Loading...</div></div></div>
-          <div class="stat-card"><div class="sc-title">Exception Breakdown</div><div id="exceptionStats"><div class="empty">Loading...</div></div></div>
-        </div>
-      </div>
-
-    </div><!-- /content -->
-  </div><!-- /main -->
-</div><!-- /app -->
+<!-- BILLING TAB -->
+<div class="tab-content" id="tab-billing">
+  <div class="billing-kpis">
+    <div class="billing-kpi">
+      <div class="sc-title">Ready to Invoice</div>
+      <div id="billingReady" style="font-size:30px;font-weight:800;color:var(--green);padding:10px 0;">—</div>
+      <div style="font-size:10px;color:var(--muted);">Delivered jobs with POD · awaiting invoice</div>
+    </div>
+    <div class="billing-kpi">
+      <div class="sc-title">Est. Revenue Today</div>
+      <div id="billingRevenue" style="font-size:30px;font-weight:800;color:var(--gold);padding:10px 0;">—</div>
+      <div style="font-size:10px;color:var(--muted);">Based on job prices · uninvoiced</div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:12px;">
+    <div class="panel-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+      <div><div class="panel-title">&#129534; Invoice Queue</div><div class="panel-sub">Completed deliveries ready for billing review</div></div>
+      <button onclick="runBillingAgent()" style="font-family:var(--mono);font-size:9px;padding:5px 12px;border-radius:7px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold);cursor:pointer;">&#9654; Run Billing Agent</button>
+    </div>
+    <div id="billingQueue" style="max-height:360px;overflow-y:auto;"><div class="empty">Click Run Billing Agent to review completed deliveries</div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-hdr"><div class="panel-title">Billing Audit Trail</div><div class="panel-sub">All billing agent decisions</div></div>
+    <div id="billingAudit" style="max-height:220px;overflow-y:auto;"><div class="empty">No billing actions yet</div></div>
+  </div>
+</div>
 
 <div class="tw" id="tw"></div>
 
-<!-- Legacy tab-content stubs for JS compatibility -->
-<div id="tab-dispatch" style="display:none;"></div>
-<div id="tab-map" style="display:none;"></div>
-<div id="tab-comms" style="display:none;"></div>
-<div id="tab-incidents" style="display:none;"></div>
-<div id="tab-analytics" style="display:none;"></div>
-<div id="tab-billing" style="display:none;"></div>
 
 <script>
 
-// ── PAGE NAVIGATION (SOC layout) ──
-const pageTitles = {
-  dispatch: 'Dispatch Operations',
-  map: 'Fleet Map · SmartTrack',
-  comms: 'Communications Hub',
-  incidents: 'Incident Management',
-  billing: 'Billing & Invoicing',
-  analytics: 'Analytics & Health'
-};
-
-function showPage(id, el){
-  // Hide all pages
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  // Show target page
-  const page = document.getElementById('page-'+id);
-  if(page) page.classList.add('active');
-  if(el) el.classList.add('active');
-  // Update topbar title
-  const title = document.getElementById('pageTitle');
-  if(title) title.textContent = pageTitles[id] || id;
-  // Trigger data loads
-  if(id==='map') renderMapDrivers();
-  if(id==='comms') loadCommsList();
-  if(id==='billing'){
-    const r=document.getElementById('billingReady');
-    if(r&&r.textContent==='—') document.getElementById('billingQueue').innerHTML='<div class="empty">Click Run Billing Agent to review completed deliveries</div>';
-  }
-}
 
 // Patch showTab to work with new layout (called by existing JS)
 function showTab(id){
@@ -1643,6 +1536,7 @@ async function init(){
 }
 
 init();
+
 
 </script>
 </body>
