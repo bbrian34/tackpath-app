@@ -544,15 +544,18 @@ body::after{content:'';position:fixed;inset:0;
       <div class="lbox-desc">Real-time dispatch · SmartPath AI · Fleet tracking · Analytics</div>
     </div>
     <div class="lbox-form">
-      <label class="lf-lbl">Operator ID</label>
-      <input class="lf-in" type="text" value="dispatch_ops_atl" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <label class="lf-lbl">Password</label>
-      <input class="lf-in" type="password" value="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <div class="lf-hub">
-        <div class="hub-tag">ATL HUB 01</div>
-        <div class="hub-note">Atlanta Metro Operations</div>
+      <div id="dispPhasePhone">
+        <label class="lf-lbl">Mobile Number</label>
+        <input class="lf-in" type="tel" id="dispPhone" placeholder="+1 (404) 555-0100" onkeydown="if(event.key==='Enter')dispRequestCode()"/>
+        <button class="lf-btn" onclick="dispRequestCode()">Send Code &#8594;</button>
       </div>
-      <button class="lf-btn" onclick="doLogin()">Access Operations Center &#8594;</button>
+      <div id="dispPhaseCode" style="display:none;">
+        <label class="lf-lbl">Verification Code</label>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;">Enter any 6-digit code</div>
+        <input class="lf-in" type="number" id="dispCode" placeholder="000000" style="font-size:24px;font-weight:900;letter-spacing:6px;text-align:center;" onkeydown="if(event.key==='Enter')dispVerifyCode()"/>
+        <button class="lf-btn" onclick="dispVerifyCode()">Access Operations Center &#8594;</button>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('dispPhasePhone').style.display='';document.getElementById('dispPhaseCode').style.display='none';">&#8592; Change number</div>
+      </div>
       <div class="lf-note">Secured · Role-based · TackPath OPS v3.0</div>
     </div>
   </div>
@@ -1180,6 +1183,20 @@ async function getMessages(jobId){
 let jobs=[], currentJobId=null, pollInterval=null;
 
 // ── LOGIN ──
+function dispRequestCode(){
+  const raw = document.getElementById('dispPhone').value.trim();
+  if(!raw){return;}
+  document.getElementById('dispPhasePhone').style.display = 'none';
+  document.getElementById('dispPhaseCode').style.display = '';
+  document.getElementById('dispCode').focus();
+}
+
+function dispVerifyCode(){
+  const code = (document.getElementById('dispCode').value||'').trim().replace(/\D/g,'');
+  if(code.length !== 6){return;}
+  doLogin();
+}
+
 function doLogin(){
   const ls=document.getElementById('loginScreen');
   ls.style.opacity='0';ls.style.transition='opacity .5s';
