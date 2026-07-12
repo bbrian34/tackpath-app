@@ -268,13 +268,18 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
       <div class="login-sub">Customer Portal</div>
     </div>
     <div class="login-form">
-      <label class="fl">Email Address</label>
-      <input type="email" class="fi" id="loginEmail" placeholder="you@company.com" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <label class="fl">Password</label>
-      <input type="password" class="fi" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <button class="btn-login" onclick="doLogin()">Sign In &#8594;</button>
-      <div class="login-note">Demo mode — any credentials work</div>
-      <div class="login-create">New to TackPath? <a href="#" onclick="doLogin()">Create account &#8594;</a></div>
+      <div id="custPhasePhone">
+        <label class="fl">Mobile Number</label>
+        <input type="tel" class="fi" id="custPhone" placeholder="+1 (404) 555-0100" onkeydown="if(event.key==='Enter')custRequestCode()"/>
+        <button class="btn-login" onclick="custRequestCode()">Send Code &#8594;</button>
+      </div>
+      <div id="custPhaseCode" style="display:none;">
+        <label class="fl">Verification Code</label>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:10px;">Enter any 6-digit code</div>
+        <input type="number" class="fi" id="custCode" placeholder="000000" style="font-size:24px;font-weight:900;letter-spacing:6px;text-align:center;" onkeydown="if(event.key==='Enter')custVerifyCode()"/>
+        <button class="btn-login" onclick="custVerifyCode()">Sign In &#8594;</button>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('custPhasePhone').style.display='';document.getElementById('custPhaseCode').style.display='none';">&#8592; Change number</div>
+      </div>
     </div>
   </div>
 </div>
@@ -566,11 +571,25 @@ async function autoDetectCity(type){
 }
 
 // ── LOGIN ──
+function custRequestCode(){
+  const raw = document.getElementById('custPhone').value.trim();
+  if(!raw) return;
+  document.getElementById('custPhasePhone').style.display = 'none';
+  document.getElementById('custPhaseCode').style.display = '';
+  document.getElementById('custCode').focus();
+}
+
+function custVerifyCode(){
+  const code = (document.getElementById('custCode').value||'').trim().replace(/\D/g,'');
+  if(code.length !== 6) return;
+  doLogin();
+}
+
 function doLogin(){
-  const email=document.getElementById('loginEmail').value.trim()||'customer@tackpath.com';
-  const name=email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  currentUser={email,name};
-  localStorage.setItem('tp_customer',JSON.stringify(currentUser));
+  const phone = (document.getElementById('custPhone')||{}).value||'+14045550100';
+  const name = 'Customer';
+  currentUser = {email: phone, name};
+  localStorage.setItem('tp_customer', JSON.stringify(currentUser));
   showPortal();
 }
 function logout(){
