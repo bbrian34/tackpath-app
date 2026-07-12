@@ -39,6 +39,34 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
 .screen.on{display:block;}
 
 /* LOGIN */
+/* ── LOGIN ── */
+#scLogin{align-items:center;justify-content:center;padding:28px;
+  background:radial-gradient(ellipse at 40% 30%,rgba(25,183,239,.1),transparent 60%),var(--bg);}
+.lbox{width:100%;max-width:380px;border-radius:24px;overflow:hidden;
+  background:rgba(7,24,40,.98);border:1px solid rgba(25,183,239,.2);
+  box-shadow:0 32px 80px rgba(0,0,0,.8);position:relative;}
+.lbox::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue) 40%,var(--green) 70%,transparent);}
+.lbox-top{padding:48px 32px 24px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);}
+.wm{font-size:42px;font-weight:900;letter-spacing:-2px;}
+.wm .t{color:#fff;}.wm .p{color:var(--blue);}
+.lbox-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;
+  border-radius:20px;background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.2);
+  font-size:13px;font-weight:700;color:var(--green);margin-top:10px;}
+.lbox-form{padding:24px 32px 36px;}
+.fl{display:block;font-family:var(--mono);font-size:9px;font-weight:500;color:var(--text2);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:7px;}
+.fi{width:100%;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);color:#fff;font-size:16px;outline:none;
+  margin-bottom:14px;-webkit-appearance:none;transition:border-color .2s;}
+.fi:focus{border-color:rgba(25,183,239,.4);}
+.fi::placeholder{color:var(--text3);}
+.fb{width:100%;padding:17px;border-radius:14px;
+  background:linear-gradient(135deg,var(--blue),#0060cc);
+  border:none;color:#fff;font-size:17px;font-weight:800;cursor:pointer;
+  box-shadow:0 8px 24px rgba(25,183,239,.3);}
+.fb:disabled{opacity:.6;}
+.fn{text-align:center;margin-top:12px;font-family:var(--mono);font-size:10px;color:var(--text2);}
 #scLogin{display:flex;align-items:center;justify-content:center;padding:24px;min-height:100vh;
   background:radial-gradient(ellipse at 30% 40%,rgba(25,183,239,.08),transparent 55%),var(--bg);}
 .login-box{width:min(440px,96vw);border-radius:22px;overflow:hidden;position:relative;
@@ -257,29 +285,29 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
 <!-- LOGIN -->
 <div id="scLogin" class="screen on" style="padding-top:0;">
   <div class="login-box">
-    <div class="login-top" style="text-align:center;padding-bottom:4px;">
+  <div class="lbox">
+    <div class="lbox-top" style="text-align:center;padding-bottom:4px;">
       <svg width="28" height="48" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 10px;">
-        <defs><linearGradient id="tpgl" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
-        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgl)"/>
-        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgl)" opacity=".75"/>
-        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgl)" opacity=".5"/>
+        <defs><linearGradient id="tpgdc" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgdc)"/>
+        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgdc)" opacity=".75"/>
+        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgdc)" opacity=".5"/>
       </svg>
-      <div class="login-wm"><span style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
-      <div class="login-sub">Customer Portal</div>
+      <div class="wm"><span style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
+      <div class="lbox-badge">Customer Portal</div>
     </div>
-    <div class="login-form">
-      <div id="custPhasePhone">
-        <label class="fl">Mobile Number</label>
-        <input type="tel" class="fi" id="custPhone" placeholder="+1 (404) 555-0100" onkeydown="if(event.key==='Enter')custRequestCode()"/>
-        <button class="btn-login" onclick="custRequestCode()">Send Code &#8594;</button>
-      </div>
-      <div id="custPhaseCode" style="display:none;">
-        <label class="fl">Verification Code</label>
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:10px;">Enter any 6-digit code</div>
-        <input type="number" class="fi" id="custCode" placeholder="000000" style="font-size:24px;font-weight:900;letter-spacing:6px;text-align:center;" onkeydown="if(event.key==='Enter')custVerifyCode()"/>
-        <button class="btn-login" onclick="custVerifyCode()">Sign In &#8594;</button>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('custPhasePhone').style.display='';document.getElementById('custPhaseCode').style.display='none';">&#8592; Change number</div>
-      </div>
+    <div class="lbox-form" id="custPhasePhone">
+      <label class="fl">Mobile Number</label>
+      <input class="fi" type="tel" id="custPhone" placeholder="+1 (404) 555-0100" autocomplete="tel"/>
+      <button class="fb" onclick="custRequestCode()">Send Code</button>
+      <div class="fn">TackPath Customer &middot; Atlanta Metro</div>
+    </div>
+    <div class="lbox-form" id="custPhaseCode" style="display:none;">
+      <label class="fl">Verification Code</label>
+      <div style="font-family:var(--mono);font-size:11px;color:#4a6e88;margin-bottom:12px;">Enter any 6-digit code</div>
+      <input class="fi" type="number" id="custCode" placeholder="000000" style="font-size:28px;font-weight:900;letter-spacing:8px;text-align:center;"/>
+      <button class="fb" onclick="custVerifyCode()">Verify &amp; Sign In</button>
+      <button onclick="document.getElementById('custPhasePhone').style.display='block';document.getElementById('custPhaseCode').style.display='none';" style="width:100%;padding:14px;border-radius:12px;background:none;border:1px solid rgba(255,255,255,.08);color:#4a6e88;font-size:14px;cursor:pointer;margin-top:10px;">Change number</button>
     </div>
   </div>
 </div>
@@ -573,15 +601,19 @@ async function autoDetectCity(type){
 // ── LOGIN ──
 function custRequestCode(){
   const raw = document.getElementById('custPhone').value.trim();
-  if(!raw) return;
+  if(!raw){return;}
   document.getElementById('custPhasePhone').style.display = 'none';
-  document.getElementById('custPhaseCode').style.display = '';
+  document.getElementById('custPhaseCode').style.display = 'block';
   document.getElementById('custCode').focus();
 }
-
 function custVerifyCode(){
   const code = (document.getElementById('custCode').value||'').trim().replace(/\D/g,'');
-  if(code.length !== 6) return;
+  if(code.length !== 6){return;}
+  const phone = document.getElementById('custPhone').value.trim();
+  currentUser = {email: phone, name: 'Customer', phone: phone};
+  localStorage.setItem('tp_customer', JSON.stringify(currentUser));
+  document.getElementById('scLogin').style.display = 'none';
+  document.getElementById('scMain') && (document.getElementById('scMain').style.display = 'block');
   doLogin();
 }
 
