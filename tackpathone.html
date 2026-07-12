@@ -219,19 +219,17 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
 <!-- MAIN -->
 <div class="main">
 
-  <!-- MORNING BRIEF -->
-  <div class="brief">
-    <div class="brief-icon">&#9728;&#65039;</div>
-    <div class="brief-content">
-      <div class="brief-greeting">Good <span id="briefGreeting">morning</span>, Brian.</div>
-      <div class="brief-text" id="briefText">
-        Loading your operational summary...
-      </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(135deg,rgba(201,168,76,.06),rgba(25,183,239,.04));border:1px solid var(--border);border-radius:16px;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="display:flex;align-items:center;gap:7px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(76,175,125,.7);animation:pulse 2s infinite;"></div><span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);">All Systems Operational</span></div>
+      <div style="width:1px;height:16px;background:var(--border);"></div>
+      <div style="font-size:12px;color:var(--muted);" id="briefText">Loading operational summary...</div>
     </div>
-    <div class="brief-right">
-      <div class="brief-date" id="briefDate">—</div>
-      <div class="brief-ai-badge">&#9889; Claude AI Active &middot; <span id="briefActions">0</span> decisions today</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);" id="briefDate">—</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);font-family:var(--mono);font-size:9px;font-weight:700;color:var(--gold);">&#9889; Claude AI &middot; <span id="briefActions">0</span> decisions</div>
     </div>
+  </div>
   </div>
 
   <!-- KPIs -->
