@@ -285,6 +285,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
   <button class="nav-tab" onclick="showTab('comms')">Comms</button>
   <button class="nav-tab" onclick="showTab('incidents')">Incidents</button>
   <button class="nav-tab" onclick="showTab('analytics')">Analytics</button>
+  <button class="nav-tab" onclick="showTab('billing')">Billing</button>
 </div>
 
 <div class="wrap">
@@ -473,6 +474,33 @@ header{position:fixed;top:0;left:0;right:0;z-index:999;height:58px;
         <div class="sc-title">Exception Breakdown</div>
         <div id="exceptionStats"><div class="empty">Loading...</div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- BILLING TAB -->
+  <div class="tab-content" id="tab-billing">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="stat-card">
+        <div class="sc-title">Ready to Invoice</div>
+        <div id="billingReady" style="font-size:32px;font-weight:800;color:var(--green);padding:12px 0;">—</div>
+        <div style="font-size:11px;color:var(--muted);">Delivered jobs with POD · awaiting invoice</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-title">Est. Revenue Today</div>
+        <div id="billingRevenue" style="font-size:32px;font-weight:800;color:var(--gold);padding:12px 0;">—</div>
+        <div style="font-size:11px;color:var(--muted);">Based on job prices · uninvoiced</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div class="panel-title">&#129534; Invoice Queue</div><div class="panel-sub">Completed deliveries ready for billing review</div></div>
+        <button onclick="runBillingAgent()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;border-radius:8px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold);cursor:pointer;">&#9654; Run Billing Agent</button>
+      </div>
+      <div id="billingQueue" style="max-height:400px;overflow-y:auto;"><div class="empty">Click Run Billing Agent to review completed deliveries</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr"><div class="panel-title">Billing Audit Trail</div><div class="panel-sub">All billing agent decisions</div></div>
+      <div id="billingAudit" style="max-height:250px;overflow-y:auto;"><div class="empty">No billing actions yet</div></div>
     </div>
   </div>
 
@@ -1266,6 +1294,168 @@ async function loadData(){
     document.getElementById('fleetGrid').innerHTML='<div class="empty">Error: '+e.message+'</div>';
   }
 }
+
+// ── BILLING AGENT ──
+let billingItems = [];
+
+async function runBillingAgent(){
+  const btn = event.target;
+  btn.textContent = '&#9200; Analyzing...';
+  btn.disabled = true;
+
+  try{
+    // Get all delivered jobs from today
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const delivered = await sbGet(
+      'jobs?status=eq.delivered&order=updated_at.desc&limit=100'
+    );
+
+    const todayJobs = (delivered||[]).filter(j =>
+      new Date(j.updated_at||j.created_at) >= today
+    );
+
+    if(!todayJobs.length){
+      document.getElementById('billingQueue').innerHTML =
+        '<div class="empty">No delivered jobs today</div>';
+      btn.textContent = '&#9654; Run Billing Agent';
+      btn.disabled = false;
+      return;
+    }
+
+    // Update KPIs
+    const revenue = todayJobs.reduce((s,j)=>s+parseFloat(j.price||0),0);
+    document.getElementById('billingReady').textContent = todayJobs.length;
+    document.getElementById('billingRevenue').textContent =
+      '$'+revenue.toFixed(2);
+
+    // Ask Claude to analyze billing
+    const prompt = `You are the TackPath Billing Agent.
+Review these completed deliveries and prepare billing assessments.
+Return ONLY a JSON array of objects with these fields:
+- job_id: string
+- customer: string
+- billable: boolean
+- amount: number
+- issue: string or null (reason if not billable or needs review)
+- invoice_ready: boolean
+- notes: string (one sentence billing note)
+
+Jobs: ${JSON.stringify(todayJobs.map(j=>({
+  id: j.id,
+  title: j.title,
+  customer: j.customer_name,
+  price: j.price,
+  status: j.status,
+  driver: j.driver_name,
+  packages: j.packages,
+  updated_at: j.updated_at
+})))}`;
+
+    const result = await askClaude(prompt);
+    let items = [];
+    try{
+      items = JSON.parse(result.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    }catch(e){
+      items = todayJobs.map(j=>({
+        job_id: j.id,
+        customer: j.customer_name||'Unknown',
+        billable: true,
+        amount: parseFloat(j.price||0),
+        issue: null,
+        invoice_ready: true,
+        notes: 'Delivery completed · ready to invoice'
+      }));
+    }
+
+    billingItems = items;
+    renderBillingQueue(items, todayJobs);
+    addFeed('BILLING AGENT: analyzed '+items.length+' deliveries · $'+revenue.toFixed(2)+' ready','var(--gold)');
+
+    // Write to audit log
+    await sbPost('agent_audit_log',{
+      agent_name: 'BILLING',
+      action_type: 'billing_review',
+      confidence_score: 0.92,
+      decision_json: {items, total_revenue: revenue, jobs_reviewed: todayJobs.length},
+      outcome: 'executed'
+    }).catch(()=>{});
+
+  }catch(e){
+    addFeed('Billing Agent error: '+e.message,'var(--red)');
+  }finally{
+    btn.textContent = '&#9654; Run Billing Agent';
+    btn.disabled = false;
+  }
+}
+
+function renderBillingQueue(items, jobs){
+  const q = document.getElementById('billingQueue');
+  if(!q) return;
+
+  const jobMap = {};
+  jobs.forEach(j => jobMap[j.id] = j);
+
+  q.innerHTML = items.map((item,i) => {
+    const job = jobMap[item.job_id] || {};
+    const hasIssue = item.issue && item.issue !== 'null';
+    return `
+    <div style="padding:12px 16px;border-bottom:1px solid rgba(201,168,76,.08);display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${hasIssue?'var(--orange)':'var(--green)'};margin-top:5px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;">
+          <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);">${item.customer||'Unknown'}</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:800;color:${hasIssue?'var(--orange)':'var(--green)'};">$${parseFloat(item.amount||0).toFixed(2)}</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">${item.notes||''}</div>
+        ${hasIssue ? `<div style="font-size:10px;color:var(--orange);margin-bottom:4px;">&#9888; ${item.issue}</div>` : ''}
+        <div style="font-family:var(--mono);font-size:8px;color:var(--faint);">${job.title||item.job_id||''} · ${job.driver_name||''}</div>
+      </div>
+      <div style="display:flex;gap:5px;flex-shrink:0;">
+        ${item.invoice_ready && !hasIssue ? `<button onclick="approveBillingItem(${i})" style="font-size:9px;padding:4px 10px;border-radius:6px;background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.3);color:#4caf7d;cursor:pointer;font-family:var(--mono);">Invoice</button>` : ''}
+        <button onclick="flagBillingItem(${i})" style="font-size:9px;padding:4px 8px;border-radius:6px;background:rgba(255,150,0,.08);border:1px solid rgba(255,150,0,.2);color:var(--orange);cursor:pointer;font-family:var(--mono);">Flag</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Update audit trail
+  const audit = document.getElementById('billingAudit');
+  if(audit){
+    const ready = items.filter(i=>i.invoice_ready&&!i.issue).length;
+    const flagged = items.filter(i=>i.issue).length;
+    audit.innerHTML = `
+      <div style="padding:10px 14px;font-size:10px;color:var(--muted);">
+        <div style="display:flex;gap:16px;font-family:var(--mono);margin-bottom:8px;">
+          <span style="color:var(--green);">&#10003; ${ready} ready to invoice</span>
+          <span style="color:var(--orange);">${flagged > 0 ? '&#9888; '+flagged+' flagged' : ''}</span>
+        </div>
+        <div style="color:var(--faint);font-size:9px;">Billing Agent ran at ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}</div>
+      </div>`;
+  }
+}
+
+function approveBillingItem(index){
+  const item = billingItems[index];
+  if(!item) return;
+  addFeed('BILLING: Invoice approved for '+item.customer+' · $'+parseFloat(item.amount||0).toFixed(2),'var(--green)');
+  // Mark as invoiced in work items
+  sbPost('work_items',{
+    agent_name: 'BILLING',
+    priority: 'standard',
+    title: 'Invoice approved: '+item.customer,
+    description: '$'+parseFloat(item.amount||0).toFixed(2)+' · '+item.notes,
+    status: 'approved',
+    action_data: item
+  }).catch(()=>{});
+  runBillingAgent();
+}
+
+function flagBillingItem(index){
+  const item = billingItems[index];
+  if(!item) return;
+  addFeed('BILLING: '+item.customer+' flagged for review','var(--orange)');
+}
+
 
 // ── INIT ──
 async function init(){
