@@ -188,7 +188,16 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
   cursor:pointer;border:1px solid var(--border);background:var(--card);
   color:var(--muted);transition:all .15s;font-family:var(--sans);}
 .quick-q:hover{border-color:var(--blue);color:var(--blue);background:rgba(25,183,239,.06);}
-@media(max-width:768px){#ask{display:none!important;}}
+@media(max-width:768px){
+  #ask{display:none!important;}
+  #assistBtn{display:none!important;}
+  #assistPanel{display:none!important;}
+  .guide-hdr{padding:10px 14px;}
+  .guide-logo svg{width:14px;height:22px;}
+  .guide-wordmark{font-size:14px!important;}
+  .guide-title{font-size:9px!important;}
+  .guide-badge{display:none;}
+}
 
 /* MOBILE JUMP MENU */
 .mob-jump{
