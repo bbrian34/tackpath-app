@@ -427,6 +427,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
       </div>
     </div>
 
+    <!-- COMMUNICATION LOG -->
+    <div id="commLogSection" style="display:none;margin-top:16px;">
+      <div style="background:rgba(25,183,239,.04);border:1px solid rgba(25,183,239,.12);border-radius:16px;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid rgba(25,183,239,.1);display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">&#128172;</span>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:rgba(25,183,239,.9);letter-spacing:.1em;text-transform:uppercase;">Delivery Updates</div>
+        </div>
+        <div id="commLog" style="padding:4px 0;max-height:280px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -730,6 +741,90 @@ function startPolling(){
 }
 
 let lastStatus='';
+// ── COMMUNICATION AGENT ──
+// Logs every status change as a customer-facing update
+const commLog = [];
+
+const commMessages = {
+  'pending': {
+    icon: '&#9203;',
+    title: 'Order Received',
+    body: 'Your delivery request has been received and is being assigned to a driver.'
+  },
+  'assigned': {
+    icon: '&#128101;',
+    title: 'Driver Assigned',
+    body: (driver) => driver + ' has been assigned to your delivery and is preparing to pick up your package.'
+  },
+  'customer_confirmed': {
+    icon: '&#128465;',
+    title: 'Driver Confirmed',
+    body: (driver) => driver + ' has confirmed your delivery and is heading to the pickup location.'
+  },
+  'in_transit': {
+    icon: '&#128663;',
+    title: 'Package Picked Up',
+    body: (driver) => driver + ' has picked up your package and is on the way to the delivery address.'
+  },
+  'approaching': {
+    icon: '&#128205;',
+    title: 'Driver Approaching',
+    body: 'Your driver is approaching the delivery address. Please be ready.'
+  },
+  'delivered': {
+    icon: '&#9989;',
+    title: 'Delivered',
+    body: 'Your package has been successfully delivered. Thank you for using TackPath.'
+  }
+};
+
+function logCommEvent(status, driverName) {
+  const msg = commMessages[status];
+  if (!msg) return;
+  const body = typeof msg.body === 'function' ? msg.body(driverName || 'Your driver') : msg.body;
+  const entry = {
+    time: new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:true}),
+    icon: msg.icon,
+    title: msg.title,
+    body: body,
+    status: status
+  };
+  commLog.unshift(entry);
+  renderCommLog();
+  // Show comm log section
+  const section = document.getElementById('commLogSection');
+  if (section) section.style.display = 'block';
+  // Write to Supabase messages table for dispatcher visibility
+  if (currentJobId) {
+    sbPost('messages', {
+      job_id: currentJobId,
+      sender: 'CommAgent',
+      sender_role: 'agent',
+      body: msg.title + ': ' + body
+    }).catch(() => {});
+  }
+}
+
+function renderCommLog() {
+  const el = document.getElementById('commLog');
+  if (!el) return;
+  if (!commLog.length) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:rgba(255,255,255,.3);">No updates yet</div>';
+    return;
+  }
+  el.innerHTML = commLog.map((e, i) => `
+    <div style="display:flex;gap:12px;padding:12px 18px;border-bottom:${i < commLog.length-1 ? '1px solid rgba(25,183,239,.06)' : 'none'};">
+      <div style="font-size:18px;flex-shrink:0;margin-top:2px;">${e.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px;">
+          <div style="font-weight:700;font-size:13px;color:#f0f0f0;">${e.title}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.35);flex-shrink:0;">${e.time}</div>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.5;">${e.body}</div>
+      </div>
+    </div>`).join('');
+}
+
 async function checkStatus(){
   if(!currentJobId) return;
   try{
@@ -743,12 +838,14 @@ async function checkStatus(){
 
     if(s==='assigned'||s==='customer_confirmed'){
       // Driver accepted the job
+      logCommEvent(s, driverName);
       setProgress(3);
       setStatus('wave','Driver found — one quick step',driverName+' is ready. Confirming your dispatch now.');
       document.getElementById('sbStatus').textContent='driver assigned';
       document.getElementById('trackDriver').textContent=driverName;
       document.getElementById('trackingPanel').style.display='block';
     } else if(s==='in_transit'){
+      logCommEvent('in_transit', driverName);
       hideModal();
       setProgress(4);
       setStatus('pin','<span style="color:#19b7ef">Your</span> delivery is live',driverName+' is en route. Watch your order move in real time below.');
@@ -762,11 +859,13 @@ async function checkStatus(){
         setTimeout(()=>scrollToEl('trackingPanel'),300);
       },4000);
     } else if(s==='approaching'){
-      setStatus('wave','Driver approaching','Your driver will arrive shortly. Please be ready at the door.');
+      logCommEvent('approaching', driverName);
+    setStatus('wave','Driver approaching','Your driver will arrive shortly. Please be ready at the door.');
       document.getElementById('approachingAlert').style.display='block';
       document.getElementById('smsSig').textContent=currentSignalId;
       document.getElementById('smsModal').style.display='block';
     } else if(s==='delivered'){
+      logCommEvent('delivered', driverName);
       clearInterval(pollInterval);
       setProgress(6);
       setStatus('check','<span style="color:#53ff88">Delivered!</span>','Your order has been completed successfully.');
