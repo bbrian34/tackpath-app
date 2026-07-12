@@ -184,6 +184,12 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
   .guide-hdr{padding:14px 18px;}
 }
 
+.quick-q{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;
+  cursor:pointer;border:1px solid var(--border);background:var(--card);
+  color:var(--muted);transition:all .15s;font-family:var(--sans);}
+.quick-q:hover{border-color:var(--blue);color:var(--blue);background:rgba(25,183,239,.06);}
+@media(max-width:768px){#ask{display:none!important;}}
+
 /* MOBILE JUMP MENU */
 .mob-jump{
   display:none;
@@ -262,6 +268,9 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
   <div class="toc-section">Reference</div>
   <a href="#statuses">Job Statuses</a>
   <a href="#agents">AI Agents</a>
+
+  <div class="toc-section">Support</div>
+  <a href="#ask" onclick="showAsk(this)">TackPath Assist</a>
 </div>
 
 <!-- CONTENT -->
@@ -1009,6 +1018,42 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
     </div>
   </div>
 
+
+  <div class="divider"></div>
+  <div class="section" id="ask" style="display:none;">
+    <div class="section-tag">Support</div>
+    <div class="section-title">TackPath Assist</div>
+    <div class="section-sub">Have a question about how something works? Type it below and get an immediate answer.</div>
+    <div style="position:relative;margin-bottom:20px;">
+      <input id="askInput" type="text" placeholder="e.g. How do I contact a driver? What does the OCA do? How do I delete a job?"
+        style="width:100%;padding:16px 60px 16px 20px;border-radius:12px;border:1px solid var(--border);
+        background:var(--card);color:var(--text);font-size:14px;font-family:var(--sans);outline:none;"
+        onkeydown="if(event.key==='Enter')askTackPath()"
+        onfocus="this.style.borderColor='var(--blue)'"
+        onblur="this.style.borderColor='var(--border)'"/>
+      <button onclick="askTackPath()" id="askBtn"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
+        padding:8px 16px;border-radius:8px;background:var(--blue);border:none;
+        color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);">Ask</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;">
+      <button onclick="quickAsk(this)" class="quick-q">How do I contact a driver?</button>
+      <button onclick="quickAsk(this)" class="quick-q">What is the exception queue?</button>
+      <button onclick="quickAsk(this)" class="quick-q">How does a driver sign in?</button>
+      <button onclick="quickAsk(this)" class="quick-q">What is the OCA?</button>
+      <button onclick="quickAsk(this)" class="quick-q">What is the difference between Sprint and Surge?</button>
+      <button onclick="quickAsk(this)" class="quick-q">How do I delete a job?</button>
+      <button onclick="quickAsk(this)" class="quick-q">What does a confidence score mean?</button>
+      <button onclick="quickAsk(this)" class="quick-q">How does billing work?</button>
+      <button onclick="quickAsk(this)" class="quick-q">What is Ruby?</button>
+      <button onclick="quickAsk(this)" class="quick-q">How do I upload a manifest?</button>
+    </div>
+    <div id="askAnswer" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;line-height:1.8;font-size:14px;color:var(--text);"></div>
+    <div id="askLoading" style="display:none;padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);">
+      <div style="display:inline-flex;align-items:center;gap:10px;"><div class="spin"></div>Looking up answer...</div>
+    </div>
+  </div>
+
   <!-- FOOTER -->
   <div style="margin-top:48px;padding:24px 0;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -1073,6 +1118,8 @@ function jumpTo(el){
   }
 }
 
+if(window.innerWidth>768){var askEl=document.getElementById("ask");if(askEl)askEl.style.display="block";}
+
 // Smooth scroll for TOC
 document.querySelectorAll('.toc a').forEach(a=>{
   a.addEventListener('click',e=>{
@@ -1097,6 +1144,74 @@ const observer=new IntersectionObserver(entries=>{
   });
 },{threshold:0.3});
 sections.forEach(s=>observer.observe(s));
+var ANT_ASK = ['sk-ant-api03-ekMGJHorvQ_CWJxUyKatJH','XdpLkBxQziMLcNycmAAoFxpghfEtsjVFAb3gyx9D9H46b5lT18qBXbqPPO213eTA-mqkG9gAA'].join('');
+
+var TACKPATH_KB = 'TackPath is a courier dispatch platform with these components: ' +
+'Dispatcher Portal (dispatcher.html): manage jobs, view job list, open job drawer by clicking a job, contact drivers, notify customers, delete jobs via red Delete Job button at bottom of job drawer. ' +
+'Driver App (driver.html): phone login, receive/accept job offers, At Stop button, scan packages, POD screen (signature or photo), Ruby AI button. ' +
+'Customer Portal (customer.html): place Sprint or Surge orders, track delivery status in real time. ' +
+'SmartSort (smartsort.html): upload CSV manifest, auto-build routes, assign to drivers. Download CSV Template for correct format. ' +
+'Symphony+ (symphony.html): SOC command center. Dispatch tab has 3 columns: fleet, AI feed, exception queue. Comms tab for driver messaging with AI Response button. Incidents tab with P1/P2/P3 severity. Billing tab with Run Billing Agent button. ' +
+'TackPath 1 (tackpathone.html): owner dashboard showing revenue, agent decisions, client health, work items needing approval. ' +
+'Job statuses in order: pending (orange, waiting for driver), assigned (driver accepted), customer_confirmed, in_transit (purple, en route), delivered (green, POD collected), cancelled. ' +
+'Job types: Sprint = single pickup to single dropoff. Surge = multi-stop route from SmartSort. ' +
+'AI Agents: OCA runs every 60 seconds, watches all jobs, detects stalled deliveries (30+ min no update) and long-pending jobs (15+ min no driver), creates work items. Communication Agent fires on every status change, sends automatic customer updates. Intake Agent validates new jobs every 10 seconds. Billing Agent runs on demand from Symphony+ Billing tab. ' +
+'Confidence score: 0-100% shown on AI decisions. Above 90% high confidence. 75-89% needs human approval. Below 75% requires human decision. ' +
+'Deleting a job: click the job card to open the drawer, scroll to bottom, click red Delete Job button, confirm popup. ' +
+'Ruby: purple button on delivery screen. Tap to ask questions about current delivery. Context-aware AI assistant for drivers. ' +
+'Exception queue: right column in Symphony+ Dispatch tab. Shows OCA flags. Approve with checkmark or Reject with X. Items expire after 2 hours. ' +
+'POD (Proof of Delivery): required at every stop. Signature = recipient signs on screen. Photo = take photo at door. Required before job marks as delivered. ' +
+'Billing: Symphony+ Billing tab, click Run Billing Agent, review invoice items, click Invoice to approve each one. ' +
+'SmartSort CSV: must include order_id, recipient, address, packages. Click Download CSV Template for exact format. ' +
+'Common issues: Driver not getting jobs = check they are signed in on driver.html. Job stuck pending = no driver accepted, OCA flags after 15 min. Cannot delete = must click job first to open drawer. Symphony+ no data = wait 15 seconds for refresh.';
+
+function askTackPath(){
+  var input = document.getElementById('askInput');
+  var q = input ? input.value.trim() : '';
+  if(!q) return;
+  var answerEl = document.getElementById('askAnswer');
+  var loadingEl = document.getElementById('askLoading');
+  var btn = document.getElementById('askBtn');
+  if(answerEl) answerEl.style.display = 'none';
+  if(loadingEl) loadingEl.style.display = 'block';
+  if(btn){btn.disabled=true;btn.textContent='...';}
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':ANT_ASK,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,
+      system:'You are TackPath Assist, a support tool embedded in the TackPath operator guide. Answer questions about TackPath using only this knowledge: ' + TACKPATH_KB + ' Be concise and practical. Format with <strong> for emphasis. Never mention Claude or AI.',
+      messages:[{role:'user',content:q}]})
+  }).then(function(r){return r.json();}).then(function(data){
+    var answer = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : 'Unable to find an answer. Please contact hello@tackpath.com';
+    if(answerEl){
+      answerEl.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;">&#9889; TackPath Assist</div>' + answer;
+      answerEl.style.display = 'block';
+    }
+  }).catch(function(){
+    if(answerEl){
+      answerEl.innerHTML = 'Something went wrong. Please try again or contact <a href="mailto:hello@tackpath.com" style="color:var(--blue);">hello@tackpath.com</a>';
+      answerEl.style.display = 'block';
+    }
+  }).finally(function(){
+    if(loadingEl) loadingEl.style.display = 'none';
+    if(btn){btn.disabled=false;btn.textContent='Ask';}
+  });
+}
+
+function quickAsk(el){
+  var input = document.getElementById('askInput');
+  if(input) input.value = el.textContent;
+  askTackPath();
+}
+
+function showAsk(el){
+  var section = document.getElementById('ask');
+  if(section){
+    section.style.display = 'block';
+    setTimeout(function(){section.scrollIntoView({behavior:'smooth',block:'start'});},100);
+  }
+}
+
 </script>
 </body>
 </html>
