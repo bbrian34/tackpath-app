@@ -1244,11 +1244,106 @@ async function loadJobs(){
     });
     jobs=newJobs;
     renderAll();
+    loadOCAData();
   }catch(e){
     ring.style.display='none';ps.textContent='Error';
     console.error('DB error:',e);
     addIntelEvent('Database connection error — retrying in 10s.','var(--red)');
   }
+}
+
+// ── OCA AGENT DATA ──
+// Pulls work items from OCA Edge Function tables and merges into exception queue
+let ocaWorkItems = [];
+
+async function loadOCAData(){
+  try{
+    const items = await sbGet('work_items?status=eq.pending&order=created_at.desc&limit=20');
+    ocaWorkItems = items || [];
+    renderExceptionQueue();
+  }catch(e){
+    // Silent -- OCA tables may not be active yet
+  }
+}
+
+function renderExceptionQueue(){
+  const list = document.getElementById('excList');
+  const badge = document.getElementById('excBadge');
+  if(!list) return;
+
+  // Merge OCA work items with any existing job-level exceptions
+  const criticalJobs = jobs.filter(j =>
+    j.status === 'pending' && 
+    ((Date.now() - new Date(j.created_at).getTime()) > 15 * 60 * 1000)
+  ).map(j => ({
+    id: j.id,
+    title: 'Unassigned ' + (j.title || j.id.slice(0,8)),
+    description: 'No driver accepted in ' + Math.floor((Date.now() - new Date(j.created_at).getTime())/60000) + ' min',
+    priority: 'high',
+    source: 'dispatcher',
+    confidence_score: 1
+  }));
+
+  const stalledJobs = jobs.filter(j =>
+    j.status === 'in_transit' &&
+    j.updated_at &&
+    ((Date.now() - new Date(j.updated_at).getTime()) > 30 * 60 * 1000)
+  ).map(j => ({
+    id: j.id,
+    title: 'Stalled: ' + (j.title || j.id.slice(0,8)),
+    description: 'No update in ' + Math.floor((Date.now() - new Date(j.updated_at).getTime())/60000) + ' min · ' + (j.driver_name || 'unknown driver'),
+    priority: 'high',
+    source: 'dispatcher',
+    confidence_score: 1
+  }));
+
+  // OCA work items
+  const ocaItems = ocaWorkItems.map(i => ({
+    id: i.id,
+    title: i.title,
+    description: i.description || '',
+    priority: i.priority,
+    source: 'oca',
+    confidence_score: i.confidence_score || 0,
+    work_item_id: i.id
+  }));
+
+  const allExceptions = [...ocaItems, ...criticalJobs, ...stalledJobs];
+
+  if(badge) badge.textContent = allExceptions.length + ' OPEN';
+
+  if(!allExceptions.length){
+    list.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No exceptions · System healthy</div>';
+    return;
+  }
+
+  const priorityColor = {critical:'var(--red)',high:'var(--orange)',standard:'var(--blue)',low:'var(--muted)'};
+  list.innerHTML = allExceptions.map(exc => `
+    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);display:flex;gap:10px;align-items:flex-start;">
+      <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
+        <div style="font-size:10px;color:var(--muted);">${exc.description}</div>
+        ${exc.source==='oca' ? `<div style="font-family:var(--mono);font-size:8px;color:var(--blue);margin-top:3px;">&#129504; OCA · ${Math.round((exc.confidence_score||0)*100)}% confidence</div>` : ''}
+      </div>
+      ${exc.source==='oca' ? `
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button onclick="approveOCAItem('${exc.work_item_id}')" style="font-size:9px;padding:3px 8px;border-radius:5px;background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.3);color:#4caf7d;cursor:pointer;font-family:var(--mono);">✓</button>
+        <button onclick="rejectOCAItem('${exc.work_item_id}')" style="font-size:9px;padding:3px 8px;border-radius:5px;background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--red);cursor:pointer;font-family:var(--mono);">✕</button>
+      </div>` : ''}
+    </div>`).join('');
+}
+
+async function approveOCAItem(id){
+  await sbPatch('work_items?id=eq.'+id,{status:'approved'}).catch(()=>{});
+  addIntelEvent('&#129504; OCA recommendation approved','var(--green)');
+  loadOCAData();
+}
+
+async function rejectOCAItem(id){
+  await sbPatch('work_items?id=eq.'+id,{status:'rejected'}).catch(()=>{});
+  addIntelEvent('OCA recommendation rejected','var(--muted)');
+  loadOCAData();
 }
 
 // ── RENDER ALL ──
