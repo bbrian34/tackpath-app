@@ -27,10 +27,10 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
 .hdr-brand{display:flex;align-items:center;gap:10px;}
 .hdr-logo{display:flex;align-items:center;gap:8px;}
 .tp1-wordmark{font-family:var(--sans);font-size:17px;font-weight:800;letter-spacing:.5px;line-height:1;}
-.tp1-one{font-family:var(--display);font-size:20px;font-weight:700;
-  background:linear-gradient(135deg,#c9a84c,#f5e4b0,#c9a84c);
+.tp1-one{font-family:var(--display);font-size:20px;font-weight:900;
+  background:linear-gradient(135deg,#5dd4f4,#19b7ef,#0e7abf);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-left:3px;}
+  margin-left:3px;letter-spacing:.02em;}
 .hdr-divider{width:1px;height:22px;background:var(--border);margin:0 16px;}
 .hdr-sub{font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;}
 .hdr-right{display:flex;align-items:center;gap:12px;}
@@ -278,7 +278,7 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
         <div class="card-sub" id="tp1LastScan">Initializing...</div>
       </div>
       <div id="tp1AgentFeed" style="max-height:280px;overflow-y:auto;">
-        <div class="loading"><div class="spin"></div>Loading agent activity...</div>
+        <div class="af-item"><div class="af-dot" style="background:var(--gold);animation:pulse 2s infinite;"></div><div class="af-content"><div class="af-agent">OCA &middot; connecting</div><div class="af-text">Connecting to Supabase &amp; loading agent activity...</div></div></div>
       </div>
     </div>
 
@@ -545,7 +545,10 @@ function updateBrief(active,delivered,revenue){
 function renderAgentFeed(log){
   const el=document.getElementById('tp1AgentFeed');
   if(!el)return;
-  if(!log.length){el.innerHTML='<div class="empty">No agent activity yet</div>';return;}
+  if(!log.length){
+    el.innerHTML='<div class="af-item"><div class="af-dot" style="background:var(--gold);box-shadow:0 0 5px rgba(201,168,76,.4);animation:pulse 2s infinite;"></div><div class="af-content"><div class="af-agent">OCA &middot; monitoring</div><div class="af-text">Operations Coordinator is running every 60 seconds. Activity will appear here as agents make decisions.</div></div><div class="af-time">live</div></div>';
+    return;
+  }
   const dotColors={OCA:'var(--gold)',BILLING:'var(--green)',COMM:'var(--blue)',INTAKE:'var(--purple)'};
   el.innerHTML=log.map(a=>{
     const dec=a.decision_json||{};
