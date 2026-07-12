@@ -1863,7 +1863,7 @@ async function saveStatus(){
   }catch(e){toast('Failed to update status');console.error(e);}
 }
 
-async function deleteJob(){
+async async function deleteJob(){
   if(!currentJobId)return;
   if(!confirm('Delete this job permanently?'))return;
   try{
