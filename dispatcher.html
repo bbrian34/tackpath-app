@@ -1792,8 +1792,15 @@ window.addEventListener('storage', e=>{
 
 // ── DRAWER ──
 function openDrawer(id){
-  const j=jobs.find(x=>x.id===id);
-  if(!j)return;
+  let j=jobs.find(x=>x.id===id);
+  if(!j){
+    // Jobs not loaded yet -- reload then open
+    loadJobs().then(()=>{
+      j=jobs.find(x=>x.id===id);
+      if(j) openDrawer(id);
+    });
+    return;
+  }
   currentJobId=id;
   selectedJobId=id;
   loadDrawerCommLog(id);
