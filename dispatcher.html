@@ -1152,16 +1152,7 @@ let jobs=[], currentJobId=null, pollInterval=null;
 
 // ── LOGIN ──
 function doLogin(){
-  const ls=document.getElementById('loginScreen');
-  ls.style.opacity='0';ls.style.transition='opacity .5s';
-  setTimeout(()=>{
-    ls.style.display='none';
-    document.getElementById('shell').style.display='flex';
-    document.getElementById('chatFab').style.display='flex';
-    const db=document.querySelector('.demo-badge');if(db)db.style.display='none';
-    startClock();loadJobs();
-    pollInterval=setInterval(loadJobs,5000);
-  },500);
+  startClock();loadJobs();loadDrivers();
 }
 document.addEventListener('keydown',e=>{
   const ls=document.getElementById('loginScreen');
