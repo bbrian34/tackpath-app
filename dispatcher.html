@@ -1136,7 +1136,7 @@ const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
-async async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbDelete(p){const r=await fetch(sbUrl(p),{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());return true;}
 async function sbPostMsg(jobId,body,role){
@@ -1151,9 +1151,7 @@ async function getMessages(jobId){
 let jobs=[], currentJobId=null, pollInterval=null;
 
 // ── LOGIN ──
-function doLogin(){
-  startClock();loadJobs();loadDrivers();
-}
+function doLogin(){startClock();loadJobs();loadDrivers();}
 document.addEventListener('keydown',e=>{
   const ls=document.getElementById('loginScreen');
   if(ls&&ls.style.display!=='none'&&e.key==='Enter')doLogin();
@@ -1792,15 +1790,8 @@ window.addEventListener('storage', e=>{
 
 // ── DRAWER ──
 function openDrawer(id){
-  let j=jobs.find(x=>x.id===id);
-  if(!j){
-    // Jobs not loaded yet -- reload then open
-    loadJobs().then(()=>{
-      j=jobs.find(x=>x.id===id);
-      if(j) openDrawer(id);
-    });
-    return;
-  }
+  const j=jobs.find(x=>x.id===id);
+  if(!j)return;
   currentJobId=id;
   selectedJobId=id;
   loadDrawerCommLog(id);
@@ -1833,14 +1824,20 @@ async function saveStatus(){
 }
 
 async function deleteJob(){
-  if(!currentJobId){toast('No job selected','warn');return;}
+  if(!currentJobId)return;
   if(!confirm('Delete this job permanently?'))return;
-  const jobId=currentJobId;
   try{
-    const delH={'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Content-Type':'application/json','Prefer':'return=minimal'};
-    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages?job_id=eq.'+jobId,{method:'DELETE',headers:delH});
-    const r=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?id=eq.'+jobId,{method:'DELETE',headers:delH});
-    if(r.ok||r.status===204){toast('Job deleted');closeDrawer();loadJobs();}
+    // Delete messages first (foreign key constraint)
+    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages?job_id=eq.'+currentJobId,{
+      method:'DELETE',
+      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
+    });
+    // Then delete the job
+    const r=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?id=eq.'+currentJobId,{
+      method:'DELETE',
+      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
+    });
+    if(r.ok){toast('Job deleted');closeDrawer();loadJobs();}
     else{const e=await r.text();toast('Delete failed: '+e.slice(0,50));}
   }catch(e){toast('Delete failed: '+e.message);console.error(e);}
 }
