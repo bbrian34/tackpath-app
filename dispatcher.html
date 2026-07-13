@@ -1826,20 +1826,14 @@ async function saveStatus(){
 }
 
 async function deleteJob(){
-  if(!currentJobId)return;
+  if(!currentJobId){toast('No job selected','warn');return;}
   if(!confirm('Delete this job permanently?'))return;
+  const jobId=currentJobId;
   try{
-    // Delete messages first (foreign key constraint)
-    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages?job_id=eq.'+currentJobId,{
-      method:'DELETE',
-      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
-    });
-    // Then delete the job
-    const r=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?id=eq.'+currentJobId,{
-      method:'DELETE',
-      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
-    });
-    if(r.ok){toast('Job deleted');closeDrawer();loadJobs();}
+    const delH={'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Content-Type':'application/json','Prefer':'return=minimal'};
+    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages?job_id=eq.'+jobId,{method:'DELETE',headers:delH});
+    const r=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?id=eq.'+jobId,{method:'DELETE',headers:delH});
+    if(r.ok||r.status===204){toast('Job deleted');closeDrawer();loadJobs();}
     else{const e=await r.text();toast('Delete failed: '+e.slice(0,50));}
   }catch(e){toast('Delete failed: '+e.message);console.error(e);}
 }
