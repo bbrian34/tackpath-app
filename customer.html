@@ -634,7 +634,7 @@ function setPri(p){
 // Driver gets notified when status becomes 'pending' (after route calculated)
 // Customer sees confirmation modal when driver accepts (status='assigned')
 // Customer confirms -> status='customer_confirmed' -> driver gets Start Delivery
-async function requestQuote(){
+async async function requestQuote(){
   const recipient=document.getElementById('recipient').value.trim();
   const pickupAddr=document.getElementById('pickupAddr').value.trim();
   const pickupCity=document.getElementById('pickupCity').value;
@@ -888,7 +888,7 @@ async function checkStatus(){
 }
 
 // ── CUSTOMER CONFIRMS ──
-async function customerConfirm(){
+async async function customerConfirm(){
   hideModal();
   setProgress(2);
   setStatus('driver','Finding <span style="color:#19b7ef">your</span> driver','Matching you with the closest available driver in your area.');
