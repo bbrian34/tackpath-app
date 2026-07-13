@@ -1794,7 +1794,6 @@ function openDrawer(id){
   if(!j)return;
   currentJobId=id;
   selectedJobId=id;
-  loadDrawerCommLog(id);
   const shortId=j.id?j.id.slice(0,8):'—';
   document.getElementById('drTitle').textContent='TP-'+shortId;
   const sd=document.getElementById('drStatusDisplay');if(sd)sd.textContent=(j.status||'pending').replace(/_/g,' ');
@@ -1810,6 +1809,11 @@ function openDrawer(id){
   document.getElementById('drMap').src='https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d106544.32!2d-84.4677!3d33.8760!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x88f5045d6993098d%3A0x66fede2f990b630b!2sMidtown%20Atlanta%2C%20Atlanta%2C%20GA!3m2!1d33.7841!2d-84.3838!4m5!1s0x88f508ef74cc9b23%3A0xb5b9ff8de2f2a6f1!2sMarietta%2C%20GA!3m2!1d33.9526!2d-84.5499!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus';
   document.getElementById('drawer').classList.add('open');
 }
+
+function loadDrawerCommLog(id){
+  // stub -- comm log loaded inline
+}
+
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');currentJobId=null;}
 
 async function saveStatus(){
