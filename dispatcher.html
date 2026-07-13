@@ -1136,7 +1136,7 @@ const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
-async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
+async async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbDelete(p){const r=await fetch(sbUrl(p),{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());return true;}
 async function sbPostMsg(jobId,body,role){
