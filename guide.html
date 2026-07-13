@@ -299,7 +299,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
       </div>
       <div class="faq-item" onclick="quickAsk(this)" data-q="What is Ruby and how does a driver use it?">
         <div class="faq-q">What is Ruby?</div>
-        <div class="faq-a">Ruby is the AI assistant built into the driver app. The purple Ruby button is always visible on the delivery screen. Drivers tap it to ask questions, report problems, or get help at any stop.</div>
+        <div class="faq-a">Ruby is the AI assistant built into the driver app. The red Ruby button is always visible on the delivery screen. Drivers tap it to ask questions, report problems, or get help at any stop.</div>
       </div>
       <div class="faq-item" onclick="quickAsk(this)" data-q="What is the difference between Sprint and Surge job types?">
         <div class="faq-q">What is the difference between Sprint and Surge?</div>
@@ -430,7 +430,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
         <div style="position:absolute;bottom:-20px;right:-10px;font-family:'Playfair Display',serif;font-size:110px;font-weight:700;line-height:1;color:rgba(201,168,76,.06);pointer-events:none;user-select:none;">+</div>
         <div style="position:relative;z-index:1;">
           <div class="fc-title" style="font-size:11px;font-family:var(--mono);color:var(--blue);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">04 &mdash; Symphony+</div>
-          <div class="fc-desc">The operations command center for dispatchers and managers. Fleet status, AI agent feed, incident management, driver communications, and billing in one view.</div>
+          <div class="fc-desc">TackPath's managed logistics operations center. Pay a flat monthly fee and TackPath runs your dispatch operation for you -- fleet oversight, AI agent workforce, exception management, driver comms, and billing. No dispatcher needed.</div>
         </div>
       </div>
 
@@ -465,7 +465,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
       <tbody>
         <tr><td><strong>Owner</strong></td><td><span class="ref-tag" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold);">TackPath 1</span></td><td style="font-family:var(--mono);font-size:10px;">/tackpathone.html</td><td style="color:var(--muted);">Review revenue, approve AI decisions, monitor client health</td></tr>
         <tr><td><strong>Dispatcher</strong></td><td><span class="ref-tag" style="background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);">Dispatcher Portal</span></td><td style="font-family:var(--mono);font-size:10px;">/dispatcher.html</td><td style="color:var(--muted);">Create jobs, assign drivers, manage active deliveries</td></tr>
-        <tr><td><strong>Senior Dispatcher</strong></td><td><span class="ref-tag" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold);">Symphony+</span></td><td style="font-family:var(--mono);font-size:10px;">/symphony.html</td><td style="color:var(--muted);">Full operations overview, AI feed, incidents, comms, billing</td></tr>
+        <tr><td><strong>Senior Dispatcher</strong></td><td><span class="ref-tag" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold);">Symphony+</span></td><td style="font-family:var(--mono);font-size:10px;">/symphony.html</td><td style="color:var(--muted);">TackPath managed operations -- fleet oversight, AI agents, incidents, comms, billing on your behalf</td></tr>
         <tr><td><strong>Driver</strong></td><td><span class="ref-tag" style="background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);">Driver App</span></td><td style="font-family:var(--mono);font-size:10px;">/driver.html</td><td style="color:var(--muted);">Receive jobs, navigate routes, scan packages, collect POD</td></tr>
         <tr><td><strong>Customer</strong></td><td><span class="ref-tag" style="background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);color:#8d5cff;">Customer Portal</span></td><td style="font-family:var(--mono);font-size:10px;">/customer.html</td><td style="color:var(--muted);">Place orders, track deliveries, view history</td></tr>
       </tbody>
@@ -889,7 +889,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
           <div class="step-num">02 &mdash; At Stop &rarr; Scan &rarr; POD</div>
           <div class="step-title">Three taps per delivery</div>
           <div class="step-desc">When the driver arrives at a stop they tap <strong>At Stop</strong> to confirm arrival. Then tap <strong>Scan Package</strong> to scan the barcode on the package using their phone camera. Once scanned, they tap <strong>Confirm &amp; Next &#10003;</strong> which opens the Proof of Delivery screen -- they collect either a signature or a photo, then submit. The stop is marked complete and they move to the next one.</div>
-          <div class="step-tip"><strong>Ruby AI:</strong> The purple Ruby button is always visible. If the driver has a question or problem at any stop, they can tap Ruby and speak to the AI assistant for help.</div>
+          <div class="step-tip"><strong>Ruby AI:</strong> The red Ruby button is always visible. If the driver has a question or problem at any stop, they can tap Ruby and speak to the AI assistant for help.</div>
         </div>
         <div style="display:flex;justify-content:center;">
           <div class="ui-phone">
@@ -904,7 +904,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
               <div style="display:flex;gap:5px;margin-bottom:0;">
                 <div style="flex:1;background:linear-gradient(135deg,var(--blue),#0060cc);border-radius:10px;padding:10px 6px;text-align:center;font-size:10px;font-weight:900;color:#fff;">At Stop &#9660;</div>
                 <div style="flex:1;background:linear-gradient(135deg,var(--orange),#c05000);border-radius:10px;padding:10px 6px;text-align:center;font-size:10px;font-weight:900;color:#fff;display:none;">Scan &#9638;</div>
-                <div style="flex:1;background:linear-gradient(135deg,#8d5cff,#5a2ed1);border-radius:10px;padding:10px 6px;text-align:center;font-size:10px;font-weight:900;color:#fff;">Ruby</div>
+                <div style="flex:1;background:linear-gradient(135deg,#ff4444,#cc0000);border-radius:10px;padding:10px 6px;text-align:center;font-size:10px;font-weight:900;color:#fff;">Ruby</div>
               </div>
             </div>
           </div>
@@ -929,7 +929,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
                   <div style="font-size:16px;margin-bottom:4px;">&#9997;</div>
                   <div style="font-size:9px;font-weight:700;color:var(--blue);">Signature</div>
                 </div>
-                <div style="background:rgba(141,92,255,.08);border:1px solid rgba(141,92,255,.2);border-radius:8px;padding:12px 6px;text-align:center;">
+                <div style="background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.3);border-radius:8px;padding:12px 6px;text-align:center;">
                   <div style="font-size:16px;margin-bottom:4px;">&#128247;</div>
                   <div style="font-size:9px;font-weight:700;color:#8d5cff;">Photo</div>
                 </div>
@@ -1024,7 +1024,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
   <div class="section" id="symphony">
     <div class="section-tag">Command Center</div>
     <div class="section-title">Symphony+</div>
-    <div class="section-sub">Symphony+ is the operations command center for senior dispatchers and managers. It gives you a full view of the business -- fleet status, AI agent activity, incidents, communications, and billing -- all on one screen.</div>
+    <div class="section-sub">Symphony+ is TackPath's managed logistics operations center. Your courier company pays a flat monthly fee and TackPath runs your entire dispatch operation through Symphony+ -- fleet oversight, AI agents handling exceptions, driver communications, and billing. You don't need to hire a dispatcher. TackPath is your dispatcher.</div>
 
     <table class="ref-table">
       <thead><tr><th>Tab</th><th>What it shows</th><th>Most useful for</th></tr></thead>
