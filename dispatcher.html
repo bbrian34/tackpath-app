@@ -535,6 +535,29 @@ body::after{content:'';position:fixed;inset:0;
   z-index:99999;font-size:11px;font-weight:700;min-width:220px;text-align:center;
   animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* ── NEW JOB MODAL ── */
+.nj-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.nj-overlay.on{display:flex;}
+.nj-modal{background:var(--card);border:1px solid rgba(25,183,239,.2);border-radius:18px;width:min(520px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.6);}
+.nj-hdr{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.nj-title{font-size:16px;font-weight:800;}
+.nj-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;}
+.nj-body{padding:24px;}
+.nj-row{margin-bottom:16px;}
+.nj-label{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;display:block;}
+.nj-input{width:100%;padding:11px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:var(--sans);outline:none;transition:border-color .2s;}
+.nj-input:focus{border-color:rgba(25,183,239,.5);}
+.nj-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.nj-type-row{display:flex;gap:8px;margin-bottom:16px;}
+.nj-type{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;}
+.nj-type.on{background:rgba(25,183,239,.1);border-color:rgba(25,183,239,.3);color:var(--blue);}
+.nj-pri-row{display:flex;gap:8px;margin-bottom:16px;}
+.nj-pri{flex:1;padding:8px;border-radius:9px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;}
+.nj-pri.on{background:rgba(255,150,30,.1);border-color:rgba(255,150,30,.3);color:var(--orange);}
+.nj-submit{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#19b7ef,#0060cc);border:none;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-top:4px;font-family:var(--sans);}
+.nj-submit:disabled{opacity:.5;cursor:default;}
+.nj-divider{height:1px;background:var(--border);margin:16px 0;}
 </style>
 </head>
 <body>
@@ -576,6 +599,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
     </div>
     <div class="tb-right">
+      <button onclick="openNewJob()" style="display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:9px;background:linear-gradient(135deg,#19b7ef,#0060cc);border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">&#43; New Job</button>
       <div class="sys-status"><div class="sys-dot"></div>SYSTEMS NOMINAL</div>
       <div class="tb-sep"></div>
       <div class="tb-poll"><div class="poll-ring" id="pollRing"></div><span id="pollStatus">Live</span></div>
@@ -2017,6 +2041,148 @@ function toast(msg){
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
 window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();});
+
+// ── NEW JOB ──
+let njType = 'sprint';
+let njPri = 'standard';
+
+function openNewJob(){
+  document.getElementById('njOverlay').classList.add('on');
+  document.getElementById('njCustomer').focus();
+}
+function closeNewJob(){
+  document.getElementById('njOverlay').classList.remove('on');
+  // Reset form
+  ['njCustomer','njRecipient','njPickup','njDropoff','njNotes'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  const pkg=document.getElementById('njPackages');if(pkg)pkg.value='1';
+  const price=document.getElementById('njPrice');if(price)price.value='';
+  njType='sprint';njPri='standard';
+  document.querySelectorAll('.nj-type').forEach((el,i)=>el.classList.toggle('on',i===0));
+  document.querySelectorAll('.nj-pri').forEach((el,i)=>el.classList.toggle('on',i===0));
+}
+function setNjType(type,el){
+  njType=type;
+  document.querySelectorAll('.nj-type').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on');
+}
+function setNjPri(pri,el){
+  njPri=pri;
+  document.querySelectorAll('.nj-pri').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on');
+}
+async function submitNewJob(){
+  const customer=document.getElementById('njCustomer').value.trim();
+  const recipient=document.getElementById('njRecipient').value.trim();
+  const pickup=document.getElementById('njPickup').value.trim();
+  const dropoff=document.getElementById('njDropoff').value.trim();
+  const packages=parseInt(document.getElementById('njPackages').value)||1;
+  const price=parseFloat(document.getElementById('njPrice').value)||0;
+  const notes=document.getElementById('njNotes').value.trim();
+  if(!pickup){toast('Pickup address required','warn');return;}
+  if(!dropoff){toast('Dropoff address required','warn');return;}
+  const btn=document.getElementById('njSubmit');
+  btn.disabled=true;btn.textContent='Dispatching...';
+  try{
+    const jobId=crypto.randomUUID();
+    const title=(recipient||customer||'New Job')+' — '+pickup.split(',')[0]+' to '+dropoff.split(',')[0];
+    await sbPost('jobs',{
+      id:jobId,
+      title,
+      status:'pending',
+      job_type:njType,
+      pickup_address:pickup,
+      dropoff_address:dropoff,
+      customer_name:customer||'Direct',
+      driver_name:null,
+      recipient,
+      price,
+      total_packages:packages,
+      total_stops:1,
+      priority:njPri,
+      route_summary:notes||null,
+      customer_confirmed:true,
+      created_at:new Date().toISOString()
+    });
+    toast('Job dispatched ✓');
+    closeNewJob();
+    await loadJobs();
+  }catch(e){
+    toast('Failed: '+e.message.slice(0,50),'warn');
+  }finally{
+    btn.disabled=false;btn.textContent='Dispatch Job →';
+  }
+}
+// keyboard shortcut -- N to open new job
+document.addEventListener('keydown',e=>{
+  if(e.key==='n'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){
+    openNewJob();
+  }
+});
+
 </script>
+
+<!-- NEW JOB MODAL -->
+<div class="nj-overlay" id="njOverlay" onclick="if(event.target===this)closeNewJob()">
+  <div class="nj-modal">
+    <div class="nj-hdr">
+      <div class="nj-title">&#43; New Job</div>
+      <button class="nj-close" onclick="closeNewJob()">&#10005;</button>
+    </div>
+    <div class="nj-body">
+      <div class="nj-row">
+        <label class="nj-label">Job Type</label>
+        <div class="nj-type-row">
+          <div class="nj-type on" onclick="setNjType('sprint',this)">&#9889; Sprint<br><span style="font-size:9px;font-weight:400;opacity:.7;">Single pickup &rarr; dropoff</span></div>
+          <div class="nj-type" onclick="setNjType('surge',this)">&#128204; Surge<br><span style="font-size:9px;font-weight:400;opacity:.7;">Multi-stop route</span></div>
+        </div>
+      </div>
+      <div class="nj-row">
+        <label class="nj-label">Customer / Client Name</label>
+        <input class="nj-input" id="njCustomer" placeholder="e.g. Peach State Couriers"/>
+      </div>
+      <div class="nj-row">
+        <label class="nj-label">Recipient Name</label>
+        <input class="nj-input" id="njRecipient" placeholder="Who is receiving the delivery?"/>
+      </div>
+      <div class="nj-divider"></div>
+      <div class="nj-row">
+        <label class="nj-label">Pickup Address</label>
+        <input class="nj-input" id="njPickup" placeholder="Full pickup address"/>
+      </div>
+      <div class="nj-row">
+        <label class="nj-label">Dropoff Address</label>
+        <input class="nj-input" id="njDropoff" placeholder="Full delivery address"/>
+      </div>
+      <div class="nj-divider"></div>
+      <div class="nj-grid">
+        <div class="nj-row" style="margin-bottom:0;">
+          <label class="nj-label">Package Count</label>
+          <input class="nj-input" id="njPackages" type="number" min="1" value="1"/>
+        </div>
+        <div class="nj-row" style="margin-bottom:0;">
+          <label class="nj-label">Price ($)</label>
+          <input class="nj-input" id="njPrice" type="number" min="0" placeholder="0.00"/>
+        </div>
+      </div>
+      <div class="nj-divider"></div>
+      <div class="nj-row">
+        <label class="nj-label">Priority</label>
+        <div class="nj-pri-row">
+          <div class="nj-pri on" onclick="setNjPri('standard',this)">Standard</div>
+          <div class="nj-pri" onclick="setNjPri('priority',this)" style="color:var(--orange);">Priority</div>
+          <div class="nj-pri" onclick="setNjPri('critical',this)" style="color:#ff4444;">Critical</div>
+        </div>
+      </div>
+      <div class="nj-row">
+        <label class="nj-label">Notes (optional)</label>
+        <input class="nj-input" id="njNotes" placeholder="Special instructions, access codes, fragile items..."/>
+      </div>
+      <button class="nj-submit" id="njSubmit" onclick="submitNewJob()">Dispatch Job &rarr;</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
