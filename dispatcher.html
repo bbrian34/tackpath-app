@@ -2173,31 +2173,7 @@ function filterHelp(q){
   });
   document.querySelectorAll('.dh-section').forEach(s=>s.style.display='');
 }
-async function askDispatchHelp(){
-  const input = document.getElementById('dhInput');
-  const q = input.value.trim();
-  if(!q) return;
-  const answerEl = document.getElementById('dhAnswer');
-  const loadingEl = document.getElementById('dhLoading');
-  answerEl.style.display = 'none';
-  loadingEl.style.display = 'flex';
-  try{
-    const resp = await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/tackpath-assist',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'},
-      body:JSON.stringify({question:'Dispatcher question: '+q})
-    });
-    const data = await resp.json();
-    answerEl.innerHTML = '<strong style="font-family:var(--mono);font-size:8px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:8px;">&#9889; TackPath Assist</strong>' + (data.answer||'Unable to find an answer.');
-    answerEl.style.display = 'block';
-    input.value = '';
-  }catch(e){
-    answerEl.innerHTML = 'Something went wrong. Try again.';
-    answerEl.style.display = 'block';
-  }finally{
-    loadingEl.style.display = 'none';
-  }
-}
+
 
 </script>
 
@@ -2356,16 +2332,7 @@ async function askDispatchHelp(){
 
   </div>
 
-  <!-- Ask Claude for anything not in FAQ -->
-  <div class="dh-loading" id="dhLoading"><div class="spin"></div>Looking up answer...</div>
-  <div class="dh-answer" id="dhAnswer"></div>
-  <div class="dh-inp-wrap">
-    <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:7px;letter-spacing:.1em;">NOT FINDING YOUR ANSWER? ASK CLAUDE</div>
-    <div class="dh-inp-row">
-      <input class="dh-inp" id="dhInput" placeholder="Ask anything about dispatching..." onkeydown="if(event.key==='Enter')askDispatchHelp()"/>
-      <button class="dh-ask" onclick="askDispatchHelp()">Ask</button>
-    </div>
-  </div>
+
 </div>
 
 </body>
