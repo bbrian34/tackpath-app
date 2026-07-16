@@ -907,7 +907,7 @@ function playMsgAlert(){
 }
 
 // ── DISPATCH POLL -- single system, ID-based ──
-function startDispatchPoll(){
+async function startDispatchPoll(){
   stopDispatchPoll();lastSeenMsgId=null;
   if(!currentJob||!currentJob.id)return;
   fetch(sbu('messages?job_id=eq.'+currentJob.id+'&sender_role=eq.dispatcher&order=created_at.desc&limit=1'),{headers:GH})
@@ -1024,7 +1024,7 @@ function toggleOnline(){
 }
 
 // ── POLLING ──
-function startPolling(){clearInterval(pollInterval);pollJobs();pollInterval=setInterval(pollJobs,5000);}
+async function startPolling(){clearInterval(pollInterval);pollJobs();pollInterval=setInterval(pollJobs,5000);}
 async function pollJobs(){
   if(!isOnline||currentJob)return;
   if(document.getElementById('scOffer').classList.contains('on'))return;
@@ -1280,7 +1280,7 @@ async function arrivedAtDropoff(){
 }
 
 // ── JOB STATUS POLL ──
-function startJobStatusPoll(){
+async function startJobStatusPoll(){
   clearInterval(jobStatusInterval);
   jobStatusInterval=setInterval(async()=>{
     if(!currentJob)return;
@@ -1402,7 +1402,7 @@ function startRubyListen(){
   rubyRecog.onerror=e=>{if(e.error!=='no-speech')toast('Ruby could not hear you','warn');setRubyState('ready');};
   try{rubyRecog.start();}catch(e){setRubyState('ready');}
 }
-function rubyCmd(cmd){document.getElementById('rubyOvTranscript').textContent=cmd;processRubyCmd(cmd);}
+async function rubyCmd(cmd){document.getElementById('rubyOvTranscript').textContent=cmd;processRubyCmd(cmd);}
 async function processRubyCmd(transcript){
   if(!transcript)return;
   if(currentJob&&currentJob.id)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'[Ruby] '+transcript}).catch(()=>{});
@@ -1460,7 +1460,7 @@ async function startCamera(){
     if('BarcodeDetector' in window)startBarcodeDetector(video);else startZXing(video);
   }catch(e){status.textContent='Camera unavailable — use manual entry';status.style.color='var(--orange)';}
 }
-function startBarcodeDetector(video){
+async function startBarcodeDetector(video){
   const det=new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','pdf417','aztec','data_matrix','itf']});
   const canvas=document.getElementById('scanCanvas');const ctx=canvas.getContext('2d');
   if(barcodeInterval)clearInterval(barcodeInterval);
