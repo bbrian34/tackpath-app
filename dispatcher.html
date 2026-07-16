@@ -2114,12 +2114,7 @@ async function submitNewJob(){
     btn.disabled=false;btn.textContent='Dispatch Job →';
   }
 }
-// keyboard shortcut -- N to open new job
-document.addEventListener('keydown',e=>{
-  if(e.key==='n'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){
-    openNewJob();
-  }
-});
+
 
 </script>
 
