@@ -2077,7 +2077,15 @@ function toast(msg){
   el.textContent=msg;el.style.display='block';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
-window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();setInterval(loadJobs,5000);});
+window.addEventListener('load',function(){
+  startClock();
+  loadJobs();
+  loadDrivers();
+  // Robust polling -- catches errors so interval never dies
+  setInterval(function(){
+    loadJobs().catch(function(e){console.warn('Poll error:',e);});
+  }, 5000);
+});
 
 // ── NEW JOB ──
 let njType = 'sprint';
