@@ -556,6 +556,44 @@ body::after{content:'';position:fixed;inset:0;
 .nj-submit{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#19b7ef,#0060cc);border:none;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-top:4px;font-family:var(--sans);}
 .nj-submit:disabled{opacity:.5;cursor:default;}
 .nj-divider{height:1px;background:var(--border);margin:16px 0;}
+
+/* ── DISPATCHER HELP ── */
+#dispHelp{position:fixed;top:0;right:-380px;width:360px;height:100vh;background:var(--card);
+  border-left:1px solid rgba(201,168,76,.2);z-index:8000;display:flex;flex-direction:column;
+  transition:right .25s ease;box-shadow:-8px 0 32px rgba(0,0,0,.4);}
+#dispHelp.open{right:0;}
+.dh-hdr{padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card2);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.dh-title{font-size:13px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.dh-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+.dh-search-wrap{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dh-search{width:100%;padding:9px 12px;border-radius:9px;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);color:var(--text);font-size:12px;font-family:var(--sans);outline:none;}
+.dh-search:focus{border-color:rgba(201,168,76,.4);}
+.dh-body{flex:1;overflow-y:auto;padding:10px 0;}
+.dh-section{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.16em;
+  text-transform:uppercase;padding:10px 16px 5px;}
+.dh-item{padding:0;}
+.dh-q{padding:10px 16px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;justify-content:space-between;
+  transition:background .12s;}
+.dh-q:hover{background:rgba(201,168,76,.05);}
+.dh-q.open{color:var(--gold);}
+.dh-a{display:none;padding:10px 16px 14px;font-size:11px;color:var(--muted);line-height:1.7;
+  background:rgba(0,0,0,.2);border-bottom:1px solid rgba(255,255,255,.04);}
+.dh-a.open{display:block;}
+.dh-a strong{color:var(--text);}
+.dh-inp-wrap{padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--card2);}
+.dh-inp-row{display:flex;gap:6px;}
+.dh-inp{flex:1;padding:9px 12px;border-radius:9px;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);color:var(--text);font-size:11px;font-family:var(--sans);outline:none;}
+.dh-inp:focus{border-color:rgba(25,183,239,.4);}
+.dh-ask{padding:9px 14px;border-radius:9px;background:var(--blue);border:none;
+  color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--sans);}
+.dh-answer{padding:12px 14px;font-size:11px;color:var(--text);line-height:1.7;
+  background:rgba(25,183,239,.04);border:1px solid rgba(25,183,239,.1);border-radius:9px;margin:10px 14px 0;display:none;}
+.dh-loading{padding:12px 14px;font-family:var(--mono);font-size:9px;color:var(--muted);
+  display:none;align-items:center;gap:8px;}
 </style>
 </head>
 <body>
@@ -598,6 +636,7 @@ body::after{content:'';position:fixed;inset:0;
     </div>
     <div class="tb-right">
       <button onclick="openNewJob()" style="display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:9px;background:linear-gradient(135deg,#19b7ef,#0060cc);border:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">&#43; New Job</button>
+      <button onclick="toggleHelp()" title="Dispatcher Help" style="width:32px;height:32px;border-radius:50%;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.25);color:#c9a84c;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;">?</button>
       <div class="sys-status"><div class="sys-dot"></div>SYSTEMS NOMINAL</div>
       <div class="tb-sep"></div>
       <div class="tb-poll"><div class="poll-ring" id="pollRing"></div><span id="pollStatus">Live</span></div>
@@ -2114,6 +2153,52 @@ async function submitNewJob(){
 }
 
 
+
+// ── DISPATCH HELP ──
+function toggleHelp(){
+  document.getElementById('dispHelp').classList.toggle('open');
+}
+function toggleDH(el){
+  const a = el.nextElementSibling;
+  const isOpen = a.classList.contains('open');
+  document.querySelectorAll('.dh-a.open').forEach(x=>x.classList.remove('open'));
+  document.querySelectorAll('.dh-q.open').forEach(x=>x.classList.remove('open'));
+  if(!isOpen){a.classList.add('open');el.classList.add('open');}
+}
+function filterHelp(q){
+  const val = q.toLowerCase();
+  document.querySelectorAll('.dh-item').forEach(item=>{
+    const text = item.textContent.toLowerCase();
+    item.style.display = (!val||text.includes(val)) ? '' : 'none';
+  });
+  document.querySelectorAll('.dh-section').forEach(s=>s.style.display='');
+}
+async function askDispatchHelp(){
+  const input = document.getElementById('dhInput');
+  const q = input.value.trim();
+  if(!q) return;
+  const answerEl = document.getElementById('dhAnswer');
+  const loadingEl = document.getElementById('dhLoading');
+  answerEl.style.display = 'none';
+  loadingEl.style.display = 'flex';
+  try{
+    const resp = await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/tackpath-assist',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'},
+      body:JSON.stringify({question:'Dispatcher question: '+q})
+    });
+    const data = await resp.json();
+    answerEl.innerHTML = '<strong style="font-family:var(--mono);font-size:8px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:8px;">&#9889; TackPath Assist</strong>' + (data.answer||'Unable to find an answer.');
+    answerEl.style.display = 'block';
+    input.value = '';
+  }catch(e){
+    answerEl.innerHTML = 'Something went wrong. Try again.';
+    answerEl.style.display = 'block';
+  }finally{
+    loadingEl.style.display = 'none';
+  }
+}
+
 </script>
 
 <!-- NEW JOB MODAL -->
@@ -2173,6 +2258,112 @@ async function submitNewJob(){
         <input class="nj-input" id="njNotes" placeholder="Special instructions, access codes, fragile items..."/>
       </div>
       <button class="nj-submit" id="njSubmit" onclick="submitNewJob()">Dispatch Job &rarr;</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- DISPATCHER HELP PANEL -->
+<div id="dispHelp">
+  <div class="dh-hdr">
+    <div class="dh-title">&#9889; Dispatch Assistant</div>
+    <button class="dh-close" onclick="toggleHelp()">&#10005;</button>
+  </div>
+  <div class="dh-search-wrap">
+    <input class="dh-search" id="dhSearch" placeholder="Search help topics..." oninput="filterHelp(this.value)"/>
+  </div>
+  <div class="dh-body" id="dhBody">
+
+    <div class="dh-section">Job Statuses</div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What does PENDING mean? <span>&#9660;</span></div>
+      <div class="dh-a">Job has been created and is waiting for a driver to accept. <strong>No driver has been assigned yet.</strong> If a job stays pending for 15+ minutes the OCA will flag it in the exception queue automatically.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What does ASSIGNED mean? <span>&#9660;</span></div>
+      <div class="dh-a">A driver has accepted the job. They are heading to the pickup address. <strong>The customer has been notified automatically.</strong></div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What does CUSTOMER CONFIRMED mean? <span>&#9660;</span></div>
+      <div class="dh-a">The driver confirmed pickup and is en route. The job is actively in progress. <strong>Track it in SmartTrack.</strong></div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What does IN TRANSIT mean? <span>&#9660;</span></div>
+      <div class="dh-a">Package has been picked up and the driver is making deliveries. <strong>If no update for 30+ minutes, the OCA will flag a stall exception.</strong></div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What does DELIVERED mean? <span>&#9660;</span></div>
+      <div class="dh-a">All stops completed. Proof of delivery collected. <strong>Customer has been notified. Job is ready for billing.</strong></div>
+    </div>
+
+    <div class="dh-section">Exceptions &amp; OCA</div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What is the Exception Queue? <span>&#9660;</span></div>
+      <div class="dh-a">Flags raised by the AI Operations Coordinator (OCA). It watches all jobs every 60 seconds and alerts you to problems before they become failures. <strong>Review each item and click Approve or Reject.</strong></div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">When do I Approve vs Reject an exception? <span>&#9660;</span></div>
+      <div class="dh-a"><strong>Approve</strong> -- you agree with the AI recommendation and want it acted on. <strong>Reject</strong> -- you've already handled it, or you disagree with the flag. Both actions are logged in the audit trail.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">Job is stuck in PENDING -- what do I do? <span>&#9660;</span></div>
+      <div class="dh-a">Check driver availability in the sidebar. If no drivers are online, broadcast the job again using the Rebroadcast button in the job drawer. The OCA will flag this automatically after 15 minutes.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">Driver hasn't updated in 30 minutes -- what do I do? <span>&#9660;</span></div>
+      <div class="dh-a">Click the job to open the drawer. Use <strong>Contact Driver</strong> to reach them directly. If no response, escalate by notifying the customer and flagging as an incident. The OCA will have already flagged a stall exception.</div>
+    </div>
+
+    <div class="dh-section">Jobs &amp; Drivers</div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">How do I create a new job? <span>&#9660;</span></div>
+      <div class="dh-a">Click the <strong>+ New Job</strong> button in the top right. Fill in pickup, dropoff, customer, and package details. Click Dispatch Job. The job goes live immediately and drivers will be notified.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">How do I contact a driver? <span>&#9660;</span></div>
+      <div class="dh-a">Click any job card to open the detail drawer. Click <strong>Contact Driver</strong>. Or open the Comms hub (bottom right button) and select the driver's channel.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">How do I notify the customer? <span>&#9660;</span></div>
+      <div class="dh-a">Click the job to open the drawer. Click <strong>Notify Customer</strong>. A context-aware message based on the current job status will be sent automatically. You can see what was sent in the Customer Updates section of the drawer.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">How do I delete a job? <span>&#9660;</span></div>
+      <div class="dh-a">Click the job card to open the drawer. Scroll to the bottom. Click <strong>Delete Job</strong> in red. Confirm the popup. The job and all associated messages are permanently removed.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">How do I reassign or rebroadcast a Surge route? <span>&#9660;</span></div>
+      <div class="dh-a">Go to the <strong>Surge</strong> tab. Find the route block. Click <strong>Rebroadcast</strong> to send it to all available drivers again. Click <strong>Reassign</strong> to assign it to a specific driver manually.</div>
+    </div>
+
+    <div class="dh-section">Tabs &amp; Screens</div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What is SmartPath? <span>&#9660;</span></div>
+      <div class="dh-a">Route optimization view. Shows the most efficient order to complete multiple stops. <strong>Google Maps integration coming soon</strong> for real-time traffic and live ETAs.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What is SmartTrack? <span>&#9660;</span></div>
+      <div class="dh-a">Live driver tracking view. Shows where each driver is and what job they are on in real time.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What is the Command tab? <span>&#9660;</span></div>
+      <div class="dh-a">The AI operations feed. Shows every decision the Claude AI agent has made -- exceptions flagged, jobs monitored, actions recommended. Full audit trail.</div>
+    </div>
+    <div class="dh-item">
+      <div class="dh-q" onclick="toggleDH(this)">What is the Analytics tab? <span>&#9660;</span></div>
+      <div class="dh-a">Performance data -- deliveries completed, on-time rate, exceptions handled, driver activity. Updated in real time.</div>
+    </div>
+
+  </div>
+
+  <!-- Ask Claude for anything not in FAQ -->
+  <div class="dh-loading" id="dhLoading"><div class="spin"></div>Looking up answer...</div>
+  <div class="dh-answer" id="dhAnswer"></div>
+  <div class="dh-inp-wrap">
+    <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:7px;letter-spacing:.1em;">NOT FINDING YOUR ANSWER? ASK CLAUDE</div>
+    <div class="dh-inp-row">
+      <input class="dh-inp" id="dhInput" placeholder="Ask anything about dispatching..." onkeydown="if(event.key==='Enter')askDispatchHelp()"/>
+      <button class="dh-ask" onclick="askDispatchHelp()">Ask</button>
     </div>
   </div>
 </div>
