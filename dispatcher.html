@@ -1216,7 +1216,7 @@ let ocaWorkItems = [];
 
 async function loadOCAData(){
   try{
-    const items = await sbGet('work_items?status=in.(routing,pending,assigned,customer_confirmed,in_transit)&order=created_at.desc&limit=20');
+    const items = await sbGet('work_items?status=eq.pending&order=created_at.desc&limit=20');
     ocaWorkItems = items || [];
     renderExceptionQueue();
   }catch(e){
@@ -2004,7 +2004,7 @@ function toast(msg){
   el.textContent=msg;el.style.display='block';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
-window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();setInterval(function(){loadJobs().catch(function(){});},5000);});
+window.addEventListener('load',function(){startClock();loadJobs();setInterval(function(){loadJobs().catch(function(){});},5000);});
 </script>
 </body>
 </html>
