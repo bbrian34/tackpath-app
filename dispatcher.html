@@ -2077,7 +2077,7 @@ function toast(msg){
   el.textContent=msg;el.style.display='block';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
-window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();});
+window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();setInterval(loadJobs,5000);});
 
 // ── NEW JOB ──
 let njType = 'sprint';
