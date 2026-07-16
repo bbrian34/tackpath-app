@@ -1216,7 +1216,7 @@ let ocaWorkItems = [];
 
 async function loadOCAData(){
   try{
-    const items = await sbGet('work_items?status=eq.pending&order=created_at.desc&limit=20');
+    const items = await sbGet('work_items?status=in.(routing,pending,assigned,customer_confirmed,in_transit)&order=created_at.desc&limit=20');
     ocaWorkItems = items || [];
     renderExceptionQueue();
   }catch(e){
@@ -1337,9 +1337,9 @@ function renderKPIs(){
 
 // ── PIPELINE ──
 function renderPipeline(){
-  const cols={pending:[],assigned:[],in_transit:[],delivered:[],cancelled:[]};
+  const cols={routing:[],pending:[],assigned:[],in_transit:[],delivered:[],cancelled:[]};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(cols[s]) cols[s].push(j); });
-  const statuses=['pending','assigned','in_transit','delivered','cancelled'];
+  const statuses=['routing','pending','assigned','in_transit','delivered','cancelled'];
   statuses.forEach(s=>{
     const col=cols[s];
     const cnt=document.getElementById('pc-'+s);
