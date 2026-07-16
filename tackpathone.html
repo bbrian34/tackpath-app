@@ -187,6 +187,31 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
   background:var(--card2);border:1px solid var(--border);color:var(--text);
   box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tIn .3s ease;max-width:280px;}
 @keyframes tIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── RIA ── */
+.ria-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.ria-stat{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:18px;position:relative;overflow:hidden;}
+.ria-stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:0 0 14px 14px;}
+.ria-stat.gold::after{background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.ria-stat.green::after{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.ria-stat.blue::after{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.ria-stat.red::after{background:linear-gradient(90deg,transparent,var(--p1),transparent);}
+.ria-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;}
+.ria-val{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:4px;}
+.ria-sub{font-size:10px;color:var(--muted);}
+.ria-table{width:100%;border-collapse:collapse;}
+.ria-table th{padding:9px 14px;text-align:left;font-family:var(--mono);font-size:8px;color:var(--muted);
+  letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid var(--border2);background:var(--card2);}
+.ria-table td{padding:10px 14px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.03);}
+.ria-table tr:hover td{background:rgba(25,183,239,.02);}
+.ria-bar-wrap{height:5px;background:var(--border2);border-radius:3px;overflow:hidden;width:80px;}
+.ria-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.ria-badge{padding:2px 8px;border-radius:5px;font-family:var(--mono);font-size:8px;font-weight:700;}
+.ria-good{background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);}
+.ria-warn{background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.2);color:var(--p2);}
+.ria-bad{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--p1);}
+.ria-run-btn{padding:7px 16px;border-radius:9px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);
+  color:var(--gold);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono);}
 </style>
 </head>
 <body>
@@ -400,6 +425,72 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
       </div>
       <div id="tp1Deliveries" style="max-height:300px;overflow-y:auto;">
         <div class="loading"><div class="spin"></div>Loading deliveries...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIA: Revenue Intelligence Agent -->
+  <div style="margin-top:16px;">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">&#128200; RIA &mdash; Revenue Intelligence Agent <span class="card-badge cb-gold">LIVE</span></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);" id="riaLastRun">Not yet run</div>
+          <button class="ria-run-btn" onclick="runRIA()">&#9654; Run RIA</button>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- Top KPIs -->
+        <div class="ria-grid" id="riaKPIs">
+          <div class="ria-stat gold">
+            <div class="ria-lbl">Revenue Per Delivery</div>
+            <div class="ria-val" id="riaRPD">--</div>
+            <div class="ria-sub">Avg across all clients</div>
+          </div>
+          <div class="ria-stat green">
+            <div class="ria-lbl">Most Profitable Client</div>
+            <div class="ria-val" style="font-size:16px;padding-top:6px;" id="riaBestClient">--</div>
+            <div class="ria-sub" id="riaBestClientSub">by total revenue</div>
+          </div>
+          <div class="ria-stat blue">
+            <div class="ria-lbl">Revenue Per Mile</div>
+            <div class="ria-val" id="riaRPM">--</div>
+            <div class="ria-sub">Avg across all routes</div>
+          </div>
+          <div class="ria-stat red">
+            <div class="ria-lbl">Lowest Value Client</div>
+            <div class="ria-val" style="font-size:16px;padding-top:6px;" id="riaWorstClient">--</div>
+            <div class="ria-sub" id="riaWorstClientSub">review pricing</div>
+          </div>
+        </div>
+
+        <!-- Client Revenue Table -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Client Revenue Breakdown</div>
+            <div class="card" style="overflow:hidden;">
+              <table class="ria-table" id="riaClientTable">
+                <thead><tr><th>Client</th><th>Jobs</th><th>Revenue</th><th>Avg/Job</th><th>Health</th></tr></thead>
+                <tbody id="riaClientBody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;font-family:var(--mono);font-size:9px;">Click Run RIA to analyze</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Driver Performance</div>
+            <div class="card" style="overflow:hidden;">
+              <table class="ria-table">
+                <thead><tr><th>Driver</th><th>Deliveries</th><th>Revenue</th><th>Avg/Job</th></tr></thead>
+                <tbody id="riaDriverBody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-family:var(--mono);font-size:9px;">Click Run RIA to analyze</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insights -->
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;" id="riaInsights" style="display:none;">
+        </div>
+
       </div>
     </div>
   </div>
@@ -712,6 +803,140 @@ async function init(){
 }
 
 init();
+
+// ── RIA: REVENUE INTELLIGENCE AGENT ──
+async function runRIA(){
+  const btn = document.querySelector('.ria-run-btn');
+  btn.textContent = '&#9654; Analyzing...';
+  btn.disabled = true;
+
+  try{
+    // Pull all jobs
+    const allJobs = await sbGet('jobs?select=*&order=created_at.desc&limit=500');
+    const delivered = allJobs.filter(j=>j.status==='delivered');
+
+    if(!delivered.length){
+      document.getElementById('riaClientBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;font-family:var(--mono);font-size:9px;">No delivered jobs yet</td></tr>';
+      document.getElementById('riaDriverBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-family:var(--mono);font-size:9px;">No data yet</td></tr>';
+      return;
+    }
+
+    // ── OVERALL KPIs ──
+    const totalRev = delivered.reduce((s,j)=>s+parseFloat(j.price||0),0);
+    const totalMiles = delivered.reduce((s,j)=>s+parseFloat(j.distance_miles||0),0);
+    const avgPerJob = totalRev / delivered.length;
+    const revPerMile = totalMiles > 0 ? totalRev / totalMiles : 0;
+
+    document.getElementById('riaRPD').textContent = '$'+avgPerJob.toFixed(2);
+    document.getElementById('riaRPM').textContent = '$'+revPerMile.toFixed(2);
+
+    // ── CLIENT BREAKDOWN ──
+    const clientMap = {};
+    delivered.forEach(j=>{
+      const n = j.customer_name||'Unknown';
+      if(!clientMap[n]) clientMap[n]={name:n,jobs:0,revenue:0,miles:0};
+      clientMap[n].jobs++;
+      clientMap[n].revenue += parseFloat(j.price||0);
+      clientMap[n].miles += parseFloat(j.distance_miles||0);
+    });
+    const clients = Object.values(clientMap).sort((a,b)=>b.revenue-a.revenue);
+    const maxRev = clients[0]?.revenue||1;
+
+    // Best and worst
+    document.getElementById('riaBestClient').textContent = clients[0]?.name||'--';
+    document.getElementById('riaBestClientSub').textContent = '$'+clients[0]?.revenue.toFixed(0)+' total revenue';
+    document.getElementById('riaWorstClient').textContent = clients[clients.length-1]?.name||'--';
+    const worstAvg = clients[clients.length-1] ? (clients[clients.length-1].revenue/clients[clients.length-1].jobs).toFixed(2) : '--';
+    document.getElementById('riaWorstClientSub').textContent = '$'+worstAvg+' avg per job';
+
+    // Client table
+    const tbody = document.getElementById('riaClientBody');
+    tbody.innerHTML = clients.map(c=>{
+      const avg = (c.revenue/c.jobs).toFixed(2);
+      const pct = Math.round((c.revenue/maxRev)*100);
+      const health = avg > avgPerJob*1.2 ? 'ria-good' : avg < avgPerJob*0.8 ? 'ria-bad' : 'ria-warn';
+      const healthLabel = avg > avgPerJob*1.2 ? 'Strong' : avg < avgPerJob*0.8 ? 'Review' : 'Steady';
+      return `<tr>
+        <td style="font-weight:700;">${c.name}</td>
+        <td style="font-family:var(--mono);">${c.jobs}</td>
+        <td style="font-family:var(--mono);color:var(--green);">$${c.revenue.toFixed(2)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-family:var(--mono);font-size:11px;">$${avg}</span>
+            <div class="ria-bar-wrap"><div class="ria-bar" style="width:${pct}%;"></div></div>
+          </div>
+        </td>
+        <td><span class="ria-badge ${health}">${healthLabel}</span></td>
+      </tr>`;
+    }).join('');
+
+    // ── DRIVER BREAKDOWN ──
+    const driverMap = {};
+    delivered.forEach(j=>{
+      const n = j.driver_name||'Unassigned';
+      if(!driverMap[n]) driverMap[n]={name:n,jobs:0,revenue:0};
+      driverMap[n].jobs++;
+      driverMap[n].revenue += parseFloat(j.price||0);
+    });
+    const drivers = Object.values(driverMap).filter(d=>d.name!=='Unassigned').sort((a,b)=>b.revenue-a.revenue);
+
+    const dbody = document.getElementById('riaDriverBody');
+    if(!drivers.length){
+      dbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-family:var(--mono);font-size:9px;">No driver data yet</td></tr>';
+    } else {
+      dbody.innerHTML = drivers.map(d=>{
+        const avg = (d.revenue/d.jobs).toFixed(2);
+        return `<tr>
+          <td style="font-weight:700;">${d.name}</td>
+          <td style="font-family:var(--mono);">${d.jobs}</td>
+          <td style="font-family:var(--mono);color:var(--green);">$${d.revenue.toFixed(2)}</td>
+          <td style="font-family:var(--mono);">$${avg}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // ── INSIGHTS ──
+    const insights = [];
+    if(clients.length > 1){
+      const top = clients[0];
+      const bottom = clients[clients.length-1];
+      const topAvg = top.revenue/top.jobs;
+      const botAvg = bottom.revenue/bottom.jobs;
+      if(botAvg < avgPerJob * 0.7){
+        insights.push({icon:'&#9888;&#65039;',color:'var(--p2)',title:'Pricing Alert',text:`${bottom.name} averages $${botAvg.toFixed(2)} per job -- ${Math.round((1-(botAvg/avgPerJob))*100)}% below your platform average. Consider a rate review.`});
+      }
+      if(top.jobs > delivered.length * 0.5){
+        insights.push({icon:'&#128204;',color:'var(--blue)',title:'Client Concentration',text:`${top.name} accounts for ${Math.round((top.jobs/delivered.length)*100)}% of your volume. Consider diversifying your client base to reduce risk.`});
+      }
+    }
+    if(revPerMile < 3){
+      insights.push({icon:'&#128663;',color:'var(--p1)',title:'Route Efficiency',text:`Revenue per mile is $${revPerMile.toFixed(2)}. Industry benchmark is $3.50+. Optimize routes or review pricing on longer distance jobs.`});
+    }
+    if(avgPerJob > 40){
+      insights.push({icon:'&#129534;',color:'var(--green)',title:'Strong Avg Revenue',text:`Your average of $${avgPerJob.toFixed(2)} per delivery is healthy. Focus on volume growth to maximize platform earnings.`});
+    }
+
+    const insightsEl = document.getElementById('riaInsights');
+    if(insights.length){
+      insightsEl.style.display = 'grid';
+      insightsEl.innerHTML = insights.map(i=>`
+        <div style="background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:16px;">
+          <div style="font-size:20px;margin-bottom:8px;">${i.icon}</div>
+          <div style="font-size:12px;font-weight:700;color:${i.color};margin-bottom:6px;">${i.title}</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7;">${i.text}</div>
+        </div>`).join('');
+    }
+
+    document.getElementById('riaLastRun').textContent = 'Last run: '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+
+  }catch(e){
+    console.error('RIA error:',e);
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = '&#9654; Run RIA';
+  }
+}
+
 </script>
 </body>
 </html>
