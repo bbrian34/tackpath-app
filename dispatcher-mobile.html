@@ -534,7 +534,7 @@ function renderJobs(){
 
   let html='';
   if(!jobs.length){
-    html='<div class="empty"><div class="empty-label">No Jobs</div><div class="empty-sub">Tap + to create a new job</div></div>';
+    html='<div class="empty" style="padding:60px 24px 40px;text-align:center;"><div style="font-family:var(--mono);font-size:14px;font-weight:800;color:#fff;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;">No Jobs</div><div style="font-size:14px;color:rgba(238,244,255,.8);margin-bottom:36px;">Tap the + button below to create a new job</div><div style="display:flex;flex-direction:column;align-items:center;gap:6px;animation:bounce 1.5s infinite;"><div style="width:2px;height:40px;background:linear-gradient(180deg,transparent,#19b7ef);border-radius:1px;"></div><div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:14px solid #19b7ef;"></div></div></div>';
   } else {
     if(active.length){
       active.forEach(j=>{
