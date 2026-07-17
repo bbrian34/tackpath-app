@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath · Sign In</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;--gold:#c9a84c;
+  --bg:#010e21;--card:#071828;--card2:#0d2135;--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+  --text:#eef4ff;--muted:rgba(238,244,255,.65);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+body::before{content:'';position:fixed;inset:0;
+  background:linear-gradient(rgba(25,183,239,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(25,183,239,.03) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(25,183,239,.1) 0%,transparent 55%);
+  pointer-events:none;z-index:0;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;height:60px;
+  background:rgba(1,14,33,.97);border-bottom:1px solid rgba(25,183,239,.1);
+  display:flex;align-items:center;padding:0 32px;z-index:10;}
+.nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
+.nav-wordmark{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:500;letter-spacing:1px;}
+.nav-back{margin-left:auto;font-size:13px;color:var(--muted);text-decoration:none;
+  font-weight:500;transition:color .15s;}
+.nav-back:hover{color:#fff;}
+
+/* MAIN */
+.main{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:80px 24px 40px;position:relative;z-index:1;}
+
+.top{text-align:center;margin-bottom:48px;}
+.top-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--blue);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px;font-weight:600;}
+.top-h{font-size:clamp(26px,4vw,38px);font-weight:800;line-height:1.1;margin-bottom:10px;}
+.top-sub{font-size:15px;color:var(--muted);}
+
+/* PORTAL CARDS */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:780px;width:100%;align-items:stretch;}
+
+.portal-card{background:var(--card);border:2px solid var(--border);border-radius:20px;height:100%;
+  padding:36px 28px;text-align:center;cursor:pointer;text-decoration:none;
+  display:flex;flex-direction:column;align-items:center;gap:0;justify-content:flex-start;
+  transition:all .2s;position:relative;overflow:hidden;}
+.portal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  opacity:0;transition:opacity .2s;}
+.portal-card:hover{transform:translateY(-3px);}
+
+/* Dispatcher -- blue */
+.pc-dispatcher{border-color:rgba(25,183,239,.15);}
+.pc-dispatcher::before{background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:1;}
+.pc-dispatcher:hover{border-color:rgba(25,183,239,.4);box-shadow:0 12px 40px rgba(25,183,239,.12);}
+
+/* Driver -- green */
+.pc-driver{border-color:rgba(83,255,136,.12);}
+.pc-driver::before{background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:1;}
+.pc-driver:hover{border-color:rgba(83,255,136,.35);box-shadow:0 12px 40px rgba(83,255,136,.1);}
+
+/* Customer -- orange */
+.pc-customer{border-color:rgba(255,150,30,.12);}
+.pc-customer::before{background:linear-gradient(90deg,transparent,var(--orange),transparent);opacity:1;}
+.pc-customer:hover{border-color:rgba(255,150,30,.35);box-shadow:0 12px 40px rgba(255,150,30,.1);}
+
+
+.pc-role{font-family:'DM Mono',monospace;font-size:9px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px;}
+.pc-role-disp{color:var(--blue);}
+.pc-role-drv{color:var(--green);}
+.pc-role-cust{color:var(--orange);}
+
+.pc-name{font-size:22px;font-weight:800;margin-bottom:10px;color:#fff;}
+.pc-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px;flex:1;}
+.pc-btn{width:100%;padding:13px;border-radius:12px;font-size:14px;font-weight:700;
+  border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.pc-btn-disp{background:var(--blue);color:#fff;}
+.pc-btn-drv{background:rgba(83,255,136,.12);border:1px solid rgba(83,255,136,.3)!important;color:var(--green);border:none;}
+.pc-btn-cust{background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.25)!important;color:var(--orange);border:none;}
+
+.pc-btn-disp:hover{background:#22ccff;}
+.pc-btn-drv:hover{background:rgba(83,255,136,.2);}
+.pc-btn-cust:hover{background:rgba(255,150,30,.18);}
+
+/* Footer note */
+.footer-note{margin-top:36px;text-align:center;font-family:'DM Mono',monospace;
+  font-size:10px;color:rgba(238,244,255,.25);letter-spacing:.06em;}
+
+@media(max-width:680px){
+  .cards{grid-template-columns:1fr;max-width:400px;}
+  .portal-card{padding:28px 22px;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">
+    <svg width="13" height="21" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+    </svg>
+    <div class="nav-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  </a>
+  <a class="nav-back" href="index.html">&#8592; Back to home</a>
+</nav>
+
+<div class="main">
+  <div class="top">
+    <div class="top-label">Welcome back</div>
+    <h1 class="top-h">Who are you signing in as?</h1>
+    <p class="top-sub">Select your role to access your portal.</p>
+  </div>
+
+  <div class="cards">
+
+    <!-- DISPATCHER -->
+    <a class="portal-card pc-dispatcher" href="dispatcher.html">
+      <div class="pc-role pc-role-disp">Operations</div>
+      <div class="pc-name">Dispatcher</div>
+      <div class="pc-desc">Manage jobs, assign drivers, monitor the fleet, and handle exceptions.</div>
+      <div class="pc-btn pc-btn-disp">Access Dispatcher &#8594;</div>
+    </a>
+
+    <!-- DRIVER -->
+    <a class="portal-card pc-driver" href="driver.html">
+      <div class="pc-role pc-role-drv">Field</div>
+      <div class="pc-name">Driver</div>
+      <div class="pc-desc">View assigned jobs, navigate your route, scan packages, and confirm deliveries.</div>
+      <div class="pc-btn pc-btn-drv">Access Driver App &#8594;</div>
+    </a>
+
+    <!-- CUSTOMER -->
+    <a class="portal-card pc-customer" href="customer.html">
+      <div class="pc-role pc-role-cust">Client</div>
+      <div class="pc-name">Customer</div>
+      <div class="pc-desc">Place a delivery order, track your package in real time, and confirm delivery.</div>
+      <div class="pc-btn pc-btn-cust">Place an Order &#8594;</div>
+    </a>
+
+  </div>
+
+  <div class="footer-note">TackPath &middot; Atlanta Metro &middot; Secure Platform Access</div>
+</div>
+
+</body>
+</html>
