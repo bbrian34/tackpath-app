@@ -6,6 +6,48 @@
 if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
   window.location.replace('dispatcher-mobile.html');
 }
+
+// ── DRIVER RATING ──
+let currentRating = 0;
+
+function setRating(n){
+  currentRating = n;
+  document.querySelectorAll('.star').forEach((s,i)=>{
+    s.classList.toggle('on', i < n);
+  });
+}
+
+function showRatingIfDelivered(job){
+  const wrap = document.getElementById('ratingWrap');
+  if(job.status === 'delivered'){
+    wrap.classList.add('on');
+    // Show existing rating if already rated
+    if(job.driver_rating){
+      setRating(job.driver_rating);
+      const note = document.getElementById('ratingNote');
+      if(note) note.value = job.driver_rating_note || '';
+      document.getElementById('ratingSaved').style.display = 'inline';
+    } else {
+      setRating(0);
+      document.getElementById('ratingNote').value = '';
+      document.getElementById('ratingSaved').style.display = 'none';
+    }
+  } else {
+    wrap.classList.remove('on');
+  }
+}
+
+async function saveRating(){
+  if(!currentJobId || !currentRating) return;
+  const note = document.getElementById('ratingNote').value.trim();
+  try{
+    await sbPatch('jobs?id=eq.'+currentJobId, {driver_rating: currentRating, driver_rating_note: note});
+    document.getElementById('ratingSaved').style.display = 'inline';
+    toast('Rating saved');
+    loadJobs();
+  } catch(e){ toast('Error: '+e.message, 'warn'); }
+}
+
 </script>
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
@@ -529,6 +571,22 @@ body::after{content:'';position:fixed;inset:0;
   z-index:99999;font-size:11px;font-weight:700;min-width:220px;text-align:center;
   animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* ── DRIVER RATING ── */
+.rating-wrap{margin-top:14px;padding:14px;border-radius:12px;background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.15);display:none;}
+.rating-wrap.on{display:block;}
+.rating-lbl{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;font-weight:600;}
+.stars{display:flex;gap:6px;margin-bottom:10px;}
+.star{font-size:24px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .15s;line-height:1;}
+.star.on{color:#f5c518;}
+.star:hover{color:#f5c518;}
+.rating-note{width:100%;padding:9px 12px;border-radius:9px;background:rgba(255,255,255,.03);
+  border:1px solid var(--border);color:var(--text);font-size:12px;
+  font-family:var(--sans);outline:none;resize:none;height:56px;margin-bottom:10px;}
+.rating-save{padding:9px 18px;border-radius:9px;background:rgba(201,168,76,.12);
+  border:1px solid rgba(201,168,76,.25);color:var(--gold);font-size:12px;
+  font-weight:700;cursor:pointer;font-family:var(--sans);}
+.rating-saved{font-family:var(--mono);font-size:9px;color:var(--green);margin-left:10px;display:none;}
 </style>
 </head>
 <body>
@@ -1049,6 +1107,20 @@ body::after{content:'';position:fixed;inset:0;
   <div class="dr-acts">
     <button class="dra dra-ghost" onclick="toast('Driver contacted via TackPath dispatch')">&#128222; Contact Driver</button>
     <button class="dra dra-ghost" onclick="toast('Customer notification sent')">&#128226; Notify Customer</button>
+  </div>
+  <!-- DRIVER RATING -->
+  <div class="rating-wrap" id="ratingWrap">
+    <div class="rating-lbl">Rate this Driver</div>
+    <div class="stars" id="ratingStars">
+      <span class="star" onclick="setRating(1)">&#9733;</span>
+      <span class="star" onclick="setRating(2)">&#9733;</span>
+      <span class="star" onclick="setRating(3)">&#9733;</span>
+      <span class="star" onclick="setRating(4)">&#9733;</span>
+      <span class="star" onclick="setRating(5)">&#9733;</span>
+    </div>
+    <textarea class="rating-note" id="ratingNote" placeholder="Optional note about this driver..."></textarea>
+    <button class="rating-save" onclick="saveRating()">Save Rating</button>
+    <span class="rating-saved" id="ratingSaved">&#10003; Saved</span>
   </div>
   <div style="margin-top:7px;">
     <button class="dra dra-d" style="width:100%;" onclick="deleteJob()">&#128465; Delete Job</button>
