@@ -195,23 +195,6 @@ nav{position:fixed;top:0;left:0;right:0;height:60px;
   </div>
 </div>
 
-<script>
-function gateLogin(){
-  const user = document.getElementById('gateUser').value.trim();
-  const pass = document.getElementById('gatePass').value.trim();
-  if(!user || !pass){
-    document.getElementById('gateErr').style.display='block';
-    return;
-  }
-  // Any credentials work -- just gate against empty fields
-  document.getElementById('gate').style.display='none';
-  sessionStorage.setItem('tp_auth','1');
-}
-// Check if already authenticated this session
-if(sessionStorage.getItem('tp_auth')==='1'){
-  document.getElementById('gate').style.display='none';
-}
-</script>
 
 <!-- LOGIN GATE -->
 <div class="gate-overlay" id="gateOverlay">
