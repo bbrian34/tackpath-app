@@ -122,7 +122,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .nj-h{font-size:22px;font-weight:800;margin-bottom:14px;color:#fff;}
 .nj-type-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
 .nj-type{padding:13px;border-radius:12px;border:2px solid rgba(255,255,255,.15);background:var(--card);text-align:center;cursor:pointer;transition:all .2s;}
-.nj-type.on{background:rgba(25,183,239,.15);border:2px solid #19b7ef;box-shadow:0 0 16px rgba(25,183,239,.4);}
+.nj-type.on-sprint{background:rgba(25,183,239,.15);border:2px solid #19b7ef;box-shadow:0 0 16px rgba(25,183,239,.4);}
+.nj-type.on-surge{background:rgba(141,92,255,.15);border:2px solid #8d5cff;box-shadow:0 0 16px rgba(141,92,255,.4);}
 .nj-type-name{font-size:17px;font-weight:800;color:#fff;}
 .nj-type-desc{font-size:13px;color:rgba(238,244,255,.85);margin-top:3px;font-weight:600;}
 .nj-lbl{font-family:var(--mono);font-size:13px;color:#fff;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;margin-top:14px;display:block;font-weight:800;}
@@ -314,7 +315,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 <div class="newjob-view" id="viewNew">
   <div class="nj-h">New Job</div>
   <div class="nj-type-row">
-    <div class="nj-type on" id="njTypeA" onclick="setNjType('sprint',this)">
+    <div class="nj-type on-sprint" id="njTypeA" onclick="setNjType('sprint',this)">
       <div class="nj-type-name" style="color:var(--blue);">Sprint</div>
       <div class="nj-type-desc">Single delivery</div>
     </div>
@@ -767,8 +768,8 @@ async function notifyCustomer(){
 // ── NEW JOB ──
 function setNjType(type,el){
   njType=type;
-  document.querySelectorAll('.nj-type').forEach(e=>e.classList.remove('on'));
-  el.classList.add('on');
+  document.querySelectorAll('.nj-type').forEach(e=>{e.classList.remove('on-sprint');e.classList.remove('on-surge');});
+  el.classList.add(type==='sprint'?'on-sprint':'on-surge');
 }
 function setNjPri(pri,el){
   njPri=pri;
@@ -805,7 +806,7 @@ async function submitNewJob(){
     document.getElementById('njPkgs').value='1';
     document.getElementById('njPrice').value='';
     njType='sprint';njPri='standard';
-    document.querySelectorAll('.nj-type').forEach((e,i)=>e.classList.toggle('on',i===0));
+    document.querySelectorAll('.nj-type').forEach((e,i)=>{e.classList.remove('on-sprint','on-surge');if(i===0)e.classList.add('on-sprint');});
     document.querySelectorAll('.nj-pri').forEach((e,i)=>e.classList.toggle('on',i===0));
     await loadJobs();
     showView('jobs');
