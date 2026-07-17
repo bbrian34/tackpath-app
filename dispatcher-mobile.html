@@ -248,6 +248,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   box-shadow:0 4px 18px rgba(25,183,239,.4);margin-top:-18px;font-weight:300;}
 .bn-new-lbl{font-family:var(--mono);font-size:7px;color:var(--muted);
   letter-spacing:.08em;text-transform:uppercase;margin-top:1px;}
+
+/* ── DRIVER RATING ── */
+.rating-wrap{margin-top:14px;padding:16px;border-radius:13px;background:rgba(201,168,76,.05);
+  border:1px solid rgba(201,168,76,.15);display:none;}
+.rating-wrap.on{display:block;}
+.rating-lbl{font-family:var(--mono);font-size:10px;color:#c9a84c;letter-spacing:.14em;
+  text-transform:uppercase;margin-bottom:12px;font-weight:700;}
+.stars{display:flex;gap:8px;margin-bottom:12px;}
+.star{font-size:32px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .15s;line-height:1;}
+.star.on{color:#f5c518;}
+.rating-note{width:100%;padding:12px 14px;border-radius:11px;background:var(--card2);
+  border:1px solid var(--border2);color:#fff;font-size:15px;resize:none;
+  font-family:'DM Sans',sans-serif;outline:none;height:70px;font-weight:500;}
+.rating-save{width:100%;padding:14px;border-radius:11px;background:rgba(201,168,76,.1);
+  border:1px solid rgba(201,168,76,.25);color:#c9a84c;font-size:14px;
+  font-weight:800;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;}
+.rating-saved{font-family:var(--mono);font-size:10px;color:var(--green);
+  display:none;text-align:center;margin-top:8px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -412,7 +430,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
       <div class="da da-secondary" onclick="notifyCustomer()">Notify Customer</div>
     </div>
     <div class="da-full da-notify" onclick="notifyCustomer()">Send Status Update to Customer</div>
-    <div class="da-full da-delete" onclick="deleteJob()">Delete Job</div>
+    <!-- RATING -->
+  <div class="rating-wrap" id="ratingWrap">
+    <div class="rating-lbl">Rate this Driver</div>
+    <div class="stars" id="ratingStars">
+      <span class="star" onclick="setRating(1)">&#9733;</span>
+      <span class="star" onclick="setRating(2)">&#9733;</span>
+      <span class="star" onclick="setRating(3)">&#9733;</span>
+      <span class="star" onclick="setRating(4)">&#9733;</span>
+      <span class="star" onclick="setRating(5)">&#9733;</span>
+    </div>
+    <textarea class="rating-note" id="ratingNote" placeholder="Optional note..."></textarea>
+    <button class="rating-save" onclick="saveRating()">Save Rating</button>
+    <div class="rating-saved" id="ratingSaved">&#10003; Rating Saved</div>
+  </div>
+  <div class="da-full da-delete" onclick="deleteJob()">Delete Job</div>
   </div>
 </div>
 
@@ -711,6 +743,7 @@ function openDrawer(id){
   document.getElementById('drPkgs').textContent=(j.total_packages||1)+' package'+(j.total_packages>1?'s':'');
   document.getElementById('drPrice').textContent='$'+parseFloat(j.price||0).toFixed(2);
   document.getElementById('drStatusSel').value=j.status||'pending';
+  showRatingIfDelivered(j);
   document.getElementById('drawer').classList.add('open');
   document.getElementById('overlay').classList.add('on');
 }
@@ -877,6 +910,41 @@ function showView(v){
 showView('jobs');
 loadJobs();
 setInterval(function(){loadJobs().catch(function(){});},5000);
+
+// ── DRIVER RATING ──
+let currentRating=0;
+function setRating(n){
+  currentRating=n;
+  document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));
+}
+function showRatingIfDelivered(job){
+  const wrap=document.getElementById('ratingWrap');
+  if(job.status==='delivered'){
+    wrap.classList.add('on');
+    if(job.driver_rating){
+      setRating(job.driver_rating);
+      document.getElementById('ratingNote').value=job.driver_rating_note||'';
+      document.getElementById('ratingSaved').style.display='block';
+    } else {
+      setRating(0);
+      document.getElementById('ratingNote').value='';
+      document.getElementById('ratingSaved').style.display='none';
+    }
+  } else {
+    wrap.classList.remove('on');
+  }
+}
+async function saveRating(){
+  if(!currentJobId||!currentRating)return;
+  const note=document.getElementById('ratingNote').value.trim();
+  try{
+    await sbPatch('jobs?id=eq.'+currentJobId,{driver_rating:currentRating,driver_rating_note:note});
+    document.getElementById('ratingSaved').style.display='block';
+    toast('Rating saved');
+    await loadJobs();
+  }catch(e){toast('Error: '+e.message,'warn');}
+}
+
 </script>
 </body>
 </html>
