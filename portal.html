@@ -94,6 +94,29 @@ nav{position:fixed;top:0;left:0;right:0;height:60px;
   .cards{grid-template-columns:1fr;max-width:400px;}
   .portal-card{padding:28px 22px;}
 }
+
+/* LOGIN GATE */
+.gate{position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:24px;}
+.gate-box{background:var(--card);border:1px solid rgba(25,183,239,.2);border-radius:20px;
+  width:100%;max-width:400px;padding:40px 36px;position:relative;overflow:hidden;}
+.gate-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.gate-logo{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:28px;}
+.gate-wordmark{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:500;letter-spacing:1px;}
+.gate-title{font-size:20px;font-weight:800;text-align:center;margin-bottom:6px;}
+.gate-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px;}
+.gate-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;display:block;font-weight:600;}
+.gate-in{width:100%;padding:13px 16px;border-radius:11px;background:rgba(255,255,255,.04);
+  border:1px solid var(--border2);color:#fff;font-size:15px;
+  font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;}
+.gate-in:focus{border-color:rgba(25,183,239,.4);}
+.gate-btn{width:100%;padding:15px;border-radius:12px;background:var(--blue);
+  border:none;color:#fff;font-size:15px;font-weight:800;cursor:pointer;
+  font-family:'DM Sans',sans-serif;margin-top:4px;}
+.gate-btn:hover{background:#22ccff;}
+.gate-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;display:none;}
 </style>
 </head>
 <body>
@@ -149,5 +172,46 @@ nav{position:fixed;top:0;left:0;right:0;height:60px;
   <div class="footer-note">TackPath &middot; Atlanta Metro &middot; Secure Platform Access</div>
 </div>
 
+
+<!-- LOGIN GATE -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">
+      <svg width="16" height="26" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="tpgg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgg)"/>
+        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgg)" opacity=".75"/>
+        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgg)" opacity=".5"/>
+      </svg>
+      <div class="gate-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+    </div>
+    <div class="gate-title">Platform Access</div>
+    <div class="gate-sub">Enter your credentials to continue.</div>
+    <label class="gate-lbl">Username</label>
+    <input class="gate-in" id="gateUser" type="text" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('gatePass').focus()"/>
+    <label class="gate-lbl">Password</label>
+    <input class="gate-in" id="gatePass" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateLogin()"/>
+    <button class="gate-btn" onclick="gateLogin()">Sign In &rarr;</button>
+    <div class="gate-err" id="gateErr">Please enter both username and password.</div>
+  </div>
+</div>
+
+<script>
+function gateLogin(){
+  const user = document.getElementById('gateUser').value.trim();
+  const pass = document.getElementById('gatePass').value.trim();
+  if(!user || !pass){
+    document.getElementById('gateErr').style.display='block';
+    return;
+  }
+  // Any credentials work -- just gate against empty fields
+  document.getElementById('gate').style.display='none';
+  sessionStorage.setItem('tp_auth','1');
+}
+// Check if already authenticated this session
+if(sessionStorage.getItem('tp_auth')==='1'){
+  document.getElementById('gate').style.display='none';
+}
+</script>
 </body>
 </html>
