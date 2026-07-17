@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath · Track Your Delivery</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;--red:#ff4444;--gold:#c9a84c;
+  --bg:#010e21;--card:#071828;--card2:#0d2135;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:#eef4ff;--muted:rgba(238,244,255,.65);--mono:'DM Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 60% 0%,rgba(25,183,239,.08) 0%,transparent 50%),
+    radial-gradient(ellipse at 0% 80%,rgba(83,255,136,.04) 0%,transparent 40%);
+  pointer-events:none;z-index:0;}
+
+/* NAV */
+.nav{height:56px;background:rgba(1,14,33,.97);border-bottom:1px solid rgba(25,183,239,.1);
+  display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10;}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.nav-wordmark{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:500;letter-spacing:1px;}
+
+/* MAIN */
+.main{max-width:560px;margin:0 auto;padding:32px 20px 60px;position:relative;z-index:1;}
+
+/* STATUS HEADER */
+.status-header{text-align:center;padding:32px 24px 24px;}
+.status-icon{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;font-size:32px;}
+.status-label{font-size:24px;font-weight:800;margin-bottom:6px;}
+.status-sub{font-size:14px;color:var(--muted);}
+.status-id{font-family:var(--mono);font-size:10px;color:var(--blue);margin-top:8px;letter-spacing:.08em;}
+
+/* PROGRESS BAR */
+.progress-wrap{margin:0 0 24px;}
+.progress-steps{display:flex;align-items:center;justify-content:space-between;position:relative;padding:0 8px;}
+.progress-steps::before{content:'';position:absolute;top:14px;left:8px;right:8px;height:2px;
+  background:var(--border2);z-index:0;}
+.progress-fill{position:absolute;top:14px;left:8px;height:2px;background:var(--blue);
+  z-index:1;transition:width .5s ease;}
+.ps{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:2;}
+.ps-dot{width:28px;height:28px;border-radius:50%;background:var(--card2);
+  border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;transition:all .3s;}
+.ps-dot.done{background:var(--blue);border-color:var(--blue);color:#fff;}
+.ps-dot.active{background:var(--blue);border-color:var(--blue);color:#fff;
+  box-shadow:0 0 16px rgba(25,183,239,.5);}
+.ps-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.08em;
+  text-transform:uppercase;text-align:center;white-space:nowrap;}
+.ps-lbl.active{color:var(--blue);font-weight:700;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:14px;}
+.card-title{font-family:var(--mono);font-size:9px;color:var(--muted);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px;font-weight:600;}
+.field{margin-bottom:12px;}
+.field:last-child{margin-bottom:0;}
+.field-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.field-val{font-size:14px;font-weight:600;color:rgba(238,244,255,.95);line-height:1.5;}
+
+/* DRIVER CARD */
+.driver-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px;}
+.driver-avatar{width:48px;height:48px;border-radius:50%;background:rgba(25,183,239,.1);
+  border:2px solid rgba(25,183,239,.2);display:flex;align-items:center;
+  justify-content:center;font-size:20px;flex-shrink:0;}
+.driver-name{font-size:16px;font-weight:800;margin-bottom:4px;}
+.driver-status{font-family:var(--mono);font-size:9px;color:var(--green);
+  letter-spacing:.08em;display:flex;align-items:center;gap:6px;}
+.driver-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* RATING */
+.rating-card{background:var(--card);border:1px solid rgba(201,168,76,.15);
+  border-radius:16px;padding:20px;margin-bottom:14px;display:none;}
+.rating-card.on{display:block;}
+.rating-title{font-family:var(--mono);font-size:9px;color:var(--gold);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px;font-weight:700;}
+.stars{display:flex;gap:8px;margin-bottom:4px;}
+.star{font-size:28px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .15s;}
+.star.on{color:#f5c518;}
+.rating-thanks{font-size:13px;color:var(--muted);margin-top:8px;display:none;}
+
+/* POLL */
+.poll-bar{display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px;font-family:var(--mono);font-size:10px;color:var(--muted);}
+.poll-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+
+/* ERROR / LOADING */
+.loading{text-align:center;padding:80px 24px;}
+.loading-label{font-family:var(--mono);font-size:11px;color:var(--muted);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px;}
+.error-card{background:rgba(255,68,68,.06);border:1px solid rgba(255,68,68,.15);
+  border-radius:14px;padding:24px;text-align:center;}
+.error-title{font-size:16px;font-weight:800;color:var(--red);margin-bottom:8px;}
+.error-sub{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">
+    <svg width="13" height="21" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+    </svg>
+    <div class="nav-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  </a>
+</nav>
+
+<div class="main">
+  <div id="content">
+    <div class="loading">
+      <div class="loading-label">Loading your delivery</div>
+      <div style="color:var(--muted);font-size:13px;">Please wait...</div>
+    </div>
+  </div>
+  <div class="poll-bar" id="pollBar" style="display:none;">
+    <div class="poll-dot"></div>
+    <span>Live updates every 10 seconds</span>
+  </div>
+</div>
+
+<script>
+const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
+const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+
+function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
+async function sbGet(p){
+  const r=await fetch(sbUrl(p),{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+async function sbPatch(p,b){
+  const r=await fetch(sbUrl(p),{method:'PATCH',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify(b)});
+  if(!r.ok)throw new Error(await r.text());
+}
+
+// Get job ID from URL
+const params=new URLSearchParams(window.location.search);
+const jobParam=params.get('job')||params.get('id')||params.get('tp');
+let currentJob=null;
+let deliveryRating=0;
+
+function statusConfig(s){
+  const map={
+    routing:{label:'Order Received',color:'var(--muted)',icon:'&#128203;',step:0},
+    pending:{label:'Awaiting Driver',color:'var(--orange)',icon:'&#9203;',step:1},
+    assigned:{label:'Driver Assigned',color:'var(--blue)',icon:'&#128663;',step:2},
+    customer_confirmed:{label:'Picked Up',color:'var(--gold)',icon:'&#128230;',step:3},
+    in_transit:{label:'On the Way',color:'var(--purple)',icon:'&#9889;',step:3},
+    delivered:{label:'Delivered',color:'var(--green)',icon:'&#9989;',step:4},
+    cancelled:{label:'Cancelled',color:'var(--red)',icon:'&#10060;',step:-1},
+  };
+  return map[s]||map.pending;
+}
+
+const STEPS=['Order Placed','Driver Assigned','Picked Up','Delivered'];
+
+function renderTracking(job){
+  currentJob=job;
+  const sc=statusConfig(job.status);
+  const step=sc.step;
+  const pct=step<=0?0:step>=4?100:Math.round((step/4)*100);
+
+  let html=`
+    <div class="status-header">
+      <div class="status-icon" style="background:rgba(25,183,239,.08);border:2px solid rgba(25,183,239,.15);">
+        <span style="color:${sc.color};">${sc.icon}</span>
+      </div>
+      <div class="status-label" style="color:${sc.color};">${sc.label}</div>
+      <div class="status-sub">${job.title||'Your Delivery'}</div>
+      <div class="status-id">TP-${(job.id||'').slice(0,8).toUpperCase()}</div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-steps" id="progressSteps">
+        <div class="progress-fill" style="width:${pct}%;"></div>
+        ${STEPS.map((s,i)=>`
+          <div class="ps">
+            <div class="ps-dot ${i<step?'done':i===step?'active':''}">${i<step?'&#10003;':i+1}</div>
+            <div class="ps-lbl ${i===step?'active':''}">${s}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  // Driver card if assigned
+  if(job.driver_name && job.status!=='routing' && job.status!=='pending'){
+    html+=`
+    <div class="driver-card">
+      <div class="driver-avatar">&#128664;</div>
+      <div>
+        <div class="driver-name">${job.driver_name}</div>
+        <div class="driver-status"><div class="driver-dot"></div>Your Driver</div>
+      </div>
+    </div>`;
+  }
+
+  // Delivery details
+  html+=`
+    <div class="card">
+      <div class="card-title">Delivery Details</div>
+      <div class="field">
+        <div class="field-lbl">Pickup</div>
+        <div class="field-val">${job.pickup_address||'--'}</div>
+      </div>
+      <div class="field">
+        <div class="field-lbl">Dropoff</div>
+        <div class="field-val">${job.dropoff_address||'--'}</div>
+      </div>
+      ${job.total_packages?`<div class="field">
+        <div class="field-lbl">Packages</div>
+        <div class="field-val">${job.total_packages}</div>
+      </div>`:''}
+    </div>`;
+
+  // Rating if delivered
+  if(job.status==='delivered'){
+    html+=`
+    <div class="rating-card on" id="ratingCard">
+      <div class="rating-title">How was your delivery?</div>
+      <div class="stars" id="custStars">
+        <span class="star" onclick="setCustRating(1)">&#9733;</span>
+        <span class="star" onclick="setCustRating(2)">&#9733;</span>
+        <span class="star" onclick="setCustRating(3)">&#9733;</span>
+        <span class="star" onclick="setCustRating(4)">&#9733;</span>
+        <span class="star" onclick="setCustRating(5)">&#9733;</span>
+      </div>
+      <div class="rating-thanks" id="ratingThanks">Thank you for your feedback!</div>
+    </div>`;
+  }
+
+  document.getElementById('content').innerHTML=html;
+  document.getElementById('pollBar').style.display=job.status==='delivered'?'none':'flex';
+}
+
+function setCustRating(n){
+  deliveryRating=n;
+  document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));
+  // Save to Supabase
+  if(currentJob){
+    sbPatch('jobs?id=eq.'+currentJob.id,{driver_rating:n}).then(()=>{
+      document.getElementById('ratingThanks').style.display='block';
+    }).catch(()=>{});
+  }
+}
+
+async function loadJob(){
+  if(!jobParam){
+    document.getElementById('content').innerHTML=`
+      <div class="error-card">
+        <div class="error-title">No Tracking ID</div>
+        <div class="error-sub">Please check your tracking link and try again.</div>
+      </div>`;
+    return;
+  }
+
+  try{
+    // Try by full ID first, then by partial match
+    let jobs=await sbGet('jobs?id=eq.'+jobParam+'&select=*');
+    if(!jobs.length){
+      // Try searching by partial ID
+      jobs=await sbGet('jobs?id=like.'+jobParam+'%&select=*&limit=1');
+    }
+    if(!jobs.length){
+      document.getElementById('content').innerHTML=`
+        <div class="error-card">
+          <div class="error-title">Delivery Not Found</div>
+          <div class="error-sub">We couldn't find a delivery matching this tracking ID. Please check your link.</div>
+        </div>`;
+      return;
+    }
+    renderTracking(jobs[0]);
+  }catch(e){
+    document.getElementById('content').innerHTML=`
+      <div class="error-card">
+        <div class="error-title">Connection Error</div>
+        <div class="error-sub">Unable to load your delivery. Please try again in a moment.</div>
+      </div>`;
+  }
+}
+
+// Load and poll
+loadJob();
+setInterval(()=>{
+  if(currentJob&&currentJob.status!=='delivered'&&currentJob.status!=='cancelled'){
+    loadJob();
+  }
+},10000);
+</script>
+</body>
+</html>
