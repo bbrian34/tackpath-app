@@ -3,150 +3,200 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>TackPath · Precision Delivery Intelligence</title>
+<title>TackPath · AI-Powered Courier Operations Platform</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;
-  --bg:#010e21;--card:#071828;--border:rgba(255,255,255,.07);
-  --text:#eef4ff;--muted:#eef4ff;--faint:#eef4ff;
-}
+:root{--blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;--gold:#c9a84c;--bg:#010e21;--card:#071828;--card2:#0d2135;--border:rgba(255,255,255,.07);--text:#eef4ff;--muted:rgba(238,244,255,.65);}
 html{scroll-behavior:smooth;}
-body{font-family:'DM Sans',-apple-system,sans-serif;color:var(--text);background:#010e21;overflow-x:hidden;line-height:1.6;}
+body{font-family:'DM Sans',-apple-system,sans-serif;color:var(--text);background:var(--bg);overflow-x:hidden;line-height:1.6;}
 
-body::before{content:'';position:fixed;inset:0;
-  background:linear-gradient(rgba(25,183,239,.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(25,183,239,.04) 1px,transparent 1px);
-  background-size:60px 60px;pointer-events:none;z-index:0;}
-body::after{content:'';position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse at 70% -10%,rgba(25,183,239,.11) 0%,transparent 50%),
-    radial-gradient(ellipse at 0% 60%,rgba(83,255,136,.045) 0%,transparent 40%),
-    radial-gradient(ellipse at 100% 100%,rgba(255,150,30,.035) 0%,transparent 35%);
-  pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(25,183,239,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(25,183,239,.04) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 70% -10%,rgba(25,183,239,.11) 0%,transparent 50%),radial-gradient(ellipse at 0% 60%,rgba(83,255,136,.045) 0%,transparent 40%),radial-gradient(ellipse at 100% 100%,rgba(255,150,30,.035) 0%,transparent 35%);pointer-events:none;z-index:0;}
 
-.wrap{max-width:1100px;margin:0 auto;padding:0 40px;position:relative;z-index:1;}
+.wrap{max-width:1100px;margin:0 auto;padding:0 48px;position:relative;z-index:1;}
 
-nav{position:fixed;top:0;left:0;right:0;z-index:9999;padding:0 40px;height:64px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(1,14,33,.95);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);}
-.nav-logo{display:flex;align-items:center;text-decoration:none;}
-.nav-cta{padding:9px 20px;border-radius:10px;background:var(--blue);color:#fff;
-  font-size:13px;font-weight:700;border:none;cursor:pointer;text-decoration:none;
-  transition:all .15s;box-shadow:0 6px 22px rgba(25,183,239,.22);}
-.nav-cta:hover{background:#22ccff;box-shadow:0 8px 30px rgba(25,183,239,.38);}
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:9999;padding:0 48px;height:64px;display:flex;align-items:center;justify-content:space-between;background:rgba(1,14,33,.97);backdrop-filter:blur(24px);border-bottom:1px solid rgba(25,183,239,.1);}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-wordmark{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:500;letter-spacing:1px;}
+.nav-links{display:flex;align-items:center;gap:2px;}
+.nav-link{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;cursor:pointer;transition:all .15s;}
+.nav-link:hover{color:#19b7ef !important;background:rgba(25,183,239,.08) !important;}
+.nav-link.active{color:#19b7ef;background:rgba(25,183,239,.08);}
+.nav-right{display:flex;align-items:center;gap:14px;}
+.nav-cta{padding:9px 20px;border-radius:10px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;text-decoration:none;transition:all .15s;box-shadow:0 6px 22px rgba(25,183,239,.22);}
+.nav-cta:hover{background:#22ccff;}
+.nav-hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;}
+.nav-hamburger span{width:22px;height:2px;background:rgba(238,244,255,.7);border-radius:1px;}
+.mob-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:9998;background:rgba(1,14,33,.98);border-bottom:1px solid rgba(25,183,239,.1);padding:16px 24px;flex-direction:column;gap:4px;backdrop-filter:blur(24px);}
+.mob-menu.open{display:flex;}
+.mob-link{padding:12px 16px;border-radius:9px;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;}
+.mob-link:hover{background:rgba(255,255,255,.05);color:#fff;}
+.mob-cta{margin-top:8px;padding:13px 20px;border-radius:10px;background:var(--blue);color:#fff;font-size:14px;font-weight:700;text-decoration:none;text-align:center;}
 
-#hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;text-align:center;padding:100px 40px 80px;}
-
+/* ── HERO ── */
+#hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 40px 80px;}
 .hero-logo-wrap{margin:0 auto 40px;animation:fadeUp .8s ease both;}
-
-.hero-h1{font-family:'DM Sans',-apple-system,sans-serif;font-size:clamp(36px,4.5vw,64px);
-  font-weight:800;line-height:1.08;letter-spacing:-.5px;margin-bottom:20px;
-  animation:fadeUp .8s .2s ease both;}
-.hero-h1 .accent{color:var(--blue);font-family:'Playfair Display',Georgia,serif;
-  font-style:italic;font-weight:400;}
-.hero-h1 .dim{color:rgba(238,244,255,.78);font-weight:400;font-size:.82em;display:block;}
-
-.hero-sub{color:rgba(238,244,255,.88);font-size:17px;font-weight:400;max-width:540px;
-  line-height:1.75;margin:0 auto 40px;animation:fadeUp .8s .3s ease both;}
+.hero-h1{font-size:clamp(38px,5vw,68px);font-weight:800;line-height:1.06;letter-spacing:-.5px;margin-bottom:20px;animation:fadeUp .8s .15s ease both;}
+.hero-h1 .accent{color:var(--blue);font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:400;}
+.hero-h1 .dim{color:rgba(238,244,255,.72);font-weight:400;font-size:.78em;display:block;margin-top:6px;}
+.hero-sub{color:rgba(238,244,255,.82);font-size:18px;font-weight:400;max-width:560px;line-height:1.75;margin:0 auto 36px;animation:fadeUp .8s .25s ease both;}
 .hero-sub strong{color:var(--text);font-weight:600;}
-
-.hero-btns{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
-  animation:fadeUp .8s .4s ease both;margin-bottom:56px;}
-.btn-p{padding:13px 28px;border-radius:11px;background:var(--blue);color:#fff;
-  font-size:14px;font-weight:700;border:none;cursor:pointer;text-decoration:none;
-  display:inline-flex;align-items:center;gap:8px;transition:all .18s;
-  box-shadow:0 8px 26px rgba(25,183,239,.25);}
-.btn-p:hover{background:#22ccff;transform:translateY(-1px);box-shadow:0 12px 36px rgba(25,183,239,.4);}
-.btn-g{padding:13px 28px;border-radius:11px;background:transparent;color:var(--text);
-  font-size:14px;font-weight:600;border:1px solid var(--border);cursor:pointer;
-  text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .18s;}
+.hero-btns{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;animation:fadeUp .8s .35s ease both;margin-bottom:52px;}
+.btn-p{padding:14px 30px;border-radius:12px;background:var(--blue);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .18s;box-shadow:0 8px 28px rgba(25,183,239,.28);}
+.btn-p:hover{background:#22ccff;transform:translateY(-1px);box-shadow:0 14px 36px rgba(25,183,239,.42);}
+.btn-g{padding:14px 30px;border-radius:12px;background:transparent;color:var(--text);font-size:15px;font-weight:600;border:1px solid var(--border);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .18s;}
 .btn-g:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.04);}
-.btn-dl{padding:13px 28px;border-radius:11px;background:rgba(83,255,136,.08);
-  color:var(--green);font-size:14px;font-weight:700;border:1px solid rgba(83,255,136,.2);
-  cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;
-  transition:all .18s;}
-.btn-dl:hover{background:rgba(83,255,136,.14);border-color:rgba(83,255,136,.4);}
-
-.chips{padding-top:32px;border-top:1px solid var(--border);animation:fadeUp .8s .5s ease both;}
-.chips-label{font-family:'DM Mono','Courier New',monospace;font-size:10px;color:rgba(238,244,255,.7);
-  letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
-.chips-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
-.chip{padding:7px 15px;border-radius:20px;font-size:12px;font-weight:600;}
+.hero-chips{padding-top:28px;border-top:1px solid var(--border);animation:fadeUp .8s .45s ease both;}
+.chips-label{font-family:'DM Mono',monospace;font-size:9px;color:rgba(238,244,255,.5);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;}
+.chips-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.chip{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;}
 .cb{background:rgba(25,183,239,.07);border:1px solid rgba(25,183,239,.18);color:var(--blue);}
-.cp{background:rgba(141,92,255,.07);border:1px solid rgba(141,92,255,.16);color:#8d5cff;}
+.cp{background:rgba(141,92,255,.07);border:1px solid rgba(141,92,255,.16);color:var(--purple);}
 .cg{background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.14);color:var(--green);}
 .co{background:rgba(255,150,30,.07);border:1px solid rgba(255,150,30,.16);color:var(--orange);}
+.cgold{background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.16);color:var(--gold);}
 
-#contact{position:relative;z-index:1;padding:100px 0;}
-.contact-card{max-width:540px;margin:0 auto;background:var(--card);
-  border:1px solid var(--border);border-radius:24px;padding:48px 40px;
-  position:relative;overflow:hidden;text-align:center;}
-.contact-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--blue),transparent);}
-.cc-label{font-family:'DM Mono','Courier New',monospace;font-size:10px;font-weight:500;
-  color:var(--blue);letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px;}
-.cc-h2{font-size:28px;font-weight:800;margin-bottom:12px;line-height:1.2;}
-.cc-p{font-size:15px;color:rgba(238,244,255,.82);line-height:1.7;margin-bottom:32px;}
-.cc-demo{display:flex;align-items:center;justify-content:center;gap:10px;
-  padding:14px 28px;border-radius:12px;width:100%;background:var(--blue);color:#fff;
-  font-size:15px;font-weight:700;text-decoration:none;transition:all .18s;margin-bottom:16px;
-  box-shadow:0 8px 28px rgba(25,183,239,.25);}
-.cc-demo:hover{background:#22ccff;transform:translateY(-1px);box-shadow:0 12px 36px rgba(25,183,239,.4);}
-.cc-alt{display:flex;align-items:center;justify-content:center;gap:10px;
-  padding:14px 28px;border-radius:12px;width:100%;
-  background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.2);
-  color:var(--blue);font-size:15px;font-weight:600;text-decoration:none;transition:all .18s;}
-.cc-alt:hover{background:rgba(25,183,239,.1);border-color:rgba(25,183,239,.4);}
-.cc-note{margin-top:20px;font-family:'DM Mono','Courier New',monospace;
-  font-size:10px;color:var(--faint);line-height:1.8;}
+/* ── PROBLEM ── */
+#problem{position:relative;z-index:1;padding:100px 0;}
+.section-label{font-family:'DM Mono',monospace;font-size:9px;font-weight:600;color:var(--blue);letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;}
+.section-h2{font-size:clamp(28px,3.5vw,46px);font-weight:800;line-height:1.12;letter-spacing:-.3px;margin-bottom:20px;}
+.section-p{font-size:16px;color:var(--muted);line-height:1.8;max-width:580px;}
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.pain-list{display:flex;flex-direction:column;gap:16px;margin-top:32px;}
+.pain-item{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:12px;background:rgba(255,68,68,.04);border:1px solid rgba(255,68,68,.1);}
+.pain-icon{font-size:18px;flex-shrink:0;margin-top:2px;}
+.pain-text{font-size:14px;color:var(--muted);line-height:1.6;}
+.pain-text strong{color:var(--text);}
+.solution-box{background:var(--card);border:1px solid rgba(25,183,239,.15);border-radius:20px;padding:32px;position:relative;overflow:hidden;}
+.solution-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.sol-item{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+.sol-item:last-child{border-bottom:none;padding-bottom:0;}
+.sol-check{width:22px;height:22px;border-radius:50%;background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--green);flex-shrink:0;margin-top:1px;}
+.sol-text{font-size:14px;color:var(--muted);line-height:1.6;}
+.sol-text strong{color:var(--text);}
 
-footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:36px 0;}
+/* ── HOW IT WORKS ── */
+#how{position:relative;z-index:1;padding:100px 0;}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px;}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative;overflow:hidden;}
+.step-num{font-family:'DM Mono',monospace;font-size:48px;font-weight:700;line-height:1;margin-bottom:16px;}
+.step-num .n0{color:#5dd4f4;}
+.step-num .n1{color:#19b7ef;}
+.step-title{font-size:17px;font-weight:800;margin-bottom:10px;}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.7;}
+.step-arrow{position:absolute;top:50%;right:-20px;transform:translateY(-50%);font-size:20px;color:rgba(25,183,239,.2);z-index:2;}
+
+/* ── PRODUCTS ── */
+#products{position:relative;z-index:1;padding:100px 0;}
+.products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:48px;}
+.product-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;position:relative;overflow:hidden;transition:border-color .2s;}
+.product-card:hover{border-color:rgba(25,183,239,.25);}
+.product-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.pc-blue::before{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.pc-purple::before{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
+.pc-gold::before{background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.pc-green::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.product-tag{font-family:'DM Mono',monospace;font-size:8px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px;}
+.product-name{font-size:32px;font-weight:800;letter-spacing:-.5px;margin-bottom:12px;line-height:1.2;padding-bottom:4px;}
+.product-desc{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:16px;}
+.product-features{display:flex;flex-direction:column;gap:7px;}
+.pf{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.pf::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* ── AI AGENTS ── */
+#agents{position:relative;z-index:1;padding:100px 0;}
+.agents-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:48px;}
+.agent-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;display:flex;gap:16px;align-items:flex-start;transition:border-color .2s;}
+.agent-card:hover{border-color:rgba(201,168,76,.2);}
+.agent-icon{width:40px;height:40px;border-radius:10px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.agent-name{font-size:14px;font-weight:800;margin-bottom:4px;}
+.agent-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+.agent-status{font-family:'DM Mono',monospace;font-size:8px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:6px;display:inline-block;}
+.as-live{background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.2);color:var(--green);}
+.as-soon{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);}
+
+/* ── WHY TACKPATH ── */
+#why{position:relative;z-index:1;padding:100px 0;}
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px;}
+.why-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;}
+.why-icon{font-size:28px;margin-bottom:14px;}
+.why-title{font-size:16px;font-weight:800;margin-bottom:8px;}
+.why-desc{font-size:13px;color:var(--muted);line-height:1.7;}
+
+/* ── CTA ── */
+#cta{position:relative;z-index:1;padding:100px 0;}
+.cta-box{background:var(--card);border:1px solid rgba(25,183,239,.15);border-radius:24px;padding:64px 48px;text-align:center;position:relative;overflow:hidden;}
+.cta-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),var(--purple),transparent);}
+.cta-h2{font-size:clamp(26px,3.5vw,44px);font-weight:800;line-height:1.1;margin-bottom:16px;}
+.cta-p{font-size:16px;color:var(--muted);line-height:1.7;max-width:480px;margin:0 auto 36px;}
+.cta-btns{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+.cta-email{font-family:'DM Mono',monospace;font-size:12px;color:rgba(238,244,255,.35);margin-top:20px;letter-spacing:.05em;}
+.cta-email a{color:var(--blue);text-decoration:none;}
+
+/* ── FOOTER ── */
+footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40px 0;}
 .footer-inner{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
-.footer-copy{font-family:'DM Mono','Courier New',monospace;font-size:9px;color:var(--faint);letter-spacing:.07em;}
+.footer-logo{display:flex;align-items:center;gap:8px;}
+.footer-copy{font-family:'DM Mono',monospace;font-size:9px;color:rgba(238,244,255,.25);letter-spacing:.07em;margin-top:4px;}
+.footer-links{display:flex;gap:24px;flex-wrap:wrap;}
+.footer-link{font-family:'DM Mono',monospace;font-size:9px;color:rgba(238,244,255,.3);text-decoration:none;letter-spacing:.05em;transition:color .15s;}
+.footer-link:hover{color:var(--blue);}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
-@media(max-width:600px){
-  nav{padding:0 20px;}
-  .wrap{padding:0 22px;}
-  #hero{padding:100px 22px 60px;}
-  .contact-card{padding:32px 22px;}
-  footer{padding:24px 0;}
-  .footer-inner{flex-direction:column;text-align:center;}
+@media(max-width:900px){
+  .problem-grid,.steps-grid,.products-grid,.agents-grid,.why-grid{grid-template-columns:1fr;}
+  .step-arrow{display:none;}
 }
-
-.svc-row{display:flex;flex-direction:row;flex-wrap:wrap;width:100%;}
-.svc-item{flex:1;min-width:220px;padding:28px 24px;text-align:center;}
-.sk{font-family:'DM Mono','Courier New',monospace;font-size:11px;letter-spacing:.25em;text-transform:uppercase;margin-bottom:12px;color:rgba(238,244,255,.7);}
-.sn{font-size:44px;font-weight:800;line-height:1.3;padding-bottom:6px;}
-.sd{font-size:15px;font-weight:400;color:rgba(238,244,255,.82);line-height:1.7;margin-top:10px;}
-@media(max-width:700px){
-  .svc-row{flex-direction:column;}
-  .svc-item{min-width:100%;padding:24px 16px;}
-  .sn{font-size:52px;}
-  .sk{font-size:13px;}
-  .sd{font-size:16px;color:rgba(238,244,255,.82);}
+@media(max-width:768px){
+  nav{padding:0 20px;}
+  .nav-links,.nav-always-on{display:none;}
+  .nav-hamburger{display:flex;}
+  .wrap{padding:0 22px;}
+  #hero{padding:110px 22px 70px;}
+  .cta-box{padding:40px 24px;}
+  footer{padding:28px 0;}
+  .footer-inner{flex-direction:column;align-items:flex-start;gap:16px;}
 }
 </style>
 </head>
 <body>
 
-<nav></nav>
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <svg width="16" height="27" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/></svg>
+    <div class="nav-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="#how">How it Works</a>
+    <a class="nav-link" href="#offerings">Offerings</a>
+    <a class="nav-link" href="#agents">AI Agents</a>
+    <a class="nav-link" href="guide.html">Guide</a>
+  </div>
+  <div class="nav-right">
+    <a class="nav-cta" href="mailto:hello@tackpath.com?subject=TackPath Demo Request">Request Demo</a>
+  </div>
+  <div class="nav-hamburger" onclick="toggleMob()"><span></span><span></span><span></span></div>
+</nav>
 
+<div class="mob-menu" id="mobMenu">
+  <a class="mob-link" href="#how" onclick="toggleMob()">How it Works</a>
+  <a class="mob-link" href="#offerings" onclick="toggleMob()">Offerings</a>
+  <a class="mob-link" href="#agents" onclick="toggleMob()">AI Agents</a>
+  <a class="mob-link" href="guide.html" onclick="toggleMob()">Guide</a>
+  <a class="mob-cta" href="mailto:hello@tackpath.com?subject=TackPath Demo Request">Request Demo</a>
+</div>
+
+<!-- HERO -->
 <section id="hero">
-  <div class="hero-logo-wrap"><div style="display:flex;align-items:center;gap:10px;">
-      <svg width="22" height="38" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
-        <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
-        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
-        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
-        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
-      </svg>
-      <div style="font-family:'Montserrat',sans-serif;font-size:clamp(28px,7vw,44px);font-weight:500;letter-spacing:1px;line-height:1;">
-        <span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span>
-      </div>
-    </div></div>
+  <div class="hero-logo-wrap">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <svg width="24" height="40" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpg2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg2)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg2)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg2)" opacity=".5"/></svg>
+      <div style="font-family:'Montserrat',sans-serif;font-size:clamp(28px,7vw,46px);font-weight:500;letter-spacing:1px;line-height:1;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+    </div>
+  </div>
 
   <h1 class="hero-h1">
     Delivery that <span class="accent">thinks ahead.</span><br/>
@@ -154,67 +204,225 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:36
   </h1>
 
   <p class="hero-sub">
-    TackPath is the <strong>AI-powered operations platform</strong> built for courier companies.
-    It orchestrates every moving part of a delivery operation, from the moment an order is placed
-    to the moment a signature is captured. One system. No gaps.
+    TackPath is the <strong>AI-powered operations platform</strong> built for courier companies ready to operate at a higher level. Dispatch, routing, driver communication, proof of delivery, and billing -- handled automatically so you can focus on growing your business.
   </p>
 
   <div class="hero-btns">
     <a href="mailto:hello@tackpath.com?subject=TackPath Demo Request" class="btn-p">Request a Demo &rarr;</a>
+    <a href="guide.html" class="btn-g">View the Guide</a>
   </div>
 
-  <div class="chips">
-    <div class="chips-label">What TackPath orchestrates</div>
+  <div class="hero-chips">
+    <div class="chips-label">Precision delivery intelligence for the Atlanta metro</div>
     <div class="chips-row">
-      <div class="chip cb">Driver Dispatch</div>
-      <div class="chip cp">SmartPath Routing</div>
-      <div class="chip cg">SmartTrack Fleet GPS</div>
-      <div class="chip co">Command Center</div>
+      <div class="chip cb">AI Dispatch</div>
+      <div class="chip cp">Route Optimization</div>
+      <div class="chip cg">Proof of Delivery</div>
+      <div class="chip co">Real-Time Tracking</div>
+      <div class="chip cgold">Automated Billing</div>
     </div>
   </div>
 </section>
 
-<section id="services" style="padding:20px 0 60px;">
+<!-- HOW IT WORKS -->
+<section id="how">
   <div class="wrap">
-    <div class="svc-row">
+    <div class="section-label">How it Works</div>
+    <h2 class="section-h2">From order to delivered in three steps.</h2>
+    <p class="section-p">TackPath handles the entire delivery lifecycle. Your team focuses on the deliveries. The platform handles everything else.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num"><span class="n0">0</span><span class="n1">1</span></div>
+        <div class="step-title">Order placed</div>
+        <div class="step-desc">Your customer places a delivery order through the TackPath customer portal. Sprint for single deliveries. Surge for multi-stop routes via manifest upload. The Intake Agent validates the order instantly.</div>
+        <div class="step-arrow">&#8594;</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num"><span class="n0">0</span><span class="n1">2</span></div>
+        <div class="step-title">Driver dispatched</div>
+        <div class="step-desc">Available drivers are notified immediately on the TackPath driver app. First to accept gets the job. They navigate stop by stop, scan packages, and collect proof of delivery at every door.</div>
+        <div class="step-arrow">&#8594;</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num"><span class="n0">0</span><span class="n1">3</span></div>
+        <div class="step-title">Delivered and billed</div>
+        <div class="step-desc">The final stop is confirmed with POD. Customer receives automatic delivery confirmation. The Billing Agent prepares the invoice. You approve and send. The whole loop closes without a single phone call.</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      <div class="svc-item" style="position:relative;border-radius:12px;background:none;border:none;box-shadow:none;overflow:hidden;padding-top:14px;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#19b7ef 30%,#19b7ef 70%,transparent);"></div>
-        <div class="sk" style="color:#19b7ef;">On-demand</div>
-        <div class="sn" style="background:linear-gradient(140deg,#ffffff,#19b7ef);-webkit-background-clip:text;background-clip:text;color:transparent;">Sprint</div>
-        <div class="sd">Hyper-speed single delivery. One customer, one driver, right now.</div>
+<!-- OFFERINGS -->
+<section id="offerings">
+  <div class="wrap">
+    <div class="section-label">Offerings</div>
+    <h2 class="section-h2">Built for every stage of your operation.</h2>
+    <p class="section-p">Whether you are dispatching your first driver or managing a full courier fleet, TackPath has a tier built for where you are right now -- and where you are going.</p>
+
+    <div class="products-grid" style="margin-top:48px;">
+
+      <div class="product-card pc-blue">
+        <div class="product-tag" style="color:var(--blue);">On-demand</div>
+        <div class="product-name" style="background:linear-gradient(135deg,#fff,var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent;">Sling</div>
+        <div class="product-desc">A single pickup. A single dropoff. Right now. Sling handles on-demand point-to-point deliveries from the moment a customer places an order to the moment a driver confirms delivery. Fast, simple, professional.</div>
+        <div class="product-features">
+          <div class="pf" style="color:var(--blue);">Customer portal order entry</div>
+          <div class="pf" style="color:var(--blue);">Instant driver notification and acceptance</div>
+          <div class="pf" style="color:var(--blue);">Real-time job status updates</div>
+          <div class="pf" style="color:var(--blue);">Digital proof of delivery at the door</div>
+          <div class="pf" style="color:var(--blue);">Automated customer delivery confirmation</div>
+        </div>
       </div>
 
-      <div class="svc-item" style="position:relative;border-radius:12px;background:none;border:none;box-shadow:none;overflow:hidden;padding-top:14px;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#8d5cff 30%,#8d5cff 70%,transparent);"></div>
-        <div class="sk" style="color:#8d5cff;">Block delivery</div>
-        <div class="sn" style="background:linear-gradient(140deg,#ffffff,#8d5cff);-webkit-background-clip:text;background-clip:text;color:transparent;">Surge</div>
-        <div class="sd">Multi-stop manifest delivery. Contracted block routes, executed stop by stop.</div>
+      <div class="product-card pc-purple">
+        <div class="product-tag" style="color:var(--purple);">Multi-stop routes</div>
+        <div class="product-name" style="background:linear-gradient(135deg,#fff,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;">Surge</div>
+        <div class="product-desc">When one stop is not enough. Surge powers contracted block routes and multi-stop manifests. Upload your delivery list, let TackPath sequence the route, and dispatch it to your driver. Every stop tracked. Every package scanned. Every delivery confirmed.</div>
+        <div class="product-features">
+          <div class="pf" style="color:var(--purple);">CSV manifest upload and route building</div>
+          <div class="pf" style="color:var(--purple);">SmartSort intelligent stop sequencing</div>
+          <div class="pf" style="color:var(--purple);">Barcode scanning at every stop</div>
+          <div class="pf" style="color:var(--purple);">POD collected and stored at every door</div>
+          <div class="pf" style="color:var(--purple);">Full route audit trail for billing</div>
+        </div>
       </div>
 
-      <div class="svc-item" style="position:relative;border-radius:12px;background:none;border:none;box-shadow:none;overflow:hidden;padding-top:14px;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#e8b85c 30%,#e8b85c 70%,transparent);"></div>
-        <div class="sk" style="color:#e8b85c;">Managed ops</div>
-        <div class="sn" style="background:linear-gradient(100deg,#f3d391,#e8b85c 50%,#c9963a);-webkit-background-clip:text;background-clip:text;color:transparent;">Symphony+</div>
-        <div class="sd">Outsourced dispatch operations. Professional fleet management on a flat monthly fee.</div>
+      <div class="product-card pc-gold">
+        <div class="product-tag" style="color:var(--gold);">Managed operations</div>
+        <div class="product-name" style="background:linear-gradient(135deg,#f5e4b0,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;">Symphony+</div>
+        <div class="product-desc">Your operation. Professionally managed. Symphony+ is TackPath's managed logistics operations center. Pay a flat monthly fee and TackPath runs your dispatch -- monitoring your fleet, handling exceptions, communicating with customers, and keeping every delivery moving. No dispatcher on your payroll required.</div>
+        <div class="product-features">
+          <div class="pf" style="color:var(--gold);">TackPath runs your dispatch operation</div>
+          <div class="pf" style="color:var(--gold);">AI agents monitoring every job 24 hours a day</div>
+          <div class="pf" style="color:var(--gold);">Exception detection and resolution</div>
+          <div class="pf" style="color:var(--gold);">Automated customer communications</div>
+          <div class="pf" style="color:var(--gold);">Flat monthly fee -- no per-delivery charges</div>
+        </div>
+      </div>
+
+      <div class="product-card pc-green">
+        <div class="product-tag" style="color:var(--green);">Owner intelligence</div>
+        <div class="product-name" style="background:linear-gradient(135deg,#fff,var(--green));-webkit-background-clip:text;background-clip:text;color:transparent;">OWL</div>
+        <div class="product-desc">The owner's command center. OWL -- Owner Workforce Layer -- gives courier company owners complete visibility into their operation and their business. Revenue intelligence, client health, AI agent activity, and one-tap approvals. Everything you need to make decisions, nothing you don't.</div>
+        <div class="product-features">
+          <div class="pf" style="color:var(--green);">RIA revenue intelligence and client analysis</div>
+          <div class="pf" style="color:var(--green);">Client health scores and concentration risk</div>
+          <div class="pf" style="color:var(--green);">Complete AI agent audit trail</div>
+          <div class="pf" style="color:var(--green);">Work item approvals with one tap</div>
+          <div class="pf" style="color:var(--green);">Full business performance dashboard</div>
+        </div>
       </div>
 
     </div>
   </div>
 </section>
 
-<section id="contact" style="padding:80px 0;">
-  <div class="wrap" style="text-align:center;">
-    <h2 style="font-size:clamp(22px,3vw,36px);font-weight:800;letter-spacing:-.3px;margin-bottom:18px;color:var(--text);">Ready to see what TackPath can do?</h2>
-    <a href="mailto:hello@tackpath.com" style="font-family:'DM Mono','Courier New',monospace;font-size:15px;color:var(--blue);text-decoration:none;letter-spacing:.02em;">hello@tackpath.com</a>
+<!-- AI AGENTS -->
+<section id="agents">
+  <div class="wrap">
+    <div class="section-label">AI Agents</div>
+    <h2 class="section-h2">Intelligence built into every operation.</h2>
+    <p class="section-p">TackPath's AI agents run continuously in the background -- monitoring, communicating, analyzing, and alerting. The more your operation runs, the sharper they get.</p>
+    <div class="agents-grid">
+      <div class="agent-card">
+                <div>
+          <div class="agent-name">Operations Coordinator (OCA)</div>
+          <div class="agent-desc">Watches every active job every 60 seconds. Detects stalled deliveries, unassigned jobs, and SLA risks before they become failures. Creates work items for your approval.</div>
+          <div class="agent-status as-live">&#11044; LIVE</div>
+        </div>
+      </div>
+      <div class="agent-card">
+                <div>
+          <div class="agent-name">Communication Agent</div>
+          <div class="agent-desc">Sends automatic delivery updates to customers at every status change. Driver assigned, picked up, approaching, delivered. Customers always know where their package is.</div>
+          <div class="agent-status as-live">&#11044; LIVE</div>
+        </div>
+      </div>
+      <div class="agent-card">
+                <div>
+          <div class="agent-name">Intake Agent</div>
+          <div class="agent-desc">Validates every new order the moment it arrives. Checks addresses, pricing, package counts. Flags issues before dispatch so drivers never head to the wrong location.</div>
+          <div class="agent-status as-live">&#11044; LIVE</div>
+        </div>
+      </div>
+      <div class="agent-card">
+                <div>
+          <div class="agent-name">Billing Agent</div>
+          <div class="agent-desc">Reviews completed deliveries, verifies proof of delivery exists, and prepares invoice line items for owner approval. Billing runs itself at the end of every day.</div>
+          <div class="agent-status as-live">&#11044; LIVE</div>
+        </div>
+      </div>
+      <div class="agent-card">
+                <div>
+          <div class="agent-name">Revenue Intelligence Agent (RIA)</div>
+          <div class="agent-desc">Analyzes every delivered job and tells you which clients are profitable, which routes are losing money, and where to raise prices. Business intelligence without a CFO.</div>
+          <div class="agent-status as-live">&#11044; LIVE</div>
+        </div>
+      </div>
+      <div class="agent-card">
+                <div>
+          <div class="agent-name">Dispatch Agent (SmartPath)</div>
+          <div class="agent-desc">Assigns the optimal driver based on real-time location and traffic. Calculates live ETAs. Reroutes automatically when conditions change on the road.</div>
+          <div class="agent-status as-soon">Coming Soon</div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
+<!-- CTA -->
+<section id="cta">
+  <div class="wrap">
+    <div class="cta-box">
+      <h2 class="cta-h2">Ready to stop dispatching manually?</h2>
+      <p class="cta-p">See TackPath in action. We'll walk you through the full platform -- dispatcher, driver app, AI agents, and OWL dashboard -- in under 30 minutes.</p>
+      <div class="cta-btns">
+        <a href="mailto:hello@tackpath.com?subject=TackPath Demo Request" class="btn-p" style="font-size:16px;padding:16px 36px;">Request a Demo &rarr;</a>
+        <a href="guide.html" class="btn-g" style="font-size:16px;padding:16px 36px;">View the Guide</a>
+      </div>
+      <div class="cta-email">Or reach us directly at <a href="mailto:hello@tackpath.com">hello@tackpath.com</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
 <footer>
   <div class="wrap">
     <div class="footer-inner">
-      
-      <div class="footer-copy">&copy; 2026 TackPath &middot; All rights reserved</div>
+      <div>
+        <div class="footer-logo">
+          <svg width="14" height="22" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpgf" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgf)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgf)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgf)" opacity=".5"/></svg>
+          <span style="font-family:'Montserrat',sans-serif;font-size:13px;font-weight:500;letter-spacing:1px;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span>
+        </div>
+        <div class="footer-copy">&copy; 2026 TackPath &middot; Atlanta, GA &middot; All rights reserved</div>
+      </div>
+      <div class="footer-links">
+        <a class="footer-link" href="guide.html">Guide</a>
+        <a class="footer-link" href="customer.html">Customer Portal</a>
+        <a class="footer-link" href="dispatcher.html">Dispatcher</a>
+        <a class="footer-link" href="owl.html">OWL</a>
+        <a class="footer-link" href="mailto:hello@tackpath.com">Contact</a>
+      </div>
     </div>
   </div>
 </footer>
+
+<script>
+function toggleMob(){document.getElementById('mobMenu').classList.toggle('open');}
+
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+function updateNav(){
+  let current = '';
+  sections.forEach(s=>{if(window.scrollY >= s.offsetTop - 80) current = s.getAttribute('id');});
+  navLinks.forEach(link=>{
+    link.classList.remove('active');
+    if(link.getAttribute('href') === '#'+current) link.classList.add('active');
+  });
+}
+updateNav();
+window.addEventListener('scroll', updateNav);
+</script>
 
 </body>
 </html>
