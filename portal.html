@@ -95,20 +95,27 @@ nav{position:fixed;top:0;left:0;right:0;height:60px;
   .portal-card{padding:28px 22px;}
 }
 
+
+
 /* LOGIN GATE */
-.gate{position:fixed;inset:0;background:var(--bg);z-index:9999;
-  display:flex;align-items:center;justify-content:center;padding:24px;}
+.gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;
+  display:none;align-items:center;justify-content:center;padding:24px;
+  backdrop-filter:blur(4px);}
+.gate-overlay.on{display:flex;}
 .gate-box{background:var(--card);border:1px solid rgba(25,183,239,.2);border-radius:20px;
-  width:100%;max-width:400px;padding:40px 36px;position:relative;overflow:hidden;}
+  width:100%;max-width:400px;padding:40px 36px;position:relative;overflow:hidden;
+  animation:slideUp .25s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 .gate-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,transparent,var(--blue),transparent);}
-.gate-logo{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:28px;}
-.gate-wordmark{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:500;letter-spacing:1px;}
-.gate-title{font-size:20px;font-weight:800;text-align:center;margin-bottom:6px;}
-.gate-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px;}
+.gate-logo{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:20px;}
+.gate-wordmark{font-family:'Montserrat',sans-serif;font-size:17px;font-weight:500;letter-spacing:1px;}
+.gate-role{font-family:'DM Mono',monospace;font-size:9px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;text-align:center;margin-bottom:6px;}
+.gate-title{font-size:20px;font-weight:800;text-align:center;margin-bottom:24px;}
 .gate-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);
   letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;display:block;font-weight:600;}
-.gate-in{width:100%;padding:13px 16px;border-radius:11px;background:rgba(255,255,255,.04);
+.gate-in{width:100%;padding:14px 16px;border-radius:11px;background:rgba(255,255,255,.04);
   border:1px solid var(--border2);color:#fff;font-size:15px;
   font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;}
 .gate-in:focus{border-color:rgba(25,183,239,.4);}
@@ -116,6 +123,9 @@ nav{position:fixed;top:0;left:0;right:0;height:60px;
   border:none;color:#fff;font-size:15px;font-weight:800;cursor:pointer;
   font-family:'DM Sans',sans-serif;margin-top:4px;}
 .gate-btn:hover{background:#22ccff;}
+.gate-cancel{width:100%;padding:12px;border-radius:12px;background:none;
+  border:1px solid var(--border);color:var(--muted);font-size:14px;font-weight:600;
+  cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:10px;}
 .gate-err{font-size:12px;color:var(--red);text-align:center;margin-top:10px;display:none;}
 </style>
 </head>
@@ -144,28 +154,28 @@ nav{position:fixed;top:0;left:0;right:0;height:60px;
   <div class="cards">
 
     <!-- DISPATCHER -->
-    <a class="portal-card pc-dispatcher" href="dispatcher.html">
+    <div class="portal-card pc-dispatcher" onclick="openGate('dispatcher.html','Dispatcher')">
       <div class="pc-role pc-role-disp">Operations</div>
       <div class="pc-name">Dispatcher</div>
       <div class="pc-desc">Manage jobs, assign drivers, monitor the fleet, and handle exceptions.</div>
       <div class="pc-btn pc-btn-disp">Access Dispatcher &#8594;</div>
-    </a>
+    </div>
 
     <!-- DRIVER -->
-    <a class="portal-card pc-driver" href="driver.html">
+    <div class="portal-card pc-driver" onclick="openGate('driver.html','Driver')">
       <div class="pc-role pc-role-drv">Field</div>
       <div class="pc-name">Driver</div>
       <div class="pc-desc">View assigned jobs, navigate your route, scan packages, and confirm deliveries.</div>
       <div class="pc-btn pc-btn-drv">Access Driver App &#8594;</div>
-    </a>
+    </div>
 
     <!-- CUSTOMER -->
-    <a class="portal-card pc-customer" href="customer.html">
+    <div class="portal-card pc-customer" onclick="openGate('customer.html','Customer')">
       <div class="pc-role pc-role-cust">Client</div>
       <div class="pc-name">Customer</div>
       <div class="pc-desc">Place a delivery order, track your package in real time, and confirm delivery.</div>
       <div class="pc-btn pc-btn-cust">Place an Order &#8594;</div>
-    </a>
+    </div>
 
   </div>
 
@@ -173,17 +183,6 @@ nav{position:fixed;top:0;left:0;right:0;height:60px;
 </div>
 
 
-<!-- LOGIN GATE -->
-<div class="gate" id="gate">
-  <div class="gate-box">
-    <div class="gate-logo">
-      <svg width="16" height="26" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
-        <defs><linearGradient id="tpgg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
-        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgg)"/>
-        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgg)" opacity=".75"/>
-        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgg)" opacity=".5"/>
-      </svg>
-      <div class="gate-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
     </div>
     <div class="gate-title">Platform Access</div>
     <div class="gate-sub">Enter your credentials to continue.</div>
@@ -213,5 +212,58 @@ if(sessionStorage.getItem('tp_auth')==='1'){
   document.getElementById('gate').style.display='none';
 }
 </script>
+
+<!-- LOGIN GATE -->
+<div class="gate-overlay" id="gateOverlay">
+  <div class="gate-box">
+    <div class="gate-logo">
+      <svg width="14" height="23" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="tpgg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgg)"/>
+        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgg)" opacity=".75"/>
+        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgg)" opacity=".5"/>
+      </svg>
+      <div class="gate-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+    </div>
+    <div class="gate-role" id="gateRole"></div>
+    <div class="gate-title" id="gateTitle">Sign In</div>
+    <label class="gate-lbl">Username</label>
+    <input class="gate-in" id="gateUser" type="text" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('gatePass').focus()"/>
+    <label class="gate-lbl">Password</label>
+    <input class="gate-in" id="gatePass" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateLogin()"/>
+    <button class="gate-btn" onclick="gateLogin()">Sign In &rarr;</button>
+    <button class="gate-cancel" onclick="closeGate()">Cancel</button>
+    <div class="gate-err" id="gateErr">Please enter both username and password.</div>
+  </div>
+</div>
+
+
+<script>
+let gateTarget = '';
+function openGate(url, role){
+  gateTarget = url;
+  document.getElementById('gateRole').textContent = role + ' Portal';
+  document.getElementById('gateRole').style.color = role==='Dispatcher'?'var(--blue)':role==='Driver'?'var(--green)':'var(--orange)';
+  document.getElementById('gateTitle').textContent = 'Sign in as ' + role;
+  document.getElementById('gateUser').value = '';
+  document.getElementById('gatePass').value = '';
+  document.getElementById('gateErr').style.display = 'none';
+  document.getElementById('gateOverlay').classList.add('on');
+  setTimeout(()=>document.getElementById('gateUser').focus(), 100);
+}
+function closeGate(){
+  document.getElementById('gateOverlay').classList.remove('on');
+}
+function gateLogin(){
+  const user = document.getElementById('gateUser').value.trim();
+  const pass = document.getElementById('gatePass').value.trim();
+  if(!user || !pass){
+    document.getElementById('gateErr').style.display = 'block';
+    return;
+  }
+  window.location.href = gateTarget;
+}
+</script>
+
 </body>
 </html>
