@@ -4,499 +4,194 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
 <title>TackPath Sort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;
+:root{--blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--red:#ff4444;
   --bg:#010e21;--card:#071828;--card2:#0d2135;--border:rgba(255,255,255,.08);
-  --text:#eef4ff;--muted:rgba(238,244,255,.65);--mono:'DM Mono',monospace;
-}
+  --border2:rgba(255,255,255,.12);--text:#eef4ff;--muted:rgba(238,244,255,.65);
+  --mono:'DM Mono',monospace;}
 html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 
-/* TOPBAR */
 .topbar{height:56px;background:rgba(1,14,33,.98);border-bottom:1px solid rgba(25,183,239,.1);
-  display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:10;}
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  position:sticky;top:0;z-index:10;}
 .tb-logo{display:flex;align-items:center;gap:8px;}
-.tb-wordmark{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.05em;}
-.tb-badge{font-family:var(--mono);font-size:8px;font-weight:700;padding:3px 8px;
+.tb-badge{font-family:var(--mono);font-size:9px;font-weight:700;padding:3px 9px;
   border-radius:6px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);
   color:var(--blue);letter-spacing:.1em;text-transform:uppercase;}
 
-/* MAIN */
-.main{max-width:700px;margin:0 auto;padding:24px 16px 60px;}
+.main{max-width:680px;margin:0 auto;padding:20px 16px 60px;}
 
-/* WAREHOUSE FIELD */
-.warehouse-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:20px;margin-bottom:16px;}
-.warehouse-lbl{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);
+.warehouse-wrap{background:var(--card);border:1px solid var(--border2);border-radius:14px;
+  padding:18px;margin-bottom:14px;}
+.field-lbl{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);
   letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;display:block;}
-.warehouse-in{width:100%;padding:14px 16px;border-radius:11px;background:var(--card2);
-  border:1px solid rgba(255,255,255,.12);color:#fff;font-size:15px;font-weight:600;
+.field-in{width:100%;padding:14px 16px;border-radius:11px;background:var(--card2);
+  border:1px solid var(--border2);color:#fff;font-size:16px;font-weight:600;
   font-family:'DM Sans',sans-serif;outline:none;}
-.warehouse-in:focus{border-color:rgba(25,183,239,.4);}
-.warehouse-in::placeholder{color:rgba(238,244,255,.3);font-weight:400;}
+.field-in:focus{border-color:rgba(25,183,239,.4);}
+.field-in::placeholder{color:rgba(238,244,255,.3);font-weight:400;}
 
-/* UPLOAD ZONE */
-.upload-zone{background:var(--card);border:2px dashed rgba(25,183,239,.25);
-  border-radius:18px;padding:48px 32px;text-align:center;cursor:pointer;
-  transition:all .2s;margin-bottom:20px;}
-.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(25,183,239,.05);}
-.upload-title{font-size:24px;font-weight:800;margin-bottom:10px;}
-.upload-sub{font-size:16px;color:var(--muted);margin-bottom:24px;line-height:1.7;}
-.upload-btn{display:inline-block;padding:16px 36px;border-radius:12px;
-  background:var(--blue);color:#fff;font-size:16px;font-weight:800;cursor:pointer;}
-.upload-or{font-size:12px;color:var(--muted);margin:14px 0;}
-.demo-btn{padding:14px 28px;border-radius:12px;background:transparent;
-  border:1px solid var(--border);color:rgba(238,244,255,.8);font-size:15px;font-weight:700;
-  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
-.demo-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text);}
+.upload-zone{background:var(--card);border:2px dashed rgba(25,183,239,.2);
+  border-radius:16px;padding:36px 20px;text-align:center;margin-bottom:14px;cursor:pointer;transition:all .2s;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(25,183,239,.04);}
+.upload-title{font-size:20px;font-weight:800;margin-bottom:8px;}
+.upload-sub{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.upload-btn{display:inline-block;padding:14px 32px;border-radius:11px;background:var(--blue);
+  color:#fff;font-size:15px;font-weight:800;cursor:pointer;}
+.upload-or{font-size:12px;color:var(--muted);margin:12px 0;}
+.demo-btn{padding:12px 24px;border-radius:11px;background:transparent;
+  border:1px solid var(--border2);color:rgba(238,244,255,.8);font-size:14px;
+  font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;}
 
-/* FILE ATTACHED */
-.file-attached{display:none;background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.2);
-  border-radius:12px;padding:14px 18px;margin-bottom:16px;
-  display:none;align-items:center;gap:12px;}
+.file-attached{display:none;align-items:center;gap:12px;background:rgba(83,255,136,.06);
+  border:1px solid rgba(83,255,136,.2);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
 .file-attached.on{display:flex;}
-.file-icon{width:36px;height:36px;border-radius:9px;background:rgba(83,255,136,.1);
-  border:1px solid rgba(83,255,136,.2);display:flex;align-items:center;
-  justify-content:center;flex-shrink:0;font-size:16px;}
 .file-name{font-size:14px;font-weight:700;color:#fff;flex:1;}
 .file-count{font-family:var(--mono);font-size:11px;color:var(--green);}
-.file-remove{font-size:18px;color:var(--muted);cursor:pointer;padding:4px;}
-.file-remove:hover{color:var(--red);}
+.file-remove{color:var(--muted);cursor:pointer;font-size:20px;padding:2px 6px;}
 
-/* PROGRESS */
 .progress-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:24px;margin-bottom:20px;display:none;}
-.progress-title{font-size:18px;font-weight:800;margin-bottom:8px;}
-.progress-sub{font-size:15px;color:rgba(238,244,255,.85);margin-bottom:16px;font-weight:600;}
+  padding:22px;margin-bottom:14px;display:none;}
+.progress-title{font-size:17px;font-weight:800;margin-bottom:6px;}
+.progress-sub{font-size:14px;color:rgba(238,244,255,.85);margin-bottom:14px;font-weight:600;}
 .progress-bar-bg{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
 .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),#5dd4f4);
-  border-radius:3px;transition:width .3s ease;width:0%;}
-.progress-address{font-family:var(--mono);font-size:12px;color:rgba(238,244,255,.7);
-  margin-top:10px;letter-spacing:.04em;}
+  border-radius:3px;transition:width .3s;}
+.progress-addr{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:10px;}
 
-/* RESULTS */
 .results-wrap{display:none;}
-.results-header{display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:16px;flex-wrap:wrap;gap:12px;}
-.results-title{font-size:26px;font-weight:800;}
-.results-meta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:5px;}
-.results-actions{display:flex;gap:10px;}
-.action-btn{padding:13px 20px;border-radius:10px;font-size:15px;font-weight:800;
-  cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .15s;}
-.ab-print{background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.2);color:var(--green);}
-.ab-reset{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);}
+.results-hdr{display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+.results-title{font-size:24px;font-weight:800;}
+.results-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px;}
+.results-actions{display:flex;gap:8px;flex-shrink:0;}
+.action-btn{padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;
+  cursor:pointer;border:none;font-family:'DM Sans',sans-serif;}
+.ab-print{background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.2)!important;color:var(--green);border:none;}
+.ab-scan{background:var(--blue);color:#fff;}
+.ab-reset{background:rgba(255,255,255,.06);border:1px solid var(--border)!important;color:var(--muted);border:none;}
 
-
-/* SCANNER */
-.scan-btn{width:100%;padding:16px;border-radius:12px;background:var(--blue);
-  border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;
-  font-family:'DM Sans',sans-serif;margin-bottom:12px;transition:all .15s;}
-.scan-btn:hover{background:#22ccff;}
-.scan-overlay{position:fixed;top:0;left:0;right:0;bottom:0;
-  background:rgba(1,14,33,.97);z-index:99999;
-  display:none;flex-direction:column;align-items:center;justify-content:center;
-  padding:24px;}
-.scan-overlay.on{display:flex !important;}
-.scan-video-wrap{width:100%;max-width:400px;border-radius:20px;overflow:hidden;
-  border:3px solid var(--blue);position:relative;margin-bottom:24px;}
-.scan-video{width:100%;display:block;}
-.scan-crosshair{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-.scan-line{position:absolute;left:10%;right:10%;height:2px;background:var(--blue);
-  opacity:.8;animation:scanline 2s ease-in-out infinite;}
-@keyframes scanline{0%,100%{top:20%;}50%{top:80%;}}
-.scan-result-flash{position:fixed;top:0;left:0;right:0;bottom:0;
-  z-index:999999;display:none;
-  flex-direction:column;align-items:center;justify-content:center;
-  background:rgba(1,14,33,.96);padding:24px;text-align:center;}
-.scan-result-flash.on{display:flex !important;}
-.scan-stop-num{font-family:'DM Mono',monospace;font-size:120px;font-weight:700;
-  color:var(--green);line-height:1;margin-bottom:8px;}
-.scan-stop-label{font-family:'DM Mono',monospace;font-size:14px;color:var(--green);
-  letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px;}
-.scan-stop-name{font-size:22px;font-weight:800;color:#fff;margin-bottom:6px;}
-.scan-stop-addr{font-size:15px;color:var(--muted);margin-bottom:32px;text-align:center;padding:0 24px;}
-.scan-next-btn{padding:16px 40px;border-radius:12px;background:var(--blue);
-  border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;
-  font-family:'DM Sans',sans-serif;}
-.scan-close{position:absolute;top:24px;right:24px;background:none;border:none;
-  color:rgba(238,244,255,.5);font-size:28px;cursor:pointer;}
-.scan-status{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);
-  margin-top:12px;letter-spacing:.08em;}
-.scan-notfound{font-size:18px;font-weight:800;color:var(--orange);margin-bottom:12px;}
-
-/* CONFIRMATION */
 .route-ready{display:none;background:rgba(83,255,136,.08);border:2px solid rgba(83,255,136,.3);
-  border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;}
+  border-radius:14px;padding:22px;text-align:center;margin-bottom:14px;}
 .route-ready.on{display:block;}
-.rr-title{font-size:22px;font-weight:800;color:var(--green);margin-bottom:6px;}
-.rr-sub{font-size:14px;color:rgba(238,244,255,.75);}
-.confirm-btn{margin-top:10px;padding:10px 18px;border-radius:9px;
-  background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);
-  color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;
-  font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;flex-shrink:0;}
-.confirm-btn:hover{background:rgba(25,183,239,.15);}
-.confirm-btn.confirmed{background:rgba(83,255,136,.1);border-color:rgba(83,255,136,.3);
-  color:var(--green);cursor:default;}
-.stop-card.confirmed{border-color:rgba(83,255,136,.25);background:rgba(83,255,136,.03);}
-.stop-card.confirmed .stop-num{background:var(--green);color:#010e21;}
-.confirmed-count{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px;}
+.rr-title{font-size:20px;font-weight:800;color:var(--green);margin-bottom:4px;}
+.rr-sub{font-size:13px;color:rgba(238,244,255,.7);}
 
-/* MAP */
-.map-toggle-btn{width:100%;padding:14px;border-radius:12px;background:rgba(25,183,239,.08);
-  border:1px solid rgba(25,183,239,.2);color:var(--blue);font-size:15px;font-weight:800;
-  cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:12px;transition:all .15s;}
-.map-toggle-btn:hover{background:rgba(25,183,239,.15);}
-.map-wrap{display:none;border-radius:16px;overflow:hidden;margin-bottom:16px;
+.map-btn{width:100%;padding:13px;border-radius:11px;background:rgba(25,183,239,.08);
+  border:1px solid rgba(25,183,239,.2);color:var(--blue);font-size:14px;font-weight:800;
+  cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:12px;display:none;}
+.map-btn.on{display:block;}
+.map-wrap{display:none;border-radius:14px;overflow:hidden;margin-bottom:14px;
   border:1px solid rgba(25,183,239,.15);}
 .map-wrap.on{display:block;}
-#routeMap{width:100%;height:380px;}
+#routeMap{width:100%;height:360px;}
 
-/* STOP CARDS */
-.stop-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;
-  transition:border-color .15s;}
-.stop-card:hover{border-color:rgba(25,183,239,.2);}
-.stop-num{width:56px;height:56px;border-radius:12px;background:var(--blue);
-  color:#fff;font-family:var(--mono);font-size:24px;font-weight:700;
+.stop-card{background:var(--card);border:1px solid var(--border);border-radius:13px;
+  padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+.stop-card.confirmed{border-color:rgba(83,255,136,.25);background:rgba(83,255,136,.03);}
+.stop-num{width:52px;height:52px;border-radius:12px;background:var(--blue);
+  color:#fff;font-family:var(--mono);font-size:22px;font-weight:700;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stop-card.confirmed .stop-num{background:var(--green);color:#010e21;}
 .stop-info{flex:1;min-width:0;}
-.stop-name{font-size:18px;font-weight:800;margin-bottom:4px;color:#fff;}
-.stop-address{font-size:15px;color:rgba(238,244,255,.9);line-height:1.5;font-weight:500;}
-.stop-right{text-align:right;flex-shrink:0;}
-.stop-pkgs{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--blue);}
-.stop-pkgs-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.1em;}
-.stop-id{font-family:var(--mono);font-size:11px;color:rgba(238,244,255,.4);
-  margin-top:4px;letter-spacing:.04em;}
+.stop-name{font-size:17px;font-weight:800;margin-bottom:3px;}
+.stop-address{font-size:14px;color:rgba(238,244,255,.85);line-height:1.5;font-weight:500;}
+.stop-id{font-family:var(--mono);font-size:10px;color:rgba(238,244,255,.35);margin-top:3px;}
+.stop-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+.stop-pkgs{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--blue);}
+.stop-pkgs-lbl{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;}
+.confirm-btn{padding:9px 14px;border-radius:9px;background:rgba(25,183,239,.08);
+  border:1px solid rgba(25,183,239,.2);color:var(--blue);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.confirm-btn.confirmed{background:rgba(83,255,136,.1);border-color:rgba(83,255,136,.3);
+  color:var(--green);cursor:default;}
 
-/* TOTAL BAR */
 .total-bar{background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.15);
-  border-radius:12px;padding:16px 20px;display:flex;gap:32px;margin-top:16px;flex-wrap:wrap;}
+  border-radius:12px;padding:14px 18px;display:flex;gap:28px;margin-top:14px;flex-wrap:wrap;}
 .tb-stat{text-align:center;}
-.tb-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--blue);}
-.tb-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.1em;margin-top:4px;}
+.tb-num{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--blue);}
+.tb-lbl{font-family:var(--mono);font-size:10px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;margin-top:3px;}
 
-/* TOAST */
-#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);
+/* SCANNER */
+.scan-overlay{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(1,14,33,.97);z-index:99999;
+  display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+.scan-overlay.on{display:flex;}
+.scan-close{position:absolute;top:20px;right:20px;background:none;border:none;
+  color:rgba(238,244,255,.5);font-size:32px;cursor:pointer;padding:8px;}
+.scan-label{font-family:var(--mono);font-size:11px;color:var(--blue);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px;}
+.scan-video-wrap{width:100%;max-width:380px;border-radius:18px;overflow:hidden;
+  border:3px solid var(--blue);position:relative;margin-bottom:20px;}
+.scan-video{width:100%;display:block;background:#000;}
+.scan-line{position:absolute;left:10%;right:10%;height:2px;background:var(--blue);
+  opacity:.9;animation:scanline 2s ease-in-out infinite;}
+@keyframes scanline{0%,100%{top:20%;}50%{top:78%;}}
+.scan-status{font-family:var(--mono);font-size:12px;color:var(--muted);
+  text-align:center;letter-spacing:.06em;padding:0 20px;}
+
+.scan-flash{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(1,14,33,.97);z-index:999999;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;text-align:center;}
+.scan-flash.on{display:flex;}
+.flash-num{font-family:var(--mono);font-size:110px;font-weight:700;
+  color:var(--green);line-height:1;margin-bottom:6px;}
+.flash-lbl{font-family:var(--mono);font-size:12px;color:var(--green);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:20px;}
+.flash-name{font-size:22px;font-weight:800;color:#fff;margin-bottom:6px;}
+.flash-addr{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.5;}
+.flash-next{padding:16px 40px;border-radius:12px;background:var(--blue);
+  border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;
+  font-family:'DM Sans',sans-serif;}
+
+#toast{position:fixed;top:66px;left:50%;transform:translateX(-50%);
   background:rgba(7,24,40,.97);border:1px solid rgba(255,255,255,.1);
   border-radius:10px;padding:10px 20px;font-size:13px;font-weight:600;
   z-index:9999;display:none;white-space:nowrap;}
 
-/* PRINT STYLES */
+@media(max-width:480px){
+  .stop-card{flex-wrap:wrap;}
+  .stop-right{flex-direction:row;flex:100%;justify-content:space-between;
+    margin-top:8px;padding-top:10px;border-top:1px solid var(--border);}
+  .results-hdr{flex-direction:column;}
+  .results-actions{width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .action-btn{text-align:center;padding:11px 8px;font-size:13px;}
+}
+
 @media print{
-  .topbar,.upload-zone,.progress-wrap,.results-actions,.demo-btn,#toast{display:none!important;}
+  .topbar,.warehouse-wrap,.upload-zone,.file-attached,.progress-wrap,
+  .results-actions,.map-btn,.map-wrap,.confirm-btn,.total-bar,#toast,
+  .scan-overlay,.scan-flash{display:none!important;}
   body{background:#fff;color:#000;}
-  .main{max-width:100%;padding:0;}
-  .results-wrap{display:block!important;}
-  .results-title{color:#000;font-size:18px;}
-  .results-meta{color:#555;}
-  .stop-card{background:#fff;border:1px solid #ddd;break-inside:avoid;margin-bottom:8px;padding:14px;}
+  .stop-card{background:#fff;border:1px solid #ddd;break-inside:avoid;margin-bottom:8px;}
   .stop-num{background:#19b7ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .stop-name{color:#000;}
   .stop-address{color:#333;}
   .stop-pkgs{color:#19b7ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  .stop-id{color:#999;}
-  .total-bar{background:#f0f9ff;border:1px solid #19b7ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  .tb-num{color:#19b7ef;}
-  .tb-lbl{color:#555;}
-}
-
-/* TABLET */
-@media(max-width:768px){
-  .main{padding:20px 14px 60px;}
-  .upload-zone{padding:36px 20px;}
-  .upload-title{font-size:22px;}
-  .results-header{flex-direction:column;align-items:flex-start;}
-  .results-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .action-btn{width:100%;text-align:center;}
-  .total-bar{gap:20px;}
-}
-
-/* MOBILE */
-@media(max-width:480px){
-  .topbar{padding:0 16px;}
-  .main{padding:16px 12px 60px;}
-  .upload-zone{padding:28px 16px;}
-  .upload-title{font-size:20px;}
-  .upload-sub{font-size:14px;}
-  .upload-btn{width:100%;text-align:center;padding:16px;}
-  .demo-btn{width:100%;}
-  .stop-card{flex-wrap:wrap;padding:16px;}
-  .stop-num{width:52px;height:52px;font-size:22px;}
-  .stop-info{flex:1;min-width:0;}
-  .stop-right{flex:100%;display:flex;gap:16px;align-items:center;margin-top:8px;
-    padding-top:10px;border-top:1px solid rgba(255,255,255,.06);}
-  .stop-pkgs{font-size:20px;}
-  .stop-name{font-size:17px;}
-  .stop-address{font-size:14px;}
-  .results-title{font-size:22px;}
-  .results-header{flex-direction:column;align-items:flex-start;gap:12px;}
-  .results-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .action-btn{width:100%;text-align:center;padding:14px;}
-  .total-bar{flex-wrap:wrap;gap:16px;padding:14px 16px;}
-  .tb-num{font-size:22px;}
-  .progress-wrap{padding:20px 16px;}
 }
 </style>
-// ── SORT CONFIRMATION ──
-function confirmStop(i){
-  window._confirmedStops[i] = true;
-  const card = document.getElementById('stop-card-'+i);
-  const btn = document.getElementById('confirm-btn-'+i);
-  card.classList.add('confirmed');
-  btn.textContent = '&#10003; Staged';
-  btn.classList.add('confirmed');
-  btn.disabled = true;
-
-  // Check if all confirmed
-  const total = window._confirmedStops.length;
-  const done = window._confirmedStops.filter(Boolean).length;
-  document.getElementById('resultsMeta').textContent =
-    done+' of '+total+' stops staged';
-
-  if(done === total){
-    document.getElementById('routeReady').classList.add('on');
-    document.getElementById('routeReady').scrollIntoView({behavior:'smooth',block:'center'});
-  }
-}
-
-
-// ── BARCODE SCANNER ──
-let scanStream = null;
-let scanInterval = null;
-let barcodeDetector = null;
-
-async function openScanner(){
-  const overlay = document.getElementById('scanOverlay');
-  if(!overlay){alert('overlay missing');return;}
-  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(1,14,33,.97);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;';
-  const status = document.getElementById('scanStatus');
-  if(status) status.textContent = 'Requesting camera access...';
-
-  // Check if mediaDevices is available
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    status.textContent = 'Camera not supported on this browser. Use Chrome.';
-    return;
-  }
-
-  try{
-    // Request camera
-    scanStream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'}}
-    });
-
-    const video = document.getElementById('scanVideo');
-    video.srcObject = scanStream;
-
-    await new Promise((resolve, reject)=>{
-      video.onloadedmetadata = resolve;
-      video.onerror = reject;
-      setTimeout(resolve, 2000);
-    });
-
-    await video.play();
-    status.textContent = 'Point camera at barcode';
-
-    // Try BarcodeDetector
-    if('BarcodeDetector' in window){
-      barcodeDetector = new BarcodeDetector({formats:[
-        'code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e','pdf417','data_matrix','itf','codabar'
-      ]});
-      scanInterval = setInterval(async()=>{
-        if(!video.readyState || video.readyState < 2) return;
-        try{
-          const codes = await barcodeDetector.detect(video);
-          if(codes.length > 0) handleScan(codes[0].rawValue);
-        }catch(e){}
-      }, 250);
-      status.textContent = 'Camera ready -- point at barcode';
-    } else {
-      status.textContent = 'Camera open -- BarcodeDetector not supported on this browser. Try Chrome on Android.';
-    }
-
-  } catch(e){
-    if(e.name === 'NotAllowedError'){
-      status.textContent = 'Camera permission denied. Please allow camera access and try again.';
-    } else if(e.name === 'NotFoundError'){
-      status.textContent = 'No camera found on this device.';
-    } else {
-      status.textContent = 'Camera error: '+e.message;
-    }
-  }
-}
-
-
-
-function handleScan(barcode){
-  // Stop scanning while showing result
-  clearInterval(scanInterval);
-
-  // Find matching stop by order_id
-  const stops = window._sortedStops;
-  if(!stops) return;
-
-  const idx = stops.findIndex(s =>
-    s.order_id === barcode ||
-    s.order_id.includes(barcode) ||
-    barcode.includes(s.order_id)
-  );
-
-  if(idx === -1){
-    document.getElementById('scanStatus').textContent = 'Not found: '+barcode+' -- try again';
-    // Resume scanning after 1.5s
-    setTimeout(()=>{
-      if(barcodeDetector){
-        const video = document.getElementById('scanVideo');
-        scanInterval = setInterval(async()=>{
-          try{const codes=await barcodeDetector.detect(video);if(codes.length)handleScan(codes[0].rawValue);}catch(e){}
-        },300);
-      }
-      document.getElementById('scanStatus').textContent = 'Point camera at barcode';
-    },1500);
-    return;
-  }
-
-  const stop = stops[idx];
-  const stopNum = idx + 1;
-
-  // Show flash result
-  document.getElementById('scanOverlay').classList.remove('on');
-  document.getElementById('flashStopNum').textContent = stopNum;
-  document.getElementById('flashName').textContent = stop.recipient;
-  document.getElementById('flashAddr').textContent = stop.address;
-  document.getElementById('scanFlash').classList.add('on');
-
-  // Auto-confirm the stop
-  confirmStop(idx);
-
-  // Beep on successful scan
-  try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+.15);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime+.15);
-  }catch(e){}
-}
-
-function continueScan(){
-  document.getElementById('scanFlash').classList.remove('on');
-  document.getElementById('scanOverlay').classList.add('on');
-  document.getElementById('scanStatus').textContent = 'Point camera at next barcode';
-
-  // Resume scanning
-  if(barcodeDetector){
-    const video = document.getElementById('scanVideo');
-    scanInterval = setInterval(async()=>{
-      try{const codes=await barcodeDetector.detect(video);if(codes.length)handleScan(codes[0].rawValue);}catch(e){}
-    },300);
-  }
-}
-
-function closeScanner(){
-  clearInterval(scanInterval);
-  if(scanStream) scanStream.getTracks().forEach(t=>t.stop());
-  document.getElementById('scanOverlay').classList.remove('on');
-  document.getElementById('scanFlash').classList.remove('on');
-  scanStream = null;
-  barcodeDetector = null;
-}
-
-</script>
-<script>
-// ── MAP ──
-let mapShowing = false;
-let mapInitialized = false;
-
-function toggleMap(){
-  const btn = document.querySelector('.map-toggle-btn');
-  const wrap = document.getElementById('mapWrap');
-  mapShowing = !mapShowing;
-  wrap.classList.toggle('on', mapShowing);
-  btn.textContent = mapShowing ? 'Hide Map' : 'Show Map';
-  if(mapShowing && !mapInitialized){
-    if(typeof google === 'undefined' || !google.maps){
-      setTimeout(buildMap, 500);
-    } else {
-      buildMap();
-    }
-  }
-}
-
-function buildMap(){
-  const stops = window._sortedStops;
-  if(!stops || !stops.length) return;
-  mapInitialized = true;
-
-  const validStops = stops.filter(s=>s.lat !== null && s.lng !== null);
-  if(!validStops.length) return;
-
-  // Center map on first stop
-  const center = {lat: validStops[0].lat, lng: validStops[0].lng};
-  const map = new google.maps.Map(document.getElementById('routeMap'), {
-    zoom: 11,
-    center: center,
-    mapTypeId: 'roadmap',
-    styles:[]
-  });
-
-  // Add warehouse marker if available
-  if(window._warehouseCoords){
-    new google.maps.Marker({
-      position:{lat:window._warehouseCoords.lat, lng:window._warehouseCoords.lng},
-      map,
-      title:'Start'
-    });
-  }
-
-  // Add numbered markers for each stop
-  validStops.forEach((s,i)=>{
-    new google.maps.Marker({
-      position:{lat:s.lat, lng:s.lng},
-      map,
-      label:{text:String(i+1),color:'#fff',fontWeight:'800',fontSize:'11px'},
-      icon:{
-        path:google.maps.SymbolPath.CIRCLE,
-        scale:13,
-        fillColor:'#19b7ef',
-        fillOpacity:1,
-        strokeColor:'#fff',
-        strokeWeight:2
-      },
-      title:'Stop '+(i+1)+': '+s.recipient
-    });
-  });
-
-  // Draw route line
-  const path = validStops.map(s=>({lat:s.lat, lng:s.lng}));
-  new google.maps.Polyline({
-    path,
-    geodesic:true,
-    strokeColor:'#19b7ef',
-    strokeOpacity:.6,
-    strokeWeight:2,
-    map
-  });
-}
-
-</script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8" async defer></script>
 </head>
 <body>
 
 <div class="topbar">
   <div class="tb-logo">
-    <svg width="16" height="27" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/></svg>
-    <div style="font-family:'Montserrat',sans-serif;font-size:16px;font-weight:500;letter-spacing:1px;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+    <svg width="16" height="27" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/>
+      </linearGradient></defs>
+      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+    </svg>
+    <div style="font-family:'Montserrat',sans-serif;font-size:16px;font-weight:500;letter-spacing:1px;">
+      <span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span>
+    </div>
   </div>
   <div class="tb-badge">Sort</div>
 </div>
@@ -505,120 +200,138 @@ function buildMap(){
 
 <div class="main">
 
-  <!-- UPLOAD -->
-  <div class="warehouse-wrap" id="warehouseWrap">
-  <label class="warehouse-lbl">Where are packages being dispatched from?</label>
-  <input class="warehouse-in" id="warehouseAddr" type="text" placeholder="Enter warehouse or pickup address..."/>
-</div>
+  <div class="warehouse-wrap">
+    <label class="field-lbl">Where are packages being dispatched from?</label>
+    <input class="field-in" id="warehouseAddr" type="text" placeholder="Enter warehouse address..."/>
+  </div>
 
-<div class="upload-zone" id="uploadZone"
+  <div class="upload-zone" id="uploadZone"
     ondragover="event.preventDefault();this.classList.add('drag')"
     ondragleave="this.classList.remove('drag')"
     ondrop="event.preventDefault();this.classList.remove('drag');handleFile(event.dataTransfer.files[0])">
-    <div class="upload-title">Upload Your Manifest</div>
-    <div class="upload-sub">Upload a CSV with your delivery stops.<br>TackPath will sequence them in the optimal delivery order.</div>
+    <div class="upload-title">Upload Manifest</div>
+    <div class="upload-sub">CSV with columns: order_id, recipient, address, packages</div>
     <label class="upload-btn" for="fileInput">Choose CSV File</label>
     <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="handleFile(this.files[0])"/>
     <div class="upload-or">or</div>
     <button class="demo-btn" onclick="loadDemo()">Load Demo Data</button>
-    <div style="margin-top:20px;font-family:var(--mono);font-size:9px;color:rgba(238,244,255,.25);letter-spacing:.1em;">
-      Required columns: order_id, recipient, address, packages
-    </div>
   </div>
 
-  <!-- PROGRESS -->
   <div class="file-attached" id="fileAttached">
-  <div class="file-icon">&#128196;</div>
-  <div>
-    <div class="file-name" id="fileName">manifest.csv</div>
-    <div class="file-count" id="fileCount"></div>
+    <div style="font-size:20px;">&#128196;</div>
+    <div style="flex:1;">
+      <div class="file-name" id="fileName"></div>
+      <div class="file-count" id="fileCount"></div>
+    </div>
+    <div class="file-remove" onclick="clearFile()">&#10005;</div>
   </div>
-  <div class="file-remove" onclick="clearFile()" title="Remove">&#10005;</div>
-</div>
 
-<div class="progress-wrap" id="progressWrap">
+  <div class="progress-wrap" id="progressWrap">
     <div class="progress-title">Sequencing Route</div>
     <div class="progress-sub" id="progressSub">Geocoding addresses...</div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
-    <div class="progress-address" id="progressAddress"></div>
+    <div class="progress-addr" id="progressAddr"></div>
   </div>
 
-  <!-- RESULTS -->
   <div class="results-wrap" id="resultsWrap">
-  <div id="scanBtnWrap" style="display:none;margin-bottom:4px;">
-  <button class="scan-btn" onclick="openScanner()">Scan Packages</button>
-</div>
-
-<div id="mapToggleWrap" style="display:none;">
-    <button class="map-toggle-btn" onclick="toggleMap()">Show Map</button>
-    <div class="map-wrap" id="mapWrap">
-      <div id="routeMap"></div>
-    </div>
-  </div>
-    <div class="results-header">
+    <div class="results-hdr">
       <div>
         <div class="results-title">Delivery Sequence</div>
         <div class="results-meta" id="resultsMeta"></div>
       </div>
       <div class="results-actions">
-        <button class="action-btn ab-print" onclick="window.print()">Print List</button>
-        <button class="action-btn ab-reset" onclick="resetAll()">Start Over</button>
+        <button class="action-btn ab-scan" onclick="openScanner()">Scan</button>
+        <button class="action-btn ab-print" onclick="window.print()">Print</button>
+        <button class="action-btn ab-reset" onclick="resetAll()">Reset</button>
       </div>
     </div>
+
     <div class="route-ready" id="routeReady">
-  <div class="rr-title">&#10003; Route Staged</div>
-  <div class="rr-sub">All packages confirmed and ready for driver pickup.</div>
-</div>
-<div id="stopsList"></div>
+      <div class="rr-title">&#10003; Route Staged</div>
+      <div class="rr-sub">All packages confirmed and ready for driver pickup.</div>
+    </div>
+
+    <button class="map-btn" id="mapBtn" onclick="toggleMap()">Show Map</button>
+    <div class="map-wrap" id="mapWrap"><div id="routeMap"></div></div>
+
+    <div id="stopsList"></div>
+
     <div class="total-bar" id="totalBar"></div>
   </div>
 
 </div>
 
+<!-- SCANNER -->
+<div class="scan-overlay" id="scanOverlay">
+  <button class="scan-close" onclick="closeScanner()">&#10005;</button>
+  <div class="scan-label">Scan Package Barcode</div>
+  <div class="scan-video-wrap">
+    <video class="scan-video" id="scanVideo" autoplay playsinline muted></video>
+    <div class="scan-line"></div>
+  </div>
+  <div class="scan-status" id="scanStatus">Point camera at barcode</div>
+</div>
+
+<div class="scan-flash" id="scanFlash">
+  <div class="flash-num" id="flashNum">7</div>
+  <div class="flash-lbl">Stop Number</div>
+  <div class="flash-name" id="flashName"></div>
+  <div class="flash-addr" id="flashAddr"></div>
+  <button class="flash-next" onclick="continueScan()">Scan Next &rarr;</button>
+</div>
+
 <script>
+const GMAPS_KEY = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
+
 const DEMO = [
-  {order_id:'TP65782101',recipient:'Marcus Johnson',address:'142 Peachtree St NW, Atlanta GA 30303',packages:2},
-  {order_id:'TP65782102',recipient:'Sarah Williams',address:'890 Marietta St NW, Atlanta GA 30318',packages:1},
-  {order_id:'TP65782103',recipient:'David Chen',address:'1180 Peachtree St NE, Atlanta GA 30309',packages:3},
-  {order_id:'TP65782104',recipient:'Jennifer Davis',address:'75 5th St NW, Atlanta GA 30308',packages:1},
-  {order_id:'TP65782105',recipient:'Robert Miller',address:'400 W Peachtree St NW, Atlanta GA 30308',packages:2},
-  {order_id:'TP65782106',recipient:'Angela Thompson',address:'3393 Peachtree Rd NE, Atlanta GA 30326',packages:4},
-  {order_id:'TP65782107',recipient:'Kevin Harris',address:'2500 Cumberland Pkwy SE, Atlanta GA 30339',packages:1},
-  {order_id:'TP65782108',recipient:'Patricia Moore',address:'1544 Piedmont Ave NE, Atlanta GA 30324',packages:2},
-  {order_id:'TP65782109',recipient:'James Wilson',address:'640 W Peachtree St NW, Atlanta GA 30308',packages:1},
-  {order_id:'TP65782110',recipient:'Linda Anderson',address:'220 Interstate N Pkwy SE, Atlanta GA 30339',packages:3},
-  {order_id:'TP65782111',recipient:'Michael Brown',address:'3630 Peachtree Rd NE, Atlanta GA 30319',packages:2},
-  {order_id:'TP65782112',recipient:'Barbara Jackson',address:'1000 Northside Dr NW, Atlanta GA 30318',packages:1},
-  {order_id:'TP65782113',recipient:'Christopher White',address:'2550 Sandy Plains Rd, Marietta GA 30066',packages:2},
-  {order_id:'TP65782114',recipient:'Susan Taylor',address:'4300 Paces Ferry Rd SE, Atlanta GA 30339',packages:1},
-  {order_id:'TP65782115',recipient:'Matthew Martinez',address:'1100 Spring St NW, Atlanta GA 30309',packages:3},
+  {order_id:'TP78001',recipient:'Marcus Johnson',address:'142 Peachtree St NW Atlanta GA 30303',packages:2},
+  {order_id:'TP78002',recipient:'Sarah Williams',address:'890 Marietta St NW Atlanta GA 30318',packages:1},
+  {order_id:'TP78003',recipient:'David Chen',address:'1180 Peachtree St NE Atlanta GA 30309',packages:3},
+  {order_id:'TP78004',recipient:'Jennifer Davis',address:'75 5th St NW Atlanta GA 30308',packages:1},
+  {order_id:'TP78005',recipient:'Robert Miller',address:'400 W Peachtree St NW Atlanta GA 30308',packages:2},
+  {order_id:'TP78006',recipient:'Angela Thompson',address:'3393 Peachtree Rd NE Atlanta GA 30326',packages:4},
+  {order_id:'TP78007',recipient:'Kevin Harris',address:'2500 Cumberland Pkwy SE Atlanta GA 30339',packages:1},
+  {order_id:'TP78008',recipient:'Patricia Moore',address:'1544 Piedmont Ave NE Atlanta GA 30324',packages:2},
+  {order_id:'TP78009',recipient:'James Wilson',address:'640 W Peachtree St NW Atlanta GA 30308',packages:1},
+  {order_id:'TP78010',recipient:'Linda Anderson',address:'220 Interstate N Pkwy SE Atlanta GA 30339',packages:3},
+  {order_id:'TP78011',recipient:'Michael Brown',address:'3630 Peachtree Rd NE Atlanta GA 30319',packages:2},
+  {order_id:'TP78012',recipient:'Barbara Jackson',address:'1000 Northside Dr NW Atlanta GA 30318',packages:1},
+  {order_id:'TP78013',recipient:'Christopher White',address:'2550 Sandy Plains Rd Marietta GA 30066',packages:2},
+  {order_id:'TP78014',recipient:'Susan Taylor',address:'4300 Paces Ferry Rd SE Atlanta GA 30339',packages:1},
+  {order_id:'TP78015',recipient:'Matthew Martinez',address:'1100 Spring St NW Atlanta GA 30309',packages:3},
 ];
 
 let packages = [];
+let sortedStops = [];
 let warehouseGeo = null;
+let confirmedStops = [];
+let mapShowing = false;
+let mapBuilt = false;
+let scanStream = null;
+let scanInterval = null;
+let barcodeDetector = null;
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.style.display='none', 3000);
+}
 
 function handleFile(file){
-  if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file');return;}
+  if(!file || !file.name.endsWith('.csv')){toast('Please upload a CSV file');return;}
   const reader = new FileReader();
   reader.onload = e => {
     parseCSV(e.target.result);
-    // Show file attached indicator
     document.getElementById('fileName').textContent = file.name;
-    document.getElementById('fileAttached').classList.add('on');
   };
   reader.readAsText(file);
 }
 
-function clearFile(){
-  packages = [];
-  document.getElementById('fileAttached').classList.remove('on');
-  document.getElementById('fileInput').value = '';
-  toast('Manifest removed');
-}
-
 function parseCSV(text){
   const lines = text.trim().split('\n');
-  if(lines.length < 2){toast('CSV needs a header and at least one row');return;}
+  if(lines.length < 2){toast('CSV needs a header row and at least one stop');return;}
   const headers = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
   const idx = {
     order_id: headers.indexOf('order_id'),
@@ -633,98 +346,86 @@ function parseCSV(text){
     if(!c[idx.address]) continue;
     packages.push({
       order_id: c[idx.order_id] || ('TP'+String(i).padStart(5,'0')),
-      recipient: c[idx.recipient] || 'Stop '+(i),
+      recipient: c[idx.recipient] || 'Stop '+i,
       address: c[idx.address],
       packages: parseInt(c[idx.packages]) || 1
     });
   }
-  if(!packages.length){toast('No valid packages found');return;}
-  document.getElementById('fileCount').textContent = packages.length+' stops ready to sequence';
+  if(!packages.length){toast('No valid stops found in CSV');return;}
+  document.getElementById('fileCount').textContent = packages.length+' stops ready';
+  document.getElementById('fileAttached').classList.add('on');
   startGeocoding();
 }
 
 function loadDemo(){
   packages = [...DEMO];
+  document.getElementById('fileName').textContent = 'demo-manifest.csv';
+  document.getElementById('fileCount').textContent = packages.length+' stops ready';
+  document.getElementById('fileAttached').classList.add('on');
   startGeocoding();
 }
 
-// ── GEOCODING + SEQUENCING via Google Maps ──
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-async function startGeocoding(){
-  const warehouseAddr = document.getElementById('warehouseAddr').value.trim();
-  if(!warehouseAddr){toast('Please enter the dispatch address first');return;}
-
-  document.getElementById('uploadZone').style.display = 'none';
-  document.getElementById('warehouseWrap').style.display = 'none';
-  document.getElementById('progressWrap').style.display = 'block';
-  document.getElementById('progressSub').textContent = 'Geocoding addresses...';
-  document.getElementById('progressFill').style.width = '10%';
-  document.getElementById('progressAddress').textContent = 'Processing warehouse + '+packages.length+' addresses...';
-
-  const KEY = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
-
-  // Geocode warehouse address first
-  warehouseGeo = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(warehouseAddr)+'&key='+KEY)
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.status==='OK' && data.results.length){
-        return {lat: data.results[0].geometry.location.lat, lng: data.results[0].geometry.location.lng};
-      }
-      return null;
-    }).catch(()=>null);
-
-  // Geocode all delivery addresses in parallel
-  const geocodePromises = packages.map(pkg =>
-    fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(pkg.address)+'&key='+KEY)
-      .then(r=>r.json())
-      .then(data=>{
-        if(data.status==='OK' && data.results.length){
-          const loc = data.results[0].geometry.location;
-          return {...pkg, lat: loc.lat, lng: loc.lng};
-        }
-        return {...pkg, lat: null, lng: null};
-      })
-      .catch(()=>({...pkg, lat: null, lng: null}))
-  );
-
-  const geocoded = await Promise.all(geocodePromises);
-  document.getElementById('progressFill').style.width = '80%';
-  document.getElementById('progressSub').textContent = 'Sequencing stops...';
-  document.getElementById('progressAddress').textContent = '';
-
-  const withCoords = geocoded.filter(p=>p.lat!==null);
-  const withoutCoords = geocoded.filter(p=>p.lat===null);
-
-  document.getElementById('progressSub').textContent = 'Sequencing stops...';
-  document.getElementById('progressFill').style.width = '90%';
-
-  const sequenced = nearestNeighborDriving(withCoords, warehouseGeo);
-  const final = [...sequenced, ...withoutCoords];
-
-  document.getElementById('progressFill').style.width = '100%';
-  await sleep(150);
-  renderResults(final);
+function clearFile(){
+  packages = [];
+  document.getElementById('fileAttached').classList.remove('on');
+  document.getElementById('fileInput').value = '';
 }
 
+async function startGeocoding(){
+  const addr = document.getElementById('warehouseAddr').value.trim();
+  if(!addr){toast('Please enter the dispatch address first');return;}
 
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('progressSub').textContent = 'Geocoding '+packages.length+' addresses...';
+  document.getElementById('progressFill').style.width = '10%';
+  document.getElementById('progressAddr').textContent = 'Processing all addresses simultaneously...';
 
-// Nearest-neighbor using straight-line for larger manifests
-function nearestNeighborDriving(stops, startPoint){
+  // Geocode warehouse
+  const wGeo = await geocode(addr);
+  if(wGeo) warehouseGeo = wGeo;
+  document.getElementById('progressFill').style.width = '20%';
+
+  // Geocode all stops in parallel
+  const results = await Promise.all(packages.map(p =>
+    geocode(p.address).then(geo => ({...p, lat: geo ? geo.lat : null, lng: geo ? geo.lng : null}))
+  ));
+
+  document.getElementById('progressFill').style.width = '80%';
+  document.getElementById('progressSub').textContent = 'Sequencing optimal delivery order...';
+
+  const withCoords = results.filter(p => p.lat !== null);
+  const without = results.filter(p => p.lat === null);
+
+  sortedStops = [...nearestNeighbor(withCoords, warehouseGeo), ...without];
+
+  document.getElementById('progressFill').style.width = '100%';
+  setTimeout(()=> renderResults(sortedStops), 200);
+}
+
+async function geocode(address){
+  try{
+    const url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(address)+'&key='+GMAPS_KEY;
+    const r = await fetch(url);
+    const data = await r.json();
+    if(data.status === 'OK' && data.results.length){
+      return {lat: data.results[0].geometry.location.lat, lng: data.results[0].geometry.location.lng};
+    }
+  }catch(e){}
+  return null;
+}
+
+function nearestNeighbor(stops, start){
   if(!stops.length) return [];
   const unvisited = [...stops];
   const route = [];
-  // Start from warehouse if available, otherwise first stop
-  let current = startPoint || unvisited[0];
-  if(!startPoint) route.push(unvisited.shift());
+  let current = start || unvisited[0];
+  if(!start) route.push(unvisited.shift());
+
   while(unvisited.length){
     let nearest = null, minDist = Infinity, nearestIdx = 0;
     unvisited.forEach((s,i)=>{
-      const R=6371;
-      const dLat=(s.lat-current.lat)*Math.PI/180;
-      const dLng=(s.lng-current.lng)*Math.PI/180;
-      const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(current.lat*Math.PI/180)*Math.cos(s.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
-      const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+      const d = haversine(current.lat, current.lng, s.lat, s.lng);
       if(d < minDist){minDist=d; nearest=s; nearestIdx=i;}
     });
     route.push(nearest);
@@ -734,83 +435,185 @@ function nearestNeighborDriving(stops, startPoint){
   return route;
 }
 
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
 function renderResults(stops){
   document.getElementById('progressWrap').style.display = 'none';
   document.getElementById('resultsWrap').style.display = 'block';
+  confirmedStops = new Array(stops.length).fill(false);
 
   const totalPkgs = stops.reduce((s,p)=>s+p.packages,0);
-  document.getElementById('resultsMeta').textContent =
-    stops.length+' stops · '+totalPkgs+' total packages';
+  document.getElementById('resultsMeta').textContent = stops.length+' stops · '+totalPkgs+' total packages';
+  document.getElementById('mapBtn').classList.add('on');
 
-  // Store sequenced stops globally for map
-  window._sortedStops = stops;
-  window._warehouseCoords = warehouseGeo;
-
-  // Add map toggle button
-  document.getElementById('mapToggleWrap').style.display = 'block';
-  document.getElementById('scanBtnWrap').style.display = 'block';
-
-  window._confirmedStops = new Array(stops.length).fill(false);
   document.getElementById('stopsList').innerHTML = stops.map((s,i)=>`
-    <div class="stop-card" id="stop-card-${i}">
-      <div class="stop-num" id="stop-num-${i}">${i+1}</div>
+    <div class="stop-card" id="sc-${i}">
+      <div class="stop-num" id="sn-${i}">${i+1}</div>
       <div class="stop-info">
         <div class="stop-name">${s.recipient}</div>
         <div class="stop-address">${s.address}</div>
         <div class="stop-id">${s.order_id}</div>
       </div>
       <div class="stop-right">
-        <div class="stop-pkgs">${s.packages}</div>
-        <div class="stop-pkgs-lbl">pkg${s.packages!==1?'s':''}</div>
+        <div><div class="stop-pkgs">${s.packages}</div><div class="stop-pkgs-lbl">pkg${s.packages!==1?'s':''}</div></div>
+        <button class="confirm-btn" id="cb-${i}" onclick="confirmStop(${i})">Confirm</button>
       </div>
-      <button class="confirm-btn" id="confirm-btn-${i}" onclick="confirmStop(${i})">Confirm</button>
     </div>`).join('');
 
   document.getElementById('totalBar').innerHTML = `
     <div class="tb-stat"><div class="tb-num">${stops.length}</div><div class="tb-lbl">Stops</div></div>
     <div class="tb-stat"><div class="tb-num">${totalPkgs}</div><div class="tb-lbl">Packages</div></div>
-    <div class="tb-stat"><div class="tb-num">${stops.length}</div><div class="tb-lbl">Sequence Ready</div></div>
-`;
+    <div class="tb-stat"><div class="tb-num" id="stagedCount">0</div><div class="tb-lbl">Staged</div></div>`;
+}
+
+function confirmStop(i){
+  confirmedStops[i] = true;
+  document.getElementById('sc-'+i).classList.add('confirmed');
+  const btn = document.getElementById('cb-'+i);
+  btn.textContent = '\u2713 Staged';
+  btn.classList.add('confirmed');
+  btn.disabled = true;
+  const done = confirmedStops.filter(Boolean).length;
+  document.getElementById('stagedCount').textContent = done;
+  document.getElementById('resultsMeta').textContent = done+' of '+confirmedStops.length+' stops staged';
+  if(done === confirmedStops.length){
+    document.getElementById('routeReady').classList.add('on');
+    document.getElementById('routeReady').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+function toggleMap(){
+  const btn = document.getElementById('mapBtn');
+  const wrap = document.getElementById('mapWrap');
+  mapShowing = !mapShowing;
+  wrap.classList.toggle('on', mapShowing);
+  btn.textContent = mapShowing ? 'Hide Map' : 'Show Map';
+  if(mapShowing && !mapBuilt) buildMap();
+}
+
+function buildMap(){
+  mapBuilt = true;
+  const validStops = sortedStops.filter(s=>s.lat !== null);
+  if(!validStops.length) return;
+  const center = {lat: validStops[0].lat, lng: validStops[0].lng};
+  const map = new google.maps.Map(document.getElementById('routeMap'), {
+    zoom: 11, center, mapTypeId: 'roadmap', styles: []
+  });
+  if(warehouseGeo){
+    new google.maps.Marker({position:{lat:warehouseGeo.lat,lng:warehouseGeo.lng},map,title:'Start'});
+  }
+  validStops.forEach((s,i)=>{
+    new google.maps.Marker({
+      position:{lat:s.lat,lng:s.lng}, map,
+      label:{text:String(i+1),color:'#fff',fontWeight:'800',fontSize:'11px'},
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:'#19b7ef',fillOpacity:1,strokeColor:'#fff',strokeWeight:2},
+      title:'Stop '+(i+1)+': '+s.recipient
+    });
+  });
+  new google.maps.Polyline({
+    path:validStops.map(s=>({lat:s.lat,lng:s.lng})),
+    geodesic:true,strokeColor:'#19b7ef',strokeOpacity:.5,strokeWeight:2,map
+  });
 }
 
 function resetAll(){
-  packages = [];
-  document.getElementById('uploadZone').style.display = 'block';
-  document.getElementById('progressWrap').style.display = 'none';
-  document.getElementById('resultsWrap').style.display = 'none';
-  document.getElementById('progressFill').style.width = '0%';
-  document.getElementById('fileInput').value = '';
+  packages=[];sortedStops=[];warehouseGeo=null;confirmedStops=[];mapShowing=false;mapBuilt=false;
+  document.getElementById('uploadZone').style.display='block';
+  document.getElementById('progressWrap').style.display='none';
+  document.getElementById('resultsWrap').style.display='none';
+  document.getElementById('fileAttached').classList.remove('on');
+  document.getElementById('fileInput').value='';
+  document.getElementById('progressFill').style.width='0%';
+  document.getElementById('warehouseAddr').value='';
+  document.getElementById('mapWrap').classList.remove('on');
+  document.getElementById('mapBtn').classList.remove('on');
+  document.getElementById('routeReady').classList.remove('on');
 }
 
-function toast(msg){
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.display = 'block';
-  clearTimeout(el._t);
-  el._t = setTimeout(()=>el.style.display='none', 3000);
+// SCANNER
+async function openScanner(){
+  document.getElementById('scanOverlay').style.display='flex';
+  document.getElementById('scanStatus').textContent='Requesting camera access...';
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    document.getElementById('scanStatus').textContent='Camera not supported. Use Chrome on Android.';
+    return;
+  }
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    const video = document.getElementById('scanVideo');
+    video.srcObject = scanStream;
+    await video.play();
+    document.getElementById('scanStatus').textContent='Point camera at barcode';
+    if('BarcodeDetector' in window){
+      barcodeDetector = new BarcodeDetector({formats:['code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e']});
+      scanInterval = setInterval(async()=>{
+        try{
+          const codes = await barcodeDetector.detect(video);
+          if(codes.length) handleScan(codes[0].rawValue);
+        }catch(e){}
+      },250);
+    } else {
+      document.getElementById('scanStatus').textContent='Camera open but barcode detection requires Chrome on Android';
+    }
+  }catch(e){
+    if(e.name==='NotAllowedError') document.getElementById('scanStatus').textContent='Camera permission denied. Please allow camera access.';
+    else document.getElementById('scanStatus').textContent='Camera error: '+e.message;
+  }
+}
+
+function handleScan(barcode){
+  clearInterval(scanInterval);
+  const idx = sortedStops.findIndex(s=>s.order_id===barcode||s.order_id.includes(barcode)||barcode.includes(s.order_id));
+  if(idx===-1){
+    document.getElementById('scanStatus').textContent='Not found: '+barcode;
+    setTimeout(()=>{
+      document.getElementById('scanStatus').textContent='Point camera at barcode';
+      if(barcodeDetector){
+        const video=document.getElementById('scanVideo');
+        scanInterval=setInterval(async()=>{try{const c=await barcodeDetector.detect(video);if(c.length)handleScan(c[0].rawValue);}catch(e){}},250);
+      }
+    },1500);
+    return;
+  }
+  const stop = sortedStops[idx];
+  document.getElementById('scanOverlay').style.display='none';
+  document.getElementById('flashNum').textContent=idx+1;
+  document.getElementById('flashName').textContent=stop.recipient;
+  document.getElementById('flashAddr').textContent=stop.address;
+  document.getElementById('scanFlash').style.display='flex';
+  confirmStop(idx);
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=880;osc.type='sine';
+    gain.gain.setValueAtTime(.3,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.15);
+    osc.start(ctx.currentTime);osc.stop(ctx.currentTime+.15);
+  }catch(e){}
+}
+
+function continueScan(){
+  document.getElementById('scanFlash').style.display='none';
+  document.getElementById('scanOverlay').style.display='flex';
+  document.getElementById('scanStatus').textContent='Point camera at next barcode';
+  if(barcodeDetector){
+    const video=document.getElementById('scanVideo');
+    scanInterval=setInterval(async()=>{try{const c=await barcodeDetector.detect(video);if(c.length)handleScan(c[0].rawValue);}catch(e){}},250);
+  }
+}
+
+function closeScanner(){
+  clearInterval(scanInterval);
+  if(scanStream) scanStream.getTracks().forEach(t=>t.stop());
+  document.getElementById('scanOverlay').style.display='none';
+  document.getElementById('scanFlash').style.display='none';
+  scanStream=null;barcodeDetector=null;
 }
 </script>
-
-<!-- SCANNER OVERLAY -->
-<div class="scan-overlay" id="scanOverlay">
-  <button class="scan-close" onclick="closeScanner()">&#10005;</button>
-  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue);
-    letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px;">Scan Package Barcode</div>
-  <div class="scan-video-wrap">
-    <video class="scan-video" id="scanVideo" autoplay playsinline muted></video>
-    <div class="scan-crosshair"><div class="scan-line"></div></div>
-  </div>
-  <div class="scan-status" id="scanStatus">Point camera at barcode</div>
-</div>
-
-<!-- SCAN RESULT FLASH -->
-<div class="scan-result-flash" id="scanFlash">
-  <div class="scan-stop-num" id="flashStopNum">7</div>
-  <div class="scan-stop-label">Stop Number</div>
-  <div class="scan-stop-name" id="flashName"></div>
-  <div class="scan-stop-addr" id="flashAddr"></div>
-  <button class="scan-next-btn" onclick="continueScan()">Scan Next &rarr;</button>
-</div>
-
 </body>
 </html>
