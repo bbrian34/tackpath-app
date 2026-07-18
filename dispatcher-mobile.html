@@ -486,6 +486,60 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 </div>
 
 <script>
+// ── SMARTTRACK MAP ──
+let smartTrackMapObj = null;
+let smartTrackMarkers = [];
+
+async function buildSmartTrackMap(drivers){
+  await loadGoogleMaps();
+  const mapDiv = document.getElementById('smartTrackMap');
+  if(!mapDiv) return;
+
+  // Atlanta center as default
+  const center = {lat:33.749,lng:-84.388};
+
+  if(!smartTrackMapObj){
+    smartTrackMapObj = new google.maps.Map(mapDiv, {
+      zoom:11, center,
+      mapTypeId:'roadmap',
+      disableDefaultUI:true,
+      styles:[
+        {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
+        {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
+        {featureType:'road',elementType:'geometry',stylers:[{color:'#304a7d'}]},
+        {featureType:'water',elementType:'geometry',stylers:[{color:'#0e1626'}]}
+      ]
+    });
+  }
+
+  // Clear old markers
+  smartTrackMarkers.forEach(m=>m.setMap(null));
+  smartTrackMarkers=[];
+
+  if(!drivers.length) return;
+
+  const colors=['#19b7ef','#53ff88','#8d5cff','#ff961e'];
+  const geocoder = new google.maps.Geocoder();
+
+  drivers.forEach((d,i)=>{
+    const color = colors[i%colors.length];
+    // Geocode driver's current job address
+    const addr = d.job.dropoff_address || d.job.pickup_address;
+    if(!addr) return;
+    geocoder.geocode({address:addr+', Atlanta GA'},(results,status)=>{
+      if(status!=='OK'||!results.length) return;
+      const pos = results[0].geometry.location;
+      const marker = new google.maps.Marker({
+        position:pos, map:smartTrackMapObj,
+        label:{text:d.name.split(' ')[0].charAt(0),color:'#fff',fontWeight:'800',fontSize:'12px'},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:color,fillOpacity:1,strokeColor:'#fff',strokeWeight:2},
+        title:d.name+' - '+statusLabel(d.job.status)
+      });
+      smartTrackMarkers.push(marker);
+    });
+  });
+}
+
 // ── SUPABASE ──
 const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
@@ -625,30 +679,12 @@ function renderDrivers(){
   const drivers=Object.values(driverMap);
   const list=document.getElementById('driverList');
 
-  // Map pins (simple decorative until Google Maps)
-  const mapBox=document.getElementById('mapBox');
-  // Remove old pins
-  mapBox.querySelectorAll('.map-pin').forEach(p=>p.remove());
-  const showLabel=!drivers.length;
-  document.getElementById('mapLabel').style.display=showLabel?'block':'none';
-
   if(!drivers.length){
     list.innerHTML='<div class="empty"><div class="empty-sub">No drivers currently active</div></div>';
+    buildSmartTrackMap([]);
     return;
   }
-
-  // Scatter pins on map
-  const positions=[[30,20],[55,45],[70,25],[40,60],[80,55],[20,50]];
-  drivers.forEach((d,i)=>{
-    const pos=positions[i%positions.length];
-    const colors=['var(--blue)','var(--green)','var(--purple)','var(--orange)'];
-    const color=colors[i%colors.length];
-    const pin=document.createElement('div');
-    pin.className='map-pin';
-    pin.style.cssText=`left:${pos[0]}%;top:${pos[1]}%;color:${color};`;
-    pin.innerHTML=`<div class="map-pin-ring"></div><div class="map-pin-dot" style="background:${color};border-color:var(--bg);"></div>`;
-    mapBox.appendChild(pin);
-  });
+  buildSmartTrackMap(drivers);
 
   list.innerHTML=drivers.map((d,i)=>{
     const colors=['var(--blue)','var(--green)','var(--purple)','var(--orange)'];
