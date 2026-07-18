@@ -185,7 +185,13 @@ function toggleMap(){
   mapShowing = !mapShowing;
   wrap.classList.toggle('on', mapShowing);
   btn.textContent = mapShowing ? 'Hide Map' : 'Show Map';
-  if(mapShowing && !mapInitialized) buildMap();
+  if(mapShowing && !mapInitialized){
+    if(typeof google === 'undefined' || !google.maps){
+      setTimeout(buildMap, 500);
+    } else {
+      buildMap();
+    }
+  }
 }
 
 function buildMap(){
@@ -193,7 +199,7 @@ function buildMap(){
   if(!stops || !stops.length) return;
   mapInitialized = true;
 
-  const validStops = stops.filter(s=>s.lat && s.lng);
+  const validStops = stops.filter(s=>s.lat !== null && s.lng !== null);
   if(!validStops.length) return;
 
   // Center map on first stop
