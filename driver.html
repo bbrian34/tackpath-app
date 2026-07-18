@@ -1030,7 +1030,7 @@ async function pollJobs(){
   if(document.getElementById('scOffer').classList.contains('on'))return;
   const scanEl=document.getElementById('scanTxt');
   try{
-    const jobs=await sbGet('jobs?select=*&status=eq.pending&order=created_at.desc&limit=10');
+    const jobs=await sbGet('jobs?select=*&status=in.(routing,pending,assigned)&order=created_at.desc&limit=10');
     const available=jobs.filter(j=>!rejectedIds.has(j.id));
     if(scanEl)scanEl.textContent=available.length+' signal'+(available.length!==1?'s':'')+' available';
     const ws=document.getElementById('waitState');
