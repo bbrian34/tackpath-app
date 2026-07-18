@@ -52,6 +52,19 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
 .demo-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text);}
 
+/* FILE ATTACHED */
+.file-attached{display:none;background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.2);
+  border-radius:12px;padding:14px 18px;margin-bottom:16px;
+  display:none;align-items:center;gap:12px;}
+.file-attached.on{display:flex;}
+.file-icon{width:36px;height:36px;border-radius:9px;background:rgba(83,255,136,.1);
+  border:1px solid rgba(83,255,136,.2);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:16px;}
+.file-name{font-size:14px;font-weight:700;color:#fff;flex:1;}
+.file-count{font-family:var(--mono);font-size:11px;color:var(--green);}
+.file-remove{font-size:18px;color:var(--muted);cursor:pointer;padding:4px;}
+.file-remove:hover{color:var(--red);}
+
 /* PROGRESS */
 .progress-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;
   padding:24px;margin-bottom:20px;display:none;}
@@ -305,7 +318,16 @@ function buildMap(){
   </div>
 
   <!-- PROGRESS -->
-  <div class="progress-wrap" id="progressWrap">
+  <div class="file-attached" id="fileAttached">
+  <div class="file-icon">&#128196;</div>
+  <div>
+    <div class="file-name" id="fileName">manifest.csv</div>
+    <div class="file-count" id="fileCount"></div>
+  </div>
+  <div class="file-remove" onclick="clearFile()" title="Remove">&#10005;</div>
+</div>
+
+<div class="progress-wrap" id="progressWrap">
     <div class="progress-title">Sequencing Route</div>
     <div class="progress-sub" id="progressSub">Geocoding addresses...</div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
@@ -361,8 +383,20 @@ let warehouseGeo = null;
 function handleFile(file){
   if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file');return;}
   const reader = new FileReader();
-  reader.onload = e => parseCSV(e.target.result);
+  reader.onload = e => {
+    parseCSV(e.target.result);
+    // Show file attached indicator
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileAttached').classList.add('on');
+  };
   reader.readAsText(file);
+}
+
+function clearFile(){
+  packages = [];
+  document.getElementById('fileAttached').classList.remove('on');
+  document.getElementById('fileInput').value = '';
+  toast('Manifest removed');
 }
 
 function parseCSV(text){
@@ -388,6 +422,7 @@ function parseCSV(text){
     });
   }
   if(!packages.length){toast('No valid packages found');return;}
+  document.getElementById('fileCount').textContent = packages.length+' stops ready to sequence';
   startGeocoding();
 }
 
