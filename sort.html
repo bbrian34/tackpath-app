@@ -303,16 +303,14 @@ async function startGeocoding(){
   const withCoords = geocoded.filter(p=>p.lat!==null);
   const withoutCoords = geocoded.filter(p=>p.lat===null);
 
-  let sequenced;
-  if(withCoords.length <= 10){
-    sequenced = await optimizeWithDistanceMatrix(withCoords);
-  } else {
-    sequenced = nearestNeighborDriving(withCoords);
-  }
+  document.getElementById('progressSub').textContent = 'Sequencing stops...';
+  document.getElementById('progressFill').style.width = '90%';
 
+  const sequenced = nearestNeighborDriving(withCoords);
   const final = [...sequenced, ...withoutCoords];
+
   document.getElementById('progressFill').style.width = '100%';
-  await sleep(200);
+  await sleep(150);
   renderResults(final);
 }
 
