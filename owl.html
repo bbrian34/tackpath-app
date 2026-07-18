@@ -484,7 +484,7 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
             <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Driver Performance</div>
             <div class="card" style="overflow:hidden;">
               <table class="ria-table">
-                <thead><tr><th>Driver</th><th>Deliveries</th><th>Revenue</th><th>Avg/Job</th></tr></thead>
+                <thead><tr><th>Driver</th><th>Deliveries</th><th>Revenue</th><th>Avg/Job</th><th>Rating</th></tr></thead>
                 <tbody id="riaDriverBody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-family:var(--mono);font-size:9px;">Click Run RIA to analyze</td></tr></tbody>
               </table>
             </div>
@@ -878,9 +878,13 @@ async function runRIA(){
     const driverMap = {};
     delivered.forEach(j=>{
       const n = j.driver_name||'Unassigned';
-      if(!driverMap[n]) driverMap[n]={name:n,jobs:0,revenue:0};
+      if(!driverMap[n]) driverMap[n]={name:n,jobs:0,revenue:0,ratings:[],totalRating:0,ratedCount:0};
       driverMap[n].jobs++;
       driverMap[n].revenue += parseFloat(j.price||0);
+      if(j.driver_rating){
+        driverMap[n].totalRating += j.driver_rating;
+        driverMap[n].ratedCount++;
+      }
     });
     const drivers = Object.values(driverMap).filter(d=>d.name!=='Unassigned').sort((a,b)=>b.revenue-a.revenue);
 
@@ -890,11 +894,14 @@ async function runRIA(){
     } else {
       dbody.innerHTML = drivers.map(d=>{
         const avg = (d.revenue/d.jobs).toFixed(2);
+        const avgRating = d.ratedCount > 0 ? (d.totalRating/d.ratedCount).toFixed(1) : null;
+        const stars = avgRating ? '&#9733;'.repeat(Math.round(avgRating)) + '<span style="opacity:.3;">' + '&#9733;'.repeat(5-Math.round(avgRating)) + '</span>' : '<span style="opacity:.3;">Not rated</span>';
         return `<tr>
           <td style="font-weight:700;">${d.name}</td>
           <td style="font-family:var(--mono);">${d.jobs}</td>
           <td style="font-family:var(--mono);color:var(--green);">$${d.revenue.toFixed(2)}</td>
           <td style="font-family:var(--mono);">$${avg}</td>
+          <td style="color:#f5c518;font-size:13px;">${stars}${avgRating?` <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">${avgRating}</span>`:''}</td>
         </tr>`;
       }).join('');
     }
