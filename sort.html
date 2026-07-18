@@ -26,6 +26,17 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 /* MAIN */
 .main{max-width:700px;margin:0 auto;padding:24px 16px 60px;}
 
+/* WAREHOUSE FIELD */
+.warehouse-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:20px;margin-bottom:16px;}
+.warehouse-lbl{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;display:block;}
+.warehouse-in{width:100%;padding:14px 16px;border-radius:11px;background:var(--card2);
+  border:1px solid rgba(255,255,255,.12);color:#fff;font-size:15px;font-weight:600;
+  font-family:'DM Sans',sans-serif;outline:none;}
+.warehouse-in:focus{border-color:rgba(25,183,239,.4);}
+.warehouse-in::placeholder{color:rgba(238,244,255,.3);font-weight:400;}
+
 /* UPLOAD ZONE */
 .upload-zone{background:var(--card);border:2px dashed rgba(25,183,239,.25);
   border-radius:18px;padding:48px 32px;text-align:center;cursor:pointer;
@@ -168,7 +179,12 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 <div class="main">
 
   <!-- UPLOAD -->
-  <div class="upload-zone" id="uploadZone"
+  <div class="warehouse-wrap" id="warehouseWrap">
+  <label class="warehouse-lbl">Where are packages being dispatched from?</label>
+  <input class="warehouse-in" id="warehouseAddr" type="text" placeholder="Enter warehouse or pickup address..."/>
+</div>
+
+<div class="upload-zone" id="uploadZone"
     ondragover="event.preventDefault();this.classList.add('drag')"
     ondragleave="this.classList.remove('drag')"
     ondrop="event.preventDefault();this.classList.remove('drag');handleFile(event.dataTransfer.files[0])">
@@ -272,14 +288,29 @@ function loadDemo(){
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function startGeocoding(){
+  const warehouseAddr = document.getElementById('warehouseAddr').value.trim();
+  if(!warehouseAddr){toast('Please enter the dispatch address first');return;}
+
   document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('warehouseWrap').style.display = 'none';
   document.getElementById('progressWrap').style.display = 'block';
   document.getElementById('progressSub').textContent = 'Geocoding addresses...';
-  document.getElementById('progressFill').style.width = '20%';
-  document.getElementById('progressAddress').textContent = 'Processing '+packages.length+' addresses...';
+  document.getElementById('progressFill').style.width = '10%';
+  document.getElementById('progressAddress').textContent = 'Processing warehouse + '+packages.length+' addresses...';
 
-  // Use REST API -- much faster than JS library
   const KEY = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
+
+  // Geocode warehouse address first
+  const warehouseGeo = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(warehouseAddr)+'&key='+KEY)
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.status==='OK' && data.results.length){
+        return {lat: data.results[0].geometry.location.lat, lng: data.results[0].geometry.location.lng};
+      }
+      return null;
+    }).catch(()=>null);
+
+  // Geocode all delivery addresses in parallel
   const geocodePromises = packages.map(pkg =>
     fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(pkg.address)+'&key='+KEY)
       .then(r=>r.json())
@@ -304,7 +335,7 @@ async function startGeocoding(){
   document.getElementById('progressSub').textContent = 'Sequencing stops...';
   document.getElementById('progressFill').style.width = '90%';
 
-  const sequenced = nearestNeighborDriving(withCoords);
+  const sequenced = nearestNeighborDriving(withCoords, warehouseGeo);
   const final = [...sequenced, ...withoutCoords];
 
   document.getElementById('progressFill').style.width = '100%';
@@ -315,12 +346,13 @@ async function startGeocoding(){
 
 
 // Nearest-neighbor using straight-line for larger manifests
-function nearestNeighborDriving(stops){
+function nearestNeighborDriving(stops, startPoint){
   if(!stops.length) return [];
   const unvisited = [...stops];
   const route = [];
-  let current = unvisited.shift();
-  route.push(current);
+  // Start from warehouse if available, otherwise first stop
+  let current = startPoint || unvisited[0];
+  if(!startPoint) route.push(unvisited.shift());
   while(unvisited.length){
     let nearest = null, minDist = Infinity, nearestIdx = 0;
     unvisited.forEach((s,i)=>{
@@ -364,11 +396,7 @@ function renderResults(stops){
     <div class="tb-stat"><div class="tb-num">${stops.length}</div><div class="tb-lbl">Stops</div></div>
     <div class="tb-stat"><div class="tb-num">${totalPkgs}</div><div class="tb-lbl">Packages</div></div>
     <div class="tb-stat"><div class="tb-num">${stops.length}</div><div class="tb-lbl">Sequence Ready</div></div>
-    <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;line-height:1.6;">
-        Load van in reverse order<br>Stop ${stops.length} loads first &rarr; Stop 1 loads last
-      </div>
-    </div>`;
+`;
 }
 
 function resetAll(){
