@@ -2031,13 +2031,7 @@ async function refreshFleetMap(){
   await loadGMaps();
   if(!fleetMap){
     fleetMap=new google.maps.Map(div,{
-      zoom:11,center:{lat:33.749,lng:-84.388},mapTypeId:'roadmap',
-      styles:[
-        {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
-        {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
-        {featureType:'road',elementType:'geometry',stylers:[{color:'#304a7d'}]},
-        {featureType:'water',elementType:'geometry',stylers:[{color:'#0e1626'}]}
-      ]
+      zoom:11,center:{lat:33.749,lng:-84.388},mapTypeId:'roadmap',styles:[]
     });
   }
   try{
