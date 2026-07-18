@@ -269,37 +269,60 @@ let scanInterval = null;
 let barcodeDetector = null;
 
 async function openScanner(){
-  document.getElementById('scanOverlay').classList.add('on');
-  document.getElementById('scanStatus').textContent = 'Starting camera...';
+  const overlay = document.getElementById('scanOverlay');
+  const status = document.getElementById('scanStatus');
+  overlay.classList.add('on');
+  status.textContent = 'Requesting camera access...';
+
+  // Check if mediaDevices is available
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    status.textContent = 'Camera not supported on this browser. Use Chrome.';
+    return;
+  }
 
   try{
-    // Try BarcodeDetector API first (Android Chrome, fast)
-    if('BarcodeDetector' in window){
-      barcodeDetector = new BarcodeDetector({formats:[
-        'code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e','pdf417','data_matrix'
-      ]});
-    }
-
+    // Request camera
     scanStream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+      video:{facingMode:{ideal:'environment'}}
     });
+
     const video = document.getElementById('scanVideo');
     video.srcObject = scanStream;
-    await video.play();
-    document.getElementById('scanStatus').textContent = 'Point camera at barcode';
 
-    if(barcodeDetector){
+    await new Promise((resolve, reject)=>{
+      video.onloadedmetadata = resolve;
+      video.onerror = reject;
+      setTimeout(resolve, 2000);
+    });
+
+    await video.play();
+    status.textContent = 'Point camera at barcode';
+
+    // Try BarcodeDetector
+    if('BarcodeDetector' in window){
+      barcodeDetector = new BarcodeDetector({formats:[
+        'code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e','pdf417','data_matrix','itf','codabar'
+      ]});
       scanInterval = setInterval(async()=>{
+        if(!video.readyState || video.readyState < 2) return;
         try{
           const codes = await barcodeDetector.detect(video);
-          if(codes.length) handleScan(codes[0].rawValue);
+          if(codes.length > 0) handleScan(codes[0].rawValue);
         }catch(e){}
-      }, 300);
+      }, 250);
+      status.textContent = 'Camera ready -- point at barcode';
     } else {
-      document.getElementById('scanStatus').textContent = 'Camera ready -- point at barcode';
+      status.textContent = 'Camera open -- BarcodeDetector not supported on this browser. Try Chrome on Android.';
     }
+
   } catch(e){
-    document.getElementById('scanStatus').textContent = 'Camera unavailable -- please allow camera access';
+    if(e.name === 'NotAllowedError'){
+      status.textContent = 'Camera permission denied. Please allow camera access and try again.';
+    } else if(e.name === 'NotFoundError'){
+      status.textContent = 'No camera found on this device.';
+    } else {
+      status.textContent = 'Camera error: '+e.message;
+    }
   }
 }
 
