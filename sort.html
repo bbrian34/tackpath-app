@@ -580,17 +580,20 @@ async function openScanner(){
 function handleScan(barcode){
   clearInterval(scanInterval);
   const idx = sortedStops.findIndex(s=>s.order_id===barcode||s.order_id.includes(barcode)||barcode.includes(s.order_id));
+
   if(idx===-1){
     document.getElementById('scanStatus').textContent='Not found: '+barcode;
-    setTimeout(()=>{
-      document.getElementById('scanStatus').textContent='Point camera at barcode';
-      if(barcodeDetector){
-        const video=document.getElementById('scanVideo');
-        scanInterval=setInterval(async()=>{try{const c=await barcodeDetector.detect(video);if(c.length)handleScan(c[0].rawValue);}catch(e){}},250);
-      }
-    },1500);
+    setTimeout(resumeScanning, 1500);
     return;
   }
+
+  // Already staged
+  if(confirmedStops[idx]){
+    document.getElementById('scanStatus').textContent='Already Staged -- Stop '+(idx+1)+': '+sortedStops[idx].recipient;
+    setTimeout(resumeScanning, 2000);
+    return;
+  }
+
   const stop = sortedStops[idx];
   document.getElementById('scanOverlay').style.display='none';
   document.getElementById('flashNum').textContent=idx+1;
@@ -598,6 +601,20 @@ function handleScan(barcode){
   document.getElementById('flashAddr').textContent=stop.address;
   document.getElementById('scanFlash').style.display='flex';
   confirmStop(idx);
+  beep();
+}
+
+function resumeScanning(){
+  document.getElementById('scanStatus').textContent='Point camera at barcode';
+  if(barcodeDetector){
+    const video=document.getElementById('scanVideo');
+    scanInterval=setInterval(async()=>{
+      try{const c=await barcodeDetector.detect(video);if(c.length)handleScan(c[0].rawValue);}catch(e){}
+    },250);
+  }
+}
+
+function beep(){
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
     const osc=ctx.createOscillator(),gain=ctx.createGain();
@@ -613,10 +630,7 @@ function continueScan(){
   document.getElementById('scanFlash').style.display='none';
   document.getElementById('scanOverlay').style.display='flex';
   document.getElementById('scanStatus').textContent='Point camera at next barcode';
-  if(barcodeDetector){
-    const video=document.getElementById('scanVideo');
-    scanInterval=setInterval(async()=>{try{const c=await barcodeDetector.detect(video);if(c.length)handleScan(c[0].rawValue);}catch(e){}},250);
-  }
+  resumeScanning();
 }
 
 function closeScanner(){
