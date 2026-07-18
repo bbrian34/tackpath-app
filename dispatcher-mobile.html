@@ -495,14 +495,11 @@ async function buildSmartTrackMap(drivers){
   const mapDiv = document.getElementById('smartTrackMap');
   if(!mapDiv) return;
 
-  // Atlanta center as default
   const center = {lat:33.749,lng:-84.388};
 
   if(!smartTrackMapObj){
     smartTrackMapObj = new google.maps.Map(mapDiv, {
-      zoom:11, center,
-      mapTypeId:'roadmap',
-      disableDefaultUI:true,
+      zoom:11, center, mapTypeId:'roadmap', disableDefaultUI:true,
       styles:[
         {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
         {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
@@ -512,32 +509,60 @@ async function buildSmartTrackMap(drivers){
     });
   }
 
-  // Clear old markers
   smartTrackMarkers.forEach(m=>m.setMap(null));
   smartTrackMarkers=[];
 
-  if(!drivers.length) return;
+  // Pull real GPS from driver_locations table
+  try{
+    const locs = await sbGet('driver_locations?order=updated_at.desc&limit=50');
+    const recentLocs = {};
+    locs.forEach(l=>{
+      // Keep only most recent location per driver
+      if(!recentLocs[l.driver_name] ||
+         new Date(l.updated_at) > new Date(recentLocs[l.driver_name].updated_at)){
+        recentLocs[l.driver_name] = l;
+      }
+    });
 
-  const colors=['#19b7ef','#53ff88','#8d5cff','#ff961e'];
-  const geocoder = new google.maps.Geocoder();
-
-  drivers.forEach((d,i)=>{
-    const color = colors[i%colors.length];
-    // Geocode driver's current job address
-    const addr = d.job.dropoff_address || d.job.pickup_address;
-    if(!addr) return;
-    geocoder.geocode({address:addr+', Atlanta GA'},(results,status)=>{
-      if(status!=='OK'||!results.length) return;
-      const pos = results[0].geometry.location;
+    const colors=['#19b7ef','#53ff88','#8d5cff','#ff961e'];
+    Object.values(recentLocs).forEach((loc,i)=>{
+      const color = colors[i%colors.length];
+      const age = (Date.now() - new Date(loc.updated_at))/1000;
+      const opacity = age > 60 ? 0.4 : 1; // fade if location is old
       const marker = new google.maps.Marker({
-        position:pos, map:smartTrackMapObj,
-        label:{text:d.name.split(' ')[0].charAt(0),color:'#fff',fontWeight:'800',fontSize:'12px'},
-        icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:color,fillOpacity:1,strokeColor:'#fff',strokeWeight:2},
-        title:d.name+' - '+statusLabel(d.job.status)
+        position:{lat:parseFloat(loc.lat), lng:parseFloat(loc.lng)},
+        map:smartTrackMapObj,
+        label:{text:(loc.driver_name||'?').charAt(0).toUpperCase(),color:'#fff',fontWeight:'800',fontSize:'12px'},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,
+          fillColor:color,fillOpacity:opacity,strokeColor:'#fff',strokeWeight:2},
+        title:loc.driver_name+' (updated '+Math.round(age)+'s ago)'
       });
       smartTrackMarkers.push(marker);
+
+      // Center map on first driver
+      if(i===0) smartTrackMapObj.setCenter({lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)});
     });
-  });
+
+    // If no GPS data yet fall back to job addresses
+    if(Object.keys(recentLocs).length === 0 && drivers.length){
+      const geocoder = new google.maps.Geocoder();
+      drivers.forEach((d,i)=>{
+        const addr = d.job.dropoff_address||d.job.pickup_address;
+        if(!addr) return;
+        geocoder.geocode({address:addr},(results,status)=>{
+          if(status!=='OK'||!results.length) return;
+          const marker = new google.maps.Marker({
+            position:results[0].geometry.location, map:smartTrackMapObj,
+            label:{text:d.name.charAt(0).toUpperCase(),color:'#fff',fontWeight:'800',fontSize:'12px'},
+            icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:colors[i%colors.length],
+              fillOpacity:0.5,strokeColor:'#fff',strokeWeight:2},
+            title:d.name+' (estimated location)'
+          });
+          smartTrackMarkers.push(marker);
+        });
+      });
+    }
+  }catch(e){console.error('SmartTrack GPS error:',e);}
 }
 
 // ── SUPABASE ──
@@ -939,7 +964,12 @@ function showView(v){
   }
   const tabMap={jobs:'tab-jobs',track:'tab-track',alerts:'tab-alerts',more:'tab-more'};
   if(tabMap[v])document.getElementById(tabMap[v])?.classList.add('active');
-  if(v==='track')renderDrivers();
+  if(v==='track'){
+    renderDrivers();
+    if(!window._trackRefresh) window._trackRefresh = setInterval(()=>{
+      if(document.getElementById('viewTrack').style.display!=='none') renderDrivers();
+    },10000);
+  }
 }
 
 // ── INIT ──
