@@ -616,13 +616,18 @@ function resumeScanning(){
 
 function beep(){
   try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const osc=ctx.createOscillator(),gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.frequency.value=880;osc.type='sine';
-    gain.gain.setValueAtTime(.3,ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.15);
-    osc.start(ctx.currentTime);osc.stop(ctx.currentTime+.15);
+    const ctx = new(window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc.frequency.setValueAtTime(900, ctx.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.8, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.18);
   }catch(e){}
 }
 
