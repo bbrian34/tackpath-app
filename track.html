@@ -216,18 +216,6 @@ function renderTracking(job){
       </div>
     </div>`;
 
-  // Driver card if assigned
-  if(job.driver_name && job.status!=='routing' && job.status!=='pending'){
-    html+=`
-    <div class="driver-card">
-      <div class="driver-avatar">&#128664;</div>
-      <div>
-        <div class="driver-name">${job.driver_name}</div>
-        <div class="driver-status"><div class="driver-dot"></div>Your Driver</div>
-      </div>
-    </div>`;
-  }
-
   // Map
   html+=`
     <div class="map-container" style="height:260px;border-radius:16px;overflow:hidden;margin-bottom:14px;position:relative;">
@@ -241,6 +229,17 @@ function renderTracking(job){
           background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);">SmartTrack</div>
       </div>
     </div>`;
+
+  // Driver card if assigned
+  if(job.driver_name && job.status!=='routing' && job.status!=='pending'){
+    html+=`
+    <div class="driver-card">
+      <div>
+        <div class="driver-name">${job.driver_name}</div>
+        <div class="driver-status"><div class="driver-dot"></div>Your Driver</div>
+      </div>
+    </div>`;
+  }
 
   // Delivery details
   html+=`
