@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>TackPath Sort</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;
+  --bg:#010e21;--card:#071828;--card2:#0d2135;--border:rgba(255,255,255,.08);
+  --text:#eef4ff;--muted:rgba(238,244,255,.65);--mono:'DM Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+
+/* TOPBAR */
+.topbar{height:56px;background:rgba(1,14,33,.98);border-bottom:1px solid rgba(25,183,239,.1);
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:10;}
+.tb-logo{display:flex;align-items:center;gap:8px;}
+.tb-wordmark{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.05em;}
+.tb-badge{font-family:var(--mono);font-size:8px;font-weight:700;padding:3px 8px;
+  border-radius:6px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);
+  color:var(--blue);letter-spacing:.1em;text-transform:uppercase;}
+
+/* MAIN */
+.main{max-width:700px;margin:0 auto;padding:24px 16px 60px;}
+
+/* UPLOAD ZONE */
+.upload-zone{background:var(--card);border:2px dashed rgba(25,183,239,.25);
+  border-radius:18px;padding:48px 32px;text-align:center;cursor:pointer;
+  transition:all .2s;margin-bottom:20px;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(25,183,239,.05);}
+.upload-title{font-size:24px;font-weight:800;margin-bottom:10px;}
+.upload-sub{font-size:16px;color:var(--muted);margin-bottom:24px;line-height:1.7;}
+.upload-btn{display:inline-block;padding:16px 36px;border-radius:12px;
+  background:var(--blue);color:#fff;font-size:16px;font-weight:800;cursor:pointer;}
+.upload-or{font-size:12px;color:var(--muted);margin:14px 0;}
+.demo-btn{padding:14px 28px;border-radius:12px;background:transparent;
+  border:1px solid var(--border);color:rgba(238,244,255,.8);font-size:15px;font-weight:700;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.demo-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text);}
+
+/* PROGRESS */
+.progress-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:24px;margin-bottom:20px;display:none;}
+.progress-title{font-size:18px;font-weight:800;margin-bottom:8px;}
+.progress-sub{font-size:15px;color:rgba(238,244,255,.85);margin-bottom:16px;font-weight:600;}
+.progress-bar-bg{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),#5dd4f4);
+  border-radius:3px;transition:width .3s ease;width:0%;}
+.progress-address{font-family:var(--mono);font-size:12px;color:rgba(238,244,255,.7);
+  margin-top:10px;letter-spacing:.04em;}
+
+/* RESULTS */
+.results-wrap{display:none;}
+.results-header{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;flex-wrap:wrap;gap:12px;}
+.results-title{font-size:26px;font-weight:800;}
+.results-meta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:5px;}
+.results-actions{display:flex;gap:10px;}
+.action-btn{padding:13px 20px;border-radius:10px;font-size:15px;font-weight:800;
+  cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.ab-print{background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.2);color:var(--green);}
+.ab-reset{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);}
+
+/* STOP CARDS */
+.stop-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;
+  transition:border-color .15s;}
+.stop-card:hover{border-color:rgba(25,183,239,.2);}
+.stop-num{width:56px;height:56px;border-radius:12px;background:var(--blue);
+  color:#fff;font-family:var(--mono);font-size:24px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stop-info{flex:1;min-width:0;}
+.stop-name{font-size:18px;font-weight:800;margin-bottom:4px;color:#fff;}
+.stop-address{font-size:15px;color:rgba(238,244,255,.9);line-height:1.5;font-weight:500;}
+.stop-right{text-align:right;flex-shrink:0;}
+.stop-pkgs{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--blue);}
+.stop-pkgs-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;}
+.stop-id{font-family:var(--mono);font-size:11px;color:rgba(238,244,255,.4);
+  margin-top:4px;letter-spacing:.04em;}
+
+/* TOTAL BAR */
+.total-bar{background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.15);
+  border-radius:12px;padding:16px 20px;display:flex;gap:32px;margin-top:16px;flex-wrap:wrap;}
+.tb-stat{text-align:center;}
+.tb-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--blue);}
+.tb-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;margin-top:4px;}
+
+/* TOAST */
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);
+  background:rgba(7,24,40,.97);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:10px 20px;font-size:13px;font-weight:600;
+  z-index:9999;display:none;white-space:nowrap;}
+
+/* PRINT STYLES */
+@media print{
+  .topbar,.upload-zone,.progress-wrap,.results-actions,.demo-btn,#toast{display:none!important;}
+  body{background:#fff;color:#000;}
+  .main{max-width:100%;padding:0;}
+  .results-wrap{display:block!important;}
+  .results-title{color:#000;font-size:18px;}
+  .results-meta{color:#555;}
+  .stop-card{background:#fff;border:1px solid #ddd;break-inside:avoid;margin-bottom:8px;padding:14px;}
+  .stop-num{background:#19b7ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .stop-name{color:#000;}
+  .stop-address{color:#333;}
+  .stop-pkgs{color:#19b7ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .stop-id{color:#999;}
+  .total-bar{background:#f0f9ff;border:1px solid #19b7ef;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .tb-num{color:#19b7ef;}
+  .tb-lbl{color:#555;}
+}
+
+@media(max-width:480px){
+  .stop-card{flex-wrap:wrap;}
+  .stop-right{flex:100%;display:flex;gap:16px;align-items:center;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-logo">
+    <svg width="13" height="21" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+    </svg>
+    <div class="tb-wordmark"><span style="color:#fff;">TACK</span><span style="color:#19b7ef;">PATH</span></div>
+  </div>
+  <div class="tb-badge">Sort</div>
+</div>
+
+<div id="toast"></div>
+
+<div class="main">
+
+  <!-- UPLOAD -->
+  <div class="upload-zone" id="uploadZone"
+    ondragover="event.preventDefault();this.classList.add('drag')"
+    ondragleave="this.classList.remove('drag')"
+    ondrop="event.preventDefault();this.classList.remove('drag');handleFile(event.dataTransfer.files[0])">
+    <div class="upload-title">Upload Your Manifest</div>
+    <div class="upload-sub">Upload a CSV with your delivery stops.<br>TackPath will sequence them in the optimal delivery order.</div>
+    <label class="upload-btn" for="fileInput">Choose CSV File</label>
+    <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="handleFile(this.files[0])"/>
+    <div class="upload-or">or</div>
+    <button class="demo-btn" onclick="loadDemo()">Load Demo Data</button>
+    <div style="margin-top:20px;font-family:var(--mono);font-size:9px;color:rgba(238,244,255,.25);letter-spacing:.1em;">
+      Required columns: order_id, recipient, address, packages
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-title">Sequencing Route</div>
+    <div class="progress-sub" id="progressSub">Geocoding addresses...</div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-address" id="progressAddress"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-wrap" id="resultsWrap">
+    <div class="results-header">
+      <div>
+        <div class="results-title">Delivery Sequence</div>
+        <div class="results-meta" id="resultsMeta"></div>
+      </div>
+      <div class="results-actions">
+        <button class="action-btn ab-print" onclick="window.print()">Print List</button>
+        <button class="action-btn ab-reset" onclick="resetAll()">Start Over</button>
+      </div>
+    </div>
+    <div id="stopsList"></div>
+    <div class="total-bar" id="totalBar"></div>
+  </div>
+
+</div>
+
+<script>
+const DEMO = [
+  {order_id:'TP65782101',recipient:'Marcus Johnson',address:'142 Peachtree St NW, Atlanta GA 30303',packages:2},
+  {order_id:'TP65782102',recipient:'Sarah Williams',address:'890 Marietta St NW, Atlanta GA 30318',packages:1},
+  {order_id:'TP65782103',recipient:'David Chen',address:'1180 Peachtree St NE, Atlanta GA 30309',packages:3},
+  {order_id:'TP65782104',recipient:'Jennifer Davis',address:'75 5th St NW, Atlanta GA 30308',packages:1},
+  {order_id:'TP65782105',recipient:'Robert Miller',address:'400 W Peachtree St NW, Atlanta GA 30308',packages:2},
+  {order_id:'TP65782106',recipient:'Angela Thompson',address:'3393 Peachtree Rd NE, Atlanta GA 30326',packages:4},
+  {order_id:'TP65782107',recipient:'Kevin Harris',address:'2500 Cumberland Pkwy SE, Atlanta GA 30339',packages:1},
+  {order_id:'TP65782108',recipient:'Patricia Moore',address:'1544 Piedmont Ave NE, Atlanta GA 30324',packages:2},
+  {order_id:'TP65782109',recipient:'James Wilson',address:'640 W Peachtree St NW, Atlanta GA 30308',packages:1},
+  {order_id:'TP65782110',recipient:'Linda Anderson',address:'220 Interstate N Pkwy SE, Atlanta GA 30339',packages:3},
+  {order_id:'TP65782111',recipient:'Michael Brown',address:'3630 Peachtree Rd NE, Atlanta GA 30319',packages:2},
+  {order_id:'TP65782112',recipient:'Barbara Jackson',address:'1000 Northside Dr NW, Atlanta GA 30318',packages:1},
+  {order_id:'TP65782113',recipient:'Christopher White',address:'2550 Sandy Plains Rd, Marietta GA 30066',packages:2},
+  {order_id:'TP65782114',recipient:'Susan Taylor',address:'4300 Paces Ferry Rd SE, Atlanta GA 30339',packages:1},
+  {order_id:'TP65782115',recipient:'Matthew Martinez',address:'1100 Spring St NW, Atlanta GA 30309',packages:3},
+];
+
+let packages = [];
+
+function handleFile(file){
+  if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file');return;}
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file);
+}
+
+function parseCSV(text){
+  const lines = text.trim().split('\n');
+  if(lines.length < 2){toast('CSV needs a header and at least one row');return;}
+  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
+  const idx = {
+    order_id: headers.indexOf('order_id'),
+    recipient: headers.indexOf('recipient'),
+    address: headers.indexOf('address'),
+    packages: headers.indexOf('packages')
+  };
+  if(idx.address < 0){toast('Missing required column: address');return;}
+  packages = [];
+  for(let i=1;i<lines.length;i++){
+    const c = lines[i].split(',').map(v=>v.trim().replace(/"/g,''));
+    if(!c[idx.address]) continue;
+    packages.push({
+      order_id: c[idx.order_id] || ('TP'+String(i).padStart(5,'0')),
+      recipient: c[idx.recipient] || 'Stop '+(i),
+      address: c[idx.address],
+      packages: parseInt(c[idx.packages]) || 1
+    });
+  }
+  if(!packages.length){toast('No valid packages found');return;}
+  startGeocoding();
+}
+
+function loadDemo(){
+  packages = [...DEMO];
+  startGeocoding();
+}
+
+// ── GEOCODING + SEQUENCING ──
+async function startGeocoding(){
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'block';
+
+  const geocoded = [];
+  for(let i=0; i<packages.length; i++){
+    const pct = Math.round((i/packages.length)*80);
+    document.getElementById('progressFill').style.width = pct+'%';
+    document.getElementById('progressSub').textContent = `Geocoding ${i+1} of ${packages.length} addresses...`;
+    document.getElementById('progressAddress').textContent = packages[i].address;
+
+    try{
+      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+
+        encodeURIComponent(packages[i].address);
+      const r = await fetch(url, {headers:{'User-Agent':'TackPath/1.0'}});
+      const data = await r.json();
+      if(data.length){
+        geocoded.push({...packages[i], lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)});
+      } else {
+        // fallback -- keep package but place at end
+        geocoded.push({...packages[i], lat: null, lng: null});
+      }
+    } catch(e){
+      geocoded.push({...packages[i], lat: null, lng: null});
+    }
+
+    // Respect Nominatim 1 req/sec rate limit
+    if(i < packages.length-1) await sleep(1100);
+  }
+
+  document.getElementById('progressSub').textContent = 'Sequencing optimal delivery order...';
+  document.getElementById('progressFill').style.width = '90%';
+
+  // Separate geocoded from failed
+  const withCoords = geocoded.filter(p=>p.lat!==null);
+  const withoutCoords = geocoded.filter(p=>p.lat===null);
+
+  // Nearest-neighbor sequencing
+  const sequenced = nearestNeighbor(withCoords);
+
+  // Append unresolved addresses at end
+  const final = [...sequenced, ...withoutCoords];
+
+  document.getElementById('progressFill').style.width = '100%';
+  await sleep(400);
+
+  renderResults(final);
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function nearestNeighbor(stops){
+  if(!stops.length) return [];
+  const unvisited = [...stops];
+  const route = [];
+
+  // Start from first stop (warehouse pickup point)
+  let current = unvisited.shift();
+  route.push(current);
+
+  while(unvisited.length){
+    let nearest = null;
+    let minDist = Infinity;
+    let nearestIdx = 0;
+
+    unvisited.forEach((stop, i)=>{
+      const d = distance(current.lat, current.lng, stop.lat, stop.lng);
+      if(d < minDist){minDist=d; nearest=stop; nearestIdx=i;}
+    });
+
+    route.push(nearest);
+    unvisited.splice(nearestIdx,1);
+    current = nearest;
+  }
+  return route;
+}
+
+function distance(lat1, lng1, lat2, lng2){
+  // Haversine formula -- straight line distance in km
+  const R = 6371;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function renderResults(stops){
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('resultsWrap').style.display = 'block';
+
+  const totalPkgs = stops.reduce((s,p)=>s+p.packages,0);
+  document.getElementById('resultsMeta').textContent =
+    stops.length+' stops · '+totalPkgs+' total packages · Load in reverse order (stop '+stops.length+' first)';
+
+  document.getElementById('stopsList').innerHTML = stops.map((s,i)=>`
+    <div class="stop-card">
+      <div class="stop-num">${i+1}</div>
+      <div class="stop-info">
+        <div class="stop-name">${s.recipient}</div>
+        <div class="stop-address">${s.address}</div>
+        <div class="stop-id">${s.order_id}</div>
+      </div>
+      <div class="stop-right">
+        <div class="stop-pkgs">${s.packages}</div>
+        <div class="stop-pkgs-lbl">pkg${s.packages!==1?'s':''}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('totalBar').innerHTML = `
+    <div class="tb-stat"><div class="tb-num">${stops.length}</div><div class="tb-lbl">Stops</div></div>
+    <div class="tb-stat"><div class="tb-num">${totalPkgs}</div><div class="tb-lbl">Packages</div></div>
+    <div class="tb-stat"><div class="tb-num">${stops.length}</div><div class="tb-lbl">Sequence Ready</div></div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;line-height:1.6;">
+        Load van in reverse order<br>Stop ${stops.length} loads first &rarr; Stop 1 loads last
+      </div>
+    </div>`;
+}
+
+function resetAll(){
+  packages = [];
+  document.getElementById('uploadZone').style.display = 'block';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('resultsWrap').style.display = 'none';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('fileInput').value = '';
+}
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.style.display='none', 3000);
+}
+</script>
+</body>
+</html>
