@@ -120,6 +120,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   .stop-right{flex:100%;display:flex;gap:16px;align-items:center;}
 }
 </style>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8&libraries=geometry"></script>
 </head>
 <body>
 
@@ -241,93 +242,124 @@ function loadDemo(){
   startGeocoding();
 }
 
-// ── GEOCODING + SEQUENCING ──
+// ── GEOCODING + SEQUENCING via Google Maps ──
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
 async function startGeocoding(){
   document.getElementById('uploadZone').style.display = 'none';
   document.getElementById('progressWrap').style.display = 'block';
 
+  const geocoder = new google.maps.Geocoder();
   const geocoded = [];
+
   for(let i=0; i<packages.length; i++){
-    const pct = Math.round((i/packages.length)*80);
+    const pct = Math.round((i/packages.length)*70);
     document.getElementById('progressFill').style.width = pct+'%';
-    document.getElementById('progressSub').textContent = `Geocoding ${i+1} of ${packages.length} addresses...`;
+    document.getElementById('progressSub').textContent = 'Geocoding '+( i+1)+' of '+packages.length+' addresses...';
     document.getElementById('progressAddress').textContent = packages[i].address;
 
     try{
-      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+
-        encodeURIComponent(packages[i].address);
-      const r = await fetch(url, {headers:{'User-Agent':'TackPath/1.0'}});
-      const data = await r.json();
-      if(data.length){
-        geocoded.push({...packages[i], lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)});
-      } else {
-        // fallback -- keep package but place at end
-        geocoded.push({...packages[i], lat: null, lng: null});
-      }
+      const result = await new Promise((resolve, reject)=>{
+        geocoder.geocode({address: packages[i].address}, (results, status)=>{
+          if(status === 'OK') resolve(results[0].geometry.location);
+          else reject(status);
+        });
+      });
+      geocoded.push({...packages[i], lat: result.lat(), lng: result.lng()});
     } catch(e){
       geocoded.push({...packages[i], lat: null, lng: null});
     }
 
-    // Respect Nominatim 1 req/sec rate limit
-    if(i < packages.length-1) await sleep(1100);
+    if(i < packages.length-1) await sleep(100);
   }
 
-  document.getElementById('progressSub').textContent = 'Sequencing optimal delivery order...';
-  document.getElementById('progressFill').style.width = '90%';
+  document.getElementById('progressSub').textContent = 'Building optimal delivery sequence...';
+  document.getElementById('progressFill').style.width = '80%';
 
-  // Separate geocoded from failed
   const withCoords = geocoded.filter(p=>p.lat!==null);
   const withoutCoords = geocoded.filter(p=>p.lat===null);
 
-  // Nearest-neighbor sequencing
-  const sequenced = nearestNeighbor(withCoords);
+  // Use Google Maps Distance Matrix for true driving distances on smaller manifests
+  let sequenced;
+  if(withCoords.length <= 10){
+    sequenced = await optimizeWithDistanceMatrix(withCoords);
+  } else {
+    sequenced = nearestNeighborDriving(withCoords);
+  }
 
-  // Append unresolved addresses at end
   const final = [...sequenced, ...withoutCoords];
-
   document.getElementById('progressFill').style.width = '100%';
-  await sleep(400);
-
+  await sleep(300);
   renderResults(final);
 }
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-function nearestNeighbor(stops){
+// Google Distance Matrix for small routes (most accurate)
+async function optimizeWithDistanceMatrix(stops){
   if(!stops.length) return [];
-  const unvisited = [...stops];
-  const route = [];
+  const service = new google.maps.DistanceMatrixService();
+  const latLngs = stops.map(s=>new google.maps.LatLng(s.lat, s.lng));
 
-  // Start from first stop (warehouse pickup point)
-  let current = unvisited.shift();
-  route.push(current);
-
-  while(unvisited.length){
-    let nearest = null;
-    let minDist = Infinity;
-    let nearestIdx = 0;
-
-    unvisited.forEach((stop, i)=>{
-      const d = distance(current.lat, current.lng, stop.lat, stop.lng);
-      if(d < minDist){minDist=d; nearest=stop; nearestIdx=i;}
+  const matrix = await new Promise((resolve, reject)=>{
+    service.getDistanceMatrix({
+      origins: latLngs,
+      destinations: latLngs,
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.IMPERIAL
+    }, (response, status)=>{
+      if(status === 'OK') resolve(response);
+      else reject(status);
     });
+  });
 
-    route.push(nearest);
-    unvisited.splice(nearestIdx,1);
+  // Build distance matrix
+  const dist = stops.map((_,i)=>
+    matrix.rows[i].elements.map(e=> e.status==='OK' ? e.duration.value : 99999)
+  );
+
+  // Nearest-neighbor using real driving times
+  const visited = new Array(stops.length).fill(false);
+  const route = [];
+  let current = 0;
+  visited[0] = true;
+  route.push(stops[0]);
+
+  for(let step=1; step<stops.length; step++){
+    let nearest = -1;
+    let minTime = Infinity;
+    for(let j=0; j<stops.length; j++){
+      if(!visited[j] && dist[current][j] < minTime){
+        minTime = dist[current][j];
+        nearest = j;
+      }
+    }
+    visited[nearest] = true;
+    route.push(stops[nearest]);
     current = nearest;
   }
   return route;
 }
 
-function distance(lat1, lng1, lat2, lng2){
-  // Haversine formula -- straight line distance in km
-  const R = 6371;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLng = (lng2-lng1)*Math.PI/180;
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2)+
-    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-    Math.sin(dLng/2)*Math.sin(dLng/2);
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+// Nearest-neighbor using straight-line for larger manifests
+function nearestNeighborDriving(stops){
+  if(!stops.length) return [];
+  const unvisited = [...stops];
+  const route = [];
+  let current = unvisited.shift();
+  route.push(current);
+  while(unvisited.length){
+    let nearest = null, minDist = Infinity, nearestIdx = 0;
+    unvisited.forEach((s,i)=>{
+      const d = google.maps.geometry.spherical.computeDistanceBetween(
+        new google.maps.LatLng(current.lat, current.lng),
+        new google.maps.LatLng(s.lat, s.lng)
+      );
+      if(d < minDist){minDist=d; nearest=s; nearestIdx=i;}
+    });
+    route.push(nearest);
+    unvisited.splice(nearestIdx,1);
+    current = nearest;
+  }
+  return route;
 }
 
 function renderResults(stops){
