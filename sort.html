@@ -6,7 +6,7 @@
 <title>TackPath Sort</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8"></script></script>
+</script></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{--blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--red:#ff4444;
@@ -283,6 +283,17 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 <script>
 const GMAPS_KEY = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
 
+// Load Google Maps dynamically
+function loadGoogleMaps(){
+  return new Promise((resolve)=>{
+    if(window.google && window.google.maps){resolve();return;}
+    const s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key='+GMAPS_KEY;
+    s.onload = resolve;
+    document.head.appendChild(s);
+  });
+}
+
 const DEMO = [
   {order_id:'TP78001',recipient:'Marcus Johnson',address:'142 Peachtree St NW Atlanta GA 30303',packages:2},
   {order_id:'TP78002',recipient:'Sarah Williams',address:'890 Marietta St NW Atlanta GA 30318',packages:1},
@@ -495,7 +506,8 @@ function toggleMap(){
   if(mapShowing && !mapBuilt) buildMap();
 }
 
-function buildMap(){
+async function buildMap(){
+  await loadGoogleMaps();
   mapBuilt = true;
   const validStops = sortedStops.filter(s=>s.lat !== null);
   if(!validStops.length) return;
