@@ -296,33 +296,14 @@ async function openScanner(){
         }catch(e){}
       }, 300);
     } else {
-      // Fallback -- listen for physical scanner keyboard input
-      document.getElementById('scanStatus').textContent = 'Use physical scanner or type barcode';
-      startKeyboardScan();
+      document.getElementById('scanStatus').textContent = 'Camera ready -- point at barcode';
     }
   } catch(e){
-    document.getElementById('scanStatus').textContent = 'Camera unavailable -- use physical scanner';
-    startKeyboardScan();
+    document.getElementById('scanStatus').textContent = 'Camera unavailable -- please allow camera access';
   }
 }
 
-// Physical Bluetooth scanner sends keystrokes ending in Enter
-let keyBuffer = '';
-let keyTimer = null;
-function startKeyboardScan(){
-  document.addEventListener('keydown', keyHandler);
-}
-function keyHandler(e){
-  if(!document.getElementById('scanOverlay').classList.contains('on')) return;
-  if(e.key === 'Enter'){
-    if(keyBuffer.length > 2) handleScan(keyBuffer.trim());
-    keyBuffer = '';
-  } else if(e.key.length === 1){
-    keyBuffer += e.key;
-    clearTimeout(keyTimer);
-    keyTimer = setTimeout(()=>{ keyBuffer=''; },500);
-  }
-}
+
 
 function handleScan(barcode){
   // Stop scanning while showing result
@@ -366,8 +347,20 @@ function handleScan(barcode){
   // Auto-confirm the stop
   confirmStop(idx);
 
-  // Vibrate if available
-  if(navigator.vibrate) navigator.vibrate([100,50,100]);
+  // Beep on successful scan
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+.15);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime+.15);
+  }catch(e){}
 }
 
 function continueScan(){
@@ -387,7 +380,6 @@ function continueScan(){
 function closeScanner(){
   clearInterval(scanInterval);
   if(scanStream) scanStream.getTracks().forEach(t=>t.stop());
-  document.removeEventListener('keydown', keyHandler);
   document.getElementById('scanOverlay').classList.remove('on');
   document.getElementById('scanFlash').classList.remove('on');
   scanStream = null;
