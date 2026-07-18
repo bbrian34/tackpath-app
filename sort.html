@@ -95,9 +95,11 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   font-family:'DM Sans',sans-serif;margin-bottom:12px;display:none;transition:all .15s;}
 .scan-btn:hover{background:#22ccff;}
 .scan-btn.on{display:block;}
-.scan-overlay{position:fixed;inset:0;background:rgba(1,14,33,.97);z-index:9000;
-  display:none;flex-direction:column;align-items:center;justify-content:center;}
-.scan-overlay.on{display:flex;}
+.scan-overlay{position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(1,14,33,.97);z-index:99999;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;}
+.scan-overlay.on{display:flex !important;}
 .scan-video-wrap{width:100%;max-width:400px;border-radius:20px;overflow:hidden;
   border:3px solid var(--blue);position:relative;margin-bottom:24px;}
 .scan-video{width:100%;display:block;}
@@ -105,10 +107,11 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 .scan-line{position:absolute;left:10%;right:10%;height:2px;background:var(--blue);
   opacity:.8;animation:scanline 2s ease-in-out infinite;}
 @keyframes scanline{0%,100%{top:20%;}50%{top:80%;}}
-.scan-result-flash{position:fixed;inset:0;z-index:9500;display:none;
+.scan-result-flash{position:fixed;top:0;left:0;right:0;bottom:0;
+  z-index:999999;display:none;
   flex-direction:column;align-items:center;justify-content:center;
-  background:rgba(1,14,33,.96);}
-.scan-result-flash.on{display:flex;}
+  background:rgba(1,14,33,.96);padding:24px;text-align:center;}
+.scan-result-flash.on{display:flex !important;}
 .scan-stop-num{font-family:'DM Mono',monospace;font-size:120px;font-weight:700;
   color:var(--green);line-height:1;margin-bottom:8px;}
 .scan-stop-label{font-family:'DM Mono',monospace;font-size:14px;color:var(--green);
@@ -271,6 +274,8 @@ let barcodeDetector = null;
 async function openScanner(){
   const overlay = document.getElementById('scanOverlay');
   const status = document.getElementById('scanStatus');
+  if(!overlay){toast('Scanner element not found');return;}
+  overlay.style.display = 'flex';
   overlay.classList.add('on');
   status.textContent = 'Requesting camera access...';
 
