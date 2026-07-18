@@ -1998,7 +1998,6 @@ function toast(msg){
   el.textContent=msg;el.style.display='block';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
-window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();});
 
 // ── MOBILE REDIRECT ──
 if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
@@ -2007,8 +2006,11 @@ if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgen
 
 // ── AUTO LOGIN + POLLING ──
 window.addEventListener('load',function(){
-  doLogin();
+  startClock();
+  loadJobs();
+  if(typeof loadDrivers==='function') loadDrivers();
   setInterval(function(){loadJobs().catch(function(){});},5000);
+  setTimeout(refreshFleetMap,3000);
 });
 
 // ── GPS FLEET MAP ──
