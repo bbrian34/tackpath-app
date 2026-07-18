@@ -75,6 +75,17 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 .ab-print{background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.2);color:var(--green);}
 .ab-reset{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);}
 
+
+/* MAP */
+.map-toggle-btn{width:100%;padding:14px;border-radius:12px;background:rgba(25,183,239,.08);
+  border:1px solid rgba(25,183,239,.2);color:var(--blue);font-size:15px;font-weight:800;
+  cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:12px;transition:all .15s;}
+.map-toggle-btn:hover{background:rgba(25,183,239,.15);}
+.map-wrap{display:none;border-radius:16px;overflow:hidden;margin-bottom:16px;
+  border:1px solid rgba(25,183,239,.15);}
+.map-wrap.on{display:block;}
+#routeMap{width:100%;height:380px;}
+
 /* STOP CARDS */
 .stop-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
   padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;
@@ -163,6 +174,93 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   .progress-wrap{padding:20px 16px;}
 }
 </style>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8">
+// ── MAP ──
+let mapShowing = false;
+let mapInitialized = false;
+
+function toggleMap(){
+  const btn = document.querySelector('.map-toggle-btn');
+  const wrap = document.getElementById('mapWrap');
+  mapShowing = !mapShowing;
+  wrap.classList.toggle('on', mapShowing);
+  btn.textContent = mapShowing ? 'Hide Map' : 'Show Map';
+  if(mapShowing && !mapInitialized) buildMap();
+}
+
+function buildMap(){
+  const stops = window._sortedStops;
+  if(!stops || !stops.length) return;
+  mapInitialized = true;
+
+  const validStops = stops.filter(s=>s.lat && s.lng);
+  if(!validStops.length) return;
+
+  // Center map on first stop
+  const center = {lat: validStops[0].lat, lng: validStops[0].lng};
+  const map = new google.maps.Map(document.getElementById('routeMap'), {
+    zoom: 11,
+    center: center,
+    mapTypeId: 'roadmap',
+    styles:[
+      {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
+      {elementType:'labels.text.stroke',stylers:[{color:'#1a3646'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#304a7d'}]},
+      {featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#255763'}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#0e1626'}]}
+    ]
+  });
+
+  // Add warehouse marker if available
+  if(window._warehouseCoords){
+    new google.maps.Marker({
+      position:{lat:window._warehouseCoords.lat, lng:window._warehouseCoords.lng},
+      map,
+      label:{text:'W',color:'#fff',fontWeight:'800',fontSize:'12px'},
+      icon:{
+        path:google.maps.SymbolPath.CIRCLE,
+        scale:14,
+        fillColor:'#ff961e',
+        fillOpacity:1,
+        strokeColor:'#fff',
+        strokeWeight:2
+      },
+      title:'Warehouse'
+    });
+  }
+
+  // Add numbered markers for each stop
+  validStops.forEach((s,i)=>{
+    new google.maps.Marker({
+      position:{lat:s.lat, lng:s.lng},
+      map,
+      label:{text:String(i+1),color:'#fff',fontWeight:'800',fontSize:'11px'},
+      icon:{
+        path:google.maps.SymbolPath.CIRCLE,
+        scale:13,
+        fillColor:'#19b7ef',
+        fillOpacity:1,
+        strokeColor:'#fff',
+        strokeWeight:2
+      },
+      title:'Stop '+(i+1)+': '+s.recipient
+    });
+  });
+
+  // Draw route line
+  const path = validStops.map(s=>({lat:s.lat, lng:s.lng}));
+  new google.maps.Polyline({
+    path,
+    geodesic:true,
+    strokeColor:'#19b7ef',
+    strokeOpacity:.6,
+    strokeWeight:2,
+    map
+  });
+}
+
+</script>
 </head>
 <body>
 
@@ -209,6 +307,12 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 
   <!-- RESULTS -->
   <div class="results-wrap" id="resultsWrap">
+  <div id="mapToggleWrap" style="display:none;">
+    <button class="map-toggle-btn" onclick="toggleMap()">Show Map</button>
+    <div class="map-wrap" id="mapWrap">
+      <div id="routeMap"></div>
+    </div>
+  </div>
     <div class="results-header">
       <div>
         <div class="results-title">Delivery Sequence</div>
@@ -377,6 +481,13 @@ function renderResults(stops){
   const totalPkgs = stops.reduce((s,p)=>s+p.packages,0);
   document.getElementById('resultsMeta').textContent =
     stops.length+' stops · '+totalPkgs+' total packages · Load in reverse order (stop '+stops.length+' first)';
+
+  // Store sequenced stops globally for map
+  window._sortedStops = stops;
+  window._warehouseCoords = warehouseGeo;
+
+  // Add map toggle button
+  document.getElementById('mapToggleWrap').style.display = 'block';
 
   document.getElementById('stopsList').innerHTML = stops.map((s,i)=>`
     <div class="stop-card">
