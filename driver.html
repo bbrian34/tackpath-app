@@ -1112,7 +1112,6 @@ async function acceptOffer(){
   // All jobs go straight to surge map -- identical flow regardless of job type
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
-  startGPSTracking(currentJob.id, driver.name);
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
   document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
@@ -1923,6 +1922,24 @@ function loadSurgeRoute(stops){
 function startGPS(){
   if(!navigator.geolocation||!currentJob)return;
   if(gpsWatcher)navigator.geolocation.clearWatch(gpsWatcher);
+  // Send GPS to Supabase every 10s
+  if(window._gpsInterval) clearInterval(window._gpsInterval);
+  window._gpsInterval = setInterval(()=>{
+    if(!currentJob) return;
+    navigator.geolocation.getCurrentPosition(pos=>{
+      fetch(SB+'/rest/v1/driver_locations',{
+        method:'POST',
+        headers:{...PH,'Prefer':'resolution=merge-duplicates'},
+        body:JSON.stringify({
+          driver_name:driver?driver.name:'Unknown',
+          job_id:currentJob.id,
+          lat:pos.coords.latitude,
+          lng:pos.coords.longitude,
+          updated_at:new Date().toISOString()
+        })
+      }).catch(()=>{});
+    },()=>{},{enableHighAccuracy:true,timeout:8000,maximumAge:5000});
+  },10000);
   gpsWatcher=navigator.geolocation.watchPosition(
     pos=>{if(!currentJob)return;sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed}).catch(()=>{});},
     err=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:15000}
