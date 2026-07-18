@@ -349,6 +349,7 @@ const DEMO = [
 ];
 
 let packages = [];
+let warehouseGeo = null;
 
 function handleFile(file){
   if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file');return;}
@@ -405,7 +406,7 @@ async function startGeocoding(){
   const KEY = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
 
   // Geocode warehouse address first
-  const warehouseGeo = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(warehouseAddr)+'&key='+KEY)
+  warehouseGeo = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(warehouseAddr)+'&key='+KEY)
     .then(r=>r.json())
     .then(data=>{
       if(data.status==='OK' && data.results.length){
@@ -480,7 +481,7 @@ function renderResults(stops){
 
   const totalPkgs = stops.reduce((s,p)=>s+p.packages,0);
   document.getElementById('resultsMeta').textContent =
-    stops.length+' stops · '+totalPkgs+' total packages · Load in reverse order (stop '+stops.length+' first)';
+    stops.length+' stops · '+totalPkgs+' total packages';
 
   // Store sequenced stops globally for map
   window._sortedStops = stops;
