@@ -48,68 +48,6 @@ async function saveRating(){
   } catch(e){ toast('Error: '+e.message, 'warn'); }
 }
 
-
-// ── SMARTTRACK GPS FLEET MAP ──
-function loadGoogleMaps(){
-  return new Promise(resolve=>{
-    if(window.google&&window.google.maps){resolve();return;}
-    const s=document.createElement('script');
-    s.src=['https://maps.googleapis.com/maps/api/js?key=','AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8'].join('');
-    s.onload=resolve;document.head.appendChild(s);
-  });
-}
-
-let fleetMap=null, fleetMarkers=[];
-
-async function refreshFleetMap(){
-  const mapDiv=document.getElementById('dispatcherFleetMap');
-  if(!mapDiv||mapDiv.offsetParent===null) return; // not visible
-  await loadGoogleMaps();
-
-  if(!fleetMap){
-    fleetMap=new google.maps.Map(mapDiv,{
-      zoom:11,center:{lat:33.749,lng:-84.388},mapTypeId:'roadmap',
-      styles:[
-        {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
-        {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
-        {featureType:'road',elementType:'geometry',stylers:[{color:'#304a7d'}]},
-        {featureType:'water',elementType:'geometry',stylers:[{color:'#0e1626'}]}
-      ]
-    });
-  }
-
-  try{
-    const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
-    const recent={};
-    locs.forEach(l=>{
-      if(!recent[l.driver_name]||new Date(l.updated_at)>new Date(recent[l.driver_name].updated_at))
-        recent[l.driver_name]=l;
-    });
-
-    fleetMarkers.forEach(m=>m.setMap(null));
-    fleetMarkers=[];
-
-    const colors=['#19b7ef','#53ff88','#8d5cff','#ff961e'];
-    Object.values(recent).forEach((loc,i)=>{
-      const age=(Date.now()-new Date(loc.updated_at))/1000;
-      const m=new google.maps.Marker({
-        position:{lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)},
-        map:fleetMap,
-        label:{text:(loc.driver_name||'?').charAt(0).toUpperCase(),color:'#fff',fontWeight:'800',fontSize:'11px'},
-        icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,
-          fillColor:colors[i%colors.length],fillOpacity:age>60?0.4:1,
-          strokeColor:'#fff',strokeWeight:2},
-        title:loc.driver_name+' ('+Math.round(age)+'s ago)'
-      });
-      fleetMarkers.push(m);
-      if(i===0) fleetMap.setCenter({lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)});
-    });
-  }catch(e){console.error('Fleet map error:',e);}
-}
-
-// Refresh fleet map every 10 seconds
-setInterval(refreshFleetMap, 10000);
-
 </script>
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
@@ -1344,7 +1282,7 @@ let ocaWorkItems = [];
 
 async function loadOCAData(){
   try{
-    const items = await sbGet('work_items?status=eq.pending&order=created_at.desc&limit=20');
+    const items = await sbGet('work_items?status=in.(routing,pending,assigned,customer_confirmed,in_transit)&order=created_at.desc&limit=20');
     ocaWorkItems = items || [];
     renderExceptionQueue();
   }catch(e){
@@ -2133,6 +2071,61 @@ function toast(msg){
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
 window.addEventListener('load',function(){startClock();loadJobs();setInterval(function(){loadJobs().catch(function(){});},5000);setTimeout(refreshFleetMap,2000);});
+
+// ── SMARTTRACK GPS FLEET MAP ──
+function loadGoogleMapsDisp(){
+  return new Promise(resolve=>{
+    if(window.google&&window.google.maps){resolve();return;}
+    const s=document.createElement('script');
+    s.src='https://maps.googleapis.com/maps/api/js?key='+['AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8'].join('');
+    s.onload=resolve;document.head.appendChild(s);
+  });
+}
+
+let fleetMap=null,fleetMarkers=[];
+
+async function refreshFleetMap(){
+  const mapDiv=document.getElementById('dispatcherFleetMap');
+  if(!mapDiv||mapDiv.offsetParent===null)return;
+  await loadGoogleMapsDisp();
+  if(!fleetMap){
+    fleetMap=new google.maps.Map(mapDiv,{
+      zoom:11,center:{lat:33.749,lng:-84.388},mapTypeId:'roadmap',
+      styles:[
+        {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
+        {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
+        {featureType:'road',elementType:'geometry',stylers:[{color:'#304a7d'}]},
+        {featureType:'water',elementType:'geometry',stylers:[{color:'#0e1626'}]}
+      ]
+    });
+  }
+  try{
+    const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
+    const recent={};
+    locs.forEach(l=>{
+      if(!recent[l.driver_name]||new Date(l.updated_at)>new Date(recent[l.driver_name].updated_at))
+        recent[l.driver_name]=l;
+    });
+    fleetMarkers.forEach(m=>m.setMap(null));
+    fleetMarkers=[];
+    const colors=['#19b7ef','#53ff88','#8d5cff','#ff961e'];
+    Object.values(recent).forEach((loc,i)=>{
+      const age=(Date.now()-new Date(loc.updated_at))/1000;
+      const m=new google.maps.Marker({
+        position:{lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)},
+        map:fleetMap,
+        label:{text:(loc.driver_name||'?').charAt(0).toUpperCase(),color:'#fff',fontWeight:'800',fontSize:'11px'},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:colors[i%colors.length],
+          fillOpacity:age>60?0.4:1,strokeColor:'#fff',strokeWeight:2},
+        title:loc.driver_name+' ('+Math.round(age)+'s ago)'
+      });
+      fleetMarkers.push(m);
+      if(i===0)fleetMap.setCenter({lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)});
+    });
+  }catch(e){console.error('Fleet map:',e);}
+}
+setInterval(refreshFleetMap,10000);
+
 </script>
 </body>
 </html>
