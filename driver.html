@@ -1112,6 +1112,7 @@ async function acceptOffer(){
   // All jobs go straight to surge map -- identical flow regardless of job type
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  startGPSTracking(currentJob.id, driver.name);
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
   document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
@@ -1627,6 +1628,7 @@ function surgeTapStop(i){
 function confirmSurgeLoad(){
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  startGPSTracking(currentJob.id, driver.name);
   startGPS();
   currentSurgeStop=0;
   // Hide Begin Route button
@@ -1891,7 +1893,8 @@ function confirmSurgeStop(){
   window._surgePODMode=false;
   if(currentSurgeStop>=total-1){
     sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name}).catch(()=>{});
-    const pay=currentJob.price||0;
+   
+  stopGPSTracking(); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);stopWakeWord();
     currentJob=null;scannedPackages=[];surgeStops=[];isSurgeJob=false;currentSurgeStop=0;
