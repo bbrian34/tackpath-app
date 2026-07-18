@@ -89,6 +89,23 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 .ab-reset{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);}
 
 
+/* CONFIRMATION */
+.route-ready{display:none;background:rgba(83,255,136,.08);border:2px solid rgba(83,255,136,.3);
+  border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;}
+.route-ready.on{display:block;}
+.rr-title{font-size:22px;font-weight:800;color:var(--green);margin-bottom:6px;}
+.rr-sub{font-size:14px;color:rgba(238,244,255,.75);}
+.confirm-btn{margin-top:10px;padding:10px 18px;border-radius:9px;
+  background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);
+  color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.confirm-btn:hover{background:rgba(25,183,239,.15);}
+.confirm-btn.confirmed{background:rgba(83,255,136,.1);border-color:rgba(83,255,136,.3);
+  color:var(--green);cursor:default;}
+.stop-card.confirmed{border-color:rgba(83,255,136,.25);background:rgba(83,255,136,.03);}
+.stop-card.confirmed .stop-num{background:var(--green);color:#010e21;}
+.confirmed-count{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px;}
+
 /* MAP */
 .map-toggle-btn{width:100%;padding:14px;border-radius:12px;background:rgba(25,183,239,.08);
   border:1px solid rgba(25,183,239,.2);color:var(--blue);font-size:15px;font-weight:800;
@@ -187,7 +204,30 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   .progress-wrap{padding:20px 16px;}
 }
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8">
+// ── SORT CONFIRMATION ──
+function confirmStop(i){
+  window._confirmedStops[i] = true;
+  const card = document.getElementById('stop-card-'+i);
+  const btn = document.getElementById('confirm-btn-'+i);
+  card.classList.add('confirmed');
+  btn.textContent = '&#10003; Staged';
+  btn.classList.add('confirmed');
+  btn.disabled = true;
+
+  // Check if all confirmed
+  const total = window._confirmedStops.length;
+  const done = window._confirmedStops.filter(Boolean).length;
+  document.getElementById('resultsMeta').textContent =
+    done+' of '+total+' stops staged';
+
+  if(done === total){
+    document.getElementById('routeReady').classList.add('on');
+    document.getElementById('routeReady').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+</script>
 <script>
 // ── MAP ──
 let mapShowing = false;
@@ -336,7 +376,11 @@ function buildMap(){
         <button class="action-btn ab-reset" onclick="resetAll()">Start Over</button>
       </div>
     </div>
-    <div id="stopsList"></div>
+    <div class="route-ready" id="routeReady">
+  <div class="rr-title">&#10003; Route Staged</div>
+  <div class="rr-sub">All packages confirmed and ready for driver pickup.</div>
+</div>
+<div id="stopsList"></div>
     <div class="total-bar" id="totalBar"></div>
   </div>
 
@@ -516,9 +560,10 @@ function renderResults(stops){
   // Add map toggle button
   document.getElementById('mapToggleWrap').style.display = 'block';
 
+  window._confirmedStops = new Array(stops.length).fill(false);
   document.getElementById('stopsList').innerHTML = stops.map((s,i)=>`
-    <div class="stop-card">
-      <div class="stop-num">${i+1}</div>
+    <div class="stop-card" id="stop-card-${i}">
+      <div class="stop-num" id="stop-num-${i}">${i+1}</div>
       <div class="stop-info">
         <div class="stop-name">${s.recipient}</div>
         <div class="stop-address">${s.address}</div>
@@ -528,6 +573,7 @@ function renderResults(stops){
         <div class="stop-pkgs">${s.packages}</div>
         <div class="stop-pkgs-lbl">pkg${s.packages!==1?'s':''}</div>
       </div>
+      <button class="confirm-btn" id="confirm-btn-${i}" onclick="confirmStop(${i})">Confirm</button>
     </div>`).join('');
 
   document.getElementById('totalBar').innerHTML = `
