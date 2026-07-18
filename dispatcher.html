@@ -6,48 +6,6 @@
 if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
   window.location.replace('dispatcher-mobile.html');
 }
-
-// ── DRIVER RATING ──
-let currentRating = 0;
-
-function setRating(n){
-  currentRating = n;
-  document.querySelectorAll('.star').forEach((s,i)=>{
-    s.classList.toggle('on', i < n);
-  });
-}
-
-function showRatingIfDelivered(job){
-  const wrap = document.getElementById('ratingWrap');
-  if(job.status === 'delivered'){
-    wrap.classList.add('on');
-    // Show existing rating if already rated
-    if(job.driver_rating){
-      setRating(job.driver_rating);
-      const note = document.getElementById('ratingNote');
-      if(note) note.value = job.driver_rating_note || '';
-      document.getElementById('ratingSaved').style.display = 'inline';
-    } else {
-      setRating(0);
-      document.getElementById('ratingNote').value = '';
-      document.getElementById('ratingSaved').style.display = 'none';
-    }
-  } else {
-    wrap.classList.remove('on');
-  }
-}
-
-async function saveRating(){
-  if(!currentJobId || !currentRating) return;
-  const note = document.getElementById('ratingNote').value.trim();
-  try{
-    await sbPatch('jobs?id=eq.'+currentJobId, {driver_rating: currentRating, driver_rating_note: note});
-    document.getElementById('ratingSaved').style.display = 'inline';
-    toast('Rating saved');
-    loadJobs();
-  } catch(e){ toast('Error: '+e.message, 'warn'); }
-}
-
 </script>
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
@@ -571,35 +529,25 @@ body::after{content:'';position:fixed;inset:0;
   z-index:99999;font-size:11px;font-weight:700;min-width:220px;text-align:center;
   animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
-
-/* ── DRIVER RATING ── */
-.rating-wrap{margin-top:14px;padding:14px;border-radius:12px;background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.15);display:none;}
-.rating-wrap.on{display:block;}
-.rating-lbl{font-family:var(--mono);font-size:9px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;font-weight:600;}
-.stars{display:flex;gap:6px;margin-bottom:10px;}
-.star{font-size:24px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .15s;line-height:1;}
-.star.on{color:#f5c518;}
-.star:hover{color:#f5c518;}
-.rating-note{width:100%;padding:9px 12px;border-radius:9px;background:rgba(255,255,255,.03);
-  border:1px solid var(--border);color:var(--text);font-size:12px;
-  font-family:var(--sans);outline:none;resize:none;height:56px;margin-bottom:10px;}
-.rating-save{padding:9px 18px;border-radius:9px;background:rgba(201,168,76,.12);
-  border:1px solid rgba(201,168,76,.25);color:var(--gold);font-size:12px;
-  font-weight:700;cursor:pointer;font-family:var(--sans);}
-.rating-saved{font-family:var(--mono);font-size:9px;color:var(--green);margin-left:10px;display:none;}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
-
+<div class="demo-badge">&#9889; Demo — any credentials work</div>
 <!-- SHELL -->
 <div id="shell" style="display:flex;flex-direction:column;">
   <!-- TOPBAR -->
   <div id="topbar">
     <div class="tb-brand">
       <div class="tb-logo">
-
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="9" stroke="#19b7ef" stroke-width="1.5"/>
+          <circle cx="10" cy="10" r="3" fill="#19b7ef"/>
+          <circle cx="10" cy="10" r="6" stroke="#19b7ef" stroke-width="1" stroke-dasharray="2 2" opacity=".5">
+            <animateTransform attributeName="transform" type="rotate" from="0 10 10" to="360 10 10" dur="6s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
         <div style="display:flex;align-items:center;gap:8px;">
           <svg width="20" height="36" viewBox="0 0 38 70" xmlns="http://www.w3.org/2000/svg">
             <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
@@ -1096,20 +1044,6 @@ body::after{content:'';position:fixed;inset:0;
     <button class="dra dra-ghost" onclick="toast('Driver contacted via TackPath dispatch')">&#128222; Contact Driver</button>
     <button class="dra dra-ghost" onclick="toast('Customer notification sent')">&#128226; Notify Customer</button>
   </div>
-  <!-- DRIVER RATING -->
-  <div class="rating-wrap" id="ratingWrap">
-    <div class="rating-lbl">Rate this Driver</div>
-    <div class="stars" id="ratingStars">
-      <span class="star" onclick="setRating(1)">&#9733;</span>
-      <span class="star" onclick="setRating(2)">&#9733;</span>
-      <span class="star" onclick="setRating(3)">&#9733;</span>
-      <span class="star" onclick="setRating(4)">&#9733;</span>
-      <span class="star" onclick="setRating(5)">&#9733;</span>
-    </div>
-    <textarea class="rating-note" id="ratingNote" placeholder="Optional note about this driver..."></textarea>
-    <button class="rating-save" onclick="saveRating()">Save Rating</button>
-    <span class="rating-saved" id="ratingSaved">&#10003; Saved</span>
-  </div>
   <div style="margin-top:7px;">
     <button class="dra dra-d" style="width:100%;" onclick="deleteJob()">&#128465; Delete Job</button>
   </div>
@@ -1403,9 +1337,9 @@ function renderKPIs(){
 
 // ── PIPELINE ──
 function renderPipeline(){
-  const cols={routing:[],pending:[],assigned:[],in_transit:[],delivered:[],cancelled:[]};
+  const cols={pending:[],assigned:[],in_transit:[],delivered:[],cancelled:[]};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(cols[s]) cols[s].push(j); });
-  const statuses=['routing','pending','assigned','in_transit','delivered','cancelled'];
+  const statuses=['pending','assigned','in_transit','delivered','cancelled'];
   statuses.forEach(s=>{
     const col=cols[s];
     const cnt=document.getElementById('pc-'+s);
@@ -2070,26 +2004,26 @@ function toast(msg){
   el.textContent=msg;el.style.display='block';
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3000);
 }
-window.addEventListener('load',function(){startClock();loadJobs();setInterval(function(){loadJobs().catch(function(){});},5000);setTimeout(refreshFleetMap,2000);});
+window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();});
 
-// ── SMARTTRACK GPS FLEET MAP ──
-function loadGoogleMapsDisp(){
-  return new Promise(resolve=>{
+// ── GPS FLEET MAP ──
+function loadGMaps(){
+  return new Promise(function(resolve){
     if(window.google&&window.google.maps){resolve();return;}
-    const s=document.createElement('script');
-    s.src='https://maps.googleapis.com/maps/api/js?key='+['AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8'].join('');
-    s.onload=resolve;document.head.appendChild(s);
+    var s=document.createElement('script');
+    var k='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
+    s.src='https://maps.googleapis.com/maps/api/js?key='+k;
+    s.onload=resolve;
+    document.head.appendChild(s);
   });
 }
-
-let fleetMap=null,fleetMarkers=[];
-
+var fleetMap=null,fleetMarkers=[];
 async function refreshFleetMap(){
-  const mapDiv=document.getElementById('dispatcherFleetMap');
-  if(!mapDiv||mapDiv.offsetParent===null)return;
-  await loadGoogleMapsDisp();
+  var div=document.getElementById('dispatcherFleetMap');
+  if(!div||div.offsetParent===null)return;
+  await loadGMaps();
   if(!fleetMap){
-    fleetMap=new google.maps.Map(mapDiv,{
+    fleetMap=new google.maps.Map(div,{
       zoom:11,center:{lat:33.749,lng:-84.388},mapTypeId:'roadmap',
       styles:[
         {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
@@ -2100,29 +2034,30 @@ async function refreshFleetMap(){
     });
   }
   try{
-    const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
-    const recent={};
-    locs.forEach(l=>{
+    var locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
+    var recent={};
+    locs.forEach(function(l){
       if(!recent[l.driver_name]||new Date(l.updated_at)>new Date(recent[l.driver_name].updated_at))
         recent[l.driver_name]=l;
     });
-    fleetMarkers.forEach(m=>m.setMap(null));
+    fleetMarkers.forEach(function(m){m.setMap(null);});
     fleetMarkers=[];
-    const colors=['#19b7ef','#53ff88','#8d5cff','#ff961e'];
-    Object.values(recent).forEach((loc,i)=>{
-      const age=(Date.now()-new Date(loc.updated_at))/1000;
-      const m=new google.maps.Marker({
+    var colors=['#19b7ef','#53ff88','#8d5cff','#ff961e'];
+    Object.values(recent).forEach(function(loc,i){
+      var age=(Date.now()-new Date(loc.updated_at))/1000;
+      var m=new google.maps.Marker({
         position:{lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)},
         map:fleetMap,
         label:{text:(loc.driver_name||'?').charAt(0).toUpperCase(),color:'#fff',fontWeight:'800',fontSize:'11px'},
-        icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:colors[i%colors.length],
-          fillOpacity:age>60?0.4:1,strokeColor:'#fff',strokeWeight:2},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,
+          fillColor:colors[i%colors.length],fillOpacity:age>60?0.4:1,
+          strokeColor:'#fff',strokeWeight:2},
         title:loc.driver_name+' ('+Math.round(age)+'s ago)'
       });
       fleetMarkers.push(m);
       if(i===0)fleetMap.setCenter({lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)});
     });
-  }catch(e){console.error('Fleet map:',e);}
+  }catch(e){console.error('GPS:',e);}
 }
 setInterval(refreshFleetMap,10000);
 
