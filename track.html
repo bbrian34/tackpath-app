@@ -341,13 +341,44 @@ async function loadJob(){
   }
 }
 
-// Load and poll
-loadJob();
-setInterval(()=>{
-  if(currentJob&&currentJob.status!=='delivered'&&currentJob.status!=='cancelled'){
-    loadJob();
-  }
-},10000);
+// Demo mode -- if no job param, run a live simulation
+const DEMO_STATUSES = ['routing','pending','assigned','customer_confirmed','in_transit','delivered'];
+let demoStep = 0;
+
+const demoJob = {
+  id: 'demo-0000-0000-0000-tackpath2026',
+  title: 'Marcus Johnson — Midtown to Buckhead',
+  status: 'routing',
+  pickup_address: '1180 Peachtree St NE, Atlanta GA 30309',
+  dropoff_address: '3500 Lenox Rd NE, Atlanta GA 30326',
+  driver_name: 'Marcus J.',
+  total_packages: 2,
+  price: 44,
+  driver_rating: null,
+  driver_rating_note: null
+};
+
+if(!jobParam){
+  // Demo mode
+  renderTracking(demoJob);
+  document.getElementById('pollBar').style.display = 'flex';
+  document.getElementById('pollBar').innerHTML = '<div class="poll-dot"></div><span>Demo mode — status updating automatically</span>';
+  setInterval(()=>{
+    demoStep = (demoStep + 1) % DEMO_STATUSES.length;
+    demoJob.status = DEMO_STATUSES[demoStep];
+    if(demoStep === DEMO_STATUSES.length - 1){
+      demoJob.driver_rating = null; // show rating on delivered
+    }
+    renderTracking(demoJob);
+  }, 3000);
+} else {
+  loadJob();
+  setInterval(()=>{
+    if(currentJob&&currentJob.status!=='delivered'&&currentJob.status!=='cancelled'){
+      loadJob();
+    }
+  },10000);
+}
 </script>
 </body>
 </html>
