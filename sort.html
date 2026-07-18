@@ -89,6 +89,41 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 .ab-reset{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);}
 
 
+/* SCANNER */
+.scan-btn{width:100%;padding:16px;border-radius:12px;background:var(--blue);
+  border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;
+  font-family:'DM Sans',sans-serif;margin-bottom:12px;display:none;transition:all .15s;}
+.scan-btn:hover{background:#22ccff;}
+.scan-btn.on{display:block;}
+.scan-overlay{position:fixed;inset:0;background:rgba(1,14,33,.97);z-index:9000;
+  display:none;flex-direction:column;align-items:center;justify-content:center;}
+.scan-overlay.on{display:flex;}
+.scan-video-wrap{width:100%;max-width:400px;border-radius:20px;overflow:hidden;
+  border:3px solid var(--blue);position:relative;margin-bottom:24px;}
+.scan-video{width:100%;display:block;}
+.scan-crosshair{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.scan-line{position:absolute;left:10%;right:10%;height:2px;background:var(--blue);
+  opacity:.8;animation:scanline 2s ease-in-out infinite;}
+@keyframes scanline{0%,100%{top:20%;}50%{top:80%;}}
+.scan-result-flash{position:fixed;inset:0;z-index:9500;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(1,14,33,.96);}
+.scan-result-flash.on{display:flex;}
+.scan-stop-num{font-family:'DM Mono',monospace;font-size:120px;font-weight:700;
+  color:var(--green);line-height:1;margin-bottom:8px;}
+.scan-stop-label{font-family:'DM Mono',monospace;font-size:14px;color:var(--green);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px;}
+.scan-stop-name{font-size:22px;font-weight:800;color:#fff;margin-bottom:6px;}
+.scan-stop-addr{font-size:15px;color:var(--muted);margin-bottom:32px;text-align:center;padding:0 24px;}
+.scan-next-btn{padding:16px 40px;border-radius:12px;background:var(--blue);
+  border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;
+  font-family:'DM Sans',sans-serif;}
+.scan-close{position:absolute;top:24px;right:24px;background:none;border:none;
+  color:rgba(238,244,255,.5);font-size:28px;cursor:pointer;}
+.scan-status{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);
+  margin-top:12px;letter-spacing:.08em;}
+.scan-notfound{font-size:18px;font-weight:800;color:var(--orange);margin-bottom:12px;}
+
 /* CONFIRMATION */
 .route-ready{display:none;background:rgba(83,255,136,.08);border:2px solid rgba(83,255,136,.3);
   border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;}
@@ -227,6 +262,138 @@ function confirmStop(i){
   }
 }
 
+
+// ── BARCODE SCANNER ──
+let scanStream = null;
+let scanInterval = null;
+let barcodeDetector = null;
+
+async function openScanner(){
+  document.getElementById('scanOverlay').classList.add('on');
+  document.getElementById('scanStatus').textContent = 'Starting camera...';
+
+  try{
+    // Try BarcodeDetector API first (Android Chrome, fast)
+    if('BarcodeDetector' in window){
+      barcodeDetector = new BarcodeDetector({formats:[
+        'code_128','code_39','ean_13','ean_8','qr_code','upc_a','upc_e','pdf417','data_matrix'
+      ]});
+    }
+
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+    });
+    const video = document.getElementById('scanVideo');
+    video.srcObject = scanStream;
+    await video.play();
+    document.getElementById('scanStatus').textContent = 'Point camera at barcode';
+
+    if(barcodeDetector){
+      scanInterval = setInterval(async()=>{
+        try{
+          const codes = await barcodeDetector.detect(video);
+          if(codes.length) handleScan(codes[0].rawValue);
+        }catch(e){}
+      }, 300);
+    } else {
+      // Fallback -- listen for physical scanner keyboard input
+      document.getElementById('scanStatus').textContent = 'Use physical scanner or type barcode';
+      startKeyboardScan();
+    }
+  } catch(e){
+    document.getElementById('scanStatus').textContent = 'Camera unavailable -- use physical scanner';
+    startKeyboardScan();
+  }
+}
+
+// Physical Bluetooth scanner sends keystrokes ending in Enter
+let keyBuffer = '';
+let keyTimer = null;
+function startKeyboardScan(){
+  document.addEventListener('keydown', keyHandler);
+}
+function keyHandler(e){
+  if(!document.getElementById('scanOverlay').classList.contains('on')) return;
+  if(e.key === 'Enter'){
+    if(keyBuffer.length > 2) handleScan(keyBuffer.trim());
+    keyBuffer = '';
+  } else if(e.key.length === 1){
+    keyBuffer += e.key;
+    clearTimeout(keyTimer);
+    keyTimer = setTimeout(()=>{ keyBuffer=''; },500);
+  }
+}
+
+function handleScan(barcode){
+  // Stop scanning while showing result
+  clearInterval(scanInterval);
+
+  // Find matching stop by order_id
+  const stops = window._sortedStops;
+  if(!stops) return;
+
+  const idx = stops.findIndex(s =>
+    s.order_id === barcode ||
+    s.order_id.includes(barcode) ||
+    barcode.includes(s.order_id)
+  );
+
+  if(idx === -1){
+    document.getElementById('scanStatus').textContent = 'Not found: '+barcode+' -- try again';
+    // Resume scanning after 1.5s
+    setTimeout(()=>{
+      if(barcodeDetector){
+        const video = document.getElementById('scanVideo');
+        scanInterval = setInterval(async()=>{
+          try{const codes=await barcodeDetector.detect(video);if(codes.length)handleScan(codes[0].rawValue);}catch(e){}
+        },300);
+      }
+      document.getElementById('scanStatus').textContent = 'Point camera at barcode';
+    },1500);
+    return;
+  }
+
+  const stop = stops[idx];
+  const stopNum = idx + 1;
+
+  // Show flash result
+  document.getElementById('scanOverlay').classList.remove('on');
+  document.getElementById('flashStopNum').textContent = stopNum;
+  document.getElementById('flashName').textContent = stop.recipient;
+  document.getElementById('flashAddr').textContent = stop.address;
+  document.getElementById('scanFlash').classList.add('on');
+
+  // Auto-confirm the stop
+  confirmStop(idx);
+
+  // Vibrate if available
+  if(navigator.vibrate) navigator.vibrate([100,50,100]);
+}
+
+function continueScan(){
+  document.getElementById('scanFlash').classList.remove('on');
+  document.getElementById('scanOverlay').classList.add('on');
+  document.getElementById('scanStatus').textContent = 'Point camera at next barcode';
+
+  // Resume scanning
+  if(barcodeDetector){
+    const video = document.getElementById('scanVideo');
+    scanInterval = setInterval(async()=>{
+      try{const codes=await barcodeDetector.detect(video);if(codes.length)handleScan(codes[0].rawValue);}catch(e){}
+    },300);
+  }
+}
+
+function closeScanner(){
+  clearInterval(scanInterval);
+  if(scanStream) scanStream.getTracks().forEach(t=>t.stop());
+  document.removeEventListener('keydown', keyHandler);
+  document.getElementById('scanOverlay').classList.remove('on');
+  document.getElementById('scanFlash').classList.remove('on');
+  scanStream = null;
+  barcodeDetector = null;
+}
+
 </script>
 <script>
 // ── MAP ──
@@ -360,7 +527,11 @@ function buildMap(){
 
   <!-- RESULTS -->
   <div class="results-wrap" id="resultsWrap">
-  <div id="mapToggleWrap" style="display:none;">
+  <div id="scanBtnWrap" style="display:none;margin-bottom:4px;">
+  <button class="scan-btn on" onclick="openScanner()">Scan Packages</button>
+</div>
+
+<div id="mapToggleWrap" style="display:none;">
     <button class="map-toggle-btn" onclick="toggleMap()">Show Map</button>
     <div class="map-wrap" id="mapWrap">
       <div id="routeMap"></div>
@@ -559,6 +730,7 @@ function renderResults(stops){
 
   // Add map toggle button
   document.getElementById('mapToggleWrap').style.display = 'block';
+  document.getElementById('scanBtnWrap').style.display = 'block';
 
   window._confirmedStops = new Array(stops.length).fill(false);
   document.getElementById('stopsList').innerHTML = stops.map((s,i)=>`
@@ -600,5 +772,27 @@ function toast(msg){
   el._t = setTimeout(()=>el.style.display='none', 3000);
 }
 </script>
+
+<!-- SCANNER OVERLAY -->
+<div class="scan-overlay" id="scanOverlay">
+  <button class="scan-close" onclick="closeScanner()">&#10005;</button>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--blue);
+    letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px;">Scan Package Barcode</div>
+  <div class="scan-video-wrap">
+    <video class="scan-video" id="scanVideo" autoplay playsinline muted></video>
+    <div class="scan-crosshair"><div class="scan-line"></div></div>
+  </div>
+  <div class="scan-status" id="scanStatus">Point camera at barcode</div>
+</div>
+
+<!-- SCAN RESULT FLASH -->
+<div class="scan-result-flash" id="scanFlash">
+  <div class="scan-stop-num" id="flashStopNum">7</div>
+  <div class="scan-stop-label">Stop Number</div>
+  <div class="scan-stop-name" id="flashName"></div>
+  <div class="scan-stop-addr" id="flashAddr"></div>
+  <button class="scan-next-btn" onclick="continueScan()">Scan Next &rarr;</button>
+</div>
+
 </body>
 </html>
