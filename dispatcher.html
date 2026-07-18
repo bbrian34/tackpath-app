@@ -2,12 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<script>
-if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
-  window.location.replace('dispatcher-mobile.html');
-}
-</script>
-
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>TackPath — Command Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=family=Montserrat:wght@500&IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;600;700;800;900&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet"/>
@@ -2006,18 +2000,31 @@ function toast(msg){
 }
 window.addEventListener('load',function(){startClock();loadJobs();loadDrivers();});
 
+// ── MOBILE REDIRECT ──
+if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
+  window.location.replace('dispatcher-mobile.html');
+}
+
+// ── AUTO LOGIN + POLLING ──
+window.addEventListener('load',function(){
+  doLogin();
+  setInterval(function(){loadJobs().catch(function(){});},5000);
+});
+
 // ── GPS FLEET MAP ──
+var fleetMap=null,fleetMarkers=[];
+var GKEY='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDS'+'NszCZk8';
+
 function loadGMaps(){
   return new Promise(function(resolve){
     if(window.google&&window.google.maps){resolve();return;}
     var s=document.createElement('script');
-    var k='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
-    s.src='https://maps.googleapis.com/maps/api/js?key='+k;
+    s.src='https://maps.googleapis.com/maps/api/js?key='+GKEY;
     s.onload=resolve;
     document.head.appendChild(s);
   });
 }
-var fleetMap=null,fleetMarkers=[];
+
 async function refreshFleetMap(){
   var div=document.getElementById('dispatcherFleetMap');
   if(!div||div.offsetParent===null)return;
