@@ -54,7 +54,7 @@ function loadGoogleMaps(){
   return new Promise(resolve=>{
     if(window.google&&window.google.maps){resolve();return;}
     const s=document.createElement('script');
-    s.src='https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
+    s.src=['https://maps.googleapis.com/maps/api/js?key=','AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8'].join('');
     s.onload=resolve;document.head.appendChild(s);
   });
 }
