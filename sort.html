@@ -280,38 +280,34 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function startGeocoding(){
   document.getElementById('uploadZone').style.display = 'none';
   document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('progressSub').textContent = 'Geocoding all addresses...';
+  document.getElementById('progressFill').style.width = '20%';
 
   const geocoder = new google.maps.Geocoder();
-  const geocoded = [];
 
-  for(let i=0; i<packages.length; i++){
-    const pct = Math.round((i/packages.length)*70);
-    document.getElementById('progressFill').style.width = pct+'%';
-    document.getElementById('progressSub').textContent = 'Geocoding '+( i+1)+' of '+packages.length+' addresses...';
-    document.getElementById('progressAddress').textContent = packages[i].address;
-
-    try{
-      const result = await new Promise((resolve, reject)=>{
-        geocoder.geocode({address: packages[i].address}, (results, status)=>{
-          if(status === 'OK') resolve(results[0].geometry.location);
-          else reject(status);
-        });
+  // Batch all geocoding requests simultaneously
+  const geocodePromises = packages.map(pkg =>
+    new Promise(resolve=>{
+      geocoder.geocode({address: pkg.address}, (results, status)=>{
+        if(status === 'OK'){
+          resolve({...pkg, lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()});
+        } else {
+          resolve({...pkg, lat: null, lng: null});
+        }
       });
-      geocoded.push({...packages[i], lat: result.lat(), lng: result.lng()});
-    } catch(e){
-      geocoded.push({...packages[i], lat: null, lng: null});
-    }
+    })
+  );
 
-    if(i < packages.length-1) await sleep(100);
-  }
+  document.getElementById('progressAddress').textContent = 'Processing '+packages.length+' addresses simultaneously...';
+  const geocoded = await Promise.all(geocodePromises);
+  document.getElementById('progressFill').style.width = '60%';
 
   document.getElementById('progressSub').textContent = 'Building optimal delivery sequence...';
-  document.getElementById('progressFill').style.width = '80%';
+  document.getElementById('progressAddress').textContent = '';
 
   const withCoords = geocoded.filter(p=>p.lat!==null);
   const withoutCoords = geocoded.filter(p=>p.lat===null);
 
-  // Use Google Maps Distance Matrix for true driving distances on smaller manifests
   let sequenced;
   if(withCoords.length <= 10){
     sequenced = await optimizeWithDistanceMatrix(withCoords);
@@ -321,7 +317,7 @@ async function startGeocoding(){
 
   const final = [...sequenced, ...withoutCoords];
   document.getElementById('progressFill').style.width = '100%';
-  await sleep(300);
+  await sleep(200);
   renderResults(final);
 }
 
