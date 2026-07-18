@@ -272,11 +272,10 @@ let barcodeDetector = null;
 
 async function openScanner(){
   const overlay = document.getElementById('scanOverlay');
+  if(!overlay){alert('overlay missing');return;}
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(1,14,33,.97);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;';
   const status = document.getElementById('scanStatus');
-  if(!overlay){toast('Scanner element not found');return;}
-  overlay.style.display = 'flex';
-  overlay.classList.add('on');
-  status.textContent = 'Requesting camera access...';
+  if(status) status.textContent = 'Requesting camera access...';
 
   // Check if mediaDevices is available
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
