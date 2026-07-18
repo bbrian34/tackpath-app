@@ -152,7 +152,6 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   .progress-wrap{padding:20px 16px;}
 }
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8&libraries=geometry"></script>
 </head>
 <body>
 
@@ -275,29 +274,28 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 async function startGeocoding(){
   document.getElementById('uploadZone').style.display = 'none';
   document.getElementById('progressWrap').style.display = 'block';
-  document.getElementById('progressSub').textContent = 'Geocoding all addresses...';
+  document.getElementById('progressSub').textContent = 'Geocoding addresses...';
   document.getElementById('progressFill').style.width = '20%';
+  document.getElementById('progressAddress').textContent = 'Processing '+packages.length+' addresses...';
 
-  const geocoder = new google.maps.Geocoder();
-
-  // Batch all geocoding requests simultaneously
+  // Use REST API -- much faster than JS library
+  const KEY = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
   const geocodePromises = packages.map(pkg =>
-    new Promise(resolve=>{
-      geocoder.geocode({address: pkg.address}, (results, status)=>{
-        if(status === 'OK'){
-          resolve({...pkg, lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()});
-        } else {
-          resolve({...pkg, lat: null, lng: null});
+    fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(pkg.address)+'&key='+KEY)
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.status==='OK' && data.results.length){
+          const loc = data.results[0].geometry.location;
+          return {...pkg, lat: loc.lat, lng: loc.lng};
         }
-      });
-    })
+        return {...pkg, lat: null, lng: null};
+      })
+      .catch(()=>({...pkg, lat: null, lng: null}))
   );
 
-  document.getElementById('progressAddress').textContent = 'Processing '+packages.length+' addresses simultaneously...';
   const geocoded = await Promise.all(geocodePromises);
-  document.getElementById('progressFill').style.width = '60%';
-
-  document.getElementById('progressSub').textContent = 'Building optimal delivery sequence...';
+  document.getElementById('progressFill').style.width = '80%';
+  document.getElementById('progressSub').textContent = 'Sequencing stops...';
   document.getElementById('progressAddress').textContent = '';
 
   const withCoords = geocoded.filter(p=>p.lat!==null);
@@ -314,51 +312,7 @@ async function startGeocoding(){
   renderResults(final);
 }
 
-// Google Distance Matrix for small routes (most accurate)
-async function optimizeWithDistanceMatrix(stops){
-  if(!stops.length) return [];
-  const service = new google.maps.DistanceMatrixService();
-  const latLngs = stops.map(s=>new google.maps.LatLng(s.lat, s.lng));
 
-  const matrix = await new Promise((resolve, reject)=>{
-    service.getDistanceMatrix({
-      origins: latLngs,
-      destinations: latLngs,
-      travelMode: google.maps.TravelMode.DRIVING,
-      unitSystem: google.maps.UnitSystem.IMPERIAL
-    }, (response, status)=>{
-      if(status === 'OK') resolve(response);
-      else reject(status);
-    });
-  });
-
-  // Build distance matrix
-  const dist = stops.map((_,i)=>
-    matrix.rows[i].elements.map(e=> e.status==='OK' ? e.duration.value : 99999)
-  );
-
-  // Nearest-neighbor using real driving times
-  const visited = new Array(stops.length).fill(false);
-  const route = [];
-  let current = 0;
-  visited[0] = true;
-  route.push(stops[0]);
-
-  for(let step=1; step<stops.length; step++){
-    let nearest = -1;
-    let minTime = Infinity;
-    for(let j=0; j<stops.length; j++){
-      if(!visited[j] && dist[current][j] < minTime){
-        minTime = dist[current][j];
-        nearest = j;
-      }
-    }
-    visited[nearest] = true;
-    route.push(stops[nearest]);
-    current = nearest;
-  }
-  return route;
-}
 
 // Nearest-neighbor using straight-line for larger manifests
 function nearestNeighborDriving(stops){
@@ -370,10 +324,11 @@ function nearestNeighborDriving(stops){
   while(unvisited.length){
     let nearest = null, minDist = Infinity, nearestIdx = 0;
     unvisited.forEach((s,i)=>{
-      const d = google.maps.geometry.spherical.computeDistanceBetween(
-        new google.maps.LatLng(current.lat, current.lng),
-        new google.maps.LatLng(s.lat, s.lng)
-      );
+      const R=6371;
+      const dLat=(s.lat-current.lat)*Math.PI/180;
+      const dLng=(s.lng-current.lng)*Math.PI/180;
+      const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(current.lat*Math.PI/180)*Math.cos(s.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+      const d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
       if(d < minDist){minDist=d; nearest=s; nearestIdx=i;}
     });
     route.push(nearest);
