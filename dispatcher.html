@@ -2058,6 +2058,19 @@ async function refreshFleetMap(){
 }
 setInterval(refreshFleetMap,10000);
 
+
+// ── TWILIO SMS ──
+async function sendSMS(type, phone, jobId, jobTitle){
+  if(!phone) return;
+  try{
+    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/send-sms',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({type, phone, job_id:jobId, job_title:jobTitle})
+    });
+  }catch(e){console.error('SMS error:',e);}
+}
+
 </script>
 </body>
 </html>
