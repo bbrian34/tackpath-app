@@ -987,6 +987,7 @@ function initApp(){
 function showScreen(id){
   prevScreen=document.querySelector('.screen.on')?.id||'scHome';
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  if(currentJob) saveRouteState();
   document.getElementById(id).classList.add('on');
   document.querySelectorAll('.bn').forEach(b=>b.classList.remove('on'));
   if(id==='scHome')document.querySelectorAll('.bn')[0]?.classList.add('on');
@@ -1124,6 +1125,8 @@ async function acceptOffer(){
   showScreen('scSurgeMap');
   startGPS();
   startDispatchPoll();startJobStatusPoll();
+  lockBackButton();
+  saveRouteState();
 }
 
 function declineOffer(){
@@ -2013,6 +2016,74 @@ if(localStorage.getItem('tp_theme')==='light'){
 const saved=localStorage.getItem('tp_drv');
 if(saved){driver=JSON.parse(saved);initApp();}
 if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
+
+// ── ROUTE STATE PERSISTENCE ──
+// Saves active job and route to localStorage so back button / refresh can't kill it
+
+function saveRouteState(){
+  if(!currentJob) return;
+  try{
+    localStorage.setItem('tp_active_job', JSON.stringify({
+      job: currentJob,
+      surgeStops: surgeStops,
+      currentSurgeStop: currentSurgeStop,
+      isSurgeJob: isSurgeJob,
+      driver: driver,
+      savedAt: Date.now()
+    }));
+  }catch(e){}
+}
+
+function clearRouteState(){
+  try{ localStorage.removeItem('tp_active_job'); }catch(e){}
+}
+
+function restoreRouteState(){
+  try{
+    const saved = localStorage.getItem('tp_active_job');
+    if(!saved) return false;
+    const state = JSON.parse(saved);
+    // Only restore if saved within last 8 hours
+    if(Date.now() - state.savedAt > 8*60*60*1000){
+      clearRouteState();
+      return false;
+    }
+    // Restore state
+    currentJob = state.job;
+    surgeStops = state.surgeStops || [];
+    currentSurgeStop = state.currentSurgeStop || 0;
+    isSurgeJob = state.isSurgeJob || false;
+    driver = state.driver;
+    return true;
+  }catch(e){ return false; }
+}
+
+// Block browser back button during active delivery
+function lockBackButton(){
+  history.pushState(null, '', window.location.href);
+  window.onpopstate = function(){
+    history.pushState(null, '', window.location.href);
+    // Show warning instead of going back
+    showBackWarning();
+  };
+}
+
+function unlockBackButton(){
+  window.onpopstate = null;
+}
+
+function showBackWarning(){
+  // Flash a warning -- don't navigate away
+  const existing = document.getElementById('backWarning');
+  if(existing){ existing.style.display='flex'; setTimeout(()=>existing.style.display='none',3000); return; }
+  const el = document.createElement('div');
+  el.id = 'backWarning';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(1,14,33,.95);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;';
+  el.innerHTML = '<div style="font-size:22px;font-weight:800;color:#ff961e;margin-bottom:12px;">Active Delivery In Progress</div><div style="font-size:15px;color:rgba(238,244,255,.8);margin-bottom:28px;line-height:1.6;">You have an active route. Going back will not cancel your delivery.</div><button onclick="document.getElementById(\'backWarning\').style.display=\'none\'" style="padding:16px 36px;border-radius:12px;background:#19b7ef;border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">Continue Delivery</button>';
+  document.body.appendChild(el);
+  setTimeout(()=>el.style.display='none', 4000);
+}
+
 </script>
 </body>
 </html>
