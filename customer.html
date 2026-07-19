@@ -685,6 +685,9 @@ async function requestQuote(){
     });
     if(created&&created[0]){
       currentJobId=created[0].id;
+      // Send tracking SMS to customer
+      const custPhone = document.getElementById('custPhone')?.value||'';
+      if(custPhone) sendSMS('customer_order', custPhone, currentJobId, created[0].title);
       // Start polling immediately so we catch all status changes
       startPolling();
     }
@@ -1006,6 +1009,19 @@ function loadHistory(){
 const saved=localStorage.getItem('tp_customer');
 if(saved){currentUser=JSON.parse(saved);showPortal();}
 window.addEventListener('load',function(){doLogin();});
+
+// ── TWILIO SMS ──
+async function sendSMS(type, phone, jobId, jobTitle){
+  if(!phone) return;
+  try{
+    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/send-sms',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY},
+      body:JSON.stringify({type, phone, job_id:jobId, job_title:jobTitle})
+    });
+  }catch(e){console.error('SMS error:',e);}
+}
+
 </script>
 </body>
 </html>
