@@ -953,6 +953,9 @@ function showPhoneInput(){
   document.getElementById('loginPhaseCode').style.display='none';
 }
 async function requestCode(){
+  // Dismiss keyboard first (fixes Capacitor WebView)
+  document.getElementById('loginPhone').blur();
+  document.activeElement && document.activeElement.blur();
   const raw=document.getElementById('loginPhone').value.trim();
   if(!raw){toast('Enter your mobile number','warn');return;}
   const phone=raw.replace(/\D/g,'');
@@ -964,6 +967,8 @@ async function requestCode(){
   document.getElementById('loginCode').focus();
 }
 async function verifyCode(){
+  document.getElementById('loginCode') && document.getElementById('loginCode').blur();
+  document.activeElement && document.activeElement.blur();
   const entered=(document.getElementById('loginCode').value||'').trim().replace(/\D/g,'');
   if(entered.length!==6){toast('Enter a 6-digit code','warn');return;}
   const phone=pendingPhone||'0000000000';
