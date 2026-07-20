@@ -65,6 +65,9 @@ button,a,input,textarea{font-family:var(--sans);}
 @keyframes scanLine{0%{top:8%;}50%{top:82%;}100%{top:8%;}}
 @keyframes timerShrink{from{width:100%;}to{width:0%;}}
 
+/* ── LOGIN PHASES ── */
+.lp-hidden{visibility:hidden;height:0;overflow:hidden;margin:0;padding:0;}
+
 /* ── LOGIN ── */
 #scLogin{align-items:center;justify-content:center;padding:28px;
   background:radial-gradient(ellipse at 40% 30%,rgba(25,183,239,.1),transparent 60%),var(--bg);}
@@ -447,8 +450,8 @@ button,a,input,textarea{font-family:var(--sans);}
     </div>
     <div class="lbox-form" id="loginPhasePhone">
       <label class="fl">Mobile Number</label>
-      <button class="fb" id="loginPhoneBtn" onclick="requestCode()" style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;pointer-events:auto;margin-bottom:12px;">Send Code</button>
       <input class="fi" type="tel" id="loginPhone" placeholder="+1 (404) 555-0100" autocomplete="tel" oninput="var d=this.value.replace(/\D/g,'');if(d.length>=10){this.blur();setTimeout(requestCode,300);}"/>
+      <button class="fb" id="loginPhoneBtn" onclick="requestCode()" style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;pointer-events:auto;">Send Code</button>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.08);"></div>
@@ -466,7 +469,7 @@ button,a,input,textarea{font-family:var(--sans);}
         </button>
       </div>
     </div>
-    <div class="lbox-form" id="loginPhaseCode" style="display:none;">
+    <div class="lbox-form" id="loginPhaseCode" class="lp-hidden">
       <label class="fl">Verification Code</label>
       <div style="font-family:var(--mono);font-size:11px;color:#4a6e88;margin-bottom:12px;" id="loginCodeHint">Enter the 6-digit code</div>
       <input class="fi" type="number" id="loginCode" oninput="if(this.value.replace(/\D/g,'').length>=6){this.blur();setTimeout(verifyCode,300);}" placeholder="000000" style="font-size:28px;font-weight:900;letter-spacing:8px;text-align:center;"/>
@@ -960,11 +963,9 @@ async function requestCode(){
   const phone=raw.replace(/\D/g,'');
   pendingPhone=phone;
   pendingCode='000000';
-  try{
-    document.getElementById('loginCodeHint').textContent='Enter any 6-digit code';
-    document.getElementById('loginPhasePhone').style.display='none';
-    document.getElementById('loginPhaseCode').style.display='block';
-  }catch(e){toast('Error: '+e.message,'warn');}
+  document.getElementById('loginCodeHint').textContent='Enter any 6-digit code';
+  document.getElementById('loginPhasePhone').className='lbox-form lp-hidden';
+  document.getElementById('loginPhaseCode').className='lbox-form';
 }
 async function verifyCode(){
   document.getElementById('loginCode') && document.getElementById('loginCode').blur();
