@@ -978,22 +978,6 @@ document.getElementById('loginCode').addEventListener('keydown',e=>{if(e.key==='
 
 // ── INIT ──
 function initApp(){
-  // Auto-login -- bypass login screen
-  var stored = localStorage.getItem('tp_driver');
-  if(stored){ 
-    try{ 
-      driver = JSON.parse(stored); 
-      showHome(); 
-      startPolling(); 
-      return; 
-    }catch(e){} 
-  }
-  // First launch -- use default
-  driver = {name: 'Driver', phone: '0000000000'};
-  localStorage.setItem('tp_driver', JSON.stringify(driver));
-  showHome();
-  startPolling();
-  return;
   document.getElementById('moreName').textContent=driver.name||'Driver';
   document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
   document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
@@ -2029,8 +2013,12 @@ if(localStorage.getItem('tp_theme')==='light'){
 }
 
 // ── BOOT ──
-const saved=localStorage.getItem('tp_drv');
-if(saved){driver=JSON.parse(saved);initApp();}
+let savedDrv=localStorage.getItem('tp_drv');
+if(!savedDrv){
+  driver={id:'drv-0000000000',phone:'0000000000',name:'Driver',email:'',first:'Driver'};
+  localStorage.setItem('tp_drv',JSON.stringify(driver));
+}else{driver=JSON.parse(savedDrv);}
+initApp();
 if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
 
 // ── KEYBOARD DETECTION -- push login box above keyboard ──
