@@ -953,10 +953,10 @@ function showPhoneInput(){
   document.getElementById('loginPhaseCode').style.display='none';
 }
 async function requestCode(){
-  // Dismiss keyboard first (fixes Capacitor WebView)
   document.getElementById('loginPhone').blur();
   document.activeElement && document.activeElement.blur();
   const raw=document.getElementById('loginPhone').value.trim();
+  toast('Got: '+raw,'ok');
   if(!raw){toast('Enter your mobile number','warn');return;}
   const phone=raw.replace(/\D/g,'');
   pendingPhone=phone;
