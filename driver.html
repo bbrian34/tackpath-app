@@ -448,7 +448,7 @@ button,a,input,textarea{font-family:var(--sans);}
     <div class="lbox-form" id="loginPhasePhone">
       <label class="fl">Mobile Number</label>
       <input class="fi" type="tel" id="loginPhone" placeholder="+1 (404) 555-0100" autocomplete="tel"/>
-      <div class="fb" id="loginPhoneBtn" style="cursor:pointer;user-select:none;" onclick="requestCode()" ontouchstart="" ontouchend="event.preventDefault();requestCode()">Send Code</div>
+      <button class="fb" id="loginPhoneBtn" onclick="requestCode()">Send Code</button>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.08);"></div>
@@ -470,7 +470,7 @@ button,a,input,textarea{font-family:var(--sans);}
       <label class="fl">Verification Code</label>
       <div style="font-family:var(--mono);font-size:11px;color:#4a6e88;margin-bottom:12px;" id="loginCodeHint">Enter the 6-digit code</div>
       <input class="fi" type="number" id="loginCode" placeholder="000000" style="font-size:28px;font-weight:900;letter-spacing:8px;text-align:center;"/>
-      <div class="fb" id="loginVerifyBtn" style="cursor:pointer;user-select:none;" onclick="verifyCode()" ontouchstart="" ontouchend="event.preventDefault();verifyCode()">Verify &amp; Sign In</button>
+      <button class="fb" id="loginVerifyBtn" onclick="verifyCode()">Verify &amp; Sign In</button>
       <button onclick="showPhoneInput()" style="width:100%;padding:14px;border-radius:12px;background:none;border:1px solid rgba(255,255,255,.08);color:#4a6e88;font-size:14px;cursor:pointer;margin-top:10px;">Change number</button>
     </div>
   </div>
