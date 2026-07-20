@@ -447,7 +447,7 @@ button,a,input,textarea{font-family:var(--sans);}
     </div>
     <div class="lbox-form" id="loginPhasePhone">
       <label class="fl">Mobile Number</label>
-      <input class="fi" type="tel" id="loginPhone" placeholder="+1 (404) 555-0100" autocomplete="tel" oninput="var d=this.value.replace(/\D/g,'');if(d.length>=7){this.blur();setTimeout(requestCode,300);}"/>
+      <input class="fi" type="tel" id="loginPhone" placeholder="+1 (404) 555-0100" autocomplete="tel" oninput="var d=this.value.replace(/\D/g,'');if(d.length>=10){this.blur();setTimeout(requestCode,300);}"/>
       <button class="fb" id="loginPhoneBtn" onclick="requestCode()" style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;pointer-events:auto;">Send Code</button>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
