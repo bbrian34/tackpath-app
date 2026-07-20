@@ -2016,6 +2016,28 @@ if(localStorage.getItem('tp_theme')==='light'){
 const saved=localStorage.getItem('tp_drv');
 if(saved){driver=JSON.parse(saved);initApp();}
 if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
+
+// ── KEYBOARD DETECTION -- push login box above keyboard ──
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', function(){
+    var scLogin = document.getElementById('scLogin');
+    if(!scLogin || !scLogin.classList.contains('on')) return;
+    var kbHeight = window.innerHeight - window.visualViewport.height;
+    if(kbHeight > 100){
+      // Keyboard is open -- shift login box up
+      scLogin.style.paddingBottom = (kbHeight + 20) + 'px';
+      scLogin.style.justifyContent = 'flex-start';
+      scLogin.style.paddingTop = '20px';
+      scLogin.scrollTop = scLogin.scrollHeight;
+    } else {
+      // Keyboard closed -- reset
+      scLogin.style.paddingBottom = '';
+      scLogin.style.justifyContent = 'center';
+      scLogin.style.paddingTop = '';
+    }
+  });
+}
+
 </script>
 </body>
 </html>
