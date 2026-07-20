@@ -978,6 +978,22 @@ document.getElementById('loginCode').addEventListener('keydown',e=>{if(e.key==='
 
 // ── INIT ──
 function initApp(){
+  // Skip login for native app -- set default driver
+  if(navigator.userAgent.indexOf('wv') === -1 && !window.Capacitor){
+    // web browser -- normal login flow
+  } else {
+    // Native app -- skip login, use stored driver or prompt name
+    var stored = localStorage.getItem('tp_driver');
+    if(stored){ try{ driver = JSON.parse(stored); showHome(); startPolling(); return; }catch(e){} }
+    // First time -- ask for name only
+    var name = prompt('Enter your name:');
+    if(!name) name = 'Driver';
+    driver = {name: name, phone: '0000000000'};
+    localStorage.setItem('tp_driver', JSON.stringify(driver));
+    showHome();
+    startPolling();
+    return;
+  }
   document.getElementById('moreName').textContent=driver.name||'Driver';
   document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
   document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
