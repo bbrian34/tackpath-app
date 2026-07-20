@@ -66,8 +66,9 @@ button,a,input,textarea{font-family:var(--sans);}
 @keyframes timerShrink{from{width:100%;}to{width:0%;}}
 
 /* ── LOGIN ── */
-#scLogin{align-items:center;justify-content:center;padding:28px;
-  background:radial-gradient(ellipse at 40% 30%,rgba(25,183,239,.1),transparent 60%),var(--bg);}
+#scLogin{align-items:center;justify-content:flex-start;padding:28px;overflow-y:auto;
+  background:radial-gradient(ellipse at 40% 30%,rgba(25,183,239,.1),transparent 60%),var(--bg);
+  padding-top:max(40px,10vh);}
 .lbox{width:100%;max-width:380px;border-radius:24px;overflow:hidden;
   background:rgba(7,24,40,.98);border:1px solid rgba(25,183,239,.2);
   box-shadow:0 32px 80px rgba(0,0,0,.8);position:relative;}
@@ -985,6 +986,8 @@ function initApp(){
 
 // ── SCREENS ──
 function showScreen(id){
+  // Allow scroll on login screen, lock on others
+  document.body.style.overflow = id==='scLogin' ? 'auto' : 'hidden';
   prevScreen=document.querySelector('.screen.on')?.id||'scHome';
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.getElementById(id).classList.add('on');
