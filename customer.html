@@ -335,6 +335,18 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
             <div class="po-desc" style="font-size:10px;">Immediate</div>
           </div>
         </div>
+        <div style="margin-bottom:8px;">
+          <label class="fl2">Mobile Number</label>
+          <input type="tel" class="fi2" id="custPhone" placeholder="(404) 555-0100"/>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;">
+          <input type="checkbox" id="smsConsent" style="margin-top:3px;width:16px;height:16px;flex-shrink:0;"/>
+          <label for="smsConsent" style="font-size:11px;color:var(--muted);line-height:1.5;">
+            I agree to receive SMS delivery notifications from TackPath, including order confirmation, tracking links, and delivery status updates. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe, HELP for help. See our
+            <a href="privacy.html" target="_blank" style="color:var(--blue);">Privacy Policy</a> and
+            <a href="terms.html" target="_blank" style="color:var(--blue);">Terms of Service</a>.
+          </label>
+        </div>
         <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">
           <input type="text" class="fi2" id="notes" placeholder="Notes (optional)" style="margin:0;"/>
           <button class="btn-primary" onclick="requestQuote()" style="white-space:nowrap;padding:9px 18px;">Request Quote &#8594;</button>
@@ -685,9 +697,10 @@ async function requestQuote(){
     });
     if(created&&created[0]){
       currentJobId=created[0].id;
-      // Send tracking SMS to customer
+      // Send tracking SMS to customer -- only if opted in
       const custPhone = document.getElementById('custPhone')?.value||'';
-      if(custPhone) sendSMS('customer_order', custPhone, currentJobId, created[0].title);
+      const smsConsent = document.getElementById('smsConsent')?.checked||false;
+      if(custPhone && smsConsent) sendSMS('customer_order', custPhone, currentJobId, created[0].title);
       // Start polling immediately so we catch all status changes
       startPolling();
     }
