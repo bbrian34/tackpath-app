@@ -854,13 +854,21 @@ function unlockSpeech(){
 }
 
 function speak(text){
+  // Native Android TTS (works in Capacitor WebView where speechSynthesis does not exist)
+  if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech){
+    try{
+      window.Capacitor.Plugins.TextToSpeech.speak({text:text,rate:1.0,pitch:1.1,volume:1.0,category:'ambient'});
+      return;
+    }catch(e){}
+  }
+  // Browser fallback (Chrome, etc.)
   try{
     if(!synth)return;
     if(synth.speaking||synth.pending)synth.cancel();
     const u=new SpeechSynthesisUtterance(text);
     if(synthVoice)u.voice=synthVoice;
     u.rate=1.0;u.pitch=1.1;u.volume=1;
-    u.onerror=()=>{}; // Silence errors
+    u.onerror=()=>{};
     setTimeout(()=>{try{synth.speak(u);}catch(e){}},200);
   }catch(e){}
 }
