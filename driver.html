@@ -837,14 +837,15 @@ let gpsWatcher=null,prevScreen='scHome',speechUnlocked=false;
 let podStream=null,podPhotoData=null,podTab='sig',sigCtxPad=null;
 
 // ── SPEECH ──
-const synth=window.speechSynthesis;
+const synth=window.speechSynthesis||null;
 let synthVoice=null;
 function loadVoices(){
+  if(!synth)return;
   const vs=synth.getVoices();
   synthVoice=vs.find(v=>v.lang==='en-US'&&!v.name.toLowerCase().includes('compact'))
     ||vs.find(v=>v.lang.startsWith('en-'))||null;
 }
-if(synth.onvoiceschanged!==undefined)synth.onvoiceschanged=loadVoices;
+if(synth&&synth.onvoiceschanged!==undefined)synth.onvoiceschanged=loadVoices;
 loadVoices();
 
 function unlockSpeech(){
@@ -854,6 +855,7 @@ function unlockSpeech(){
 
 function speak(text){
   try{
+    if(!synth)return;
     if(synth.speaking||synth.pending)synth.cancel();
     const u=new SpeechSynthesisUtterance(text);
     if(synthVoice)u.voice=synthVoice;
@@ -923,7 +925,7 @@ async function startDispatchPoll(){
       lastSeenMsgId=latest.id;
       const onComms=document.getElementById('scComms')?.classList.contains('on');
       if(!onComms){playMsgAlert();showDispatchNotif(latest.body);}
-      synth.cancel();setTimeout(()=>speak('Dispatch says: '+latest.body),200);
+      if(synth)synth.cancel();setTimeout(()=>speak('Dispatch says: '+latest.body),200);
       const dBtn=document.getElementById('dispatchBtn');
       if(dBtn)dBtn.classList.add('alert');
       const badge=document.getElementById('msgBadge');
@@ -942,7 +944,7 @@ function showDispatchNotif(text){
   const old=document.getElementById('dispNotif');if(old)old.remove();
   const n=document.createElement('div');n.id='dispNotif';n.className='dispatch-notif';
   n.innerHTML='<div class="dn-icon">&#128172;</div><div class="dn-info"><div class="dn-from">Dispatch says</div><div class="dn-body">'+text.slice(0,100)+'</div></div>';
-  n.onclick=()=>{synth.cancel();speak('Dispatch says: '+text);n.remove();};
+  n.onclick=()=>{if(synth)synth.cancel();speak('Dispatch says: '+text);n.remove();};
   document.body.appendChild(n);
   setTimeout(()=>{if(document.getElementById('dispNotif')===n){n.style.opacity='0';n.style.transition='opacity .4s';setTimeout(()=>n.remove(),400);}},7000);
 }
