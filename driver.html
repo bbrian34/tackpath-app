@@ -1127,16 +1127,28 @@ async function acceptOffer(){
   if(currentJob.job_type==='surge'&&surgeSt&&surgeSt.length>0){
     isSurgeJob=true;surgeStops=surgeSt;currentSurgeStop=0;
   }else{
-    // Sprint -- single stop, runs identical to surge
+    // Sprint -- pickup then dropoff as two stops, runs identical to surge
     isSurgeJob=true;currentSurgeStop=0;
-    surgeStops=[{
+    const sprintStops=[];
+    if(currentJob.pickup_address){
+      sprintStops.push({
+        order_id: currentJob.id ? currentJob.id.slice(0,8)+'-P' : 'SP-001-P',
+        smart_id: currentJob.id ? 'TP-'+currentJob.id.slice(0,8)+'-P' : 'TP-SP01-P',
+        recipient: 'Pickup',
+        address: currentJob.pickup_address,
+        packages: parseInt(currentJob.packages)||1,
+        job_type: 'sprint_pickup'
+      });
+    }
+    sprintStops.push({
       order_id: currentJob.id ? currentJob.id.slice(0,8) : 'SP-001',
       smart_id: currentJob.id ? 'TP-'+currentJob.id.slice(0,8) : 'TP-SP01',
       recipient: currentJob.customer_name || currentJob.dropoff_name || 'Customer',
       address: currentJob.dropoff_address || '',
       packages: parseInt(currentJob.packages)||1,
       job_type: 'sprint'
-    }];
+    });
+    surgeStops=sprintStops;
   }
   // All jobs go straight to surge map -- identical flow regardless of job type
   currentJob.status='in_transit';
