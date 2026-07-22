@@ -2119,6 +2119,17 @@ async function initJobNotifications(){
   if(!LN) return;
   try{
     await LN.requestPermissions();
+    // High-importance channel -- makes this pop up as a heads-up banner with distinct sound/vibration,
+    // instead of quietly sitting in the notification shade like a normal alert
+    await LN.createChannel({
+      id:'tackpath_active_job',
+      name:'Active Delivery',
+      importance:5,
+      visibility:1,
+      vibration:true,
+      lights:true,
+      lightColor:'#19b7ef'
+    });
     await LN.registerActionTypes({types:[{
       id:'JOB_ACTIVE',
       actions:[
@@ -2141,6 +2152,7 @@ async function showJobNotification(body){
       title:'TackPath -- Active Delivery',
       body:body||'Delivery in progress',
       actionTypeId:'JOB_ACTIVE',
+      channelId:'tackpath_active_job',
       ongoing:true,
       autoCancel:false,
       schedule:{at:new Date(Date.now()+100)}
