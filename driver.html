@@ -1928,7 +1928,7 @@ function confirmSurgeStop(){
   if(currentSurgeStop>=total-1){
     sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name}).catch(()=>{});
    
-  stopGPSTracking(); const pay=currentJob.price||0;
+  if(window._gpsInterval)clearInterval(window._gpsInterval); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);stopWakeWord();
     currentJob=null;scannedPackages=[];surgeStops=[];isSurgeJob=false;currentSurgeStop=0;
@@ -1937,12 +1937,9 @@ function confirmSurgeStop(){
     showHome();
   }else{
     currentSurgeStop++;
-    showScreen('scSurgeMap');
-    renderSurgeList();
-    setTimeout(()=>{
-      const nextRow=document.getElementById('surgeRow'+currentSurgeStop);
-      if(nextRow)nextRow.scrollIntoView({behavior:'smooth',block:'center'});
-    },200);
+    // Jump straight into the next stop -- no list, no extra tap, matches standard delivery-app flow
+    showScreen('scSurgeDelivery');
+    surgeTapStop(currentSurgeStop);
   }
 }
 
