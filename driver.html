@@ -702,6 +702,7 @@ button,a,input,textarea{font-family:var(--sans);}
         <div style="font-size:16px;font-weight:900;color:#fff;" id="sdRecipient">Barbara Jackson</div>
         <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:1px;" id="sdAddress">1000 Northside Dr NW</div>
       </div>
+      <button onclick="navigateToStop()" style="background:var(--blue);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;">&#9194; Navigate</button>
       <button onclick="showScreen('scSurgeMap')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">&#8592; List</button>
     </div>
     <!-- Map -->
@@ -1609,6 +1610,14 @@ function sdScanConfirmed(){
   document.getElementById('sdScanBtn').style.display='none';
   // Go straight to POD -- no intermediate button
   openSurgePOD();
+}
+
+function navigateToStop(){
+  if(!surgeStops||!surgeStops[currentSurgeStop])return;
+  const addr=surgeStops[currentSurgeStop].address;
+  if(!addr)return;
+  const dest=encodeURIComponent(addr);
+  window.open('https://www.google.com/maps/dir/?api=1&destination='+dest+'&travelmode=driving','_system');
 }
 
 function surgeTapStop(i){
