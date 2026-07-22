@@ -702,6 +702,7 @@ button,a,input,textarea{font-family:var(--sans);}
         <div style="font-size:16px;font-weight:900;color:#fff;" id="sdRecipient">Barbara Jackson</div>
         <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:1px;" id="sdAddress">1000 Northside Dr NW</div>
       </div>
+      <button onclick="navigateToStop()" style="background:var(--blue);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px;">&#9194; Navigate</button>
       <button onclick="showScreen('scSurgeMap')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">&#8592; List</button>
     </div>
     <!-- Map -->
@@ -991,16 +992,30 @@ function initApp(){
   document.getElementById('moreName').textContent=driver.name||'Driver';
   document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
   document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
+  // If a route was in progress (e.g. app process was killed by Android while navigating externally), restore it
+  if(restoreRouteState()){
+    startPolling();
+    startJobStatusPoll();
+    if(currentJob.status==='in_transit'&&isSurgeJob&&surgeStops.length>0){
+      showScreen('scSurgeDelivery');renderSurgeStop();
+    }else{
+      showScreen('scJob');renderJobScreen();
+    }
+    if(currentJob.status==='in_transit'||currentJob.status==='arrived_pickup'||currentJob.status==='customer_confirmed')startGPS();
+    return;
+  }
   showHome();startPolling();
 }
 
 // ── SCREENS ──
 function showScreen(id){
+  const target=document.getElementById(id);
+  if(!target)return; // unknown screen id -- fail safe instead of crashing the app
   // Allow scroll on login screen, lock on others
   document.body.style.overflow = id==='scLogin' ? 'auto' : 'hidden';
   prevScreen=document.querySelector('.screen.on')?.id||'scHome';
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
+  target.classList.add('on');
   document.querySelectorAll('.bn').forEach(b=>b.classList.remove('on'));
   if(id==='scHome')document.querySelectorAll('.bn')[0]?.classList.add('on');
   if(id==='scComms'){
@@ -1155,6 +1170,7 @@ function declineOffer(){
 
 function renderJobScreen(){
   if(!currentJob)return;
+  saveRouteState();
   const s=currentJob.status;
   const badge=document.getElementById('mapStatus');
   const btn=document.getElementById('jobBtn');
@@ -1446,7 +1462,7 @@ async function execRubyAction(cmd,transcript){
   switch(cmd.action){
     case 'navigate':
       const dest=currentJob?.status==='in_transit'?currentJob?.dropoff_address:currentJob?.pickup_address;
-      if(dest)window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest),'_blank');break;
+      if(dest)startTurnByTurn(dest);break;
     case 'arrived_pickup':arrivedAtPickup();break;
     case 'got_package':startDelivery();break;
     case 'arrived_dropoff':arrivedAtDropoff();break;
@@ -1609,6 +1625,11 @@ function sdScanConfirmed(){
   document.getElementById('sdScanBtn').style.display='none';
   // Go straight to POD -- no intermediate button
   openSurgePOD();
+}
+
+function navigateToStop(){
+  if(!surgeStops||!surgeStops[currentSurgeStop])return;
+  startTurnByTurn(surgeStops[currentSurgeStop].address);
 }
 
 function surgeTapStop(i){
@@ -1801,6 +1822,7 @@ function toast(msg,type='ok'){
 // ── SURGE MULTI-STOP FLOW ──
 function renderSurgeStop(){
   if(!surgeStops.length)return;
+  saveRouteState();
   const stop=surgeStops[currentSurgeStop];
   const total=surgeStops.length;
   const idx=currentSurgeStop;
@@ -1960,15 +1982,33 @@ function startGPS(){
 }
 
 // ── IN-APP NAVIGATION ──
+async function startTurnByTurn(address){
+  if(!address)return;
+  const dest=encodeURIComponent(address);
+  const AL=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AppLauncher;
+  const navUrl='google.navigation:q='+dest+'&mode=d';
+  const webUrl='https://www.google.com/maps/dir/?api=1&destination='+dest+'&travelmode=driving';
+  if(AL){
+    try{
+      const r=await AL.openUrl({url:navUrl});
+      if(!r||!r.completed) await AL.openUrl({url:webUrl});
+    }catch(e){
+      try{await AL.openUrl({url:webUrl});}catch(e2){}
+    }
+  }else{
+    // Browser fallback (Chrome, testing) -- safe here since there's no WebView job state to lose
+    window.open(webUrl,'_blank');
+  }
+}
+
 function navigateInApp(address){
   if(!address)return;
   const iframe=document.getElementById('jobMap');
   if(iframe){
-    // Use Google Maps embed with directions mode
     const dest=encodeURIComponent(address);
     iframe.src='https://maps.google.com/maps?q='+dest+'&output=embed&z=15';
   }
-  
+  startTurnByTurn(address);
 }
 
 // Show Route tap -- load stops and show screen
@@ -2020,6 +2060,39 @@ if(localStorage.getItem('tp_theme')==='light'){
     const btn=document.getElementById('themeBtn');
     if(btn)btn.textContent='☀';
   });
+}
+
+// ── ROUTE STATE PERSISTENCE ──
+// Protects against Android killing the app process while backgrounded (e.g. during external navigation).
+// localStorage is disk-backed in the WebView and survives a full process kill, unlike in-memory JS variables.
+function saveRouteState(){
+  try{
+    localStorage.setItem('tp_route_state',JSON.stringify({
+      currentJob:currentJob||null,
+      surgeStops:surgeStops||[],
+      currentSurgeStop:currentSurgeStop||0,
+      isSurgeJob:!!isSurgeJob,
+      savedAt:Date.now()
+    }));
+  }catch(e){}
+}
+function restoreRouteState(){
+  try{
+    const raw=localStorage.getItem('tp_route_state');
+    if(!raw)return false;
+    const st=JSON.parse(raw);
+    // Ignore stale state older than 8 hours
+    if(!st.savedAt||Date.now()-st.savedAt>8*60*60*1000){localStorage.removeItem('tp_route_state');return false;}
+    if(!st.currentJob)return false;
+    currentJob=st.currentJob;
+    surgeStops=st.surgeStops||[];
+    currentSurgeStop=st.currentSurgeStop||0;
+    isSurgeJob=!!st.isSurgeJob;
+    return true;
+  }catch(e){return false;}
+}
+function clearRouteState(){
+  try{localStorage.removeItem('tp_route_state');}catch(e){}
 }
 
 // ── BOOT ──
