@@ -989,6 +989,7 @@ document.getElementById('loginCode').addEventListener('keydown',e=>{if(e.key==='
 
 // ── INIT ──
 function initApp(){
+  initJobNotifications();
   document.getElementById('moreName').textContent=driver.name||'Driver';
   document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
   document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
@@ -1140,6 +1141,7 @@ async function acceptOffer(){
   // All jobs go straight to surge map -- identical flow regardless of job type
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  showJobNotification(surgeStops.length>1?'Delivering -- '+surgeStops.length+' stops':'Heading to delivery');
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
   document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
@@ -1290,6 +1292,7 @@ async function startDelivery(){
   try{
     await sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name});
     currentJob.status='in_transit';
+    showJobNotification(isSurgeJob?'Delivering -- '+surgeStops.length+' stops':'Heading to dropoff');
     startGPS();
     // Check if Surge multi-stop job
     if(isSurgeJob&&surgeStops.length>0){
@@ -1789,6 +1792,7 @@ async function submitPOD(){
     // Notify dispatch
     sbPost('messages',{job_id:currentJob.id,sender:driver.name,sender_role:'driver',body:'Delivered to '+recipient+'. POD: '+podTab+'.'}).catch(()=>{});
     stopPODCamera();
+    clearJobNotification();
     const pay=currentJob.price||Math.floor(Math.random()*35+45);
     earnings+=pay;jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);
@@ -1927,7 +1931,7 @@ function confirmSurgeStop(){
   window._surgePODMode=false;
   if(currentSurgeStop>=total-1){
     sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name}).catch(()=>{});
-   
+    clearJobNotification();
   if(window._gpsInterval)clearInterval(window._gpsInterval); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);stopWakeWord();
@@ -2090,6 +2094,57 @@ function restoreRouteState(){
 }
 function clearRouteState(){
   try{localStorage.removeItem('tp_route_state');}catch(e){}
+}
+
+// ── JOB NOTIFICATION (return-to-app without hunting through app switcher) ──
+const JOB_NOTIF_ID = 9001;
+async function initJobNotifications(){
+  const LN = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+  if(!LN) return;
+  try{
+    await LN.requestPermissions();
+    await LN.registerActionTypes({types:[{
+      id:'JOB_ACTIVE',
+      actions:[
+        {id:'back', title:'Back to Delivery'},
+        {id:'arrived', title:'Arrived at Stop'}
+      ]
+    }]});
+    LN.addListener('localNotificationActionPerformed', (action)=>{
+      if(action.actionId==='arrived') handleArrivedFromNotification();
+      // 'back' and a plain tap both bring the app to foreground automatically (default Android behavior)
+    });
+  }catch(e){}
+}
+async function showJobNotification(body){
+  const LN = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+  if(!LN) return;
+  try{
+    await LN.schedule({notifications:[{
+      id:JOB_NOTIF_ID,
+      title:'TackPath -- Active Delivery',
+      body:body||'Delivery in progress',
+      actionTypeId:'JOB_ACTIVE',
+      ongoing:true,
+      autoCancel:false,
+      schedule:{at:new Date(Date.now()+100)}
+    }]});
+  }catch(e){}
+}
+async function clearJobNotification(){
+  const LN = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+  if(!LN) return;
+  try{ await LN.cancel({notifications:[{id:JOB_NOTIF_ID}]}); }catch(e){}
+}
+function handleArrivedFromNotification(){
+  if(!currentJob) return;
+  if(isSurgeJob){
+    if(typeof sdAtStop==='function') sdAtStop();
+  }else if(currentJob.status==='customer_confirmed'){
+    arrivedAtPickup();
+  }else if(currentJob.status==='in_transit'){
+    arrivedAtDropoff();
+  }
 }
 
 // ── BOOT ──
