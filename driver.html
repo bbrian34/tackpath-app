@@ -1962,13 +1962,16 @@ function startGPS(){
 // ── IN-APP NAVIGATION ──
 function navigateInApp(address){
   if(!address)return;
+  // Keep the in-app preview map updated
   const iframe=document.getElementById('jobMap');
   if(iframe){
-    // Use Google Maps embed with directions mode
     const dest=encodeURIComponent(address);
     iframe.src='https://maps.google.com/maps?q='+dest+'&output=embed&z=15';
   }
-  
+  // Launch real turn-by-turn voice navigation in the Google Maps app
+  const dest=encodeURIComponent(address);
+  const mapsUrl='https://www.google.com/maps/dir/?api=1&destination='+dest+'&travelmode=driving';
+  window.open(mapsUrl,'_system');
 }
 
 // Show Route tap -- load stops and show screen
