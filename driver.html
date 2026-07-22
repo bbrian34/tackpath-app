@@ -1941,9 +1941,13 @@ function confirmSurgeStop(){
     showHome();
   }else{
     currentSurgeStop++;
-    // Jump straight into the next stop -- no list, no extra tap, matches standard delivery-app flow
-    showScreen('scSurgeDelivery');
-    surgeTapStop(currentSurgeStop);
+    // Return to the stop list, scrolled to the next unfinished stop -- driver taps it to open and navigate
+    showScreen('scSurgeMap');
+    renderSurgeList();
+    setTimeout(()=>{
+      const nextRow=document.getElementById('surgeRow'+currentSurgeStop);
+      if(nextRow)nextRow.scrollIntoView({behavior:'smooth',block:'center'});
+    },200);
   }
 }
 
