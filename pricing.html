@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Subscription Plans — TackPath</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--purple:#8d5cff;--orange:#ff961e;
+  --card-bg:#071828;--page-bg:#010e21;
+  --text:#e8ecf2;--muted-75:rgba(232,236,242,.75);--muted-5:rgba(232,236,242,.5);
+}
+body{font-family:'DM Sans',-apple-system,sans-serif;color:var(--text);background:var(--page-bg);line-height:1.5;padding:90px 32px 100px;}
+.logo{display:flex;align-items:center;justify-content:center;gap:16px;font-family:'Montserrat',sans-serif;font-weight:500;letter-spacing:1.5px;font-size:34px;margin-bottom:64px;}
+.logo span:first-child{color:#fff;}
+.logo span:last-child{color:var(--blue);}
+
+.head{text-align:center;max-width:600px;margin:0 auto 64px;}
+.eyebrow-head{font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;color:var(--blue);text-transform:uppercase;margin-bottom:16px;}
+h1{font-size:clamp(30px,4vw,44px);font-weight:800;letter-spacing:-1px;margin-bottom:16px;}
+.sub{color:var(--muted-75);font-size:16px;}
+
+.grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:end;}
+@media(max-width:900px){.grid{grid-template-columns:1fr;align-items:stretch;}}
+
+.card{border-radius:20px;padding:44px 38px;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--card-bg);}
+
+.card.bloom{min-height:560px;border:1px solid rgba(25,183,239,.3);background:radial-gradient(ellipse at 30% 10%,rgba(25,183,239,.22),transparent 60%),var(--card-bg);}
+.card.ascend{min-height:580px;border:1px solid rgba(141,92,255,.45);background:radial-gradient(ellipse at 30% 5%,rgba(141,92,255,.28),transparent 65%),var(--card-bg);}
+.card.lotus{min-height:700px;border:1.5px solid var(--orange);background:radial-gradient(ellipse at 30% 0%,rgba(255,150,30,.38),transparent 65%),var(--card-bg);box-shadow:0 20px 60px rgba(255,150,30,.18);}
+
+@media(max-width:900px){.card{min-height:auto;}}
+
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;}
+.card.bloom .eyebrow{color:var(--blue);}
+.card.ascend .eyebrow{color:var(--purple);}
+.card.lotus .eyebrow{color:var(--orange);}
+
+.pname{font-size:34px;letter-spacing:-0.5px;margin-bottom:26px;}
+.card.bloom .pname,.card.ascend .pname{font-weight:600;}
+.card.lotus .pname{font-weight:700;}
+
+.scope{display:flex;align-items:baseline;gap:6px;margin-bottom:34px;}
+.scope .amt{font-size:48px;font-weight:800;letter-spacing:-1px;line-height:1;}
+.scope .per{color:var(--muted-75);font-size:16px;}
+
+.desc{color:var(--muted-75);font-size:15px;margin-bottom:36px;max-width:280px;}
+
+.feat-list{list-style:none;flex-grow:1;}
+.feat-list li{font-size:15px;color:var(--text);margin-bottom:20px;}
+
+.cta{display:block;text-align:center;padding:16px 24px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-top:32px;border:1px solid rgba(232,236,242,.3);color:var(--text);background:transparent;}
+.card.lotus .cta{background:var(--orange);color:var(--card-bg);border:none;font-weight:800;}
+
+.footnote{text-align:center;color:var(--muted-5);font-size:13px;margin-top:52px;max-width:640px;margin-left:auto;margin-right:auto;}
+.footnote a{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="logo">
+  <svg width="27" height="46" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/></svg>
+  <span>T Ʌ C K </span><span>P Ʌ T H</span>
+</div>
+
+<div class="head">
+  <div class="eyebrow-head">Subscription Plans</div>
+  <h1>Built for how you actually run deliveries</h1>
+  <p class="sub">From a single-driver operation to a fully managed dispatch desk, TackPath scales with your business.</p>
+</div>
+
+<div class="grid">
+
+  <div class="card bloom">
+    <div class="eyebrow">Entry</div>
+    <div class="pname">Bloom</div>
+    <div class="scope"><span class="amt">3 drivers</span><span class="per">max</span></div>
+    <div class="desc">For courier teams running their first automated routes.</div>
+    <ul class="feat-list">
+      <li>Sling — on-demand point-to-point delivery</li>
+      <li>Surge — multi-stop block routing</li>
+      <li>Customer portal &amp; live tracking</li>
+      <li>Standard support</li>
+    </ul>
+    <a href="#" class="cta">Start free trial</a>
+  </div>
+
+  <div class="card ascend">
+    <div class="eyebrow">Growth</div>
+    <div class="pname">Ascend</div>
+    <div class="scope"><span class="amt">Unlimited</span><span class="per">drivers</span></div>
+    <div class="desc">For courier operations scaling up their daily volume.</div>
+    <ul class="feat-list">
+      <li>SmartSort pre-sort &amp; barcode scanning</li>
+      <li>Live GPS fleet map, all drivers</li>
+      <li>OWL dashboard with RIA revenue intelligence</li>
+      <li>Priority support</li>
+    </ul>
+    <a href="#" class="cta">Start free trial</a>
+  </div>
+
+  <div class="card lotus">
+    <div class="eyebrow">Fully Managed</div>
+    <div class="pname">Lotus</div>
+    <div class="scope"><span class="amt">Custom</span></div>
+    <div class="desc">TackPath's team runs your dispatch, end to end.</div>
+    <ul class="feat-list">
+      <li>Full AI agent suite — Operations, Communication, Intake, Billing</li>
+      <li>White label branding</li>
+      <li>24/7 monitoring &amp; priority support</li>
+    </ul>
+    <a href="#" class="cta">Talk to sales</a>
+  </div>
+
+</div>
+
+<p class="footnote">All plans include the TackPath driver app, GPS tracking, and proof of delivery. Lotus pricing is scoped to your delivery volume and requirements — <a href="#">contact us</a> for a custom quote.</p>
+</body>
+</html>
