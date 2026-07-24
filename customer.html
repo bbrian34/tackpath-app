@@ -687,7 +687,7 @@ async function requestQuote(){
   const distFee=Math.round(distMiles*2.8);
   const surcharge={standard:0,priority:12,critical:28}[selectedPri];
   currentPrice=base+distFee+surcharge;
-  currentEta=Math.floor(Math.random()*20+18);
+  currentEta=12+Math.round(distMiles*2);
   const priorityLabel={standard:'Standard',priority:'Priority',critical:'Critical'}[selectedPri];
   const routeSummary=pickupCity+' to '+deliveryCity;
 
