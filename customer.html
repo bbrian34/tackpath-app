@@ -541,7 +541,7 @@ const ZONE_MAP={
   'Marietta':3,'Roswell':3,'Alpharetta':3,'Norcross':3,'Duluth':3,
   'Lawrenceville':3,'Kennesaw':3,'Woodstock':3,'Cumming':3,'Peachtree City':3
 };
-const ZONE_BASE_FEE={1:10,2:15,3:22};
+const ZONE_BASE_FEE={1:15,2:20,3:28};
 // Estimated miles by zone pair -- deterministic, not random, based on real Atlanta geography
 const ZONE_PAIR_MILES={
   '1-1':4, '1-2':9, '1-3':16,
@@ -687,7 +687,7 @@ async function requestQuote(){
   const distFee=Math.round(distMiles*2.8);
   const surcharge={standard:0,priority:12,critical:28}[selectedPri];
   currentPrice=base+distFee+surcharge;
-  currentEta=12+Math.round(distMiles*2);
+  currentEta=15+Math.round(distMiles*3);
   const priorityLabel={standard:'Standard',priority:'Priority',critical:'Critical'}[selectedPri];
   const routeSummary=pickupCity+' to '+deliveryCity;
 
