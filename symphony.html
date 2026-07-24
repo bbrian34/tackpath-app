@@ -532,11 +532,36 @@ body{font-family:var(--sans);color:var(--text);display:flex;flex-direction:colum
     </div>
   </div>
   <div class="panel" style="margin-bottom:12px;">
+    <div class="panel-hdr"><div class="panel-title">&#128203; Invoice Filters</div><div class="panel-sub">Choose a client and date range before running billing</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 0 4px;">
+      <div>
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Client</label>
+        <select id="billingClientFilter" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;">
+          <option value="">All clients</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">From</label>
+        <input type="date" id="billingDateFrom" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;"/>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">To</label>
+        <input type="date" id="billingDateTo" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;"/>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:12px;">
     <div class="panel-hdr" style="display:flex;justify-content:space-between;align-items:center;">
       <div><div class="panel-title">&#129534; Invoice Queue</div><div class="panel-sub">Completed deliveries ready for billing review</div></div>
       <button onclick="runBillingAgent()" style="font-family:var(--mono);font-size:9px;padding:5px 12px;border-radius:7px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold);cursor:pointer;">&#9654; Run Billing Agent</button>
     </div>
     <div id="billingQueue" style="max-height:360px;overflow-y:auto;"><div class="empty">Click Run Billing Agent to review completed deliveries</div></div>
+  </div>
+  <div class="panel" style="margin-bottom:12px;">
+    <div class="panel-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+      <div><div class="panel-title">&#128196; Invoice History</div><div class="panel-sub">Past invoices generated, paid and unpaid</div></div>
+    </div>
+    <div id="invoiceHistory" style="max-height:300px;overflow-y:auto;"><div class="empty">No invoices generated yet</div></div>
   </div>
   <div class="panel">
     <div class="panel-hdr"><div class="panel-title">Billing Audit Trail</div><div class="panel-sub">All billing agent decisions</div></div>
@@ -851,6 +876,7 @@ function showTab(id){
   if(id==='comms') loadCommsList();
   if(id==='analytics') renderAnalytics();
   if(id==='map') renderMapDrivers();
+  if(id==='billing'){populateBillingClientFilter();renderInvoiceHistory();}
   if(id==='incidents'){renderIncidents();renderIncidentStats();renderAudit();}
 }
 
@@ -1360,6 +1386,80 @@ async function loadData(){
 
 // ── BILLING AGENT ──
 let billingItems = [];
+let billingContextJobs = [];
+let billingContextClient = '';
+let billingContextFrom = '';
+let billingContextTo = '';
+
+async function populateBillingClientFilter(){
+  const sel = document.getElementById('billingClientFilter');
+  if(!sel) return;
+  try{
+    const jobs = await sbGet('jobs?select=customer_name&order=customer_name.asc&limit=500');
+    const names = [...new Set((jobs||[]).map(j=>j.customer_name).filter(Boolean))];
+    sel.innerHTML = '<option value="">All clients</option>' +
+      names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  }catch(e){}
+}
+
+async function saveInvoice(){
+  if(!billingItems.length){toast('Nothing to save','warn');return;}
+  const total = billingItems.reduce((s,i)=>s+parseFloat(i.amount||0),0);
+  try{
+    await sbPost('invoices',{
+      client_name: billingContextClient,
+      date_from: billingContextFrom,
+      date_to: billingContextTo,
+      job_count: billingItems.length,
+      total_amount: total,
+      status: 'unpaid',
+      job_ids: billingItems.map(i=>i.job_id)
+    });
+    addFeed('Invoice saved: '+billingContextClient+' · $'+total.toFixed(2),'var(--gold)');
+    renderInvoiceHistory();
+  }catch(e){
+    addFeed('Could not save invoice: '+e.message,'var(--orange)');
+  }
+}
+
+async function renderInvoiceHistory(){
+  const el = document.getElementById('invoiceHistory');
+  if(!el) return;
+  try{
+    const invoices = await sbGet('invoices?order=created_at.desc&limit=100');
+    if(!invoices || !invoices.length){
+      el.innerHTML = '<div class="empty">No invoices generated yet</div>';
+      return;
+    }
+    const unpaidTotal = invoices.filter(i=>i.status==='unpaid').reduce((s,i)=>s+parseFloat(i.total_amount||0),0);
+    el.innerHTML = `
+      <div style="padding:10px 16px;font-family:var(--mono);font-size:10px;color:var(--muted);border-bottom:1px solid rgba(201,168,76,.08);">
+        Outstanding unpaid: <strong style="color:var(--orange);">$${unpaidTotal.toFixed(2)}</strong>
+      </div>` +
+      invoices.map(inv => `
+      <div style="padding:12px 16px;border-bottom:1px solid rgba(201,168,76,.08);display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:12px;">${inv.client_name}</div>
+          <div style="font-size:10px;color:var(--muted);">${inv.date_from} to ${inv.date_to} · ${inv.job_count} deliveries</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-family:var(--mono);font-weight:800;font-size:13px;">$${parseFloat(inv.total_amount).toFixed(2)}</div>
+          <button onclick="toggleInvoiceStatus('${inv.id}','${inv.status==='paid'?'unpaid':'paid'}')" style="font-size:9px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:var(--mono);border:1px solid ${inv.status==='paid'?'rgba(76,175,125,.3)':'rgba(255,150,0,.3)'};background:${inv.status==='paid'?'rgba(76,175,125,.12)':'rgba(255,150,0,.1)'};color:${inv.status==='paid'?'#4caf7d':'var(--orange)'};">${inv.status}</button>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML = '<div class="empty">Could not load invoice history. Has the invoices table been created yet?</div>';
+  }
+}
+
+async function toggleInvoiceStatus(id,newStatus){
+  try{
+    await sbPatch('invoices?id=eq.'+id,{status:newStatus});
+  }catch(e){
+    addFeed('Could not update invoice status: '+e.message,'var(--orange)');
+  }
+  renderInvoiceHistory();
+}
 
 async function runBillingAgent(){
   const btn = event.target;
@@ -1367,20 +1467,32 @@ async function runBillingAgent(){
   btn.disabled = true;
 
   try{
-    // Get all delivered jobs from today
+    const clientFilter = document.getElementById('billingClientFilter')?.value || '';
+    const fromVal = document.getElementById('billingDateFrom')?.value || '';
+    const toVal = document.getElementById('billingDateTo')?.value || '';
+
+    // Default to today if no date range chosen, same as original behavior
     const today = new Date();
     today.setHours(0,0,0,0);
+    const fromDate = fromVal ? new Date(fromVal+'T00:00:00') : today;
+    const toDate = toVal ? new Date(toVal+'T23:59:59') : new Date();
+
     const delivered = await sbGet(
-      'jobs?status=eq.delivered&order=updated_at.desc&limit=100'
+      'jobs?status=eq.delivered&order=updated_at.desc&limit=500'
     );
 
-    const todayJobs = (delivered||[]).filter(j =>
-      new Date(j.updated_at||j.created_at) >= today
-    );
+    let filteredJobs = (delivered||[]).filter(j => {
+      const d = new Date(j.updated_at||j.created_at);
+      return d >= fromDate && d <= toDate;
+    });
+    if(clientFilter){
+      filteredJobs = filteredJobs.filter(j => (j.customer_name||'Unknown') === clientFilter);
+    }
+    const todayJobs = filteredJobs;
 
     if(!todayJobs.length){
       document.getElementById('billingQueue').innerHTML =
-        '<div class="empty">No delivered jobs today</div>';
+        '<div class="empty">No delivered jobs match this client and date range</div>';
       btn.textContent = '&#9654; Run Billing Agent';
       btn.disabled = false;
       return;
@@ -1432,6 +1544,10 @@ Jobs: ${JSON.stringify(todayJobs.map(j=>({
     }
 
     billingItems = items;
+    billingContextJobs = todayJobs;
+    billingContextClient = clientFilter || 'All Clients';
+    billingContextFrom = fromVal || fromDate.toISOString().slice(0,10);
+    billingContextTo = toVal || toDate.toISOString().slice(0,10);
     renderBillingQueue(items, todayJobs);
     addFeed('BILLING AGENT: analyzed '+items.length+' deliveries · $'+revenue.toFixed(2)+' ready','var(--gold)');
 
@@ -1479,7 +1595,10 @@ function renderBillingQueue(items, jobs){
         <button onclick="flagBillingItem(${i})" style="font-size:9px;padding:4px 8px;border-radius:6px;background:rgba(255,150,0,.08);border:1px solid rgba(255,150,0,.2);color:var(--orange);cursor:pointer;font-family:var(--mono);">Flag</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + `
+    <div style="padding:14px 16px;">
+      <button onclick="saveInvoice()" style="width:100%;padding:10px;border-radius:8px;background:var(--gold);border:none;color:#1a1408;font-weight:700;font-size:12px;cursor:pointer;">Save as Invoice</button>
+    </div>`;
 
   // Update audit trail
   const audit = document.getElementById('billingAudit');
