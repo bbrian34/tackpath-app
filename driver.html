@@ -794,8 +794,8 @@ button,a,input,textarea{font-family:var(--sans);}
       <div class="stat-b"><div class="stat-l">YTD</div><div class="stat-v" style="color:var(--orange);" id="statYTD">$0</div></div>
     </div>
     <div style="display:flex;gap:10px;margin:14px 0;">
-      <button onclick="startTurnByTurn('https://tackpath.com/privacy.html')" style="flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;">Privacy Policy</button>
-      <button onclick="startTurnByTurn('https://tackpath.com/terms.html')" style="flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;">Terms of Service</button>
+      <button onclick="openExternalLink('https://tackpath.com/privacy.html')" style="flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;">Privacy Policy</button>
+      <button onclick="openExternalLink('https://tackpath.com/terms.html')" style="flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;">Terms of Service</button>
     </div>
     <button class="signout" onclick="doLogout()">Sign Out</button>
   </div>
@@ -2003,6 +2003,16 @@ function startGPS(){
 }
 
 // ── IN-APP NAVIGATION ──
+async function openExternalLink(url){
+  if(!url)return;
+  const AL=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AppLauncher;
+  if(AL){
+    try{await AL.openUrl({url:url});}catch(e){}
+  }else{
+    window.open(url,'_blank');
+  }
+}
+
 async function startTurnByTurn(address){
   if(!address)return;
   const dest=encodeURIComponent(address);
