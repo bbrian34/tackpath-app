@@ -81,9 +81,6 @@ body::after{content:'';position:fixed;inset:0;
   box-shadow:0 12px 32px rgba(10,168,255,.3);transition:all .18s;}
 .lf-btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(10,168,255,.42);}
 .lf-note{text-align:center;margin-top:13px;font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.07em;}
-.demo-badge{position:fixed;top:18px;right:18px;z-index:100001;padding:7px 14px;border-radius:20px;
-  background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);
-  color:var(--blue);font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;z-index:100000;}
 
 /* ── SHELL ── */
 #shell{display:none;height:100vh;max-height:100vh;flex-direction:column;position:relative;z-index:1;overflow:hidden;}
@@ -528,7 +525,6 @@ body::after{content:'';position:fixed;inset:0;
 <body>
 
 <!-- LOGIN -->
-<div class="demo-badge">&#9889; Demo — any credentials work</div>
 <!-- SHELL -->
 <div id="shell" style="display:flex;flex-direction:column;">
   <!-- TOPBAR -->
@@ -556,6 +552,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab" onclick="setTab('analytics',this)">Analytics</button>
       <button class="tbtab" onclick="setTab('sprint',this)" style="color:var(--blue);">Sprint</button>
       <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
+      <button class="tbtab" onclick="setTab('drivers',this)" style="color:var(--green,#53ff88);">Drivers</button>
     </div>
     <div class="tb-right">
       <div class="sys-status"><div class="sys-dot"></div>SYSTEMS NOMINAL</div>
@@ -831,7 +828,36 @@ body::after{content:'';position:fixed;inset:0;
         </div>
       </div>
 
-      <!-- ANALYTICS TAB -->
+      <!-- DRIVERS TAB -->
+      <div class="tab" id="tab-drivers">
+        <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Drivers</div>
+            <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Driver Roster</div>
+          </div>
+          <button class="btn-primary" onclick="showAddDriverForm()" style="padding:9px 18px;font-size:12px;">+ Add Driver</button>
+        </div>
+        <div id="addDriverForm" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;">
+            <div>
+              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Name</label>
+              <input type="text" id="newDriverName" class="fi2" placeholder="Marcus Johnson"/>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Phone</label>
+              <input type="tel" id="newDriverPhone" class="fi2" placeholder="(404) 555-0100"/>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Vehicle Type</label>
+              <input type="text" id="newDriverVehicle" class="fi2" placeholder="Sedan, Van, etc (optional)"/>
+            </div>
+            <button class="btn-primary" onclick="addDriver()" style="padding:9px 18px;font-size:12px;white-space:nowrap;">Save</button>
+          </div>
+        </div>
+        <div id="driverRosterList"></div>
+      </div>
+
+    <!-- ANALYTICS TAB -->
       <div class="tab" id="tab-analytics">
         <div style="margin-bottom:16px;">
           <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Analytics</div>
@@ -1167,6 +1193,93 @@ function setTab(id,btn){
   if(id==='command') renderCommand();
   if(id==='sprint') renderSprint();
   if(id==='surge') renderSurge();
+  if(id==='drivers') renderDriverRoster();
+}
+
+// ── DRIVER ROSTER ──
+let driverRoster=[];
+async function renderDriverRoster(){
+  const listEl=document.getElementById('driverRosterList');
+  if(!listEl)return;
+  listEl.innerHTML='<div style="color:var(--muted);font-size:13px;">Loading...</div>';
+  try{
+    const res=await fetch(sbUrl('drivers?order=active.desc,name.asc'),{headers:H});
+    driverRoster=await res.json();
+  }catch(e){
+    listEl.innerHTML='<div style="color:var(--muted);font-size:13px;">Could not load drivers. Has the drivers table been created in Supabase yet?</div>';
+    return;
+  }
+  if(!driverRoster.length){
+    listEl.innerHTML='<div style="color:var(--muted);font-size:13px;">No drivers yet. Click + Add Driver to add your first one.</div>';
+    return;
+  }
+  listEl.innerHTML=driverRoster.map(d=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+      <div>
+        <div style="font-weight:700;font-size:14px;">${d.name}${d.active?'':' <span style=\"color:var(--muted);font-weight:400;font-size:11px;\">(inactive)</span>'}</div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);">${d.phone}${d.vehicle_type?' · '+d.vehicle_type:''}</div>
+      </div>
+      <button onclick="toggleDriverActive('${d.id}',${!d.active})" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;cursor:pointer;">
+        ${d.active?'Deactivate':'Reactivate'}
+      </button>
+    </div>
+  `).join('');
+}
+function showAddDriverForm(){
+  const f=document.getElementById('addDriverForm');
+  if(f) f.style.display = f.style.display==='none' ? 'block' : 'none';
+}
+async function addDriver(){
+  const name=document.getElementById('newDriverName').value.trim();
+  const phone=document.getElementById('newDriverPhone').value.trim();
+  const vehicle=document.getElementById('newDriverVehicle').value.trim();
+  if(!name||!phone){toast('Name and phone are required','warn');return;}
+  try{
+    await fetch(sbUrl('drivers'),{method:'POST',headers:H,body:JSON.stringify({name,phone,vehicle_type:vehicle||null,active:true})});
+    toast('Driver added','ok');
+    document.getElementById('newDriverName').value='';
+    document.getElementById('newDriverPhone').value='';
+    document.getElementById('newDriverVehicle').value='';
+    document.getElementById('addDriverForm').style.display='none';
+    renderDriverRoster();
+  }catch(e){toast('Could not add driver','warn');}
+}
+async function toggleDriverActive(id,newState){
+  try{
+    await fetch(sbUrl('drivers?id=eq.'+id),{method:'PATCH',headers:H,body:JSON.stringify({active:newState})});
+    renderDriverRoster();
+  }catch(e){toast('Could not update driver','warn');}
+}
+async function populateDriverPicker(){
+  const sel=document.getElementById('assignDriverSelect');
+  if(!sel)return;
+  try{
+    const res=await fetch(sbUrl('drivers?active=eq.true&order=name.asc'),{headers:H});
+    const activeDrivers=await res.json();
+    sel.innerHTML='<option value="">Select a driver...</option>'+
+      activeDrivers.map(d=>`<option value="${d.name}">${d.name}${d.vehicle_type?' ('+d.vehicle_type+')':''}</option>`).join('');
+  }catch(e){
+    sel.innerHTML='<option value="">No drivers available</option>';
+  }
+}
+async function assignJobToDriver(jobId){
+  const sel=document.getElementById('assignDriverSelect');
+  const driverName=sel?sel.value:'';
+  if(!driverName){toast('Select a driver first','warn');return;}
+  try{
+    await fetch(sbUrl('jobs?id=eq.'+jobId),{method:'PATCH',headers:H,body:JSON.stringify({driver_name:driverName,status:'assigned'})});
+    toast('Assigned to '+driverName,'ok');
+    openDrawer(jobId);
+    loadJobs();
+  }catch(e){toast('Could not assign driver','warn');}
+}
+async function broadcastJob(jobId){
+  try{
+    await fetch(sbUrl('jobs?id=eq.'+jobId),{method:'PATCH',headers:H,body:JSON.stringify({driver_name:null,status:'pending'})});
+    toast('Broadcast to all available drivers','ok');
+    openDrawer(jobId);
+    loadJobs();
+  }catch(e){toast('Could not broadcast job','warn');}
 }
 
 // ── LOAD JOBS ──
@@ -1792,7 +1905,19 @@ function openDrawer(id){
     <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:11px;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${j.pickup_address||'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${j.dropoff_address||'—'}</div></div>
+    <div class="dr-field" style="grid-column:1/-1;">
+      <div class="df-lbl">Driver Assignment</div>
+      <div class="df-val" style="margin-bottom:8px;">${j.driver_name?j.driver_name:'Unassigned, open to any driver'}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="assignDriverSelect" style="flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;">
+          <option value="">Select a driver...</option>
+        </select>
+        <button onclick="assignJobToDriver('${j.id}')" style="padding:8px 14px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Assign</button>
+        <button onclick="broadcastJob('${j.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:12px;cursor:pointer;">Broadcast to All</button>
+      </div>
+    </div>
   `;
+  populateDriverPicker();
   // Load map
   document.getElementById('drMap').src='https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d106544.32!2d-84.4677!3d33.8760!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x88f5045d6993098d%3A0x66fede2f990b630b!2sMidtown%20Atlanta%2C%20Atlanta%2C%20GA!3m2!1d33.7841!2d-84.3838!4m5!1s0x88f508ef74cc9b23%3A0xb5b9ff8de2f2a6f1!2sMarietta%2C%20GA!3m2!1d33.9526!2d-84.5499!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus';
   document.getElementById('drawer').classList.add('open');
