@@ -529,8 +529,32 @@ const cityPatterns=[
   {pattern:/dunwoody/i,city:'Dunwoody'},
   {pattern:/tucker/i,city:'Tucker'},
   {pattern:/stone.?mountain/i,city:'Stone Mountain'},
-  {pattern:/atlanta|atl/i,city:'Atlanta'},
+  {pattern:/atlanta|atl/i,city:'Atlanta'},
 ];
+
+// ── ZONE PRICING ──
+// Zone 1 = Core, Zone 2 = Inner Suburbs, Zone 3 = Outer Suburbs
+// Adjust these dollar figures anytime, they are the only numbers pricing depends on
+const ZONE_MAP={
+  'Atlanta':1,'Downtown Atlanta':1,'Midtown Atlanta':1,'Buckhead':1,'Decatur':1,
+  'Sandy Springs':2,'Dunwoody':2,'Smyrna':2,'Tucker':2,'Stone Mountain':2,
+  'Marietta':3,'Roswell':3,'Alpharetta':3,'Norcross':3,'Duluth':3,
+  'Lawrenceville':3,'Kennesaw':3,'Woodstock':3,'Cumming':3,'Peachtree City':3
+};
+const ZONE_BASE_FEE={1:10,2:15,3:22};
+// Estimated miles by zone pair -- deterministic, not random, based on real Atlanta geography
+const ZONE_PAIR_MILES={
+  '1-1':4, '1-2':9, '1-3':16,
+  '2-1':9, '2-2':6, '2-3':13,
+  '3-1':16,'3-2':13,'3-3':8
+};
+function calculateZonePrice(pickupCity, deliveryCity){
+  const zoneA=ZONE_MAP[pickupCity]||1;
+  const zoneB=ZONE_MAP[deliveryCity]||1;
+  const baseFee=ZONE_BASE_FEE[Math.max(zoneA,zoneB)];
+  const estMiles=ZONE_PAIR_MILES[zoneA+'-'+zoneB] || ZONE_PAIR_MILES[zoneB+'-'+zoneA] || 10;
+  return {baseFee, estMiles, zoneA, zoneB};
+}
 
 async function autoDetectCity(type){
   const addrEl=document.getElementById(type==='pickup'?'pickupAddr':'deliveryAddr');
@@ -656,9 +680,10 @@ async function requestQuote(){
   if(!pickupAddr){alert('Please enter pickup address.');return;}
   if(!deliveryAddr){alert('Please enter delivery address.');return;}
 
-  // Calculate route and price
-  const base=18;
-  const distMiles=parseFloat((Math.random()*12+4).toFixed(1));
+  // Calculate route and price using zone-based pricing (not random)
+  const zoneInfo=calculateZonePrice(pickupCity, deliveryCity);
+  const base=zoneInfo.baseFee;
+  const distMiles=zoneInfo.estMiles;
   const distFee=Math.round(distMiles*2.8);
   const surcharge={standard:0,priority:12,critical:28}[selectedPri];
   currentPrice=base+distFee+surcharge;
