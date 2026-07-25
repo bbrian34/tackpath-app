@@ -525,8 +525,23 @@ body::after{content:'';position:fixed;inset:0;
 <body>
 
 <!-- LOGIN -->
+<div id="loginScreen">
+  <div class="lbox">
+    <div class="lbox-top">
+      <div class="lbox-logo"><span>TACK</span>PATH</div>
+      <div class="lbox-ver">DISPATCHER</div>
+      <div class="lbox-desc">Enter your company code to access your dispatch board.</div>
+    </div>
+    <div class="lbox-form">
+      <label class="lf-lbl">Company Code</label>
+      <input type="text" class="lf-in" id="loginOrgCode" placeholder="e.g. quickhaul" autocomplete="off"/>
+      <div id="loginError" style="color:var(--orange);font-size:11px;margin:-6px 0 12px;display:none;">Company code not found. Check with your TackPath admin.</div>
+      <button class="lf-btn" onclick="doLogin()" style="width:100%;padding:12px;border-radius:11px;background:var(--blue);border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Sign In</button>
+    </div>
+  </div>
+</div>
 <!-- SHELL -->
-<div id="shell" style="display:flex;flex-direction:column;">
+<div id="shell" style="display:none;flex-direction:column;">
   <!-- TOPBAR -->
   <div id="topbar">
     <div class="tb-brand">
@@ -1181,7 +1196,29 @@ async function getMessages(jobId){
 let jobs=[], currentJobId=null, pollInterval=null;
 
 // ── LOGIN ──
-function doLogin(){startClock();loadJobs();loadDrivers();}
+async function doLogin(){
+  const codeInput=document.getElementById('loginOrgCode');
+  const errEl=document.getElementById('loginError');
+  const code=codeInput?codeInput.value.trim().toLowerCase():'';
+  if(!code)return;
+  errEl.style.display='none';
+  try{
+    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(code)),{headers:H});
+    const rows=await r.json();
+    if(!rows||!rows[0]){
+      errEl.style.display='block';
+      return;
+    }
+    currentOrgId=rows[0].id;
+    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:rows[0].id,slug:rows[0].slug,name:rows[0].name}));
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('shell').style.display='flex';
+    startClock();loadJobs();loadDrivers();
+  }catch(e){
+    errEl.textContent='Something went wrong. Please try again.';
+    errEl.style.display='block';
+  }
+}
 document.addEventListener('keydown',e=>{
   const ls=document.getElementById('loginScreen');
   if(ls&&ls.style.display!=='none'&&e.key==='Enter')doLogin();
@@ -2142,12 +2179,23 @@ if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgen
 }
 
 // ── AUTO LOGIN + POLLING ──
-window.addEventListener('load',function(){
-  startClock();
-  loadJobs();
-  if(typeof loadDrivers==='function') loadDrivers();
-  setInterval(function(){loadJobs().catch(function(){});},5000);
-  setTimeout(refreshFleetMap,3000);
+window.addEventListener('load',async function(){
+  await orgReady; // resolves currentOrgId from ?org= URL param if present
+  let sessionOrg=null;
+  try{ sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null'); }catch(e){}
+
+  if(currentOrgId || sessionOrg){
+    if(!currentOrgId && sessionOrg) currentOrgId=sessionOrg.id;
+    if(sessionOrg) localStorage.setItem('tp_dispatch_org',JSON.stringify(sessionOrg.id===currentOrgId?sessionOrg:{id:currentOrgId}));
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('shell').style.display='flex';
+    startClock();
+    loadJobs();
+    if(typeof loadDrivers==='function') loadDrivers();
+    setInterval(function(){loadJobs().catch(function(){});},5000);
+    setTimeout(refreshFleetMap,3000);
+  }
+  // Otherwise: leave the login screen showing (its default state), waiting for doLogin()
 });
 
 // ── GPS FLEET MAP ──
