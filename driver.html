@@ -379,6 +379,17 @@ button,a,input,textarea{font-family:var(--sans);}
   background:rgba(255,59,48,.08);border:1px solid rgba(255,59,48,.18);
   color:var(--red);font-size:15px;font-weight:700;cursor:pointer;}
 
+/* ── ROUTE MAP OVERLAY ── */
+.route-map-overlay{position:fixed;inset:0;z-index:8998;
+  background:#000;display:none;flex-direction:column;}
+.route-map-overlay.on{display:flex;}
+.rmo-header{padding:14px 18px;padding-top:calc(14px + env(safe-area-inset-top));
+  background:#0f172a;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.rmo-title{color:#fff;font-size:15px;font-weight:800;}
+.rmo-close{background:rgba(255,255,255,.1);border:none;color:#fff;
+  width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;}
+.rmo-frame{flex:1;border:none;width:100%;}
+
 /* ── RUBY OVERLAY ── */
 .ruby-overlay{position:fixed;inset:0;z-index:8999;
   background:rgba(0,0,0,.8);backdrop-filter:blur(10px);
@@ -679,6 +690,7 @@ button,a,input,textarea{font-family:var(--sans);}
         <div style="font-size:18px;font-weight:900;color:#0f172a;" id="surgeMapSub">20 stops</div>
       </div>
       <div style="font-family:var(--mono);font-size:10px;color:#0077cc;font-weight:700;" id="surgeMapRoute"></div>
+      <button onclick="showRouteMapOverlay()" style="padding:8px 14px;border-radius:10px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);color:#0077cc;font-size:11px;font-weight:700;cursor:pointer;">&#128506; Route Map</button>
     </div>
     <!-- Persistent stop list -- stays visible entire delivery -->
     <div style="flex:1;overflow-y:auto;" id="surgeStopList"></div>
@@ -801,6 +813,15 @@ button,a,input,textarea{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- ROUTE MAP OVERLAY -->
+<div class="route-map-overlay" id="routeMapOverlay">
+  <div class="rmo-header">
+    <div class="rmo-title">Route Map</div>
+    <button class="rmo-close" onclick="closeRouteMapOverlay()">&#10005;</button>
+  </div>
+  <iframe class="rmo-frame" id="routeMapFrame" src="" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+
 <!-- RUBY OVERLAY -->
 <div class="ruby-overlay" id="rubyOverlay">
   <div class="ruby-orb" id="rubyOrb">
@@ -838,6 +859,29 @@ let jobStatusInterval=null,dispatchMsgInterval=null,commsInterval=null;
 let lastSeenMsgId=null,isOnline=true,earnings=0,jobCount=0;
 let scannedPackages=[],scanStream=null,barcodeInterval=null;
 let surgeStops=[],currentSurgeStop=0,isSurgeJob=false;
+
+function showRouteMapOverlay(){
+  if(!surgeStops || !surgeStops.length){return;}
+  const iframe=document.getElementById('routeMapFrame');
+  const overlay=document.getElementById('routeMapOverlay');
+
+  if(!iframe.getAttribute('src')){
+    const origin=encodeURIComponent(surgeStops[0].address);
+    const destination=encodeURIComponent(surgeStops[surgeStops.length-1].address);
+    const waypoints=surgeStops.slice(1,-1).map(s=>encodeURIComponent(s.address)).join('|');
+
+    let url='https://www.google.com/maps/embed/v1/directions?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8&origin='+origin+'&destination='+destination;
+    if(waypoints) url+='&waypoints='+waypoints;
+    url+='&mode=driving';
+
+    iframe.src=url;
+  }
+  overlay.classList.add('on');
+}
+
+function closeRouteMapOverlay(){
+  document.getElementById('routeMapOverlay').classList.remove('on');
+}
 let gpsWatcher=null,prevScreen='scHome',speechUnlocked=false;
 let podStream=null,podPhotoData=null,podTab='sig',sigCtxPad=null;
 
