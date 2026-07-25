@@ -1364,7 +1364,7 @@ async function loadJobs(){
   try{
     const prevStatuses={};
     jobs.forEach(j=>prevStatuses[j.id]=j.status);
-    const orgFilter=currentOrgId?('&org_id=eq.'+currentOrgId):'';
+    const orgFilter=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
     const newJobs=await sbGet('jobs?select=*'+orgFilter+'&order=created_at.desc');
     ring.style.display='none';ps.textContent='Live';
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
