@@ -159,7 +159,7 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
 .es-sub{font-size:13px;color:var(--muted);max-width:300px;line-height:1.6;}
 
 /* ── ROUTE GRID ── */
-#routeGrid{display:none;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;}
+#routeGrid{display:none;flex-direction:column;gap:16px;width:360px;flex-shrink:0;}
 .route-card{
   background:var(--card);border:1px solid var(--border);
   border-radius:14px;overflow:hidden;
@@ -364,13 +364,16 @@ body.light .pkg-row:hover{background:rgba(0,0,0,.02);}
         <button onclick="resetAll()" style="padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);background:var(--card2);border:1px solid var(--border);color:var(--muted);">Reset</button>
       </div>
     </div>
-    <div class="right-body">
+    <div class="right-body" style="display:flex;gap:16px;">
       <div id="emptyState">
         <div class="es-icon">&#9650;</div>
         <div class="es-title">SmartSort Ready</div>
         <div class="es-sub">Upload a CSV or load demo data. One scan loads the entire route to the driver.</div>
       </div>
       <div id="routeGrid"></div>
+      <div id="sharedMapArea" style="display:none;flex:1;min-width:400px;border-radius:14px;overflow:hidden;background:var(--card);border:1px solid var(--border);">
+        <iframe id="sharedMapFrame" src="" style="width:100%;height:100%;border:none;" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
     </div>
   </div>
 </div>
@@ -525,7 +528,7 @@ function renderRoutes(){
   const empty=document.getElementById('emptyState');
   const actions=document.getElementById('rightActions');
   empty.style.display='none';
-  grid.style.display='grid';
+  grid.style.display='flex';
   actions.style.display='flex';
   document.getElementById('rightTitle').innerHTML='<span style="color:#0060aa;">Smart</span><span style="color:#19b7ef;">Sort</span> Routes';
   document.getElementById('rightSub').textContent=
@@ -579,9 +582,6 @@ function renderRoutes(){
         <button class="btn-assign" onclick="assignRoute('${r.id}')">Assign Driver &rarr;</button>
       </div>
       <button class="rc-map-btn" onclick="toggleRouteMap('${r.id}', this)">Show Map</button>
-      <div class="rc-map-wrap" id="map-${r.id}">
-        <iframe id="mapif-${r.id}" src="" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
-      </div>
     </div>`).join('');
 }
 
@@ -791,30 +791,39 @@ function toast(msg,type='ok'){
 }
 
 // ── ROUTE MAP ──
+let currentMapRouteId = null;
+
 function toggleRouteMap(routeId, btn){
-  const wrap = document.getElementById('map-'+routeId);
-  const showing = wrap.classList.contains('on');
-  wrap.classList.toggle('on', !showing);
-  btn.textContent = showing ? 'Show Map' : 'Hide Map';
+  const mapArea = document.getElementById('sharedMapArea');
+  const iframe = document.getElementById('sharedMapFrame');
 
-  if(!showing){
-    // Build Google Maps directions URL using all stop addresses
-    const route = routes.find(r=>r.id===routeId);
-    if(!route || !route.stops.length) return;
+  // Reset every other button back to "Show Map" first, since only one route's
+  // map can occupy the shared area at a time
+  document.querySelectorAll('.rc-map-btn').forEach(b => { if(b !== btn) b.textContent = 'Show Map'; });
 
-    const iframe = document.getElementById('mapif-'+routeId);
-    if(iframe.getAttribute('src')) return; // already loaded
-
-    const origin = encodeURIComponent(route.stops[0].address);
-    const destination = encodeURIComponent(route.stops[route.stops.length-1].address);
-    const waypoints = route.stops.slice(1,-1).map(s=>encodeURIComponent(s.address)).join('|');
-
-    let url = 'https://www.google.com/maps/embed/v1/directions?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8&origin='+origin+'&destination='+destination;
-    if(waypoints) url += '&waypoints='+waypoints;
-    url += '&mode=driving';
-
-    iframe.src = url;
+  if(currentMapRouteId === routeId){
+    // Same route clicked again -- close it
+    mapArea.style.display = 'none';
+    btn.textContent = 'Show Map';
+    currentMapRouteId = null;
+    return;
   }
+
+  const route = routes.find(r => r.id === routeId);
+  if(!route || !route.stops.length) return;
+
+  const origin = encodeURIComponent(route.stops[0].address);
+  const destination = encodeURIComponent(route.stops[route.stops.length-1].address);
+  const waypoints = route.stops.slice(1,-1).map(s => encodeURIComponent(s.address)).join('|');
+
+  let url = 'https://www.google.com/maps/embed/v1/directions?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8&origin='+origin+'&destination='+destination;
+  if(waypoints) url += '&waypoints='+waypoints;
+  url += '&mode=driving';
+
+  iframe.src = url;
+  mapArea.style.display = 'block';
+  btn.textContent = 'Hide Map';
+  currentMapRouteId = routeId;
 }
 
 </script>
