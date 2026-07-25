@@ -803,7 +803,7 @@ function toggleRouteMap(routeId, btn){
     if(!route || !route.stops.length) return;
 
     const iframe = document.getElementById('mapif-'+routeId);
-    if(iframe.src && iframe.src !== '') return; // already loaded
+    if(iframe.getAttribute('src')) return; // already loaded
 
     const origin = encodeURIComponent(route.stops[0].address);
     const destination = encodeURIComponent(route.stops[route.stops.length-1].address);
