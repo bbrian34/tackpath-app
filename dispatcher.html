@@ -574,6 +574,7 @@ body::after{content:'';position:fixed;inset:0;
       <div class="tb-sep"></div>
       <div class="tb-poll"><div class="poll-ring" id="pollRing"></div><span id="pollStatus">Live</span></div>
       <div class="tb-clock" id="tbClock">—</div>
+      <button onclick="doLogout()" style="font-family:var(--mono);font-size:10px;color:var(--muted);background:transparent;border:1px solid var(--border);padding:5px 12px;border-radius:8px;cursor:pointer;">Sign Out</button>
       <div class="tb-avatar">D</div>
     </div>
   </div>
@@ -1193,7 +1194,7 @@ async function getMessages(jobId){
 }
 
 // ── STATE ──
-let jobs=[], currentJobId=null, pollInterval=null;
+let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
 
 // ── LOGIN ──
 async function doLogin(){
@@ -1218,6 +1219,18 @@ async function doLogin(){
     errEl.textContent='Something went wrong. Please try again.';
     errEl.style.display='block';
   }
+}
+function doLogout(){
+  if(dispatchPollId){clearInterval(dispatchPollId);dispatchPollId=null;}
+  localStorage.removeItem('tp_dispatch_org');
+  currentOrgId=null;
+  jobs=[];
+  const codeInput=document.getElementById('loginOrgCode');
+  if(codeInput)codeInput.value='';
+  const errEl=document.getElementById('loginError');
+  if(errEl)errEl.style.display='none';
+  document.getElementById('shell').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
 }
 document.addEventListener('keydown',e=>{
   const ls=document.getElementById('loginScreen');
@@ -2192,7 +2205,7 @@ window.addEventListener('load',async function(){
     startClock();
     loadJobs();
     if(typeof loadDrivers==='function') loadDrivers();
-    setInterval(function(){loadJobs().catch(function(){});},5000);
+    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},5000);
     setTimeout(refreshFleetMap,3000);
   }
   // Otherwise: leave the login screen showing (its default state), waiting for doLogin()
