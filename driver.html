@@ -1046,7 +1046,11 @@ function initApp(){
     startPolling();
     startJobStatusPoll();
     if(currentJob.status==='in_transit'&&isSurgeJob&&surgeStops.length>0){
-      showScreen('scSurgeDelivery');renderSurgeStop();
+      if(window._restoredScreenContext==='delivery'){
+        showScreen('scSurgeDelivery');surgeTapStop(currentSurgeStop);
+      }else{
+        showScreen('scSurgeMap');renderSurgeList();
+      }
     }else{
       showScreen('scJob');renderJobScreen();
     }
@@ -1200,6 +1204,7 @@ async function acceptOffer(){
   }
   // All jobs go straight to surge map -- identical flow regardless of job type
   currentJob.status='in_transit';
+  saveRouteState('list');
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   showJobNotification(surgeStops.length>1?'Delivering -- '+surgeStops.length+' stops':'Heading to delivery');
   const total=surgeStops.length;
@@ -1643,6 +1648,7 @@ function showSurgeRouteMap(){
 }
 
 function renderSurgeList(){
+  saveRouteState('list');
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
   document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
@@ -1699,6 +1705,7 @@ function surgeTapStop(i){
   if(i<currentSurgeStop)return;
   if(!currentJob||currentJob.status!=='in_transit')return;
   currentSurgeStop=i;
+  saveRouteState('delivery');
   const stop=surgeStops[i];
   const total=surgeStops.length;
   // Populate delivery screen
@@ -2140,13 +2147,14 @@ if(localStorage.getItem('tp_theme')==='light'){
 // ── ROUTE STATE PERSISTENCE ──
 // Protects against Android killing the app process while backgrounded (e.g. during external navigation).
 // localStorage is disk-backed in the WebView and survives a full process kill, unlike in-memory JS variables.
-function saveRouteState(){
+function saveRouteState(screenContext){
   try{
     localStorage.setItem('tp_route_state',JSON.stringify({
       currentJob:currentJob||null,
       surgeStops:surgeStops||[],
       currentSurgeStop:currentSurgeStop||0,
       isSurgeJob:!!isSurgeJob,
+      screenContext:screenContext||'list',
       savedAt:Date.now()
     }));
   }catch(e){}
@@ -2163,6 +2171,7 @@ function restoreRouteState(){
     surgeStops=st.surgeStops||[];
     currentSurgeStop=st.currentSurgeStop||0;
     isSurgeJob=!!st.isSurgeJob;
+    window._restoredScreenContext=st.screenContext||'list';
     return true;
   }catch(e){return false;}
 }
