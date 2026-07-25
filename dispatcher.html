@@ -535,7 +535,9 @@ body::after{content:'';position:fixed;inset:0;
     <div class="lbox-form">
       <label class="lf-lbl">Company Code</label>
       <input type="text" class="lf-in" id="loginOrgCode" placeholder="e.g. quickhaul" autocomplete="off"/>
-      <div id="loginError" style="color:var(--orange);font-size:11px;margin:-6px 0 12px;display:none;">Company code not found. Check with your TackPath admin.</div>
+      <label class="lf-lbl">Password</label>
+      <input type="password" class="lf-in" id="loginOrgPassword" placeholder="Password" autocomplete="off"/>
+      <div id="loginError" style="color:var(--orange);font-size:11px;margin:-6px 0 12px;display:none;">Company code or password not recognized.</div>
       <button class="lf-btn" onclick="doLogin()" style="width:100%;padding:12px;border-radius:11px;background:var(--blue);border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Sign In</button>
     </div>
   </div>
@@ -1199,19 +1201,25 @@ let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
 // ── LOGIN ──
 async function doLogin(){
   const codeInput=document.getElementById('loginOrgCode');
+  const passInput=document.getElementById('loginOrgPassword');
   const errEl=document.getElementById('loginError');
   const code=codeInput?codeInput.value.trim().toLowerCase():'';
-  if(!code)return;
+  const pass=passInput?passInput.value:'';
+  if(!code||!pass)return;
   errEl.style.display='none';
   try{
-    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(code)),{headers:H});
-    const rows=await r.json();
-    if(!rows||!rows[0]){
+    const r=await fetch(SB_URL+'/functions/v1/org-login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({slug:code,code:pass})
+    });
+    const data=await r.json();
+    if(!data.success||!data.org){
       errEl.style.display='block';
       return;
     }
-    currentOrgId=rows[0].id;
-    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:rows[0].id,slug:rows[0].slug,name:rows[0].name}));
+    currentOrgId=data.org.id;
+    localStorage.setItem('tp_dispatch_org',JSON.stringify(data.org));
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('shell').style.display='flex';
     startClock();loadJobs();loadDrivers();
@@ -1227,6 +1235,8 @@ function doLogout(){
   jobs=[];
   const codeInput=document.getElementById('loginOrgCode');
   if(codeInput)codeInput.value='';
+  const passInput=document.getElementById('loginOrgPassword');
+  if(passInput)passInput.value='';
   const errEl=document.getElementById('loginError');
   if(errEl)errEl.style.display='none';
   document.getElementById('shell').style.display='none';
