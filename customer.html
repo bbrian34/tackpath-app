@@ -501,6 +501,22 @@ const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
 async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+
+// ── ORGANIZATION RESOLUTION ──
+// Reads ?org=slug from the URL so every order gets tagged to the right courier company.
+// Example: customer.html?org=quickhaul
+let currentOrgId=null;
+async function resolveOrgFromUrl(){
+  const params=new URLSearchParams(window.location.search);
+  const slug=params.get('org');
+  if(!slug)return;
+  try{
+    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(slug)),{headers:H});
+    const rows=await r.json();
+    if(rows&&rows[0])currentOrgId=rows[0].id;
+  }catch(e){}
+}
+resolveOrgFromUrl();
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbGet(p){const r=await fetch(sbUrl(p),{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});if(!r.ok)throw new Error(await r.text());return r.json();}
 
@@ -718,7 +734,8 @@ async function requestQuote(){
       price:currentPrice,
       distance_miles:distMiles,
       route_summary:routeSummary,
-      customer_confirmed:false
+      customer_confirmed:false,
+      org_id:currentOrgId
     });
     if(created&&created[0]){
       currentJobId=created[0].id;
