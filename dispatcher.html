@@ -573,6 +573,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab" onclick="setTab('sprint',this)" style="color:var(--blue);">Sprint</button>
       <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
       <button class="tbtab" onclick="setTab('drivers',this)" style="color:var(--green,#53ff88);">Drivers</button>
+      <button class="tbtab" onclick="setTab('history',this)" style="color:var(--muted);">History</button>
     </div>
     <div class="tb-right">
       <div class="sys-status"><div class="sys-dot"></div>SYSTEMS NOMINAL</div>
@@ -897,6 +898,15 @@ body::after{content:'';position:fixed;inset:0;
           <div class="panel-hdr"><div><div class="panel-ttl">Recent Job Log</div><div class="panel-sub">LAST 10 JOBS · LIVE FROM DATABASE</div></div></div>
           <div id="recentLog"></div>
         </div>
+      </div>
+
+      <!-- HISTORY TAB -->
+      <div class="tab" id="tab-history">
+        <div style="margin-bottom:16px;">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">History</div>
+          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Completed Deliveries</div>
+        </div>
+        <div id="historyList" style="display:flex;flex-direction:column;gap:12px;"></div>
       </div>
 
       <!-- SLING TAB -->
@@ -1261,6 +1271,7 @@ function setTab(id,btn){
   document.getElementById('tab-'+id).classList.add('on');
   if(btn) btn.classList.add('on');
   if(id==='smartpath') renderSmartPath();
+  if(id==='history') renderHistory();
   if(id==='smarttrack') renderSmartTrack();
   if(id==='analytics') renderAnalytics();
   if(id==='command') renderCommand();
@@ -1364,8 +1375,10 @@ async function loadJobs(){
   try{
     const prevStatuses={};
     jobs.forEach(j=>prevStatuses[j.id]=j.status);
-    const orgFilter=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
-    const newJobs=await sbGet('jobs?select=*'+orgFilter+'&order=created_at.desc');
+    const orgCond=currentOrgId?('or(org_id.eq.'+currentOrgId+',org_id.is.null)'):null;
+    const archivedCond='or(archived.eq.false,archived.is.null)';
+    const combinedFilter=orgCond?('&and=('+orgCond+','+archivedCond+')'):('&'+archivedCond.replace('or','or='));
+    const newJobs=await sbGet('jobs?select=*'+combinedFilter+'&order=created_at.desc');
     ring.style.display='none';ps.textContent='Live';
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
     // Detect status changes
@@ -1991,6 +2004,8 @@ function openDrawer(id){
         <button onclick="broadcastJob('${j.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:12px;cursor:pointer;">Broadcast to All</button>
       </div>
     </div>
+    ${j.status==='delivered'?renderTimingBreakdown(j):''}
+    ${j.status==='delivered'?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="archiveJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;">Archive This Delivery</button></div>`:''}
   `;
   populateDriverPicker();
   // Load map
@@ -1998,8 +2013,82 @@ function openDrawer(id){
   document.getElementById('drawer').classList.add('open');
 }
 
-function loadDrawerCommLog(id){
-  // stub -- comm log loaded inline
+function renderTimingBreakdown(j){
+  const fmt=t=>t?new Date(t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
+  let comparisonHtml='';
+  if(j.estimated_delivery_at&&j.delivered_at){
+    const diffMin=Math.round((new Date(j.delivered_at)-new Date(j.estimated_delivery_at))/60000);
+    const color=diffMin<=0?'var(--green)':(diffMin<=10?'var(--orange)':'var(--red)');
+    const label=diffMin<=0?Math.abs(diffMin)+' min early':diffMin+' min late';
+    comparisonHtml=`<div class="df-val" style="color:${color};font-weight:700;margin-top:4px;">${label}</div>`;
+  }
+  return `
+    <div class="dr-field" style="grid-column:1/-1;">
+      <div class="df-lbl">Delivery Timing</div>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;">
+        <div><div style="color:var(--muted);font-size:10px;">PLACED</div><div>${fmt(j.created_at)}</div></div>
+        <div><div style="color:var(--muted);font-size:10px;">PICKED UP</div><div>${fmt(j.picked_up_at)}</div></div>
+        <div><div style="color:var(--muted);font-size:10px;">DELIVERED</div><div>${fmt(j.delivered_at)}</div></div>
+        <div><div style="color:var(--muted);font-size:10px;">ESTIMATED</div><div>${fmt(j.estimated_delivery_at)}</div></div>
+      </div>
+      ${comparisonHtml}
+    </div>`;
+}
+
+async function renderHistory(){
+  const container=document.getElementById('historyList');
+  container.innerHTML='<div style="color:var(--muted);padding:20px;">Loading history...</div>';
+  try{
+    const orgCond=currentOrgId?('or(org_id.eq.'+currentOrgId+',org_id.is.null)'):null;
+    const archivedCond='archived.eq.true';
+    const filter=orgCond?('&and=('+orgCond+','+archivedCond+')'):('&'+archivedCond);
+    const archivedJobs=await sbGet('jobs?select=*'+filter+'&order=delivered_at.desc');
+
+    if(!archivedJobs||!archivedJobs.length){
+      container.innerHTML='<div style="color:var(--muted);padding:20px;text-align:center;">No archived deliveries yet.</div>';
+      return;
+    }
+
+    container.innerHTML=archivedJobs.map(j=>{
+      const shortId=j.id?j.id.slice(0,8):'—';
+      const fmt=t=>t?new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+      let timingLine='';
+      if(j.estimated_delivery_at&&j.delivered_at){
+        const diffMin=Math.round((new Date(j.delivered_at)-new Date(j.estimated_delivery_at))/60000);
+        const color=diffMin<=0?'var(--green)':(diffMin<=10?'var(--orange)':'var(--red)');
+        const label=diffMin<=0?Math.abs(diffMin)+' min early':diffMin+' min late';
+        timingLine=`<span style="color:${color};font-weight:700;">${label}</span>`;
+      }
+      return `
+        <div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-family:var(--mono);color:var(--blue);font-size:11px;">TP-${shortId}</div>
+            <div style="font-size:11px;color:var(--muted);">${j.driver_name||'—'}</div>
+          </div>
+          <div style="font-size:13px;margin-bottom:8px;">${j.title||'—'}</div>
+          <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);flex-wrap:wrap;">
+            <div>Placed: ${fmt(j.created_at)}</div>
+            <div>Picked up: ${fmt(j.picked_up_at)}</div>
+            <div>Delivered: ${fmt(j.delivered_at)}</div>
+            ${timingLine}
+          </div>
+        </div>`;
+    }).join('');
+  }catch(e){
+    container.innerHTML='<div style="color:var(--red);padding:20px;">Could not load history.</div>';
+  }
+}
+
+async function archiveJob(id){
+  if(!confirm('Archive this delivery? It will move to History and leave the active board.'))return;
+  try{
+    await sbPatch('jobs?id=eq.'+id,{archived:true});
+    closeDrawer();
+    loadJobs();
+    toast('Delivery archived','ok');
+  }catch(e){
+    toast('Could not archive delivery','warn');
+  }
 }
 
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');currentJobId=null;}
