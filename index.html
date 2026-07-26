@@ -92,6 +92,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:9999;padding:0 48px;height:64px;
 /* ── PRODUCTS ── */
 #products{position:relative;z-index:1;padding:100px 0;}
 .products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:48px;}
+.pg-3col{grid-template-columns:repeat(3,1fr);}
 .product-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;position:relative;overflow:hidden;transition:border-color .2s;}
 .product-card:hover{border-color:rgba(25,183,239,.25);}
 .product-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
@@ -148,7 +149,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
 @media(max-width:900px){
-  .problem-grid,.steps-grid,.products-grid,.agents-grid,.why-grid{grid-template-columns:1fr;}
+  .problem-grid,.steps-grid,.products-grid,.pg-3col,.agents-grid,.why-grid{grid-template-columns:1fr;}
   .step-arrow{display:none;}
 }
 @media(max-width:900px){
@@ -341,7 +342,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40
     <p class="section-p" style="margin:0 auto;">Local retailers lose customers to three-day shipping every day. Connect their Shopify store to TackPath in minutes, and every order becomes a same-day delivery job on your dispatch board, automatically. No manual entry. No missed orders. Just an option no national carrier can match.</p>
     <div style="text-align:center;font-size:28px;font-weight:700;margin-top:24px;">Do it in <span style="background:linear-gradient(135deg,#fff,var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent;font-style:italic;font-family:'Playfair Display',Georgia,serif;">hours.</span></div>
 
-    <div class="products-grid" style="margin-top:48px;grid-template-columns:repeat(3,1fr);">
+    <div class="products-grid pg-3col">
 
       <div class="product-card pc-blue">
         <div class="product-tag" style="color:var(--blue);">One-Time Setup</div>
