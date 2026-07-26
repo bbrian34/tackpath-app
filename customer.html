@@ -735,7 +735,8 @@ async function requestQuote(){
       distance_miles:distMiles,
       route_summary:routeSummary,
       customer_confirmed:false,
-      org_id:currentOrgId
+      org_id:currentOrgId,
+      estimated_delivery_at:new Date(Date.now()+currentEta*60000).toISOString()
     });
     if(created&&created[0]){
       currentJobId=created[0].id;
