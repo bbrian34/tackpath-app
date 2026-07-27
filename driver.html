@@ -1392,7 +1392,7 @@ async function startJobStatusPoll(){
         playAlert();
       }else if(ns==='cancelled'){
         clearInterval(jobStatusInterval);stopDispatchPoll();
-        currentJob=null;showHome();toast('Order cancelled','warn');
+        currentJob=null;clearRouteState();showHome();toast('Order cancelled','warn');
       }
     }catch(e){}
   },4000);
@@ -1863,7 +1863,7 @@ async function submitPOD(){
     const pay=currentJob.price||Math.floor(Math.random()*35+45);
     earnings+=pay;jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);
-      currentJob=null;scannedPackages=[];podPhotoData=null;
+      currentJob=null;clearRouteState();scannedPackages=[];podPhotoData=null;
     showHome();
   }catch(e){
     toast('Submission failed: '+e.message.slice(0,60),'warn');
@@ -2002,7 +2002,7 @@ function confirmSurgeStop(){
   if(window._gpsInterval)clearInterval(window._gpsInterval); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);stopWakeWord();
-    currentJob=null;scannedPackages=[];surgeStops=[];isSurgeJob=false;currentSurgeStop=0;
+    currentJob=null;clearRouteState();scannedPackages=[];surgeStops=[];isSurgeJob=false;currentSurgeStop=0;
     const earnEl=document.getElementById('homeEarnings');
     if(earnEl)earnEl.textContent='$'+earnings+' today';
     showHome();
