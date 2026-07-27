@@ -301,6 +301,10 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
         <div class="faq-q">What is Ruby?</div>
         <div class="faq-a">Ruby is the AI assistant built into the driver app. The red Ruby button is always visible on the delivery screen. Drivers tap it to ask questions, report problems, or get help at any stop.</div>
       </div>
+      <div class="faq-item" onclick="quickAsk(this)" data-q="How do I archive a delivery and where does it go?">
+        <div class="faq-q">How do I archive a delivery?</div>
+        <div class="faq-a">Open a delivered job and tap Archive This Delivery in the job drawer. It does not delete the job -- it moves it off the active board and into the History tab, where you can still see its full placed, picked up, delivered, and estimated timing.</div>
+      </div>
       <div class="faq-item" onclick="quickAsk(this)" data-q="What is the difference between Sprint and Surge job types?">
         <div class="faq-q">What is the difference between Sprint and Surge?</div>
         <div class="faq-a">Sprint is a single pickup to a single dropoff -- one package, one stop, created via the Customer Portal. Surge is a multi-stop block route with multiple packages and stops, created via SmartSort.</div>
@@ -556,6 +560,36 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
               <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.1em;">&#128172; Customer Updates</div>
               <div style="background:rgba(25,183,239,.03);border:1px solid rgba(25,183,239,.08);border-radius:8px;padding:8px 10px;font-size:9px;color:var(--muted);">&#10003; Order received &middot; 10:14 AM<br/>&#10003; Driver assigned &middot; 10:22 AM</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Archiving and History -->
+      <div class="step">
+        <div class="step-text">
+          <div class="step-num">03 &mdash; Archiving and Delivery History</div>
+          <div class="step-title">Timing, archiving, and the History tab</div>
+          <div class="step-desc">Every job now tracks four real timestamps: when it was placed, when the driver picked it up, when it was delivered, and what the original estimate was. Open a delivered job and you will see all four side by side, along with a colored line showing whether the delivery ran early or late compared to the estimate.</div>
+          <div class="step-desc">Once you are done reviewing a delivered job, tap <strong>Archive This Delivery</strong> in the detail panel. This does not delete anything -- it simply moves the job off your active board and into the History tab, where it stays available with its full timing record.</div>
+          <div class="step-tip"><strong>Tip:</strong> The History tab lives in the top tab bar next to Drivers. It lists every archived delivery with the same timing breakdown, so you can review completed work without it cluttering your active board.</div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar">
+            <div class="mockup-dot" style="background:#ff5f57;"></div>
+            <div class="mockup-dot" style="background:#ffbd2e;"></div>
+            <div class="mockup-dot" style="background:#28c840;"></div>
+            <div class="mockup-url">Delivery Timing</div>
+          </div>
+          <div class="mockup-body">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;">DELIVERY TIMING</div>
+            <div style="display:flex;gap:10px;margin-bottom:10px;font-size:10px;flex-wrap:wrap;">
+              <div><div style="color:var(--muted);font-size:9px;">PLACED</div><div>9:00 AM</div></div>
+              <div><div style="color:var(--muted);font-size:9px;">PICKED UP</div><div>9:05 AM</div></div>
+              <div><div style="color:var(--muted);font-size:9px;">DELIVERED</div><div>9:30 AM</div></div>
+              <div><div style="color:var(--muted);font-size:9px;">ESTIMATED</div><div>9:35 AM</div></div>
+            </div>
+            <div style="color:var(--green);font-weight:700;font-size:11px;margin-bottom:12px;">5 min early</div>
+            <div class="ui-btn btn-blue" style="width:100%;text-align:center;box-sizing:border-box;">Archive This Delivery</div>
           </div>
         </div>
       </div>
