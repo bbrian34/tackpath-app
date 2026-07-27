@@ -79,6 +79,51 @@ test('driver.html: captures delivered_at when the final stop is confirmed', asyn
   }
 });
 
+test('driver.html: clears saved route state on delivery completion so a stale job cannot block future offers', async () => {
+  const { dom, storage, cleanup } = loadApp('driver.html', {
+    initialStorage: {
+      tp_drv: JSON.stringify({ id: 'drv-1', phone: '4045551234', name: 'Marcus', first: 'Marcus' }),
+    },
+  });
+
+  let dom2Cleanup = null;
+  try {
+    await wait(1200);
+    dom.window.eval(`
+      pendingJob = {
+        id: 'job-complete-test', job_type: 'single',
+        surge_stops: JSON.stringify([{ address: '100 A St, Atlanta, GA', recipient: 'Alice' }]),
+        price: 30
+      };
+    `);
+    await dom.window.eval('acceptOffer()');
+    await wait(300);
+    await dom.window.eval('confirmSurgeStop()'); // completes the only stop
+    await wait(300);
+
+    assert.strictEqual(
+      storage.tp_route_state,
+      undefined,
+      'saved route state should be cleared once the delivery is complete, not left stale'
+    );
+
+    // Simulate closing and reopening the app right after completion.
+    const second = loadApp('driver.html', { initialStorage: { ...storage } });
+    dom2Cleanup = second.cleanup;
+    await wait(1200);
+
+    const restoredCurrentJob = second.dom.window.eval('currentJob');
+    assert.strictEqual(
+      restoredCurrentJob,
+      null,
+      'a completed job should never be restored as the active job after reopening'
+    );
+  } finally {
+    cleanup();
+    if (dom2Cleanup) dom2Cleanup();
+  }
+});
+
 test('driver.html: restores in-progress route state after a simulated app close/reopen', async () => {
   const { dom, storage, cleanup } = loadApp('driver.html', {
     initialStorage: {
