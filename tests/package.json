@@ -1,0 +1,18 @@
+{
+  "name": "tackpath-app-tests",
+  "version": "1.0.0",
+  "description": "Permanent regression test suite for TackPath web platform (dispatcher, driver, customer apps)",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node --test *.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jsdom": "^30.0.0"
+  }
+}
