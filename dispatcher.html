@@ -1176,6 +1176,20 @@ body::after{content:'';position:fixed;inset:0;
 <div id="toast"></div>
 
 <script>
+// ── AUTO-SCALE FOR DIFFERENT SCREENS ──
+// This dashboard was built at a fixed pixel size, so it renders inconsistently across
+// a big external monitor vs a laptop screen without one -- too small on one, clipped
+// on the other. This automatically applies the same zoom adjustment a person would do
+// by hand, calibrated to the real available screen width, so it fits well either way.
+function autoScaleDashboard(){
+  const designWidth=1600;
+  const scale=Math.max(0.75,Math.min(1.4,window.innerWidth/designWidth));
+  document.body.style.zoom=scale;
+}
+window.addEventListener('load',autoScaleDashboard);
+window.addEventListener('resize',autoScaleDashboard);
+autoScaleDashboard();
+
 // ── SUPABASE ──
 const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
