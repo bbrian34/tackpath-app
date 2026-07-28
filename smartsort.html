@@ -593,10 +593,17 @@ async function assignRoute(routeId){
   const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 
   // Build job record
+  let sessionOrgId=null;
+  try{
+    const sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');
+    if(sessionOrg)sessionOrgId=sessionOrg.id;
+  }catch(e){}
+
   const job={
     title:'Surge Route '+route.id,
     job_type:'surge',
     status:'pending',
+    org_id: sessionOrgId,
     pickup_address: route.stops[0]?.address||'See route',
     dropoff_address: route.stops[route.stops.length-1]?.address||'See route',
     surge_stops: route.stops.map((s,i)=>({
