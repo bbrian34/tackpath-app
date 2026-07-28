@@ -1375,10 +1375,9 @@ async function loadJobs(){
   try{
     const prevStatuses={};
     jobs.forEach(j=>prevStatuses[j.id]=j.status);
-    const orgCond=currentOrgId?('or(org_id.eq.'+currentOrgId+',org_id.is.null)'):null;
-    const archivedCond='or(archived.eq.false,archived.is.null)';
-    const combinedFilter=orgCond?('&and=('+orgCond+','+archivedCond+')'):('&'+archivedCond.replace('or','or='));
-    const newJobs=await sbGet('jobs?select=*'+combinedFilter+'&order=created_at.desc');
+    const orgFilter=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
+    const fetchedJobs=await sbGet('jobs?select=*'+orgFilter+'&order=created_at.desc');
+    const newJobs=fetchedJobs.filter(j=>j.archived!==true);
     ring.style.display='none';ps.textContent='Live';
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
     // Detect status changes
@@ -2039,10 +2038,9 @@ async function renderHistory(){
   const container=document.getElementById('historyList');
   container.innerHTML='<div style="color:var(--muted);padding:20px;">Loading history...</div>';
   try{
-    const orgCond=currentOrgId?('or(org_id.eq.'+currentOrgId+',org_id.is.null)'):null;
-    const archivedCond='archived.eq.true';
-    const filter=orgCond?('&and=('+orgCond+','+archivedCond+')'):('&'+archivedCond);
-    const archivedJobs=await sbGet('jobs?select=*'+filter+'&order=delivered_at.desc');
+    const orgFilter=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
+    const fetchedJobs=await sbGet('jobs?select=*'+orgFilter+'&order=delivered_at.desc');
+    const archivedJobs=fetchedJobs.filter(j=>j.archived===true);
 
     if(!archivedJobs||!archivedJobs.length){
       container.innerHTML='<div style="color:var(--muted);padding:20px;text-align:center;">No archived deliveries yet.</div>';
