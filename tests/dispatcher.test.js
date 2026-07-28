@@ -31,16 +31,42 @@ function buildMockBackend() {
       return { ok: true, json: async () => ([]) };
     }
     if (url.includes('/jobs')) {
-      let results = allJobs;
-      if (url.includes('archived.eq.true')) results = results.filter((j) => j.archived === true);
-      else results = results.filter((j) => j.archived !== true);
-      return { ok: true, json: async () => results };
+      // The app now fetches all org-matched jobs and filters archived client-side,
+      // so the mock simply returns everything and trusts the app to split it correctly.
+      return { ok: true, json: async () => allJobs };
     }
     return undefined;
   };
 
   return { mockOrgs, allJobs, fetchHandler };
 }
+
+test('dispatcher.html: a job with no org_id (e.g. from SmartSort) still shows up when a specific org is logged in', async () => {
+  const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
+  const allJobs = [
+    {
+      id: 'job-no-org', title: 'SmartSort Route', org_id: null, status: 'in_transit',
+      archived: false, created_at: '2026-07-27T10:00:00Z', driver_name: 'Marcus',
+    },
+  ];
+  const fetchHandler = async (url, opts) => {
+    if (url.includes('/organizations')) return { ok: true, json: async () => mockOrgs };
+    if (url.includes('/jobs')) return { ok: true, json: async () => allJobs };
+    return undefined;
+  };
+
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  try {
+    dom.window.document.getElementById('loginOrgCode').value = 'demo';
+    await dom.window.doLogin();
+    await wait(400);
+
+    assert.strictEqual(dom.window.eval('jobs.length'), 1, 'a null-org job should still appear on the board of a logged-in org');
+    assert.strictEqual(dom.window.eval('jobs[0].id'), 'job-no-org');
+  } finally {
+    cleanup();
+  }
+});
 
 test('dispatcher.html: archiving a delivered job removes it from the active board and into History', async () => {
   const { allJobs, fetchHandler } = buildMockBackend();
