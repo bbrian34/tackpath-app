@@ -1998,7 +1998,7 @@ function confirmSurgeStop(){
   }
   window._surgePODMode=false;
   if(currentSurgeStop>=total-1){
-    sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name,delivered_at:new Date().toISOString()}).catch(()=>{});
+    sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name,delivered_at:new Date().toISOString(),stops_completed:total}).catch(()=>{});
     clearJobNotification();
   if(window._gpsInterval)clearInterval(window._gpsInterval); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
@@ -2009,6 +2009,7 @@ function confirmSurgeStop(){
     showHome();
   }else{
     currentSurgeStop++;
+    sbPatch('jobs?id=eq.'+currentJob.id,{stops_completed:currentSurgeStop}).catch(()=>{});
     // Return to the stop list, scrolled to the next unfinished stop -- driver taps it to open and navigate
     showScreen('scSurgeMap');
     renderSurgeList();
