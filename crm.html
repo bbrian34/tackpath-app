@@ -1,3 +1,4 @@
+html{font-size:clamp(13.0px,0.4vw + 8.0px,18.0px);}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,7 +29,7 @@
   --serif:'Playfair Display',serif;
 }
 
-html,body{background:var(--dark);color:var(--text);font-family:var(--sans);min-height:100vh;font-size:14px;line-height:1.5;}
+html,body{background:var(--dark);color:var(--text);font-family:var(--sans);min-height:100vh;font-size:1.0rem;line-height:1.5;}
 
 /* NAV */
 nav{
@@ -36,12 +37,12 @@ nav{
   display:flex;align-items:center;justify-content:space-between;
   padding:0 24px;position:sticky;top:0;z-index:100;
 }
-.wordmark{font-weight:800;font-size:16px;letter-spacing:.04em;text-decoration:none;display:flex;align-items:center;gap:0;}
+.wordmark{font-weight:800;font-size:1.1429rem;letter-spacing:.04em;text-decoration:none;display:flex;align-items:center;gap:0;}
 .wordmark .t{color:#fff;}
 .wordmark .p{color:var(--blue);}
-.nav-badge{font-family:var(--mono);font-size:10px;color:var(--blue);background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);border-radius:4px;padding:3px 9px;letter-spacing:.08em;margin-left:14px;}
+.nav-badge{font-family:var(--mono);font-size:0.7143rem;color:var(--blue);background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);border-radius:4px;padding:3px 9px;letter-spacing:.08em;margin-left:14px;}
 .nav-links{display:flex;align-items:center;gap:20px;}
-.nav-link{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s;}
+.nav-link{color:var(--muted);text-decoration:none;font-size:0.9286rem;font-weight:500;transition:color .2s;}
 .nav-link:hover{color:var(--text);}
 .nav-link.active{color:var(--blue);}
 
@@ -52,7 +53,7 @@ nav{
 .sidebar{background:var(--mid);border-right:1px solid var(--border);padding:20px 0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;}
 
 .sidebar-section{margin-bottom:24px;}
-.sidebar-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;padding:0 20px;margin-bottom:8px;}
+.sidebar-label{font-family:var(--mono);font-size:0.6429rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;padding:0 20px;margin-bottom:8px;}
 
 .account-card{
   padding:12px 20px;cursor:pointer;transition:background .15s;
@@ -65,12 +66,12 @@ nav{
 .account-avatar{
   width:36px;height:36px;border-radius:8px;
   display:flex;align-items:center;justify-content:center;
-  font-weight:800;font-size:13px;flex-shrink:0;
+  font-weight:800;font-size:0.9286rem;flex-shrink:0;
 }
 
 .account-info{flex:1;min-width:0;}
-.account-name{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.account-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.account-name{font-size:0.9286rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.account-meta{font-size:0.7857rem;color:var(--muted);margin-top:1px;}
 
 .account-health{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .health-green{background:var(--green);}
@@ -80,7 +81,7 @@ nav{
 .sidebar-add{
   margin:8px 20px 0;padding:9px;border-radius:8px;
   border:1px dashed var(--border2);background:none;
-  color:var(--muted);font-family:var(--sans);font-size:12px;
+  color:var(--muted);font-family:var(--sans);font-size:0.8571rem;
   font-weight:500;cursor:pointer;width:calc(100% - 40px);
   transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;
 }
@@ -105,13 +106,13 @@ nav{
 .acct-logo img{width:100%;height:100%;object-fit:contain;padding:8px;}
 
 .acct-title{flex:1;}
-.acct-name{font-family:var(--serif);font-size:26px;color:#fff;line-height:1.1;margin-bottom:4px;}
-.acct-sub{font-size:13px;color:var(--muted);margin-bottom:10px;}
+.acct-name{font-family:var(--serif);font-size:1.8571rem;color:#fff;line-height:1.1;margin-bottom:4px;}
+.acct-sub{font-size:0.9286rem;color:var(--muted);margin-bottom:10px;}
 .acct-tags{display:flex;gap:6px;flex-wrap:wrap;}
-.acct-tag{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;border:1px solid;letter-spacing:.06em;}
+.acct-tag{font-family:var(--mono);font-size:0.7143rem;padding:3px 9px;border-radius:4px;border:1px solid;letter-spacing:.06em;}
 
 .acct-actions{display:flex;gap:8px;flex-shrink:0;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:7px;border:none;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:7px;border:none;font-family:var(--sans);font-size:0.9286rem;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;}
 .btn-primary{background:var(--blue);color:#fff;}
 .btn-primary:hover{background:#14a3d5;}
 .btn-ghost{background:none;border:1px solid var(--border2);color:var(--muted);}
@@ -124,9 +125,9 @@ nav{
   background:var(--card);border:1px solid var(--border2);
   border-radius:10px;padding:16px 18px;
 }
-.stat-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
-.stat-val{font-size:26px;font-weight:800;color:#fff;line-height:1;margin-bottom:3px;font-family:var(--mono);}
-.stat-sub{font-size:11px;color:var(--muted);}
+.stat-label{font-family:var(--mono);font-size:0.6429rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.stat-val{font-size:1.8571rem;font-weight:800;color:#fff;line-height:1;margin-bottom:3px;font-family:var(--mono);}
+.stat-sub{font-size:0.7857rem;color:var(--muted);}
 .stat-sub.up{color:var(--green);}
 .stat-sub.down{color:var(--red);}
 
@@ -137,8 +138,8 @@ nav{
 /* PANEL */
 .panel{background:var(--card);border:1px solid var(--border2);border-radius:10px;overflow:hidden;margin-bottom:16px;}
 .panel-hdr{padding:14px 18px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;}
-.panel-title{font-size:13px;font-weight:700;color:#fff;}
-.panel-sub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
+.panel-title{font-size:0.9286rem;font-weight:700;color:#fff;}
+.panel-sub{font-family:var(--mono);font-size:0.6429rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
 .panel-body{padding:16px 18px;}
 
 /* AI SIGNAL */
@@ -150,17 +151,17 @@ nav{
 .ai-dot{width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0;margin-top:4px;box-shadow:0 0 8px var(--purple);animation:aPulse 2s infinite;}
 @keyframes aPulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 .ai-signal-txt{flex:1;}
-.ai-signal-eyebrow{font-family:var(--mono);font-size:9px;color:var(--purple);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
-.ai-signal-msg{font-size:13px;color:var(--text);line-height:1.5;}
-.ai-signal-action{font-size:12px;color:var(--blue);cursor:pointer;margin-top:6px;font-weight:600;}
+.ai-signal-eyebrow{font-family:var(--mono);font-size:0.6429rem;color:var(--purple);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
+.ai-signal-msg{font-size:0.9286rem;color:var(--text);line-height:1.5;}
+.ai-signal-action{font-size:0.8571rem;color:var(--blue);cursor:pointer;margin-top:6px;font-weight:600;}
 
 /* JOB TABLE */
 .job-table{width:100%;border-collapse:collapse;}
-.job-table th{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:0 0 10px;text-align:left;border-bottom:1px solid var(--border2);}
-.job-table td{padding:11px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;vertical-align:middle;}
+.job-table th{font-family:var(--mono);font-size:0.6429rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:0 0 10px;text-align:left;border-bottom:1px solid var(--border2);}
+.job-table td{padding:11px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:0.8571rem;vertical-align:middle;}
 .job-table tr:last-child td{border-bottom:none;}
 
-.status-chip{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid;letter-spacing:.06em;white-space:nowrap;}
+.status-chip{font-family:var(--mono);font-size:0.6429rem;padding:3px 8px;border-radius:4px;border:1px solid;letter-spacing:.06em;white-space:nowrap;}
 .chip-delivered{color:var(--green);border-color:rgba(83,255,136,.25);background:rgba(83,255,136,.06);}
 .chip-transit{color:var(--blue);border-color:rgba(25,183,239,.25);background:rgba(25,183,239,.06);}
 .chip-exception{color:var(--orange);border-color:rgba(255,150,30,.25);background:rgba(255,150,30,.06);}
@@ -170,43 +171,43 @@ nav{
 .comms-feed{display:flex;flex-direction:column;gap:0;}
 .comm-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04);}
 .comm-item:last-child{border-bottom:none;}
-.comm-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px;}
+.comm-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9286rem;flex-shrink:0;margin-top:1px;}
 .comm-body{flex:1;min-width:0;}
-.comm-type{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;}
-.comm-msg{font-size:12px;color:var(--text);line-height:1.5;margin-bottom:2px;}
-.comm-time{font-size:11px;color:var(--muted);}
+.comm-type{font-family:var(--mono);font-size:0.6429rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;}
+.comm-msg{font-size:0.8571rem;color:var(--text);line-height:1.5;margin-bottom:2px;}
+.comm-time{font-size:0.7857rem;color:var(--muted);}
 
 /* HEALTH BARS */
 .health-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .health-row:last-child{margin-bottom:0;}
-.health-lbl{font-size:12px;color:var(--muted);width:130px;flex-shrink:0;}
+.health-lbl{font-size:0.8571rem;color:var(--muted);width:130px;flex-shrink:0;}
 .health-bar-wrap{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
 .health-bar-fill{height:100%;border-radius:3px;transition:width .6s;}
-.health-pct{font-family:var(--mono);font-size:11px;color:var(--text);width:36px;text-align:right;flex-shrink:0;}
+.health-pct{font-family:var(--mono);font-size:0.7857rem;color:var(--text);width:36px;text-align:right;flex-shrink:0;}
 
 /* VOLUME CHART */
 .vol-chart{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:8px;}
 .vol-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
 .vol-bar{width:100%;border-radius:3px 3px 0 0;transition:height .4s;}
-.vol-day{font-family:var(--mono);font-size:8px;color:var(--muted);}
+.vol-day{font-family:var(--mono);font-size:0.5714rem;color:var(--muted);}
 
 /* CONTACT CARD */
 .contact-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);}
 .contact-row:last-child{border-bottom:none;}
-.contact-icon{font-size:14px;width:24px;text-align:center;flex-shrink:0;}
-.contact-val{font-size:12px;color:var(--text);}
-.contact-lbl{font-size:11px;color:var(--muted);margin-top:1px;}
+.contact-icon{font-size:1.0rem;width:24px;text-align:center;flex-shrink:0;}
+.contact-val{font-size:0.8571rem;color:var(--text);}
+.contact-lbl{font-size:0.7857rem;color:var(--muted);margin-top:1px;}
 
 /* NOTES */
-.note-inp{width:100%;background:var(--mid);border:1px solid var(--border2);border-radius:7px;padding:10px 12px;color:var(--text);font-family:var(--sans);font-size:13px;resize:none;min-height:72px;outline:none;transition:border-color .2s;}
+.note-inp{width:100%;background:var(--mid);border:1px solid var(--border2);border-radius:7px;padding:10px 12px;color:var(--text);font-family:var(--sans);font-size:0.9286rem;resize:none;min-height:72px;outline:none;transition:border-color .2s;}
 .note-inp:focus{border-color:var(--blue);}
 .note-inp::placeholder{color:var(--muted);}
 
 /* RUBY CHIP */
-.ruby-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;background:rgba(255,150,30,.08);border:1px solid rgba(255,150,30,.2);color:var(--orange);letter-spacing:.06em;}
+.ruby-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:0.6429rem;padding:3px 8px;border-radius:4px;background:rgba(255,150,30,.08);border:1px solid rgba(255,150,30,.2);color:var(--orange);letter-spacing:.06em;}
 
 /* EMPTY */
-.empty{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px;}
+.empty{text-align:center;padding:32px 20px;color:var(--muted);font-size:0.9286rem;}
 
 /* MOBILE */
 @media(max-width:900px){
@@ -221,7 +222,7 @@ nav{
 
 <nav>
   <div style="display:flex;align-items:center;">
-    <a href="index.html" class="wordmark"><span style="font-family:'Montserrat',sans-serif;font-size:16px;font-weight:600;letter-spacing:1px;line-height:1;white-space:nowrap;"><span style="color:#ffffff;">TACK</span><span style="color:#19b7ef;">PATH</span></span></a>
+    <a href="index.html" class="wordmark"><span style="font-family:'Montserrat',sans-serif;font-size:1.1429rem;font-weight:600;letter-spacing:1px;line-height:1;white-space:nowrap;"><span style="color:#ffffff;">TACK</span><span style="color:#19b7ef;">PATH</span></span></a>
     <span class="nav-badge">CRM</span>
   </div>
   <div class="nav-links">
@@ -266,20 +267,20 @@ nav{
       <div class="sidebar-label">This Month</div>
       <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;color:var(--muted);">Total accounts</span>
-          <span style="font-family:var(--mono);font-size:12px;color:#fff;">1</span>
+          <span style="font-size:0.8571rem;color:var(--muted);">Total accounts</span>
+          <span style="font-family:var(--mono);font-size:0.8571rem;color:#fff;">1</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;color:var(--muted);">Active jobs</span>
-          <span style="font-family:var(--mono);font-size:12px;color:var(--blue);">3</span>
+          <span style="font-size:0.8571rem;color:var(--muted);">Active jobs</span>
+          <span style="font-family:var(--mono);font-size:0.8571rem;color:var(--blue);">3</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;color:var(--muted);">Revenue</span>
-          <span style="font-family:var(--mono);font-size:12px;color:var(--green);">$1,847</span>
+          <span style="font-size:0.8571rem;color:var(--muted);">Revenue</span>
+          <span style="font-family:var(--mono);font-size:0.8571rem;color:var(--green);">$1,847</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;color:var(--muted);">Exceptions</span>
-          <span style="font-family:var(--mono);font-size:12px;color:var(--orange);">2</span>
+          <span style="font-size:0.8571rem;color:var(--muted);">Exceptions</span>
+          <span style="font-family:var(--mono);font-size:0.8571rem;color:var(--orange);">2</span>
         </div>
       </div>
     </div>
@@ -291,7 +292,7 @@ nav{
     <!-- ACCOUNT HEADER -->
     <div class="acct-header">
       <div class="acct-logo">
-        <img src="https://img1.wsimg.com/isteam/ip/8e02f6f6-4c29-4db8-822f-0e8ce8b13ce5/Untitled%20design%20(40).png" alt="Zelurco" onerror="this.parentNode.innerHTML='<div style=\'font-weight:800;font-size:18px;color:var(--blue);\'>ZL</div>'">
+        <img src="https://img1.wsimg.com/isteam/ip/8e02f6f6-4c29-4db8-822f-0e8ce8b13ce5/Untitled%20design%20(40).png" alt="Zelurco" onerror="this.parentNode.innerHTML='<div style=\'font-weight:800;font-size:1.2857rem;color:var(--blue);\'>ZL</div>'">
       </div>
       <div class="acct-title">
         <div class="acct-name">Zelurco</div>
@@ -367,70 +368,70 @@ nav{
             </thead>
             <tbody>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0047</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0047</td>
                 <td style="color:var(--muted);">Jul 3</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$42</td>
                 <td><span class="status-chip chip-transit">In Transit</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0046</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0046</td>
                 <td style="color:var(--muted);">Jul 3</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$38</td>
                 <td><span class="status-chip chip-transit">In Transit</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0045</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0045</td>
                 <td style="color:var(--muted);">Jul 2</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$55</td>
                 <td><span class="status-chip chip-delivered">Delivered</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0044</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0044</td>
                 <td style="color:var(--muted);">Jul 1</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$39</td>
                 <td><span class="status-chip chip-delivered">Delivered</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0043</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0043</td>
                 <td style="color:var(--muted);">Jun 30</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$47</td>
                 <td><span class="status-chip chip-delivered">Delivered</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0042</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0042</td>
                 <td style="color:var(--muted);">Jun 29</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$36</td>
                 <td><span class="status-chip chip-delivered">Delivered</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0041</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0041</td>
                 <td style="color:var(--muted);">Jun 28</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$41</td>
                 <td><span class="status-chip chip-exception">Exception</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0040</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0040</td>
                 <td style="color:var(--muted);">Jun 27</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$33</td>
                 <td><span class="status-chip chip-delivered">Delivered</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0039</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0039</td>
                 <td style="color:var(--muted);">Jun 26</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$29</td>
                 <td><span class="status-chip chip-delivered">Delivered</span></td>
               </tr>
               <tr>
-                <td style="font-family:var(--mono);color:var(--blue);font-size:11px;">ZL-0038</td>
+                <td style="font-family:var(--mono);color:var(--blue);font-size:0.7857rem;">ZL-0038</td>
                 <td style="color:var(--muted);">Jun 25</td>
                 <td>Sprint</td>
                 <td style="color:#fff;font-weight:600;">$44</td>
@@ -476,7 +477,7 @@ nav{
 
             <!-- Volume chart -->
             <div style="margin-top:18px;">
-              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Weekly Order Volume</div>
+              <div style="font-family:var(--mono);font-size:0.6429rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Weekly Order Volume</div>
               <div class="vol-chart">
                 <div class="vol-bar-wrap"><div class="vol-bar" style="height:30%;background:var(--blue);opacity:.5;"></div><div class="vol-day">W1</div></div>
                 <div class="vol-bar-wrap"><div class="vol-bar" style="height:45%;background:var(--blue);opacity:.6;"></div><div class="vol-day">W2</div></div>
@@ -494,7 +495,7 @@ nav{
         <div class="panel">
           <div class="panel-hdr">
             <div class="panel-title">Contact</div>
-            <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;">Edit</button>
+            <button class="btn btn-ghost" style="padding:5px 10px;font-size:0.7857rem;">Edit</button>
           </div>
           <div class="panel-body" style="padding:8px 18px;">
             <div class="contact-row">
@@ -526,7 +527,7 @@ nav{
           <div class="panel-title">Communication Log</div>
           <div class="panel-sub">All touchpoints · SMS · Ruby · Confirmations</div>
         </div>
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="composeMessage()">+ Message</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:0.7857rem;" onclick="composeMessage()">+ Message</button>
       </div>
       <div class="panel-body" style="padding:0 18px;">
         <div class="comms-feed">
@@ -584,7 +585,7 @@ nav{
     <div class="panel">
       <div class="panel-hdr">
         <div class="panel-title">Account Notes</div>
-        <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="saveNote()">Save</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:0.7857rem;" onclick="saveNote()">Save</button>
       </div>
       <div class="panel-body">
         <textarea class="note-inp" id="accountNotes" placeholder="Add notes about this account...">New courier operation based in Snellville. No prior dispatch software. Strong first-mover opportunity. Owner is responsive. Potential to upsell Surge when volume increases.</textarea>
