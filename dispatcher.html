@@ -1798,7 +1798,16 @@ function renderSprint(){
   const active    = jobs.filter(j=>j.status==='assigned'||j.status==='in_transit');
   const pending   = jobs.filter(j=>j.status==='pending');
   const delivered = jobs.filter(j=>j.status==='delivered');
-  const exceptions= jobs.filter(j=>j.status==='cancelled'||j.exception);
+  const exceptions= jobs.filter(j=>{
+    if(j.status==='cancelled') return true;
+    // LATE: still moving but past its own estimated delivery time
+    if(j.status==='in_transit' && j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()) return true;
+    // UNASSIGNED: sat pending too long with no driver
+    if(j.status==='pending' && ((Date.now() - new Date(j.created_at).getTime()) > 15*60*1000)) return true;
+    // DRIVER DARK: in transit but no update in a while
+    if(j.status==='in_transit' && j.updated_at && ((Date.now() - new Date(j.updated_at).getTime()) > 30*60*1000)) return true;
+    return false;
+  });
 
   const total = jobs.length;
 
@@ -1847,7 +1856,13 @@ function renderSprint(){
     excEl.innerHTML=exceptions.map(j=>`
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
         <div style="font-family:var(--mono);font-size:0.846rem;color:var(--blue);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.15);border-radius:4px;padding:3px 8px;">TP-${j.id?j.id.slice(0,8):'—'}</div>
-        <div style="flex:1;font-size:0.923rem;color:var(--orange);">${j.status==='cancelled'?'Order cancelled':'Driver not responding'}</div>
+        <div style="flex:1;font-size:0.923rem;color:var(--orange);">${(function(){
+          if(j.status==='cancelled') return 'Order cancelled';
+          if(j.status==='in_transit' && j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()) return 'Late - past estimated delivery time';
+          if(j.status==='pending') return 'Unassigned - no driver in ' + Math.floor((Date.now()-new Date(j.created_at).getTime())/60000) + ' min';
+          if(j.status==='in_transit') return 'Driver dark - no update in ' + Math.floor((Date.now()-new Date(j.updated_at).getTime())/60000) + ' min';
+          return 'Needs attention';
+        })()}</div>
         <button onclick="sprintFeedEntry('TP-${j.id?j.id.slice(0,8):'—'}','Reassign attempted')" style="padding:5px 11px;border-radius:5px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-family:var(--mono);font-size:0.769rem;cursor:pointer;">REASSIGN</button>
       </div>
     `).join('');
