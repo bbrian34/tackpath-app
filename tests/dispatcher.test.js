@@ -41,6 +41,40 @@ function buildMockBackend() {
   return { mockOrgs, allJobs, fetchHandler };
 }
 
+test('dispatcher.html: manual login starts live polling so new jobs appear without a manual refresh', async () => {
+  const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
+  let allJobs = [];
+
+  const fetchHandler = async (url) => {
+    if (url.includes('/organizations')) return { ok: true, json: async () => mockOrgs };
+    if (url.includes('driver_locations')) return { ok: true, json: async () => ([]) };
+    if (url.includes('/jobs')) return { ok: true, json: async () => allJobs };
+    return undefined;
+  };
+
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  try {
+    dom.window.google = { maps: { Map: function(){}, Marker: function(){}, SymbolPath: { CIRCLE: 0 } } };
+    dom.window.document.getElementById('loginOrgCode').value = 'demo';
+    await dom.window.doLogin();
+    await wait(300);
+
+    assert.strictEqual(dom.window.eval('jobs.length'), 0, 'no jobs should exist at login time');
+    assert.ok(dom.window.eval('dispatchPollId') !== null, 'polling interval should be started after manual login');
+
+    // Simulate a job appearing (e.g. via SmartSort + driver acceptance) with no manual refresh
+    allJobs = [{ id: 'new-job', title: 'New Job', org_id: 'org-demo-uuid', status: 'in_transit',
+      archived: false, driver_name: 'Marcus', created_at: new Date().toISOString() }];
+
+    await wait(5300); // past one real poll cycle
+
+    assert.strictEqual(dom.window.eval('jobs.length'), 1, 'new job should appear automatically without a manual refresh');
+    assert.strictEqual(dom.window.eval('jobs[0].id'), 'new-job');
+  } finally {
+    cleanup();
+  }
+});
+
 test('dispatcher.html: a job with no org_id (e.g. from SmartSort) still shows up when a specific org is logged in', async () => {
   const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
   const allJobs = [
