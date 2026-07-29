@@ -68,6 +68,54 @@ test('dispatcher.html: a job with no org_id (e.g. from SmartSort) still shows up
   }
 });
 
+test('dispatcher.html: Sprint-tab exceptions panel correctly detects Late, Unassigned, Driver Dark, and Cancelled jobs', async () => {
+  const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
+  const now = Date.now();
+  const allJobs = [
+    { id: 'j-late', title: 'Late job', org_id: 'org-demo-uuid', status: 'in_transit', archived: false,
+      created_at: new Date(now - 60*60000).toISOString(), updated_at: new Date(now - 5*60000).toISOString(),
+      estimated_delivery_at: new Date(now - 10*60000).toISOString(), driver_name: 'Marcus' },
+    { id: 'j-unassigned', title: 'Unassigned job', org_id: 'org-demo-uuid', status: 'pending', archived: false,
+      created_at: new Date(now - 20*60000).toISOString() },
+    { id: 'j-dark', title: 'Dark driver job', org_id: 'org-demo-uuid', status: 'in_transit', archived: false,
+      created_at: new Date(now - 90*60000).toISOString(), updated_at: new Date(now - 40*60000).toISOString(),
+      driver_name: 'Alex' },
+    { id: 'j-cancelled', title: 'Cancelled job', org_id: 'org-demo-uuid', status: 'cancelled', archived: false,
+      created_at: new Date(now - 30*60000).toISOString() },
+    { id: 'j-healthy', title: 'Healthy job', org_id: 'org-demo-uuid', status: 'in_transit', archived: false,
+      created_at: new Date(now - 5*60000).toISOString(), updated_at: new Date(now - 1*60000).toISOString(),
+      estimated_delivery_at: new Date(now + 20*60000).toISOString(), driver_name: 'Sam' },
+  ];
+
+  const fetchHandler = async (url) => {
+    if (url.includes('/organizations')) return { ok: true, json: async () => mockOrgs };
+    if (url.includes('/jobs')) return { ok: true, json: async () => allJobs };
+    return undefined;
+  };
+
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  try {
+    dom.window.document.getElementById('loginOrgCode').value = 'demo';
+    await dom.window.doLogin();
+    await wait(500);
+
+    await dom.window.eval('renderSprint()');
+    await wait(200);
+
+    const badge = dom.window.document.getElementById('sl-exc-badge').textContent;
+    const excHtml = dom.window.document.getElementById('sl-exceptions').innerHTML;
+
+    assert.strictEqual(badge, '4 OPEN', 'expected exactly 4 flagged jobs');
+    assert.ok(excHtml.includes('j-late') && excHtml.includes('past estimated delivery'), 'late job should be flagged with the right reason');
+    assert.ok(excHtml.includes('j-unassi') && excHtml.includes('Unassigned - no driver'), 'unassigned job should be flagged with the right reason');
+    assert.ok(excHtml.includes('j-dark') && excHtml.includes('Driver dark'), 'dark-driver job should be flagged with the right reason');
+    assert.ok(excHtml.includes('j-cancel') && excHtml.includes('Order cancelled'), 'cancelled job should be flagged with the right reason');
+    assert.ok(!excHtml.includes('j-health'), 'a healthy, on-time job should not be flagged');
+  } finally {
+    cleanup();
+  }
+});
+
 test('dispatcher.html: archiving a delivered job removes it from the active board and into History', async () => {
   const { allJobs, fetchHandler } = buildMockBackend();
   const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
