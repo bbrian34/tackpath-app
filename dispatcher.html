@@ -623,19 +623,6 @@ body::after{content:'';position:fixed;inset:0;
           <div class="sb-label">Analytics</div>
         </div>
       </div>
-      <div class="sb-sec">
-        <div class="sb-sec-lbl">Clients · LOC</div>
-        <div class="sb-item">
-          <div class="sb-icon" style="background:rgba(83,255,136,.07);font-size:0.615rem;color:var(--green);font-weight:900;font-family:var(--mono);">ATL</div>
-          <div class="sb-label">Client A</div>
-          <div class="sb-cnt cnt-g">&#9679;</div>
-        </div>
-        <div class="sb-item">
-          <div class="sb-icon" style="background:rgba(141,92,255,.07);font-size:0.615rem;color:var(--purple);font-weight:900;font-family:var(--mono);">MED</div>
-          <div class="sb-label">Client B</div>
-          <div class="sb-cnt cnt-o">&#9679;</div>
-        </div>
-      </div>
       <div style="flex:1;"></div>
       <div class="sb-fleet">
         <div class="sf-ttl">Fleet Status</div>
@@ -1230,7 +1217,10 @@ async function doLogin(){
     localStorage.setItem('tp_dispatch_org',JSON.stringify({id:rows[0].id,slug:rows[0].slug,name:rows[0].name}));
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('shell').style.display='flex';
-    startClock();loadJobs();loadDrivers();
+    startClock();loadJobs();if(typeof loadDrivers==='function')loadDrivers();
+    if(dispatchPollId)clearInterval(dispatchPollId);
+    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},5000);
+    setTimeout(refreshFleetMap,3000);
   }catch(e){
     errEl.textContent='Something went wrong. Please try again.';
     errEl.style.display='block';
@@ -1390,6 +1380,7 @@ async function loadJobs(){
       }
     });
     jobs=newJobs;
+    syncSurgeBlocksFromJobs();
     renderAll();
     loadOCAData();
   }catch(e){
@@ -1587,23 +1578,30 @@ function renderSmartPath(){
   const total=jobs.length;
   const transit=jobs.filter(j=>j.status==='in_transit');
   const pending=jobs.filter(j=>j.status==='pending');
+  const assigned=jobs.filter(j=>j.driver_name);
   document.getElementById('sp-routes').textContent=total;
   document.getElementById('sp-rbar').style.width=Math.min(total*5,100)+'%';
-  document.getElementById('sp-decisions').textContent=total*3;
-  document.getElementById('sp-dbar').style.width=Math.min(total*3,100)+'%';
-  const conf=transit.length>0?92:78;
+  // Real assignment count -- jobs a driver has actually been assigned to, not a fabricated multiplier
+  document.getElementById('sp-decisions').textContent=assigned.length;
+  document.getElementById('sp-dbar').style.width=total>0?Math.round(assigned.length/total*100)+'%':'0%';
+  // Real on-time rate -- percent of in-transit jobs not yet past their own estimated delivery time
+  const lateCounted = transit.filter(j=>j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()).length;
+  const conf = transit.length>0 ? Math.round((transit.length-lateCounted)/transit.length*100) : 100;
   document.getElementById('confFill').style.width=conf+'%';
   document.getElementById('confVal').textContent=conf+'%';
-  // Reasoning feed
+  // Reasoning feed -- real job facts, not fabricated route/traffic narrative
   const feed=document.getElementById('spReasonFeed');
   if(transit.length){
-    feed.innerHTML=transit.slice(0,2).map(j=>`
+    feed.innerHTML=transit.slice(0,2).map(j=>{
+      const etaMins = j.estimated_delivery_at ? Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000) : null;
+      const etaText = etaMins===null ? 'no estimate on file' : (etaMins<=0 ? 'past its estimated delivery time' : ('estimated in '+etaMins+' min'));
+      return `
       <div class="sp-reasoning">
-        <div class="spr-lbl">&#129504; SmartPath Decision</div>
-        <div class="spr-txt"><strong>${j.title||'Job'}</strong> — Optimal route selected. I-75 N preferred based on current traffic density. Driver en route from pickup.</div>
-        <div class="spr-chips"><span class="spc spc-b">94% confidence</span><span class="spc spc-g">Traffic: LOW</span><span class="spc spc-p">AI assigned</span></div>
+        <div class="spr-lbl">&#128203; Active Delivery</div>
+        <div class="spr-txt"><strong>${j.title||'Job'}</strong> — ${j.pickup_address||'pickup'} &#8594; ${j.dropoff_address||'dropoff'}. ${j.driver_name||'A driver'} en route, ${etaText}.</div>
+        <div class="spr-chips"><span class="spc spc-b">${j.driver_name||'Unassigned'}</span>${etaMins!==null?`<span class="spc spc-g">${etaText}</span>`:''}</div>
       </div>
-    `).join('');
+    `;}).join('');
   } else {
     feed.innerHTML='<div style="padding:16px;font-family:var(--mono);font-size:0.769rem;color:var(--faint);">No active transit signals — SmartPath standing by.</div>';
   }
@@ -1641,13 +1639,7 @@ function renderSmartPath(){
 
 // ── SMARTTRACK ──
 function renderSmartTrack(){
-  // Force map to load by reassigning src if not yet loaded
-  const iframe = document.getElementById('fleetMapIframe');
-  if(iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.contentDocument === null)){
-    const src = iframe.src;
-    iframe.src = '';
-    setTimeout(()=>{ iframe.src = src; }, 50);
-  }
+  refreshFleetMap();
   const active=jobs.filter(j=>j.status==='in_transit'||j.status==='assigned');
   const trackEl=document.getElementById('trackingCount');if(trackEl)trackEl.textContent=active.length + surgeBlocks.filter(b=>b.status==='active'||b.status==='accepted').length;
   const grid=document.getElementById('drvGrid');
@@ -1655,7 +1647,6 @@ function renderSmartTrack(){
   // Determine service type color -- Surge = purple, Sprint = blue
   function serviceColor(j){ return (j.service_type==='surge'||j.isSurge) ? 'var(--purple)' : 'var(--blue)'; }
   function serviceLabel(j){ return (j.service_type==='surge'||j.isSurge) ? 'Surge' : 'Sprint'; }
-  function serviceDot(j){ return (j.service_type==='surge'||j.isSurge) ? '#8d5cff' : '#19b7ef'; }
 
   // Combine Sprint jobs + active Surge blocks into unified driver list for the map
   const surgeActive = surgeBlocks
@@ -1674,15 +1665,36 @@ function renderSmartTrack(){
 
   if(!allActive.length){
     grid.innerHTML='<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div>';
-    // Clear pins
-    const pins=document.getElementById('driverPins');
-    if(pins) pins.innerHTML='';
     return;
   }
 
   // Render driver grid cards with service-type color coding
   const emojis=['&#128100;','&#128101;','&#128102;','&#128103;','&#128104;','&#128105;'];
-  grid.innerHTML=allActive.slice(0,6).map((j,i)=>`
+  function realEtaMinutes(j){
+    if(!j.estimated_delivery_at) return null;
+    const mins = Math.round((new Date(j.estimated_delivery_at).getTime() - Date.now())/60000);
+    return mins;
+  }
+  function realProgressPct(j){
+    if(j.isSurge){
+      const b = surgeBlocks.find(x=>x.jobId===j.id);
+      if(b && b.stops) return Math.round((b.stopsCompleted||0)/b.stops*100);
+      return 0;
+    }
+    if(j.picked_up_at && j.estimated_delivery_at){
+      const start = new Date(j.picked_up_at).getTime();
+      const end = new Date(j.estimated_delivery_at).getTime();
+      const now = Date.now();
+      if(end<=start) return 100;
+      return Math.max(0,Math.min(100,Math.round((now-start)/(end-start)*100)));
+    }
+    return 0;
+  }
+  grid.innerHTML=allActive.slice(0,6).map((j,i)=>{
+    const etaMins = realEtaMinutes(j);
+    const etaText = etaMins===null ? '—' : (etaMins<=0 ? 'Due' : '~'+etaMins+'m');
+    const progressPct = realProgressPct(j);
+    return `
     <div class="drv-card" onclick="openDrawer('${j.id}')" style="border-top:2px solid ${serviceColor(j)};">
       <div class="dc-top">
         <div class="dc-av" style="background:${(j.isSurge)?'rgba(141,92,255,.15)':'rgba(25,183,239,.12)'};border:1px solid ${serviceColor(j)};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:1.077rem;">${emojis[i%emojis.length]}</div>
@@ -1694,48 +1706,13 @@ function renderSmartTrack(){
             <span style="color:var(--muted);font-size:0.692rem;">· ${j.status==='in_transit'?'In Transit':'Assigned'}</span>
           </div>
         </div>
-        <div class="dc-eta"><div class="dc-eta-val" style="color:${serviceColor(j)};">~${18+i*4}m</div><div class="dc-eta-lbl">ETA</div></div>
+        <div class="dc-eta"><div class="dc-eta-val" style="color:${serviceColor(j)};">${etaText}</div><div class="dc-eta-lbl">ETA</div></div>
       </div>
       <div class="dc-route">${j.pickup_address||'—'} &#8594; ${j.dropoff_address||'—'}</div>
-      <div class="dc-bar"><div class="dc-fill" style="width:${30+i*12}%;background:${serviceColor(j)};"></div></div>
+      <div class="dc-bar"><div class="dc-fill" style="width:${progressPct}%;background:${serviceColor(j)};"></div></div>
     </div>
-  `).join('');
-
-  // Render color-coded driver pins overlay on the map
-  const pins=document.getElementById('driverPins');
-  if(pins){
-    // Spread pins across the map area in Atlanta
-    const positions=[
-      {top:'38%',left:'48%'},{top:'52%',left:'34%'},{top:'29%',left:'61%'},
-      {top:'61%',left:'55%'},{top:'44%',left:'22%'},{top:'35%',left:'70%'}
-    ];
-    pins.innerHTML=allActive.slice(0,6).map((j,i)=>{
-      const pos=positions[i]||{top:(30+i*10)+'%',left:(30+i*10)+'%'};
-      const col=serviceDot(j);
-      const label=serviceLabel(j);
-      return `
-        <div style="position:absolute;top:${pos.top};left:${pos.left};transform:translate(-50%,-50%);z-index:10;pointer-events:none;">
-          <!-- Pin body -->
-          <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-            <!-- Service label chip -->
-            <div style="background:${col};color:#fff;font-family:var(--mono);font-size:0.615rem;font-weight:700;letter-spacing:.08em;padding:2px 6px;border-radius:3px;margin-bottom:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5);">${label}</div>
-            <!-- Animated pin dot -->
-            <div style="width:14px;height:14px;border-radius:50%;background:${col};border:2px solid #fff;box-shadow:0 0 0 3px ${col}40,0 2px 8px rgba(0,0,0,.5);position:relative;">
-              <div style="position:absolute;inset:-5px;border-radius:50%;border:2px solid ${col};opacity:.4;animation:pinPulse${i} 2s ease-out infinite;"></div>
-            </div>
-            <!-- Pin tail -->
-            <div style="width:2px;height:8px;background:${col};margin-top:1px;border-radius:0 0 2px 2px;"></div>
-          </div>
-        </div>
-        <style>
-          @keyframes pinPulse${i}{
-            0%{transform:scale(1);opacity:.5;}
-            100%{transform:scale(2.2);opacity:0;}
-          }
-        </style>
-      `;
-    }).join('');
-  }
+  `;
+  }).join('');
 }
 
 // ── ANALYTICS ──
@@ -1882,7 +1859,40 @@ function sprintFeedEntry(signalId, msg){
 }
 
 // ── SURGE ──
-const surgeBlocks = [];
+let surgeBlocks = [];
+
+// Rebuilds surgeBlocks from real job data every time jobs load, so the Surge tab
+// reflects actual database state on page load/refresh, not just live same-session
+// broadcasts from surge.html (which never persist across a reload).
+function syncSurgeBlocksFromJobs(){
+  const realBlocks = jobs.filter(j=>j.job_type==='surge').map(j=>{
+    const totalStops = j.total_stops||0;
+    const stopsCompleted = j.stops_completed||0;
+    let status='active';
+    if(j.status==='delivered') status='complete';
+    else if(j.status==='cancelled') status='rejected';
+    else if(j.status==='pending') status='broadcast';
+
+    let exception=false, exceptionMsg='';
+    if(j.status==='in_transit' && j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()){
+      exception=true; exceptionMsg='Late - past estimated delivery time';
+    } else if(j.status==='pending' && ((Date.now()-new Date(j.created_at).getTime())>15*60*1000)){
+      exception=true; exceptionMsg='Unassigned - no driver in '+Math.floor((Date.now()-new Date(j.created_at).getTime())/60000)+' min';
+    } else if(j.status==='in_transit' && j.updated_at && ((Date.now()-new Date(j.updated_at).getTime())>30*60*1000)){
+      exception=true; exceptionMsg='Driver dark - no update in '+Math.floor((Date.now()-new Date(j.updated_at).getTime())/60000)+' min';
+    }
+
+    return {
+      id: j.master_code || ('TP-'+(j.id?j.id.slice(0,6):'—')),
+      jobId: j.id,
+      status, driver: j.driver_name||null,
+      stops: totalStops, stopsCompleted,
+      exception, exceptionMsg,
+      hub: j.pickup_address||'Hub'
+    };
+  });
+  surgeBlocks = realBlocks;
+}
 
 function renderSurge(){
   const board = document.getElementById('sg-board');
@@ -1959,15 +1969,17 @@ function surgeAddBlock(block){
   renderSurge();
 }
 
-function surgeRebroadcast(routeId){
+async function surgeRebroadcast(routeId){
   const b = surgeBlocks.find(x=>x.id===routeId);
   if(!b) return;
-  b.exception=false;
-  b.exceptionMsg='';
-  b.status='broadcast';
-  b.driver=null;
-  surgeFeedEntry(routeId, routeId+' rebroadcast to driver pool');
-  renderSurge();
+  try{
+    await sbPatch('jobs?id=eq.'+b.jobId,{status:'pending',driver_name:null});
+    surgeFeedEntry(routeId, routeId+' rebroadcast to driver pool');
+    toast('Route rebroadcast to driver pool','ok');
+    loadJobs();
+  }catch(e){
+    toast('Could not rebroadcast route','warn');
+  }
 }
 
 function surgeFeedEntry(routeId, msg){
