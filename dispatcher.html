@@ -15,8 +15,9 @@
   --text:#d8eeff;--muted:rgba(255,255,255,.72);--faint:rgba(255,255,255,.48);
   --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;--cond:'Barlow Condensed',sans-serif;
 }
+html{font-size:clamp(12px,0.5vw + 6px,17px);}
 html,body{height:100%;margin:0;padding:0;}
-body{font-family:var(--sans);color:var(--text);background:var(--bg);font-size:13px;overflow:hidden;}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);font-size:1rem;overflow:hidden;}
 body::before{content:'';position:fixed;inset:0;
   background:
     linear-gradient(rgba(25,183,239,.014) 1px,transparent 1px),
@@ -55,32 +56,32 @@ body::after{content:'';position:fixed;inset:0;
 .lbox::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,transparent,var(--blue) 40%,var(--purple) 70%,transparent);}
 .lbox-top{padding:32px 36px 24px;text-align:center;border-bottom:1px solid var(--border);}
-.lbox-logo{font-family:var(--cond);font-weight:900;font-size:28px;letter-spacing:2.5px;
+.lbox-logo{font-family:var(--cond);font-weight:900;font-size:2.154rem;letter-spacing:2.5px;
   display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px;}
 .lbox-logo span{color:var(--blue);}
-.lbox-ver{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.22em;text-transform:uppercase;}
-.lbox-desc{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.6;}
+.lbox-ver{font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.22em;text-transform:uppercase;}
+.lbox-desc{margin-top:10px;font-size:0.923rem;color:var(--muted);line-height:1.6;}
 .lbox-form{padding:24px 36px 32px;}
-.lf-lbl{font-family:var(--mono);font-size:8px;font-weight:600;color:var(--muted);
+.lf-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;color:var(--muted);
   letter-spacing:.16em;text-transform:uppercase;margin-bottom:7px;display:block;}
 .lf-in{width:100%;padding:12px 15px;border-radius:11px;background:rgba(255,255,255,.03);
-  border:1px solid var(--border);color:var(--text);font-size:13px;font-family:var(--sans);
+  border:1px solid var(--border);color:var(--text);font-size:1rem;font-family:var(--sans);
   outline:none;transition:border-color .2s;margin-bottom:13px;}
 .lf-in:focus{border-color:rgba(25,183,239,.45);background:rgba(25,183,239,.02);}
 .lf-hub{display:flex;align-items:center;gap:9px;margin-bottom:18px;}
 .hub-tag{padding:5px 12px;border-radius:7px;background:rgba(25,183,239,.08);
-  border:1px solid rgba(25,183,239,.22);font-size:10px;font-weight:700;color:var(--blue);
+  border:1px solid rgba(25,183,239,.22);font-size:0.769rem;font-weight:700;color:var(--blue);
   display:flex;align-items:center;gap:6px;}
 .hub-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--blue);
   box-shadow:0 0 6px rgba(25,183,239,.8);}
-.hub-note{font-size:11px;color:var(--muted);}
+.hub-note{font-size:0.846rem;color:var(--muted);}
 .lf-btn{width:100%;padding:14px;border-radius:12px;
   background:linear-gradient(135deg,#0aa8ff 0%,#0060cc 100%);
-  border:1px solid rgba(255,255,255,.1);color:#fff;font-size:14px;font-weight:800;
+  border:1px solid rgba(255,255,255,.1);color:#fff;font-size:1.077rem;font-weight:800;
   cursor:pointer;font-family:var(--sans);letter-spacing:.2px;
   box-shadow:0 12px 32px rgba(10,168,255,.3);transition:all .18s;}
 .lf-btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(10,168,255,.42);}
-.lf-note{text-align:center;margin-top:13px;font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.07em;}
+.lf-note{text-align:center;margin-top:13px;font-family:var(--mono);font-size:0.692rem;color:var(--faint);letter-spacing:.07em;}
 
 /* ── SHELL ── */
 #shell{display:none;height:100vh;max-height:100vh;flex-direction:column;position:relative;z-index:1;overflow:hidden;}
@@ -90,35 +91,35 @@ body::after{content:'';position:fixed;inset:0;
   background:rgba(2,6,14,.96);border-bottom:1px solid rgba(25,183,239,.1);
   backdrop-filter:blur(24px);gap:18px;flex-shrink:0;z-index:200;}
 .tb-brand{display:flex;align-items:center;gap:9px;flex-shrink:0;}
-.tb-logo{font-family:var(--cond);font-weight:900;font-size:20px;letter-spacing:2px;
+.tb-logo{font-family:var(--cond);font-weight:900;font-size:1.538rem;letter-spacing:2px;
   color:#fff;display:flex;align-items:center;gap:8px;}
-.tb-badge{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.18em;
+.tb-badge{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.18em;
   padding:3px 8px;border-radius:4px;background:rgba(25,183,239,.12);
   border:1px solid rgba(25,183,239,.28);color:var(--blue);text-transform:uppercase;}
 .tb-sep{width:1px;height:22px;background:var(--border);flex-shrink:0;}
 .tb-tabs{display:flex;gap:1px;}
-.tbtab{padding:6px 13px;border-radius:8px;font-size:11px;font-weight:700;
+.tbtab{padding:6px 13px;border-radius:8px;font-size:0.846rem;font-weight:700;
   background:transparent;border:none;color:var(--muted);cursor:pointer;
   transition:all .15s;font-family:var(--sans);white-space:nowrap;position:relative;}
 .tbtab.on{background:rgba(25,183,239,.1);color:var(--blue);}
 .tbtab:hover:not(.on){background:rgba(255,255,255,.04);color:var(--text);}
 .tbtab-badge{position:absolute;top:1px;right:2px;min-width:14px;height:14px;border-radius:7px;
-  background:var(--red);color:#fff;font-size:7px;font-weight:900;
+  background:var(--red);color:#fff;font-size:0.538rem;font-weight:900;
   display:flex;align-items:center;justify-content:center;font-family:var(--mono);padding:0 3px;}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
-.sys-status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;
+.sys-status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:0.692rem;
   color:var(--green);letter-spacing:.06em;}
 .sys-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
   box-shadow:0 0 8px rgba(83,255,136,.9);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-.tb-clock{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.tb-clock{font-family:var(--mono);font-size:0.769rem;color:var(--muted);}
 @media(max-width:800px){.tb-clock{display:none;}.sys-status span:not(.sys-dot){display:none;}}
-.tb-poll{font-family:var(--mono);font-size:9px;color:var(--faint);display:flex;align-items:center;gap:5px;}
+.tb-poll{font-family:var(--mono);font-size:0.692rem;color:var(--faint);display:flex;align-items:center;gap:5px;}
 .poll-ring{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(25,183,239,.3);
   border-top-color:var(--blue);animation:spin 1.5s linear infinite;display:none;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .tb-avatar{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#0aa8ff,#005faa);
-  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;font-size:0.923rem;font-weight:900;
   cursor:pointer;flex-shrink:0;}
 
 /* ── LAYOUT ── */
@@ -130,17 +131,17 @@ body::after{content:'';position:fixed;inset:0;
 @media(max-width:900px){#sidebar{display:none;}}
 @media(max-width:1200px){#sidebar{width:160px;}}
 .sb-sec{padding:0 10px;margin-bottom:18px;}
-.sb-sec-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.2em;
+.sb-sec-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.2em;
   color:var(--faint);text-transform:uppercase;padding:0 8px;margin-bottom:7px;}
 .sb-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;
   cursor:pointer;transition:all .12s;margin-bottom:2px;border:1px solid transparent;}
 .sb-item:hover{background:rgba(25,183,239,.04);}
 .sb-item.on{background:rgba(25,183,239,.09);border-color:rgba(25,183,239,.16);}
 .sb-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;
-  justify-content:center;font-size:13px;flex-shrink:0;}
-.sb-label{font-size:11px;font-weight:700;color:var(--muted);}
+  justify-content:center;font-size:1rem;flex-shrink:0;}
+.sb-label{font-size:0.846rem;font-weight:700;color:var(--muted);}
 .sb-item.on .sb-label{color:var(--blue);}
-.sb-cnt{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:600;
+.sb-cnt{margin-left:auto;font-family:var(--mono);font-size:0.692rem;font-weight:600;
   padding:2px 7px;border-radius:5px;}
 .cnt-b{background:rgba(25,183,239,.1);color:var(--blue);}
 .cnt-o{background:rgba(255,150,30,.1);color:var(--orange);}
@@ -149,14 +150,14 @@ body::after{content:'';position:fixed;inset:0;
 .cnt-p{background:rgba(141,92,255,.1);color:var(--purple);}
 .sb-fleet{margin:auto 10px 10px;padding:12px 14px;border-radius:11px;
   background:var(--card);border:1px solid var(--border);}
-.sf-ttl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.16em;
+.sf-ttl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.16em;
   color:var(--muted);text-transform:uppercase;margin-bottom:9px;}
 .sf-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
-.sf-k{font-size:10px;color:var(--muted);}
-.sf-v{font-family:var(--mono);font-size:11px;font-weight:600;}
+.sf-k{font-size:0.769rem;color:var(--muted);}
+.sf-v{font-family:var(--mono);font-size:0.846rem;font-weight:600;}
 .sf-bar{height:2px;border-radius:1px;background:rgba(255,255,255,.05);margin-top:9px;}
 .sf-fill{height:2px;border-radius:1px;background:linear-gradient(90deg,var(--blue),var(--green));}
-.sf-note{font-family:var(--mono);font-size:8px;color:var(--faint);margin-top:4px;}
+.sf-note{font-family:var(--mono);font-size:0.615rem;color:var(--faint);margin-top:4px;}
 
 /* ── MAIN ── */
 #main{flex:1;overflow-y:auto;padding:20px 22px;position:relative;min-width:0;}
@@ -176,15 +177,15 @@ body::after{content:'';position:fixed;inset:0;
 .kpi-o::before{background:linear-gradient(90deg,transparent,var(--orange),transparent);}
 .kpi-y::before{background:linear-gradient(90deg,transparent,var(--yellow),transparent);}
 .kpi-r::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
-.kpi-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.13em;
+.kpi-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.13em;
   color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
-.kpi-val{font-family:var(--cond);font-size:26px;font-weight:600;line-height:1;letter-spacing:-.2px;}
-.kpi-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:5px;}
+.kpi-val{font-family:var(--cond);font-size:2rem;font-weight:600;line-height:1;letter-spacing:-.2px;}
+.kpi-sub{font-family:var(--mono);font-size:0.692rem;color:var(--muted);margin-top:5px;}
 .up{color:var(--green);}.dn{color:var(--red);}
 
 /* ── SIGNAL PIPELINE (Kanban) ── */
 .pipeline-wrap{margin-bottom:18px;}
-.pipeline-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.18em;
+.pipeline-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.18em;
   color:var(--muted);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
 .pipeline-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
 .pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
@@ -192,21 +193,21 @@ body::after{content:'';position:fixed;inset:0;
 @media(max-width:700px){.pipeline{grid-template-columns:repeat(2,1fr);}}
 .pipe-col{background:var(--card);border-radius:13px;border:1px solid var(--border);overflow:hidden;min-height:120px;}
 .pipe-hdr{padding:10px 12px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;}
-.pipe-title{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
-.pipe-cnt{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;}
+.pipe-title{font-family:var(--mono);font-size:0.615rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
+.pipe-cnt{font-family:var(--mono);font-size:0.769rem;font-weight:700;padding:2px 8px;border-radius:5px;}
 .pipe-body{padding:8px;display:flex;flex-direction:column;gap:6px;}
 .pcard{padding:10px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);
   cursor:pointer;transition:all .15s;position:relative;}
 .pcard:hover{border-color:rgba(25,183,239,.3);background:var(--card3);transform:translateY(-1px);}
-.pcard-sig{font-family:var(--mono);font-size:9px;color:var(--blue);margin-bottom:3px;}
-.pcard-name{font-size:11px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pcard-route{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pcard-age{font-family:var(--mono);font-size:8px;color:var(--faint);margin-top:5px;}
-.pri-tag{display:inline-flex;padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:8px;font-weight:600;margin-top:5px;}
+.pcard-sig{font-family:var(--mono);font-size:0.692rem;color:var(--blue);margin-bottom:3px;}
+.pcard-name{font-size:0.846rem;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pcard-route{font-size:0.769rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pcard-age{font-family:var(--mono);font-size:0.615rem;color:var(--faint);margin-top:5px;}
+.pri-tag{display:inline-flex;padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:0.615rem;font-weight:600;margin-top:5px;}
 .pri-s{background:rgba(255,255,255,.05);color:var(--faint);}
 .pri-p{background:rgba(255,150,30,.1);color:var(--orange);}
 .pri-c{background:rgba(141,92,255,.12);color:var(--purple);}
-.pipe-empty{padding:16px 12px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);}
+.pipe-empty{padding:16px 12px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);}
 
 /* ── TWO COL SECTION ── */
 .two-col{display:grid;grid-template-columns:1fr 360px;gap:14px;margin-bottom:18px;}
@@ -217,18 +218,18 @@ body::after{content:'';position:fixed;inset:0;
   border-radius:13px;overflow:hidden;}
 .panel-hdr{padding:13px 16px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;}
-.panel-title{font-size:13px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.panel-title{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:8px;}
 .ai-chip{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;
   background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.22);
-  font-family:var(--mono);font-size:8px;font-weight:700;color:var(--purple);letter-spacing:.1em;}
+  font-family:var(--mono);font-size:0.615rem;font-weight:700;color:var(--purple);letter-spacing:.1em;}
 .intel-feed{padding:10px;display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;}
 .ifeed-item{padding:10px 12px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);
   display:flex;gap:9px;align-items:flex-start;animation:slideR .3s ease both;}
 @keyframes slideR{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
 .if-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;}
-.if-text{font-size:11px;color:var(--muted);line-height:1.55;flex:1;}
+.if-text{font-size:0.846rem;color:var(--muted);line-height:1.55;flex:1;}
 .if-text strong{color:var(--text);}
-.if-time{font-family:var(--mono);font-size:8px;color:var(--faint);flex-shrink:0;}
+.if-time{font-family:var(--mono);font-size:0.615rem;color:var(--faint);flex-shrink:0;}
 
 /* ── EXCEPTION QUEUE ── */
 .exc-panel{background:var(--card);border:1px solid rgba(255,150,30,.14);
@@ -237,31 +238,31 @@ body::after{content:'';position:fixed;inset:0;
   display:flex;align-items:center;justify-content:space-between;
   background:linear-gradient(135deg,rgba(255,150,30,.04),transparent);}
 .exc-badge{padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.12);
-  border:1px solid rgba(255,150,30,.25);font-family:var(--mono);font-size:9px;
+  border:1px solid rgba(255,150,30,.25);font-family:var(--mono);font-size:0.692rem;
   font-weight:700;color:var(--orange);}
 .exc-list{max-height:260px;overflow-y:auto;}
 .exc-item{padding:12px 14px;border-bottom:1px solid var(--border2);display:flex;gap:10px;}
 .exc-item:last-child{border-bottom:none;}
 .exc-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
-  justify-content:center;font-size:14px;flex-shrink:0;}
+  justify-content:center;font-size:1.077rem;flex-shrink:0;}
 .ei-r{background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.2);}
 .ei-o{background:rgba(255,150,30,.08);border:1px solid rgba(255,150,30,.18);}
 .ei-y{background:rgba(255,210,61,.07);border:1px solid rgba(255,210,61,.16);}
 .exc-body{flex:1;min-width:0;}
-.exc-sig{font-family:var(--mono);font-size:9px;color:var(--blue);margin-bottom:2px;}
-.exc-name{font-size:11px;font-weight:800;margin-bottom:3px;}
-.exc-detail{font-size:10px;color:var(--muted);line-height:1.5;margin-bottom:6px;}
+.exc-sig{font-family:var(--mono);font-size:0.692rem;color:var(--blue);margin-bottom:2px;}
+.exc-name{font-size:0.846rem;font-weight:800;margin-bottom:3px;}
+.exc-detail{font-size:0.769rem;color:var(--muted);line-height:1.5;margin-bottom:6px;}
 .exc-countdown{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;
   background:rgba(255,59,48,.08);border:1px solid rgba(255,59,48,.16);
-  font-family:var(--mono);font-size:8px;font-weight:700;color:var(--red);margin-bottom:6px;}
+  font-family:var(--mono);font-size:0.615rem;font-weight:700;color:var(--red);margin-bottom:6px;}
 .exc-acts{display:flex;gap:5px;flex-wrap:wrap;}
-.ea{padding:4px 9px;border-radius:5px;font-size:9px;font-weight:700;
+.ea{padding:4px 9px;border-radius:5px;font-size:0.692rem;font-weight:700;
   cursor:pointer;border:none;font-family:var(--sans);transition:all .15s;}
 .ea-r{background:rgba(255,59,48,.1);color:var(--red);border:1px solid rgba(255,59,48,.2);}
 .ea-b{background:rgba(25,183,239,.1);color:var(--blue);border:1px solid rgba(25,183,239,.2);}
 .ea-g{background:rgba(83,255,136,.08);color:var(--green);border:1px solid rgba(83,255,136,.18);}
 .ea-o{background:rgba(255,150,30,.08);color:var(--orange);border:1px solid rgba(255,150,30,.18);}
-.exc-t{font-family:var(--mono);font-size:8px;color:var(--faint);flex-shrink:0;white-space:nowrap;}
+.exc-t{font-family:var(--mono);font-size:0.615rem;color:var(--faint);flex-shrink:0;white-space:nowrap;}
 
 /* ── SIGNAL TABLE ── */
 .sig-panel{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;}
@@ -269,33 +270,33 @@ body::after{content:'';position:fixed;inset:0;
 .sig-search{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;
   padding:8px 12px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--border);}
 .sig-search input{background:transparent;border:none;outline:none;color:var(--text);
-  font-size:12px;font-family:var(--sans);flex:1;}
+  font-size:0.923rem;font-family:var(--sans);flex:1;}
 .sig-search input::placeholder{color:var(--faint);}
 .sig-filter{padding:8px 12px;border-radius:9px;background:rgba(255,255,255,.03);
-  border:1px solid var(--border);color:var(--text);font-size:12px;font-family:var(--sans);
+  border:1px solid var(--border);color:var(--text);font-size:0.923rem;font-family:var(--sans);
   outline:none;cursor:pointer;}
 .sig-filter option{background:var(--card);}
 .live-chip{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;
   background:rgba(83,255,136,.07);border:1px solid rgba(83,255,136,.18);
-  font-family:var(--mono);font-size:8px;font-weight:700;color:var(--green);letter-spacing:.1em;}
+  font-family:var(--mono);font-size:0.615rem;font-weight:700;color:var(--green);letter-spacing:.1em;}
 .live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.2s infinite;}
 .tbl{width:100%;border-collapse:collapse;}
 .tbl thead tr{background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);}
-.tbl th{padding:9px 13px;text-align:left;font-family:var(--mono);font-size:8px;
+.tbl th{padding:9px 13px;text-align:left;font-family:var(--mono);font-size:0.615rem;
   font-weight:600;color:var(--muted);letter-spacing:.13em;text-transform:uppercase;white-space:nowrap;}
 .tbl tbody tr{border-bottom:1px solid var(--border2);transition:background .1s;cursor:pointer;}
 .tbl tbody tr:hover{background:rgba(25,183,239,.04);}
 .tbl tbody tr:last-child{border-bottom:none;}
 .tbl td{padding:11px 13px;vertical-align:middle;}
-.tbl-sig{font-family:var(--mono);font-size:10px;color:var(--blue);}
-.tbl-order{font-family:var(--mono);font-size:8px;color:var(--faint);}
-.tbl-name{font-size:12px;font-weight:500;}
-.tbl-route{font-size:10px;color:var(--muted);}
-.tbl-driver{font-size:11px;}
-.tbl-eta{font-family:var(--mono);font-size:11px;font-weight:600;}
-.tbl-quote{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green);}
+.tbl-sig{font-family:var(--mono);font-size:0.769rem;color:var(--blue);}
+.tbl-order{font-family:var(--mono);font-size:0.615rem;color:var(--faint);}
+.tbl-name{font-size:0.923rem;font-weight:500;}
+.tbl-route{font-size:0.769rem;color:var(--muted);}
+.tbl-driver{font-size:0.846rem;}
+.tbl-eta{font-family:var(--mono);font-size:0.846rem;font-weight:600;}
+.tbl-quote{font-family:var(--mono);font-size:0.846rem;font-weight:600;color:var(--green);}
 .spill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;
-  font-family:var(--mono);font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+  font-family:var(--mono);font-size:0.615rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
 .s-pending{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--muted);}
 .s-routing{background:rgba(141,92,255,.08);border:1px solid rgba(141,92,255,.2);color:var(--purple);}
 .s-assigned{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
@@ -303,48 +304,48 @@ body::after{content:'';position:fixed;inset:0;
 .s-delivered{background:rgba(83,255,136,.04);border:1px solid rgba(83,255,136,.1);color:rgba(83,255,136,.5);}
 .s-cancelled{background:rgba(255,59,48,.07);border:1px solid rgba(255,59,48,.18);color:var(--red);}
 .s-problem{background:rgba(255,59,48,.07);border:1px solid rgba(255,59,48,.18);color:var(--red);}
-.act-btn{padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;
+.act-btn{padding:5px 10px;border-radius:6px;font-size:0.692rem;font-weight:700;cursor:pointer;
   font-family:var(--sans);background:rgba(25,183,239,.1);color:var(--blue);
   border:1px solid rgba(25,183,239,.22);transition:all .15s;}
 .act-btn:hover{background:rgba(25,183,239,.2);}
 .act-btn.danger{background:rgba(255,59,48,.08);color:var(--red);border-color:rgba(255,59,48,.2);}
 .tbl-empty{padding:48px;text-align:center;}
-.tbl-empty .ei{font-size:28px;margin-bottom:10px;opacity:.3;}
-.tbl-empty .et{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:5px;}
-.tbl-empty .es{font-size:11px;color:var(--faint);}
+.tbl-empty .ei{font-size:2.154rem;margin-bottom:10px;opacity:.3;}
+.tbl-empty .et{font-size:1rem;font-weight:600;color:var(--muted);margin-bottom:5px;}
+.tbl-empty .es{font-size:0.846rem;color:var(--faint);}
 
 /* ── SMARTPATH TAB ── */
 .sp-reasoning{padding:13px 15px;border-radius:10px;
   background:linear-gradient(135deg,rgba(141,92,255,.06),rgba(25,183,239,.03));
   border:1px solid rgba(141,92,255,.18);margin-bottom:10px;}
-.spr-lbl{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.14em;
+.spr-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:700;letter-spacing:.14em;
   color:var(--purple);text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
-.spr-txt{font-size:12px;color:var(--text);line-height:1.65;}
+.spr-txt{font-size:0.923rem;color:var(--text);line-height:1.65;}
 .spr-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
 .spc{display:inline-flex;padding:3px 8px;border-radius:5px;
-  font-family:var(--mono);font-size:8px;font-weight:600;}
+  font-family:var(--mono);font-size:0.615rem;font-weight:600;}
 .spc-b{background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
 .spc-g{background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.18);color:var(--green);}
 .spc-r{background:rgba(255,59,48,.08);border:1px solid rgba(255,59,48,.18);color:var(--red);}
 .spc-p{background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);color:var(--purple);}
 .conf-wrap{padding:10px 12px;border-radius:9px;background:rgba(141,92,255,.04);
   border:1px solid rgba(141,92,255,.12);margin-top:10px;}
-.conf-lbl{font-family:var(--mono);font-size:8px;color:var(--purple);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;}
+.conf-lbl{font-family:var(--mono);font-size:0.615rem;color:var(--purple);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;}
 .conf-row{display:flex;align-items:center;gap:10px;}
 .conf-bar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.05);}
 .conf-fill{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--purple),var(--blue));transition:width 2s ease;}
-.conf-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blue);}
+.conf-val{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--blue);}
 .rstep{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;
   background:var(--card2);border:1px solid var(--border2);margin-bottom:6px;}
 .rs-n{width:24px;height:24px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;
-  justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;}
+  justify-content:center;font-family:var(--mono);font-size:0.692rem;font-weight:700;}
 .rs-done{background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.25);color:var(--green);}
 .rs-now{background:rgba(25,183,239,.18);border:1px solid rgba(25,183,239,.5);color:var(--blue);}
 .rs-q{background:rgba(25,183,239,.07);border:1px solid rgba(25,183,239,.18);color:var(--blue);}
 .rs-dest{background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.16);color:var(--green);}
-.rs-name{font-size:11px;font-weight:700;margin-bottom:1px;}
-.rs-detail{font-family:var(--mono);font-size:9px;color:var(--muted);}
-.rs-eta{font-family:var(--cond);font-size:16px;font-weight:900;color:var(--blue);margin-left:auto;}
+.rs-name{font-size:0.846rem;font-weight:700;margin-bottom:1px;}
+.rs-detail{font-family:var(--mono);font-size:0.692rem;color:var(--muted);}
+.rs-eta{font-family:var(--cond);font-size:1.231rem;font-weight:900;color:var(--blue);margin-left:auto;}
 .rconn{width:2px;height:8px;background:rgba(25,183,239,.14);margin:0 0 6px 11px;}
 
 /* ── SMARTTRACK ── */
@@ -354,7 +355,7 @@ body::after{content:'';position:fixed;inset:0;
   filter:hue-rotate(195deg) saturate(0.85) brightness(0.72);}
 .map-lbl{position:absolute;top:10px;left:10px;padding:5px 12px;border-radius:8px;
   background:rgba(2,6,14,.92);border:1px solid rgba(25,183,239,.28);
-  font-family:var(--mono);font-size:9px;font-weight:700;color:var(--blue);letter-spacing:.1em;}
+  font-family:var(--mono);font-size:0.692rem;font-weight:700;color:var(--blue);letter-spacing:.1em;}
 .drv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 @media(max-width:900px){.drv-grid{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:600px){.drv-grid{grid-template-columns:1fr;}}
@@ -364,13 +365,13 @@ body::after{content:'';position:fixed;inset:0;
 .dc-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
 .dc-av{width:32px;height:32px;border-radius:9px;background:#0d1a28;
   border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;
-  justify-content:center;font-size:14px;flex-shrink:0;}
-.dc-name{font-size:12px;font-weight:800;margin-bottom:1px;}
-.dc-status{font-family:var(--mono);font-size:9px;color:var(--muted);}
+  justify-content:center;font-size:1.077rem;flex-shrink:0;}
+.dc-name{font-size:0.923rem;font-weight:800;margin-bottom:1px;}
+.dc-status{font-family:var(--mono);font-size:0.692rem;color:var(--muted);}
 .dc-eta{margin-left:auto;text-align:right;}
-.dc-eta-val{font-family:var(--cond);font-size:20px;font-weight:900;line-height:1;}
-.dc-eta-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;}
-.dc-route{font-size:10px;color:var(--muted);}
+.dc-eta-val{font-family:var(--cond);font-size:1.538rem;font-weight:900;line-height:1;}
+.dc-eta-lbl{font-family:var(--mono);font-size:0.615rem;color:var(--muted);text-transform:uppercase;}
+.dc-route{font-size:0.769rem;color:var(--muted);}
 .dc-bar{height:2px;border-radius:1px;background:rgba(255,255,255,.05);margin-top:8px;}
 .dc-fill{height:2px;border-radius:1px;transition:width 1s ease;}
 
@@ -379,45 +380,45 @@ body::after{content:'';position:fixed;inset:0;
 @media(max-width:900px){.cmd-grid{grid-template-columns:1fr;}}
 .panel{padding:16px 18px;border-radius:13px;background:var(--card);border:1px solid var(--border);margin-bottom:12px;}
 .panel-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.panel-ttl{font-size:12px;font-weight:600;}
-.panel-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+.panel-ttl{font-size:0.923rem;font-weight:600;}
+.panel-sub{font-family:var(--mono);font-size:0.692rem;color:var(--muted);margin-top:2px;}
 .cmd-act{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;
   border:1px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:7px;
   background:transparent;width:100%;text-align:left;font-family:var(--sans);}
 .cmd-act:hover{border-color:rgba(25,183,239,.3);background:rgba(25,183,239,.04);}
-.cmd-ico{font-size:16px;flex-shrink:0;}
-.cmd-ttl{font-size:12px;font-weight:800;color:var(--text);}
-.cmd-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px;}
+.cmd-ico{font-size:1.231rem;flex-shrink:0;}
+.cmd-ttl{font-size:0.923rem;font-weight:800;color:var(--text);}
+.cmd-sub{font-family:var(--mono);font-size:0.692rem;color:var(--muted);margin-top:1px;}
 .sla-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .sla-cell{padding:12px;border-radius:9px;background:var(--card2);text-align:center;}
-.sla-tier{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
-.sla-val{font-family:var(--cond);font-size:22px;font-weight:600;letter-spacing:-0.5px;}
-.sla-note{font-size:9px;color:var(--muted);margin-top:3px;}
+.sla-tier{font-family:var(--mono);font-size:0.615rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
+.sla-val{font-family:var(--cond);font-size:1.692rem;font-weight:600;letter-spacing:-0.5px;}
+.sla-note{font-size:0.692rem;color:var(--muted);margin-top:3px;}
 .loc-panel{padding:10px 12px;border-radius:9px;background:var(--card2);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.loc-name{font-size:11px;font-weight:700;display:flex;align-items:center;gap:7px;}
+.loc-name{font-size:0.846rem;font-weight:700;display:flex;align-items:center;gap:7px;}
 .loc-dot{width:7px;height:7px;border-radius:50%;}
-.loc-stat{font-family:var(--mono);font-size:9px;}
+.loc-stat{font-family:var(--mono);font-size:0.692rem;}
 
 /* ── ANALYTICS TAB ── */
 .spark-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
 @media(max-width:700px){.spark-row{grid-template-columns:1fr;}}
 .spark-box{padding:14px 16px;border-radius:11px;background:var(--card);border:1px solid var(--border);}
-.spark-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.13em;
+.spark-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.13em;
   color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
-.spark-val{font-family:var(--cond);font-size:24px;font-weight:600;letter-spacing:-0.5px;margin-bottom:6px;}
+.spark-val{font-family:var(--cond);font-size:1.846rem;font-weight:600;letter-spacing:-0.5px;margin-bottom:6px;}
 .bar-w{height:3px;background:rgba(255,255,255,.05);border-radius:2px;}
 .bar-f{height:3px;border-radius:2px;}
 .vol-chart{display:flex;align-items:flex-end;gap:5px;height:80px;margin-bottom:6px;}
 .vb-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
 .vb{width:100%;border-radius:3px 3px 0 0;background:rgba(25,183,239,.28);}
-.vb-lbl{font-family:var(--mono);font-size:8px;color:var(--faint);}
+.vb-lbl{font-family:var(--mono);font-size:0.615rem;color:var(--faint);}
 .lb-row{display:grid;grid-template-columns:20px 1fr 60px 60px 60px;
   align-items:center;padding:9px 10px;border-radius:8px;margin-bottom:2px;gap:0;}
-.lb-hdr{font-family:var(--mono);font-size:8px;font-weight:600;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
-.lb-nm{font-size:11px;font-weight:700;}
-.lb-vl{font-family:var(--mono);font-size:10px;text-align:right;}
-.lb-rk{font-family:var(--cond);font-size:14px;font-weight:900;color:var(--muted);}
+.lb-hdr{font-family:var(--mono);font-size:0.615rem;font-weight:600;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.lb-nm{font-size:0.846rem;font-weight:700;}
+.lb-vl{font-family:var(--mono);font-size:0.769rem;text-align:right;}
+.lb-rk{font-family:var(--cond);font-size:1.077rem;font-weight:900;color:var(--muted);}
 
 /* ── DRAWER ── */
 #drawer{position:fixed;right:-480px;top:52px;bottom:0;width:460px;
@@ -429,29 +430,29 @@ body::after{content:'';position:fixed;inset:0;
   background:linear-gradient(90deg,transparent,var(--blue),transparent);}
 .dr-close{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:8px;
   background:rgba(255,255,255,.06);border:1px solid var(--border);
-  color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.dr-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.2em;
+  color:var(--text);font-size:1.231rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.dr-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.2em;
   color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
-.dr-title{font-family:var(--sans);font-size:15px;font-weight:500;letter-spacing:0;margin-bottom:18px;line-height:1.3;color:var(--muted);}
+.dr-title{font-family:var(--sans);font-size:1.154rem;font-weight:500;letter-spacing:0;margin-bottom:18px;line-height:1.3;color:var(--muted);}
 .dr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
 .dr-field{padding:11px 13px;border-radius:9px;background:var(--card);border:1px solid var(--border);}
-.df-lbl{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.1em;
+.df-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.1em;
   color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
-.df-val{font-size:12px;font-weight:500;color:var(--text);}
+.df-val{font-size:0.923rem;font-weight:500;color:var(--text);}
 .dr-map{height:160px;border-radius:11px;overflow:hidden;border:1px solid var(--border);margin-bottom:14px;}
 .dr-map iframe{width:100%;height:100%;border:0;display:block;
   filter:hue-rotate(195deg) saturate(0.9) brightness(0.7);}
 .dr-price{padding:12px 14px;border-radius:10px;background:var(--card2);border:1px solid var(--border);margin-bottom:14px;}
-.dp-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border2);font-size:11px;}
+.dp-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border2);font-size:0.846rem;}
 .dp-row:last-child{border-bottom:none;padding-top:8px;}
 .dp-k{color:var(--muted);}
 .dp-v{font-family:var(--mono);font-weight:600;}
 .dr-status-sel{width:100%;padding:10px 13px;border-radius:9px;background:rgba(255,255,255,.03);
-  border:1px solid var(--border);color:var(--text);font-size:12px;font-family:var(--sans);
+  border:1px solid var(--border);color:var(--text);font-size:0.923rem;font-family:var(--sans);
   outline:none;margin-bottom:12px;cursor:pointer;}
 .dr-status-sel option{background:var(--card);}
 .dr-acts{display:flex;gap:7px;flex-wrap:wrap;}
-.dra{flex:1;padding:10px 12px;border-radius:9px;font-size:11px;font-weight:800;
+.dra{flex:1;padding:10px 12px;border-radius:9px;font-size:0.846rem;font-weight:800;
   cursor:pointer;border:none;font-family:var(--sans);transition:all .15s;text-align:center;}
 .dra-p{background:#0aa8ff;color:#fff;}
 .dra-g{background:rgba(83,255,136,.1);color:var(--green);border:1px solid rgba(83,255,136,.2);}
@@ -469,55 +470,55 @@ body::after{content:'';position:fixed;inset:0;
 .oc-hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .oc-brand{display:flex;align-items:center;gap:8px;}
 .oc-brand-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px rgba(83,255,136,.8);animation:pulse 2s infinite;}
-.oc-ttl{font-size:14px;font-weight:800;}
-.oc-sub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;margin-top:1px;}
+.oc-ttl{font-size:1.077rem;font-weight:800;}
+.oc-sub{font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.08em;margin-top:1px;}
 .oc-tabs{display:flex;gap:2px;padding-bottom:0;}
-.oc-tab{padding:7px 13px;border-radius:8px 8px 0 0;font-size:11px;font-weight:700;
+.oc-tab{padding:7px 13px;border-radius:8px 8px 0 0;font-size:0.846rem;font-weight:700;
   cursor:pointer;border:none;font-family:var(--sans);background:transparent;
   color:var(--muted);transition:all .15s;position:relative;}
 .oc-tab.on{background:rgba(25,183,239,.1);color:var(--blue);}
 .oc-tab-badge{position:absolute;top:2px;right:3px;min-width:14px;height:14px;border-radius:7px;
-  background:var(--red);color:#fff;font-size:7px;font-weight:900;
+  background:var(--red);color:#fff;font-size:0.538rem;font-weight:900;
   display:none;align-items:center;justify-content:center;font-family:var(--mono);padding:0 3px;}
 .oc-channel{display:none;flex-direction:column;}
 .oc-channel.on{display:flex;}
 .oc-msgs{height:240px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;background:#020a14;}
 .oc-msg-wrap{display:flex;flex-direction:column;gap:2px;}
-.oc-msg-meta{font-family:var(--mono);font-size:8px;color:var(--faint);padding:0 2px;}
+.oc-msg-meta{font-family:var(--mono);font-size:0.615rem;color:var(--faint);padding:0 2px;}
 .oc-msg-meta.right{text-align:right;color:#666;}
-.oc-msg{padding:9px 12px;border-radius:10px;line-height:1.6;max-width:88%;font-size:11px;}
+.oc-msg{padding:9px 12px;border-radius:10px;line-height:1.6;max-width:88%;font-size:0.846rem;}
 .oc-inbound{background:#0c1a28;border:1px solid rgba(255,255,255,.06);color:var(--text);}
 .oc-outbound{background:var(--blue);color:#fff;align-self:flex-end;}
 .oc-customer{background:rgba(141,92,255,.15);border:1px solid rgba(141,92,255,.2);color:var(--text);}
 .oc-driver{background:#e5e5ea;border:none;color:#111;}
-.oc-system{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:var(--muted);font-style:italic;font-size:10px;text-align:center;align-self:center;max-width:100%;}
+.oc-system{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:var(--muted);font-style:italic;font-size:0.769rem;text-align:center;align-self:center;max-width:100%;}
 .oc-inp-area{padding:10px;border-top:1px solid rgba(255,255,255,.06);background:#040c18;}
 .oc-inp-row{display:flex;gap:7px;align-items:flex-end;}
 .oc-recipient{width:100%;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.07);
-  background:#091422;color:var(--muted);font-size:10px;font-family:var(--mono);
+  background:#091422;color:var(--muted);font-size:0.769rem;font-family:var(--mono);
   outline:none;margin-bottom:6px;cursor:pointer;}
 .oc-recipient option{background:#091422;}
 #ocInput{flex:1;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.07);
-  background:#091422;color:#fff;font-size:11px;outline:none;font-family:var(--sans);resize:none;height:38px;}
+  background:#091422;color:#fff;font-size:0.846rem;outline:none;font-family:var(--sans);resize:none;height:38px;}
 #ocInput:focus{border-color:rgba(25,183,239,.35);}
 .oc-send{padding:9px 14px;border:none;border-radius:9px;background:var(--blue);
-  color:#fff;font-weight:900;cursor:pointer;font-size:12px;flex-shrink:0;}
+  color:#fff;font-weight:900;cursor:pointer;font-size:0.923rem;flex-shrink:0;}
 #chatFab{position:fixed;bottom:24px;right:24px;height:46px;padding:0 18px;border-radius:23px;
   background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;
-  font-size:12px;font-weight:800;font-family:var(--sans);letter-spacing:.3px;
+  font-size:0.923rem;font-weight:800;font-family:var(--sans);letter-spacing:.3px;
   cursor:pointer;box-shadow:0 8px 28px rgba(10,168,255,.4),0 0 0 1px rgba(10,168,255,.2);
   display:flex;align-items:center;gap:8px;z-index:8500;transition:all .2s;white-space:nowrap;}
 #chatFab:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(10,168,255,.55);}
 #chatFab-dot{width:7px;height:7px;border-radius:50%;background:#53ff88;box-shadow:0 0 7px rgba(83,255,136,.9);}
 #chatFab-unread{min-width:18px;height:18px;border-radius:9px;background:var(--red);
-  color:#fff;font-size:9px;font-weight:900;display:none;align-items:center;justify-content:center;
+  color:#fff;font-size:0.692rem;font-weight:900;display:none;align-items:center;justify-content:center;
   padding:0 4px;font-family:var(--mono);}
 
 /* ── TOAST ── */
 #toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   padding:10px 18px;border-radius:10px;background:#0a1828;
   border:1px solid rgba(83,255,136,.2);box-shadow:0 14px 40px rgba(0,0,0,.6);
-  z-index:99999;font-size:11px;font-weight:700;min-width:220px;text-align:center;
+  z-index:99999;font-size:0.846rem;font-weight:700;min-width:220px;text-align:center;
   animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 </style>
@@ -528,7 +529,7 @@ body::after{content:'';position:fixed;inset:0;
 <div id="loginScreen">
   <div class="lbox">
     <div class="lbox-top">
-      <div class="lbox-logo" style="font-family:'Montserrat',sans-serif;font-weight:500;letter-spacing:1px;font-size:24px;">
+      <div class="lbox-logo" style="font-family:'Montserrat',sans-serif;font-weight:500;letter-spacing:1px;font-size:1.846rem;">
         <svg width="24" height="41" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="loginlogo" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#loginlogo)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#loginlogo)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#loginlogo)" opacity=".5"/></svg>
         <span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span>
       </div>
@@ -540,8 +541,8 @@ body::after{content:'';position:fixed;inset:0;
       <input type="text" class="lf-in" id="loginOrgCode" placeholder="e.g. quickhaul" autocomplete="off"/>
       <label class="lf-lbl">Password</label>
       <input type="password" class="lf-in" id="loginOrgPassword" placeholder="Password" autocomplete="off"/>
-      <div id="loginError" style="color:var(--orange);font-size:11px;margin:-6px 0 12px;display:none;">Company code not recognized.</div>
-      <button class="lf-btn" onclick="doLogin()" style="width:100%;padding:12px;border-radius:11px;background:var(--blue);border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Sign In</button>
+      <div id="loginError" style="color:var(--orange);font-size:0.846rem;margin:-6px 0 12px;display:none;">Company code not recognized.</div>
+      <button class="lf-btn" onclick="doLogin()" style="width:100%;padding:12px;border-radius:11px;background:var(--blue);border:none;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;">Sign In</button>
     </div>
   </div>
 </div>
@@ -559,7 +560,7 @@ body::after{content:'';position:fixed;inset:0;
             <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
             <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
           </svg>
-          <span style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:500;letter-spacing:1px;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span>
+          <span style="font-family:'Montserrat',sans-serif;font-size:1.385rem;font-weight:500;letter-spacing:1px;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span>
         </div> <div class="tb-badge">OPS</div>
       </div>
     </div>
@@ -580,7 +581,7 @@ body::after{content:'';position:fixed;inset:0;
       <div class="tb-sep"></div>
       <div class="tb-poll"><div class="poll-ring" id="pollRing"></div><span id="pollStatus">Live</span></div>
       <div class="tb-clock" id="tbClock">—</div>
-      <button onclick="doLogout()" style="font-family:var(--mono);font-size:10px;color:var(--blue);background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:700;">Sign Out</button>
+      <button onclick="doLogout()" style="font-family:var(--mono);font-size:0.769rem;color:var(--blue);background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:700;">Sign Out</button>
       <div class="tb-avatar">D</div>
     </div>
   </div>
@@ -625,12 +626,12 @@ body::after{content:'';position:fixed;inset:0;
       <div class="sb-sec">
         <div class="sb-sec-lbl">Clients · LOC</div>
         <div class="sb-item">
-          <div class="sb-icon" style="background:rgba(83,255,136,.07);font-size:8px;color:var(--green);font-weight:900;font-family:var(--mono);">ATL</div>
+          <div class="sb-icon" style="background:rgba(83,255,136,.07);font-size:0.615rem;color:var(--green);font-weight:900;font-family:var(--mono);">ATL</div>
           <div class="sb-label">Client A</div>
           <div class="sb-cnt cnt-g">&#9679;</div>
         </div>
         <div class="sb-item">
-          <div class="sb-icon" style="background:rgba(141,92,255,.07);font-size:8px;color:var(--purple);font-weight:900;font-family:var(--mono);">MED</div>
+          <div class="sb-icon" style="background:rgba(141,92,255,.07);font-size:0.615rem;color:var(--purple);font-weight:900;font-family:var(--mono);">MED</div>
           <div class="sb-label">Client B</div>
           <div class="sb-cnt cnt-o">&#9679;</div>
         </div>
@@ -702,11 +703,11 @@ body::after{content:'';position:fixed;inset:0;
           <!-- EXCEPTION QUEUE -->
           <div class="exc-panel" id="excPanel">
             <div class="exc-hdr">
-              <div class="panel-title" style="color:var(--orange);font-size:13px;">&#9888; Exception Queue</div>
+              <div class="panel-title" style="color:var(--orange);font-size:1rem;">&#9888; Exception Queue</div>
               <div class="exc-badge" id="excBadge">0 OPEN</div>
             </div>
             <div class="exc-list" id="excList">
-              <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No exceptions · System healthy</div>
+              <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>
             </div>
           </div>
         </div>
@@ -715,7 +716,7 @@ body::after{content:'';position:fixed;inset:0;
         <div class="sig-panel">
           <div class="sig-toolbar">
             <div class="sig-search">
-              <span style="color:var(--faint);font-size:12px;">&#128269;</span>
+              <span style="color:var(--faint);font-size:0.923rem;">&#128269;</span>
               <input type="text" id="searchInput" placeholder="Search jobs, addresses, signals..." oninput="renderTable()"/>
             </div>
             <select class="sig-filter" id="statusFilter" onchange="renderTable()">
@@ -727,7 +728,7 @@ body::after{content:'';position:fixed;inset:0;
               <option value="cancelled">Cancelled</option>
             </select>
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--faint);" id="lastRefresh">—</div>
+            <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
           </div>
           <div style="overflow-x:auto;">
             <table class="tbl">
@@ -749,9 +750,9 @@ body::after{content:'';position:fixed;inset:0;
       <!-- SMARTPATH TAB -->
       <div class="tab" id="tab-smartpath">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">SmartPath Engine</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Route Intelligence</div>
-          <div style="margin-top:6px;font-size:12px;color:var(--muted);max-width:560px;line-height:1.6;">AI-powered route optimization across all active signals. Routes recalculate in real time based on traffic, driver position, geofencing, and SLA windows.</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">SmartPath Engine</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Route Intelligence</div>
+          <div style="margin-top:6px;font-size:0.923rem;color:var(--muted);max-width:560px;line-height:1.6;">AI-powered route optimization across all active signals. Routes recalculate in real time based on traffic, driver position, geofencing, and SLA windows.</div>
         </div>
         <div class="spark-row">
           <div class="spark-box"><div class="spark-lbl">Routes Optimized</div><div class="spark-val" style="color:var(--blue);" id="sp-routes">—</div><div class="bar-w"><div class="bar-f" id="sp-rbar" style="background:var(--blue);width:0%;"></div></div></div>
@@ -769,11 +770,11 @@ body::after{content:'';position:fixed;inset:0;
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="panel" id="spActiveRoute">
             <div class="panel-hdr"><div><div class="panel-ttl">Active Route</div><div class="panel-sub" id="spRouteSubtitle">No active jobs</div></div><div class="ai-chip">SmartPath</div></div>
-            <div id="spRouteSteps"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No active transit jobs</div></div>
+            <div id="spRouteSteps"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No active transit jobs</div></div>
           </div>
           <div class="panel">
             <div class="panel-hdr"><div class="panel-ttl">Pending Queue</div></div>
-            <div id="spQueue"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No jobs pending dispatch</div></div>
+            <div id="spQueue"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs pending dispatch</div></div>
           </div>
         </div>
       </div>
@@ -781,9 +782,9 @@ body::after{content:'';position:fixed;inset:0;
       <!-- SMARTTRACK TAB -->
       <div class="tab" id="tab-smarttrack">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">SmartTrack</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Fleet Live Map</div>
-          <div style="margin-top:6px;font-size:12px;color:var(--muted);">Real-time GPS telemetry · Atlanta Metro · ATL HUB 01</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">SmartTrack</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Fleet Live Map</div>
+          <div style="margin-top:6px;font-size:0.923rem;color:var(--muted);">Real-time GPS telemetry · Atlanta Metro · ATL HUB 01</div>
         </div>
         <div class="panel">
           <div class="panel-hdr">
@@ -795,25 +796,25 @@ body::after{content:'';position:fixed;inset:0;
             <div class="map-lbl">SmartTrack · ATL HUB 01</div>
             <!-- Map legend -->
             <div style="position:absolute;top:10px;right:10px;background:rgba(7,24,40,.88);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 10px;display:flex;flex-direction:column;gap:5px;z-index:20;backdrop-filter:blur(4px);">
-              <div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;color:#fff;letter-spacing:.06em;">
+              <div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:0.692rem;color:#fff;letter-spacing:.06em;">
                 <span style="width:8px;height:8px;border-radius:50%;background:#19b7ef;flex-shrink:0;box-shadow:0 0 6px #19b7ef;"></span>SLING
               </div>
-              <div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;color:#fff;letter-spacing:.06em;">
+              <div style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:0.692rem;color:#fff;letter-spacing:.06em;">
                 <span style="width:8px;height:8px;border-radius:50%;background:#8d5cff;flex-shrink:0;box-shadow:0 0 6px #8d5cff;"></span>SURGE
               </div>
             </div>
             <!-- Driver pins overlay -->
             <div id="driverPins" style="position:absolute;inset:0;pointer-events:none;"></div>
           </div>
-          <div class="drv-grid" id="drvGrid"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div></div>
+          <div class="drv-grid" id="drvGrid"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div></div>
         </div>
       </div>
 
       <!-- COMMAND TAB -->
       <div class="tab" id="tab-command">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Command Center</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Operator Controls</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Command Center</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Operator Controls</div>
         </div>
         <div class="cmd-grid">
           <div>
@@ -843,7 +844,7 @@ body::after{content:'';position:fixed;inset:0;
             <div class="panel">
               <div class="panel-hdr"><div><div class="panel-ttl">Live Database</div><div class="panel-sub">SUPABASE · TACKPATH PROD</div></div></div>
               <div style="display:flex;flex-direction:column;gap:6px;" id="dbStats">
-                <div style="padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);">Connecting to database...</div>
+                <div style="padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);font-family:var(--mono);font-size:0.769rem;color:var(--muted);">Connecting to database...</div>
               </div>
             </div>
           </div>
@@ -854,26 +855,26 @@ body::after{content:'';position:fixed;inset:0;
       <div class="tab" id="tab-drivers">
         <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;">
           <div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Drivers</div>
-            <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Driver Roster</div>
+            <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Drivers</div>
+            <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Driver Roster</div>
           </div>
-          <button class="btn-primary" onclick="showAddDriverForm()" style="padding:9px 18px;font-size:12px;">+ Add Driver</button>
+          <button class="btn-primary" onclick="showAddDriverForm()" style="padding:9px 18px;font-size:0.923rem;">+ Add Driver</button>
         </div>
         <div id="addDriverForm" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;">
             <div>
-              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Name</label>
+              <label style="font-size:0.769rem;color:var(--muted);display:block;margin-bottom:4px;">Name</label>
               <input type="text" id="newDriverName" class="fi2" placeholder="Marcus Johnson"/>
             </div>
             <div>
-              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Phone</label>
+              <label style="font-size:0.769rem;color:var(--muted);display:block;margin-bottom:4px;">Phone</label>
               <input type="tel" id="newDriverPhone" class="fi2" placeholder="(404) 555-0100"/>
             </div>
             <div>
-              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Vehicle Type</label>
+              <label style="font-size:0.769rem;color:var(--muted);display:block;margin-bottom:4px;">Vehicle Type</label>
               <input type="text" id="newDriverVehicle" class="fi2" placeholder="Sedan, Van, etc (optional)"/>
             </div>
-            <button class="btn-primary" onclick="addDriver()" style="padding:9px 18px;font-size:12px;white-space:nowrap;">Save</button>
+            <button class="btn-primary" onclick="addDriver()" style="padding:9px 18px;font-size:0.923rem;white-space:nowrap;">Save</button>
           </div>
         </div>
         <div id="driverRosterList"></div>
@@ -882,8 +883,8 @@ body::after{content:'';position:fixed;inset:0;
     <!-- ANALYTICS TAB -->
       <div class="tab" id="tab-analytics">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Analytics</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Operations Intelligence</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Analytics</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Operations Intelligence</div>
         </div>
         <div class="spark-row">
           <div class="spark-box"><div class="spark-lbl">Total Jobs</div><div class="spark-val" style="color:var(--blue);" id="an-total">—</div><div class="bar-w"><div class="bar-f" id="an-tbar" style="background:var(--blue);width:0%;"></div></div></div>
@@ -903,8 +904,8 @@ body::after{content:'';position:fixed;inset:0;
       <!-- HISTORY TAB -->
       <div class="tab" id="tab-history">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">History</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Completed Deliveries</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">History</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Completed Deliveries</div>
         </div>
         <div id="historyList" style="display:flex;flex-direction:column;gap:12px;"></div>
       </div>
@@ -912,8 +913,8 @@ body::after{content:'';position:fixed;inset:0;
       <!-- SLING TAB -->
       <div class="tab" id="tab-sprint">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--blue);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Sprint · On-Demand Dispatch</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Live Sprint Ops</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--blue);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Sprint · On-Demand Dispatch</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Live Sprint Ops</div>
         </div>
 
         <!-- SLING SUMMARY ROW -->
@@ -942,8 +943,8 @@ body::after{content:'';position:fixed;inset:0;
 
         <!-- SLING ACTION BAR -->
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-          <a href="customer.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-family:var(--mono);font-size:11px;font-weight:600;text-decoration:none;letter-spacing:.06em;">+ NEW SLING ORDER</a>
-          <button onclick="renderSprint()" style="padding:8px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;">&#8635; REFRESH</button>
+          <a href="customer.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-family:var(--mono);font-size:0.846rem;font-weight:600;text-decoration:none;letter-spacing:.06em;">+ NEW SLING ORDER</a>
+          <button onclick="renderSprint()" style="padding:8px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:0.846rem;cursor:pointer;">&#8635; REFRESH</button>
         </div>
 
         <!-- LIVE JOB BOARD -->
@@ -956,7 +957,7 @@ body::after{content:'';position:fixed;inset:0;
             <div class="ai-chip" style="background:rgba(25,183,239,.1);color:var(--blue);border-color:rgba(25,183,239,.3);">SLING LIVE</div>
           </div>
           <div id="sl-board">
-            <div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>
+            <div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:0.846rem;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>
           </div>
         </div>
 
@@ -967,10 +968,10 @@ body::after{content:'';position:fixed;inset:0;
               <div class="panel-ttl" style="color:var(--orange);">Exceptions</div>
               <div class="panel-sub">LATE · UNASSIGNED · DRIVER DARK</div>
             </div>
-            <div id="sl-exc-badge" style="font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.25);color:var(--orange);">0 OPEN</div>
+            <div id="sl-exc-badge" style="font-family:var(--mono);font-size:0.846rem;padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.25);color:var(--orange);">0 OPEN</div>
           </div>
           <div id="sl-exceptions">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All Sprint jobs running clean</div>
+            <div style="font-family:var(--mono);font-size:0.846rem;color:var(--muted);padding:12px 0;">No exceptions · All Sprint jobs running clean</div>
           </div>
         </div>
 
@@ -983,7 +984,7 @@ body::after{content:'';position:fixed;inset:0;
             </div>
           </div>
           <div id="sl-feed" style="display:flex;flex-direction:column;gap:0;max-height:240px;overflow-y:auto;">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:10px 0;">No activity yet for this session.</div>
+            <div style="font-family:var(--mono);font-size:0.846rem;color:var(--muted);padding:10px 0;">No activity yet for this session.</div>
           </div>
         </div>
       </div>
@@ -991,8 +992,8 @@ body::after{content:'';position:fixed;inset:0;
       <!-- SURGE TAB -->
       <div class="tab" id="tab-surge">
         <div style="margin-bottom:16px;">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--purple);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Surge · Block Dispatch</div>
-          <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:-0.5px;">Live Block Ops</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--purple);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Surge · Block Dispatch</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Live Block Ops</div>
         </div>
 
         <!-- SURGE SUMMARY ROW -->
@@ -1021,8 +1022,8 @@ body::after{content:'';position:fixed;inset:0;
 
         <!-- SURGE ACTION BAR -->
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-          <a href="surge.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;background:rgba(141,92,255,0.12);border:1px solid rgba(141,92,255,0.3);color:var(--purple);font-family:var(--mono);font-size:11px;font-weight:600;text-decoration:none;letter-spacing:.06em;">+ NEW BLOCK DISPATCH</a>
-          <button onclick="renderSurge()" style="padding:8px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;">&#8635; REFRESH</button>
+          <a href="surge.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;background:rgba(141,92,255,0.12);border:1px solid rgba(141,92,255,0.3);color:var(--purple);font-family:var(--mono);font-size:0.846rem;font-weight:600;text-decoration:none;letter-spacing:.06em;">+ NEW BLOCK DISPATCH</a>
+          <button onclick="renderSurge()" style="padding:8px 14px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:0.846rem;cursor:pointer;">&#8635; REFRESH</button>
         </div>
 
         <!-- LIVE BLOCK BOARD -->
@@ -1035,7 +1036,7 @@ body::after{content:'';position:fixed;inset:0;
             <div class="ai-chip" style="background:rgba(141,92,255,.1);color:var(--purple);border-color:rgba(141,92,255,.3);">SURGE LIVE</div>
           </div>
           <div id="sg-board">
-            <div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active blocks. Launch a block dispatch from Surge.</div>
+            <div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:0.846rem;color:var(--muted);">No active blocks. Launch a block dispatch from Surge.</div>
           </div>
         </div>
 
@@ -1046,10 +1047,10 @@ body::after{content:'';position:fixed;inset:0;
               <div class="panel-ttl" style="color:var(--orange);">Block Exceptions</div>
               <div class="panel-sub">DRIVER DARK · REJECTED MID-ROUTE · BEHIND PACE</div>
             </div>
-            <div id="sg-exc-badge" style="font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.25);color:var(--orange);">0 OPEN</div>
+            <div id="sg-exc-badge" style="font-family:var(--mono);font-size:0.846rem;padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.25);color:var(--orange);">0 OPEN</div>
           </div>
           <div id="sg-exceptions">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>
+            <div style="font-family:var(--mono);font-size:0.846rem;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>
           </div>
         </div>
 
@@ -1062,7 +1063,7 @@ body::after{content:'';position:fixed;inset:0;
             </div>
           </div>
           <div id="sg-feed" style="display:flex;flex-direction:column;gap:0;max-height:240px;overflow-y:auto;">
-            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:10px 0;">No activity yet for this session.</div>
+            <div style="font-family:var(--mono);font-size:0.846rem;color:var(--muted);padding:10px 0;">No activity yet for this session.</div>
           </div>
         </div>
       </div>
@@ -1081,9 +1082,9 @@ body::after{content:'';position:fixed;inset:0;
     <iframe id="drMap" src="about:blank" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
   </div>
   <div style="margin-bottom:12px;">
-    <div style="font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;">Current Status</div>
-    <div id="drStatusDisplay" style="padding:11px 13px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--blue);">—</div>
-    <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:6px;">Status updates automatically from driver app</div>
+    <div style="font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;">Current Status</div>
+    <div id="drStatusDisplay" style="padding:11px 13px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:1rem;font-weight:600;color:var(--blue);">—</div>
+    <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);margin-top:6px;">Status updates automatically from driver app</div>
   </div>
   <div class="dr-acts">
     <button class="dra dra-ghost" onclick="toast('Driver contacted via TackPath dispatch')">&#128222; Contact Driver</button>
@@ -1102,7 +1103,7 @@ body::after{content:'';position:fixed;inset:0;
         <div class="oc-brand-dot"></div>
         <div><div class="oc-ttl">Dispatch Comms</div><div class="oc-sub">Customers · Drivers · Internal</div></div>
       </div>
-      <button onclick="closeChat()" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,.07);color:#fff;font-size:15px;cursor:pointer;flex-shrink:0;">&#10005;</button>
+      <button onclick="closeChat()" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,.07);color:#fff;font-size:1.154rem;cursor:pointer;flex-shrink:0;">&#10005;</button>
     </div>
     <div class="oc-tabs">
       <button class="oc-tab on" onclick="switchCommsTab('customers',this)">
@@ -1176,20 +1177,6 @@ body::after{content:'';position:fixed;inset:0;
 <div id="toast"></div>
 
 <script>
-// ── AUTO-SCALE FOR DIFFERENT SCREENS ──
-// This dashboard was built at a fixed pixel size, so it renders inconsistently across
-// a big external monitor vs a laptop screen without one -- too small on one, clipped
-// on the other. This automatically applies the same zoom adjustment a person would do
-// by hand, calibrated to the real available screen width, so it fits well either way.
-function autoScaleDashboard(){
-  const designWidth=1600;
-  const scale=Math.max(0.75,Math.min(1.4,window.innerWidth/designWidth));
-  document.body.style.zoom=scale;
-}
-window.addEventListener('load',autoScaleDashboard);
-window.addEventListener('resize',autoScaleDashboard);
-autoScaleDashboard();
-
 // ── SUPABASE ──
 const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
@@ -1299,25 +1286,25 @@ let driverRoster=[];
 async function renderDriverRoster(){
   const listEl=document.getElementById('driverRosterList');
   if(!listEl)return;
-  listEl.innerHTML='<div style="color:var(--muted);font-size:13px;">Loading...</div>';
+  listEl.innerHTML='<div style="color:var(--muted);font-size:1rem;">Loading...</div>';
   try{
     const res=await fetch(sbUrl('drivers?order=active.desc,name.asc'),{headers:H});
     driverRoster=await res.json();
   }catch(e){
-    listEl.innerHTML='<div style="color:var(--muted);font-size:13px;">Could not load drivers. Has the drivers table been created in Supabase yet?</div>';
+    listEl.innerHTML='<div style="color:var(--muted);font-size:1rem;">Could not load drivers. Has the drivers table been created in Supabase yet?</div>';
     return;
   }
   if(!driverRoster.length){
-    listEl.innerHTML='<div style="color:var(--muted);font-size:13px;">No drivers yet. Click + Add Driver to add your first one.</div>';
+    listEl.innerHTML='<div style="color:var(--muted);font-size:1rem;">No drivers yet. Click + Add Driver to add your first one.</div>';
     return;
   }
   listEl.innerHTML=driverRoster.map(d=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
       <div>
-        <div style="font-weight:700;font-size:14px;">${d.name}${d.active?'':' <span style=\"color:var(--muted);font-weight:400;font-size:11px;\">(inactive)</span>'}</div>
-        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);">${d.phone}${d.vehicle_type?' · '+d.vehicle_type:''}</div>
+        <div style="font-weight:700;font-size:1.077rem;">${d.name}${d.active?'':' <span style=\"color:var(--muted);font-weight:400;font-size:0.846rem;\">(inactive)</span>'}</div>
+        <div style="font-size:0.923rem;color:var(--muted);font-family:var(--mono);">${d.phone}${d.vehicle_type?' · '+d.vehicle_type:''}</div>
       </div>
-      <button onclick="toggleDriverActive('${d.id}',${!d.active})" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:11px;cursor:pointer;">
+      <button onclick="toggleDriverActive('${d.id}',${!d.active})" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:0.846rem;cursor:pointer;">
         ${d.active?'Deactivate':'Reactivate'}
       </button>
     </div>
@@ -1473,7 +1460,7 @@ function renderExceptionQueue(){
   if(badge) badge.textContent = allExceptions.length + ' OPEN';
 
   if(!allExceptions.length){
-    list.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No exceptions · System healthy</div>';
+    list.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>';
     return;
   }
 
@@ -1482,14 +1469,14 @@ function renderExceptionQueue(){
     <div style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);display:flex;gap:10px;align-items:flex-start;">
       <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;"></div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
-        <div style="font-size:10px;color:var(--muted);">${exc.description}</div>
-        ${exc.source==='oca' ? `<div style="font-family:var(--mono);font-size:8px;color:var(--blue);margin-top:3px;">&#129504; OCA · ${Math.round((exc.confidence_score||0)*100)}% confidence</div>` : ''}
+        <div style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
+        <div style="font-size:0.769rem;color:var(--muted);">${exc.description}</div>
+        ${exc.source==='oca' ? `<div style="font-family:var(--mono);font-size:0.615rem;color:var(--blue);margin-top:3px;">&#129504; OCA · ${Math.round((exc.confidence_score||0)*100)}% confidence</div>` : ''}
       </div>
       ${exc.source==='oca' ? `
       <div style="display:flex;gap:4px;flex-shrink:0;">
-        <button onclick="approveOCAItem('${exc.work_item_id}')" style="font-size:9px;padding:3px 8px;border-radius:5px;background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.3);color:#4caf7d;cursor:pointer;font-family:var(--mono);">✓</button>
-        <button onclick="rejectOCAItem('${exc.work_item_id}')" style="font-size:9px;padding:3px 8px;border-radius:5px;background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--red);cursor:pointer;font-family:var(--mono);">✕</button>
+        <button onclick="approveOCAItem('${exc.work_item_id}')" style="font-size:0.692rem;padding:3px 8px;border-radius:5px;background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.3);color:#4caf7d;cursor:pointer;font-family:var(--mono);">✓</button>
+        <button onclick="rejectOCAItem('${exc.work_item_id}')" style="font-size:0.692rem;padding:3px 8px;border-radius:5px;background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--red);cursor:pointer;font-family:var(--mono);">✕</button>
       </div>` : ''}
     </div>`).join('');
 }
@@ -1586,7 +1573,7 @@ function renderTable(){
       <td><div class="tbl-route">${j.pickup_address||'—'}</div></td>
       <td><div class="tbl-route">${j.dropoff_address||'—'}</div></td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
-      <td style="font-family:var(--mono);font-size:10px;color:var(--muted);">${created}</td>
+      <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
       <td><button class="act-btn" onclick="event.stopPropagation();quickDispatch('${j.id}','${s}')">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
     </tr>`;
   }).join('');
@@ -1618,7 +1605,7 @@ function renderSmartPath(){
       </div>
     `).join('');
   } else {
-    feed.innerHTML='<div style="padding:16px;font-family:var(--mono);font-size:10px;color:var(--faint);">No active transit signals — SmartPath standing by.</div>';
+    feed.innerHTML='<div style="padding:16px;font-family:var(--mono);font-size:0.769rem;color:var(--faint);">No active transit signals — SmartPath standing by.</div>';
   }
   // Active route
   const subtitle=document.getElementById('spRouteSubtitle');
@@ -1635,7 +1622,7 @@ function renderSmartPath(){
     `;
   } else {
     subtitle.textContent='No active transit';
-    steps.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No jobs in transit</div>';
+    steps.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs in transit</div>';
   }
   // Queue
   const queue=document.getElementById('spQueue');
@@ -1644,11 +1631,11 @@ function renderSmartPath(){
       <div class="rstep" style="margin-bottom:7px;">
         <div class="rs-n" style="background:rgba(255,150,30,.08);border:1px solid rgba(255,150,30,.2);color:var(--orange);">&#9203;</div>
         <div style="flex:1;"><div class="rs-name">${j.title||'Untitled'}</div><div class="rs-detail">${j.pickup_address||'—'} &#8594; ${j.dropoff_address||'—'}</div></div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--orange);">Pending</div>
+        <div style="font-family:var(--mono);font-size:0.692rem;color:var(--orange);">Pending</div>
       </div>
     `).join('');
   } else {
-    queue.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No jobs pending dispatch</div>';
+    queue.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs pending dispatch</div>';
   }
 }
 
@@ -1686,7 +1673,7 @@ function renderSmartTrack(){
   const allActive = [...active, ...surgeActive];
 
   if(!allActive.length){
-    grid.innerHTML='<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div>';
+    grid.innerHTML='<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div>';
     // Clear pins
     const pins=document.getElementById('driverPins');
     if(pins) pins.innerHTML='';
@@ -1698,13 +1685,13 @@ function renderSmartTrack(){
   grid.innerHTML=allActive.slice(0,6).map((j,i)=>`
     <div class="drv-card" onclick="openDrawer('${j.id}')" style="border-top:2px solid ${serviceColor(j)};">
       <div class="dc-top">
-        <div class="dc-av" style="background:${(j.isSurge)?'rgba(141,92,255,.15)':'rgba(25,183,239,.12)'};border:1px solid ${serviceColor(j)};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">${emojis[i%emojis.length]}</div>
+        <div class="dc-av" style="background:${(j.isSurge)?'rgba(141,92,255,.15)':'rgba(25,183,239,.12)'};border:1px solid ${serviceColor(j)};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:1.077rem;">${emojis[i%emojis.length]}</div>
         <div>
           <div class="dc-name">${j.title?j.title.split('—')[0].trim():'Driver '+(i+1)}</div>
           <div class="dc-status" style="display:flex;align-items:center;gap:5px;">
             <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${serviceColor(j)};flex-shrink:0;"></span>
-            <span style="color:${serviceColor(j)};font-size:9px;font-family:var(--mono);font-weight:600;letter-spacing:.06em;">${serviceLabel(j)}</span>
-            <span style="color:var(--muted);font-size:9px;">· ${j.status==='in_transit'?'In Transit':'Assigned'}</span>
+            <span style="color:${serviceColor(j)};font-size:0.692rem;font-family:var(--mono);font-weight:600;letter-spacing:.06em;">${serviceLabel(j)}</span>
+            <span style="color:var(--muted);font-size:0.692rem;">· ${j.status==='in_transit'?'In Transit':'Assigned'}</span>
           </div>
         </div>
         <div class="dc-eta"><div class="dc-eta-val" style="color:${serviceColor(j)};">~${18+i*4}m</div><div class="dc-eta-lbl">ETA</div></div>
@@ -1731,7 +1718,7 @@ function renderSmartTrack(){
           <!-- Pin body -->
           <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
             <!-- Service label chip -->
-            <div style="background:${col};color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.08em;padding:2px 6px;border-radius:3px;margin-bottom:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5);">${label}</div>
+            <div style="background:${col};color:#fff;font-family:var(--mono);font-size:0.615rem;font-weight:700;letter-spacing:.08em;padding:2px 6px;border-radius:3px;margin-bottom:3px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5);">${label}</div>
             <!-- Animated pin dot -->
             <div style="width:14px;height:14px;border-radius:50%;background:${col};border:2px solid #fff;box-shadow:0 0 0 3px ${col}40,0 2px 8px rgba(0,0,0,.5);position:relative;">
               <div style="position:absolute;inset:-5px;border-radius:50%;border:2px solid ${col};opacity:.4;animation:pinPulse${i} 2s ease-out infinite;"></div>
@@ -1768,21 +1755,21 @@ function renderAnalytics(){
   const colors={pending:'var(--muted)',assigned:'var(--blue)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
   document.getElementById('statusBreakdown').innerHTML=Object.entries(counts).map(([s,c])=>`
     <div style="padding:14px;border-radius:10px;background:var(--card2);border:1px solid var(--border);text-align:center;">
-      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">${s.replace('_',' ')}</div>
-      <div style="font-family:var(--cond);font-size:24px;font-weight:600;color:${colors[s]||'var(--text)'};">${c}</div>
+      <div style="font-family:var(--mono);font-size:0.615rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">${s.replace('_',' ')}</div>
+      <div style="font-family:var(--cond);font-size:1.846rem;font-weight:600;color:${colors[s]||'var(--text)'};">${c}</div>
     </div>
   `).join('');
   // Recent log
   document.getElementById('recentLog').innerHTML=jobs.slice(0,10).map(j=>{
     const s=j.status||'pending';
     const created=j.created_at?new Date(j.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
-    return `<div style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-bottom:1px solid var(--border2);font-size:11px;" onclick="openDrawer('${j.id}')" style="cursor:pointer;">
-      <div style="font-family:var(--mono);font-size:9px;color:var(--blue);min-width:80px;">TP-${j.id?j.id.slice(0,8):'—'}</div>
+    return `<div style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-bottom:1px solid var(--border2);font-size:0.846rem;" onclick="openDrawer('${j.id}')" style="cursor:pointer;">
+      <div style="font-family:var(--mono);font-size:0.692rem;color:var(--blue);min-width:80px;">TP-${j.id?j.id.slice(0,8):'—'}</div>
       <div style="flex:1;font-weight:600;">${j.title||'—'}</div>
-      <span class="spill s-${s}" style="font-size:8px;">${s.replace('_',' ')}</span>
-      <div style="font-family:var(--mono);font-size:9px;color:var(--faint);">${created}</div>
+      <span class="spill s-${s}" style="font-size:0.615rem;">${s.replace('_',' ')}</span>
+      <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);">${created}</div>
     </div>`;
-  }).join('')||'<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--faint);">No jobs yet</div>';
+  }).join('')||'<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs yet</div>';
 }
 
 // ── COMMAND ──
@@ -1794,13 +1781,13 @@ function renderCommand(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
       ${Object.entries(counts).map(([s,c])=>`
         <div style="padding:9px 11px;border-radius:8px;background:var(--card2);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:10px;color:var(--muted);text-transform:capitalize;">${s.replace('_',' ')}</div>
-          <div style="font-family:var(--mono);font-size:12px;font-weight:700;">${c}</div>
+          <div style="font-size:0.769rem;color:var(--muted);text-transform:capitalize;">${s.replace('_',' ')}</div>
+          <div style="font-family:var(--mono);font-size:0.923rem;font-weight:700;">${c}</div>
         </div>
       `).join('')}
       <div style="padding:9px 11px;border-radius:8px;background:var(--card2);border:1px solid rgba(25,183,239,.15);display:flex;justify-content:space-between;align-items:center;grid-column:1/-1;">
-        <div style="font-size:10px;color:var(--blue);font-weight:700;">Total Jobs</div>
-        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);">${total}</div>
+        <div style="font-size:0.769rem;color:var(--blue);font-weight:700;">Total Jobs</div>
+        <div style="font-family:var(--mono);font-size:0.923rem;font-weight:700;color:var(--blue);">${total}</div>
       </div>
     </div>
   `;
@@ -1831,7 +1818,7 @@ function renderSprint(){
   const statusColor={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--green)',delivered:'var(--green)',cancelled:'var(--red)'};
 
   if(!jobs.length){
-    board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>';
+    board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:0.846rem;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>';
   } else {
     board.innerHTML=jobs.map(j=>{
       const sc=statusColor[j.status]||'var(--muted)';
@@ -1840,13 +1827,13 @@ function renderSprint(){
       const created=j.created_at?new Date(j.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'—';
       return `
         <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openDrawer('${j.id}')">
-          <div style="font-family:var(--mono);font-size:11px;color:var(--blue);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.15);border-radius:4px;padding:3px 8px;flex-shrink:0;min-width:90px;text-align:center;">TP-${j.id?j.id.slice(0,8):'—'}</div>
+          <div style="font-family:var(--mono);font-size:0.846rem;color:var(--blue);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.15);border-radius:4px;padding:3px 8px;flex-shrink:0;min-width:90px;text-align:center;">TP-${j.id?j.id.slice(0,8):'—'}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driver}</div>
-            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${route}</div>
+            <div style="font-size:1rem;font-weight:600;color:#fff;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${driver}</div>
+            <div style="font-size:0.846rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${route}</div>
           </div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);flex-shrink:0;">${created}</div>
-          <div style="font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;border:1px solid ${sc};color:${sc};flex-shrink:0;text-transform:uppercase;">${j.status?.replace('_',' ')||'—'}</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);flex-shrink:0;">${created}</div>
+          <div style="font-family:var(--mono);font-size:0.769rem;padding:3px 9px;border-radius:4px;border:1px solid ${sc};color:${sc};flex-shrink:0;text-transform:uppercase;">${j.status?.replace('_',' ')||'—'}</div>
         </div>
       `;
     }).join('');
@@ -1855,13 +1842,13 @@ function renderSprint(){
   // Exceptions
   const excEl=document.getElementById('sl-exceptions');
   if(!exceptions.length){
-    excEl.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All Sprint jobs running clean</div>';
+    excEl.innerHTML='<div style="font-family:var(--mono);font-size:0.846rem;color:var(--muted);padding:12px 0;">No exceptions · All Sprint jobs running clean</div>';
   } else {
     excEl.innerHTML=exceptions.map(j=>`
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <div style="font-family:var(--mono);font-size:11px;color:var(--blue);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.15);border-radius:4px;padding:3px 8px;">TP-${j.id?j.id.slice(0,8):'—'}</div>
-        <div style="flex:1;font-size:12px;color:var(--orange);">${j.status==='cancelled'?'Order cancelled':'Driver not responding'}</div>
-        <button onclick="sprintFeedEntry('TP-${j.id?j.id.slice(0,8):'—'}','Reassign attempted')" style="padding:5px 11px;border-radius:5px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-family:var(--mono);font-size:10px;cursor:pointer;">REASSIGN</button>
+        <div style="font-family:var(--mono);font-size:0.846rem;color:var(--blue);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.15);border-radius:4px;padding:3px 8px;">TP-${j.id?j.id.slice(0,8):'—'}</div>
+        <div style="flex:1;font-size:0.923rem;color:var(--orange);">${j.status==='cancelled'?'Order cancelled':'Driver not responding'}</div>
+        <button onclick="sprintFeedEntry('TP-${j.id?j.id.slice(0,8):'—'}','Reassign attempted')" style="padding:5px 11px;border-radius:5px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-family:var(--mono);font-size:0.769rem;cursor:pointer;">REASSIGN</button>
       </div>
     `).join('');
   }
@@ -1873,8 +1860,8 @@ function sprintFeedEntry(signalId, msg){
   const now=new Date();
   const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   const el=document.createElement('div');
-  el.style.cssText='display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
-  el.innerHTML=`<span style="font-family:var(--mono);font-size:10px;color:var(--muted);width:40px;flex-shrink:0;">${t}</span><span style="color:var(--blue);font-family:var(--mono);font-size:10px;flex-shrink:0;">${signalId}</span><span style="color:var(--text);">${msg}</span>`;
+  el.style.cssText='display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.923rem;';
+  el.innerHTML=`<span style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);width:40px;flex-shrink:0;">${t}</span><span style="color:var(--blue);font-family:var(--mono);font-size:0.769rem;flex-shrink:0;">${signalId}</span><span style="color:var(--text);">${msg}</span>`;
   if(feed.children.length===1&&feed.children[0].style.cssText==='') feed.innerHTML='';
   feed.prepend(el);
 }
@@ -1906,8 +1893,8 @@ function renderSurge(){
   excBadge.textContent = exceptions+' OPEN';
 
   if(surgeBlocks.length===0){
-    board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:11px;color:var(--muted);">No active blocks. Launch a block dispatch from Surge.</div>';
-    excEl.innerHTML='<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>';
+    board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:0.846rem;color:var(--muted);">No active blocks. Launch a block dispatch from Surge.</div>';
+    excEl.innerHTML='<div style="font-family:var(--mono);font-size:0.846rem;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>';
     return;
   }
 
@@ -1918,30 +1905,30 @@ function renderSurge(){
     const sc  = statusColor[b.status]||'var(--muted)';
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);">
-        <div style="font-family:var(--mono);font-size:11px;color:var(--purple);background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);border-radius:4px;padding:3px 8px;flex-shrink:0;min-width:70px;text-align:center;">${b.id}</div>
+        <div style="font-family:var(--mono);font-size:0.846rem;color:var(--purple);background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);border-radius:4px;padding:3px 8px;flex-shrink:0;min-width:70px;text-align:center;">${b.id}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:3px;">${b.driver||'Awaiting driver'}</div>
+          <div style="font-size:1rem;font-weight:600;color:#fff;margin-bottom:3px;">${b.driver||'Awaiting driver'}</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div style="flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;">
               <div style="height:4px;border-radius:2px;background:var(--purple);width:${pct}%;transition:width .4s;"></div>
             </div>
-            <div style="font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0;">${b.stopsCompleted||0}/${b.stops||0}</div>
+            <div style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);flex-shrink:0;">${b.stopsCompleted||0}/${b.stops||0}</div>
           </div>
         </div>
-        <div style="font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;border:1px solid ${sc};color:${sc};flex-shrink:0;">${b.status.toUpperCase()}</div>
-        ${b.exception?`<div style="font-size:10px;color:var(--orange);">&#9888;</div>`:''}
+        <div style="font-family:var(--mono);font-size:0.769rem;padding:3px 9px;border-radius:4px;border:1px solid ${sc};color:${sc};flex-shrink:0;">${b.status.toUpperCase()}</div>
+        ${b.exception?`<div style="font-size:0.769rem;color:var(--orange);">&#9888;</div>`:''}
       </div>
     `;
   }).join('');
 
   const excs = surgeBlocks.filter(b=>b.exception);
   excEl.innerHTML = excs.length===0
-    ? '<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>'
+    ? '<div style="font-family:var(--mono);font-size:0.846rem;color:var(--muted);padding:12px 0;">No exceptions · All blocks running clean</div>'
     : excs.map(b=>`
         <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-          <div style="font-family:var(--mono);font-size:11px;color:var(--purple);background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);border-radius:4px;padding:3px 8px;">${b.id}</div>
-          <div style="flex:1;font-size:12px;color:var(--orange);">${b.exceptionMsg||'Driver not responding'}</div>
-          <button onclick="surgeRebroadcast('${b.id}')" style="padding:5px 11px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.3);color:var(--orange);font-family:var(--mono);font-size:10px;cursor:pointer;">REBROADCAST</button>
+          <div style="font-family:var(--mono);font-size:0.846rem;color:var(--purple);background:rgba(141,92,255,.1);border:1px solid rgba(141,92,255,.2);border-radius:4px;padding:3px 8px;">${b.id}</div>
+          <div style="flex:1;font-size:0.923rem;color:var(--orange);">${b.exceptionMsg||'Driver not responding'}</div>
+          <button onclick="surgeRebroadcast('${b.id}')" style="padding:5px 11px;border-radius:5px;background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.3);color:var(--orange);font-family:var(--mono);font-size:0.769rem;cursor:pointer;">REBROADCAST</button>
         </div>
       `).join('');
 }
@@ -1974,8 +1961,8 @@ function surgeFeedEntry(routeId, msg){
   const now=new Date();
   const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   const el=document.createElement('div');
-  el.style.cssText='display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;';
-  el.innerHTML=`<span style="font-family:var(--mono);font-size:10px;color:var(--muted);width:40px;flex-shrink:0;">${t}</span><span style="color:var(--purple);font-family:var(--mono);font-size:10px;flex-shrink:0;">${routeId}</span><span style="color:var(--text);">${msg}</span>`;
+  el.style.cssText='display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.923rem;';
+  el.innerHTML=`<span style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);width:40px;flex-shrink:0;">${t}</span><span style="color:var(--purple);font-family:var(--mono);font-size:0.769rem;flex-shrink:0;">${routeId}</span><span style="color:var(--text);">${msg}</span>`;
   if(feed.children.length===1 && feed.children[0].tagName!=='DIV'.toLowerCase()) feed.innerHTML='';
   feed.prepend(el);
 }
@@ -2001,24 +1988,24 @@ function openDrawer(id){
   const sd=document.getElementById('drStatusDisplay');if(sd)sd.textContent=(j.status||'pending').replace(/_/g,' ');
   document.getElementById('drFields').innerHTML=`
     <div class="dr-field"><div class="df-lbl">Job Title</div><div class="df-val">${j.title||'—'}</div></div>
-    <div class="dr-field"><div class="df-lbl">Signal ID</div><div class="df-val" style="font-family:var(--mono);color:var(--blue);font-size:11px;">TP-${shortId}</div></div>
+    <div class="dr-field"><div class="df-lbl">Signal ID</div><div class="df-val" style="font-family:var(--mono);color:var(--blue);font-size:0.846rem;">TP-${shortId}</div></div>
     <div class="dr-field"><div class="df-lbl">Status</div><div class="df-val"><span class="spill s-${j.status||'pending'}">${(j.status||'pending').replace('_',' ')}</span></div></div>
-    <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:11px;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
+    <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:0.846rem;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${j.pickup_address||'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${j.dropoff_address||'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;">
       <div class="df-lbl">Driver Assignment</div>
       <div class="df-val" style="margin-bottom:8px;">${j.driver_name?j.driver_name:'Unassigned, open to any driver'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <select id="assignDriverSelect" style="flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;">
+        <select id="assignDriverSelect" style="flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:0.923rem;">
           <option value="">Select a driver...</option>
         </select>
-        <button onclick="assignJobToDriver('${j.id}')" style="padding:8px 14px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Assign</button>
-        <button onclick="broadcastJob('${j.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:12px;cursor:pointer;">Broadcast to All</button>
+        <button onclick="assignJobToDriver('${j.id}')" style="padding:8px 14px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-size:0.923rem;font-weight:700;cursor:pointer;">Assign</button>
+        <button onclick="broadcastJob('${j.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:0.923rem;cursor:pointer;">Broadcast to All</button>
       </div>
     </div>
     ${j.status==='delivered'?renderTimingBreakdown(j):''}
-    ${j.status==='delivered'?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="archiveJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;">Archive This Delivery</button></div>`:''}
+    ${j.status==='delivered'?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="archiveJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:0.923rem;font-weight:700;cursor:pointer;">Archive This Delivery</button></div>`:''}
   `;
   populateDriverPicker();
   // Load map
@@ -2038,11 +2025,11 @@ function renderTimingBreakdown(j){
   return `
     <div class="dr-field" style="grid-column:1/-1;">
       <div class="df-lbl">Delivery Timing</div>
-      <div style="display:flex;gap:16px;margin-top:6px;font-size:12px;">
-        <div><div style="color:var(--muted);font-size:10px;">PLACED</div><div>${fmt(j.created_at)}</div></div>
-        <div><div style="color:var(--muted);font-size:10px;">PICKED UP</div><div>${fmt(j.picked_up_at)}</div></div>
-        <div><div style="color:var(--muted);font-size:10px;">DELIVERED</div><div>${fmt(j.delivered_at)}</div></div>
-        <div><div style="color:var(--muted);font-size:10px;">ESTIMATED</div><div>${fmt(j.estimated_delivery_at)}</div></div>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:0.923rem;">
+        <div><div style="color:var(--muted);font-size:0.769rem;">PLACED</div><div>${fmt(j.created_at)}</div></div>
+        <div><div style="color:var(--muted);font-size:0.769rem;">PICKED UP</div><div>${fmt(j.picked_up_at)}</div></div>
+        <div><div style="color:var(--muted);font-size:0.769rem;">DELIVERED</div><div>${fmt(j.delivered_at)}</div></div>
+        <div><div style="color:var(--muted);font-size:0.769rem;">ESTIMATED</div><div>${fmt(j.estimated_delivery_at)}</div></div>
       </div>
       ${comparisonHtml}
     </div>`;
@@ -2074,11 +2061,11 @@ async function renderHistory(){
       return `
         <div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <div style="font-family:var(--mono);color:var(--blue);font-size:11px;">TP-${shortId}</div>
-            <div style="font-size:11px;color:var(--muted);">${j.driver_name||'—'}</div>
+            <div style="font-family:var(--mono);color:var(--blue);font-size:0.846rem;">TP-${shortId}</div>
+            <div style="font-size:0.846rem;color:var(--muted);">${j.driver_name||'—'}</div>
           </div>
-          <div style="font-size:13px;margin-bottom:8px;">${j.title||'—'}</div>
-          <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);flex-wrap:wrap;">
+          <div style="font-size:1rem;margin-bottom:8px;">${j.title||'—'}</div>
+          <div style="display:flex;gap:16px;font-size:0.846rem;color:var(--muted);flex-wrap:wrap;">
             <div>Placed: ${fmt(j.created_at)}</div>
             <div>Picked up: ${fmt(j.picked_up_at)}</div>
             <div>Delivered: ${fmt(j.delivered_at)}</div>
