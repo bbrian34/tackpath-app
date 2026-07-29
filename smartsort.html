@@ -620,6 +620,7 @@ async function assignRoute(routeId){
     total_packages: route.total_packages,
     price: (route.stops.length * 8 + route.total_packages * 2).toFixed(2),
     distance_miles: parseFloat(route.est_miles)||0,
+    estimated_delivery_at: new Date(Date.now() + (15 + (parseFloat(route.est_miles)||0)*3 + route.stops.length*5) * 60000).toISOString(),
     created_at: new Date().toISOString()
   };
 
