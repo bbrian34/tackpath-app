@@ -2033,6 +2033,7 @@ function openDrawer(id){
     </div>
     ${j.status==='delivered'?renderTimingBreakdown(j):''}
     ${j.status==='delivered'?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="archiveJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:0.923rem;font-weight:700;cursor:pointer;">Archive This Delivery</button></div>`:''}
+    ${(j.status!=='delivered'&&j.status!=='cancelled')?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="cancelJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.923rem;font-weight:700;cursor:pointer;">Cancel This Job</button></div>`:''}
   `;
   populateDriverPicker();
   // Load map
@@ -2114,6 +2115,18 @@ async function archiveJob(id){
     toast('Delivery archived','ok');
   }catch(e){
     toast('Could not archive delivery','warn');
+  }
+}
+
+async function cancelJob(id){
+  if(!confirm('Cancel this job? The driver app will exit this delivery within a few seconds.'))return;
+  try{
+    await sbPatch('jobs?id=eq.'+id,{status:'cancelled'});
+    closeDrawer();
+    loadJobs();
+    toast('Job cancelled -- driver app will clear shortly','ok');
+  }catch(e){
+    toast('Could not cancel job','warn');
   }
 }
 
