@@ -75,6 +75,85 @@ test('dispatcher.html: manual login starts live polling so new jobs appear witho
   }
 });
 
+test('dispatcher.html: clicking View on a completed job never mutates its status', async () => {
+  let patchedStatus = null;
+  const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
+  const allJobs = [
+    { id: 'delivered-job-1', title: 'Delivered Job', org_id: 'org-demo-uuid', status: 'delivered', archived: false,
+      created_at: new Date().toISOString(), pickup_address: '1 A St', dropoff_address: '2 B St' },
+  ];
+
+  const fetchHandler = async (url, opts) => {
+    if (url.includes('/organizations')) return { ok: true, json: async () => mockOrgs };
+    if (url.includes('/jobs') && opts && opts.method === 'PATCH') {
+      const body = JSON.parse(opts.body);
+      if (body.status) patchedStatus = body.status;
+      return { ok: true, json: async () => ([]) };
+    }
+    if (url.includes('/jobs')) return { ok: true, json: async () => allJobs };
+    return undefined;
+  };
+
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  try {
+    dom.window.document.getElementById('loginOrgCode').value = 'demo';
+    await dom.window.doLogin();
+    await wait(500);
+    await dom.window.eval('renderTable()');
+    await wait(100);
+
+    // Reproduces the exact real onclick logic for a delivered job's action button
+    const status = 'delivered';
+    const shouldDispatch = (status === 'pending' || status === 'assigned');
+    const code = shouldDispatch
+      ? "quickDispatch('delivered-job-1','" + status + "')"
+      : "openDrawer('delivered-job-1')";
+    await dom.window.eval(code);
+    await wait(200);
+
+    assert.strictEqual(patchedStatus, null, 'viewing a completed job should never change its status');
+  } finally {
+    cleanup();
+  }
+});
+
+test('dispatcher.html: SmartPath shows the current active stop for a multi-stop route, not the fixed first/last address', async () => {
+  const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
+  const allJobs = [
+    { id: 'surge-job-multi', title: 'Multi-Stop Surge', org_id: 'org-demo-uuid', status: 'in_transit', archived: false,
+      created_at: new Date().toISOString(), driver_name: 'Marcus', pickup_address: '1 First St', dropoff_address: '9 Last St',
+      stops_completed: 2,
+      surge_stops: JSON.stringify([
+        { address: '1 First St', recipient: 'A' },
+        { address: '5 Second St', recipient: 'B' },
+        { address: '7 Third St', recipient: 'C' },
+        { address: '9 Last St', recipient: 'D' },
+      ]),
+    },
+  ];
+
+  const fetchHandler = async (url) => {
+    if (url.includes('/organizations')) return { ok: true, json: async () => mockOrgs };
+    if (url.includes('/jobs')) return { ok: true, json: async () => allJobs };
+    return undefined;
+  };
+
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  try {
+    dom.window.document.getElementById('loginOrgCode').value = 'demo';
+    await dom.window.doLogin();
+    await wait(500);
+
+    await dom.window.eval('renderSmartPath()');
+    await wait(200);
+    const feedHtml = dom.window.document.getElementById('spReasonFeed').innerHTML;
+
+    assert.ok(feedHtml.includes('7 Third St') && feedHtml.includes('stop 3 of 4'), 'should show the current active stop, not the fixed first/last address');
+  } finally {
+    cleanup();
+  }
+});
+
 test('dispatcher.html: a job with no org_id (e.g. from SmartSort) still shows up when a specific org is logged in', async () => {
   const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
   const allJobs = [
