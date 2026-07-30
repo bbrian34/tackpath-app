@@ -4,27 +4,58 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>TackPath — Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&family=Montserrat:wght@500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&family=Montserrat:wght@500&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;
-  --bg:#010e21;--card:#071828;--card2:#0d2135;
-  --border:rgba(255,255,255,.07);--text:#eef4ff;--muted:rgba(238,244,255,.65);
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--red:#ff3b30;
+  --purple:#8d5cff;--yellow:#ffd23d;
+  --bg:#02060e;--card:#07101e;--card2:#0b1728;--card3:#0f1e32;
+  --border:rgba(25,183,239,.07);--border2:rgba(255,255,255,.04);
+  --text:#d8eeff;--muted:rgba(255,255,255,.72);--faint:rgba(255,255,255,.48);
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',sans-serif;--cond:'Barlow Condensed',sans-serif;
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;}
-.wrap{max-width:1080px;margin:0 auto;padding:0 32px;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;}
 
-.topbar{border-bottom:1px solid var(--border);padding:20px 0;}
+/* ── LOGIN SCREEN — matches dispatcher.html exactly ── */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.lbox{width:420px;max-width:94vw;border-radius:22px;overflow:hidden;position:relative;
+  background:rgba(7,16,30,.97);border:1px solid rgba(25,183,239,.18);
+  box-shadow:0 0 0 1px rgba(25,183,239,.06),0 40px 80px rgba(0,0,0,.8);}
+.lbox::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue) 40%,var(--purple) 70%,transparent);}
+.lbox-top{padding:32px 36px 24px;text-align:center;border-bottom:1px solid var(--border);}
+.lbox-logo{font-family:var(--cond);font-weight:900;font-size:2.154rem;letter-spacing:2.5px;
+  display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px;}
+.lbox-logo span{color:var(--blue);}
+.lbox-ver{font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.22em;text-transform:uppercase;}
+.lbox-desc{margin-top:10px;font-size:0.923rem;color:var(--muted);line-height:1.6;}
+.lbox-form{padding:24px 36px 32px;}
+.lf-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;color:var(--muted);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:7px;display:block;}
+.lf-in{width:100%;padding:12px 15px;border-radius:11px;background:rgba(255,255,255,.03);
+  border:1px solid var(--border);color:var(--text);font-size:1rem;font-family:var(--sans);
+  outline:none;transition:border-color .2s;margin-bottom:13px;}
+.lf-in:focus{border-color:rgba(25,183,239,.45);background:rgba(25,183,239,.02);}
+.lf-btn{width:100%;padding:14px;border-radius:12px;
+  background:linear-gradient(135deg,#0aa8ff 0%,#0060cc 100%);
+  border:1px solid rgba(255,255,255,.1);color:#fff;font-size:1.077rem;font-weight:800;
+  cursor:pointer;font-family:var(--sans);letter-spacing:.2px;
+  box-shadow:0 12px 32px rgba(10,168,255,.3);transition:all .18s;}
+.lf-btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(10,168,255,.42);}
+
+/* ── DASHBOARD ── */
+.wrap{max-width:1080px;margin:0 auto;padding:0 32px;}
+.topbar{border-bottom:1px solid rgba(255,255,255,.07);padding:20px 0;}
 .topbar-inner{display:flex;align-items:center;justify-content:space-between;}
 .logo-row{display:flex;align-items:center;gap:9px;}
 .wordmark{font-family:'Montserrat',sans-serif;font-weight:500;font-size:17px;letter-spacing:1px;}
-.org-pill{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:6px 14px;}
-.signout{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;}
+.org-pill{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:6px 14px;}
+.signout{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;}
 .signout:hover{color:var(--text);}
 
 .hero{padding:56px 0 40px;}
-.hero-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:12px;}
+.hero-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:12px;}
 .hero-title{font-size:clamp(26px,3.5vw,38px);font-weight:800;letter-spacing:-.5px;margin-bottom:8px;}
 .hero-title em{font-family:'Playfair Display',serif;font-style:italic;font-weight:400;color:var(--blue);}
 .hero-sub{color:var(--muted);font-size:15px;max-width:520px;}
@@ -32,17 +63,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding-bottom:64px;}
 @media(max-width:720px){.grid{grid-template-columns:1fr;}.wrap{padding:0 20px;}}
 
-.tile{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px;
+.tile{background:var(--card2);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:26px;
   display:flex;flex-direction:column;gap:14px;text-decoration:none;color:inherit;
   transition:border-color .2s,transform .2s;position:relative;overflow:hidden;}
 .tile:hover{border-color:var(--tile-accent);transform:translateY(-2px);}
 .tile::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--tile-accent);}
-
 .tile-top{display:flex;align-items:center;justify-content:space-between;}
 .tile-mark{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
   background:color-mix(in srgb,var(--tile-accent) 14%,transparent);color:var(--tile-accent);}
 .tile-mark svg{width:19px;height:19px;}
-.tile-status{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:9px;
+.tile-status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;
   letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
 .tile-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
   box-shadow:0 0 0 0 rgba(83,255,136,.5);animation:pulse 2s infinite;}
@@ -51,52 +81,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   70%{box-shadow:0 0 0 7px rgba(83,255,136,0);}
   100%{box-shadow:0 0 0 0 rgba(83,255,136,0);}
 }
-
 .tile-name{font-size:18px;font-weight:700;letter-spacing:-.2px;}
 .tile-desc{font-size:13px;color:var(--muted);line-height:1.6;flex:1;}
-.tile-cta{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+.tile-cta{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;
   color:var(--tile-accent);display:flex;align-items:center;gap:6px;}
 .tile-cta svg{width:11px;height:11px;transition:transform .2s;}
 .tile:hover .tile-cta svg{transform:translateX(3px);}
-
 .foot-note{padding-bottom:56px;color:var(--muted);font-size:12px;text-align:center;}
-
-/* LOGIN SCREEN */
-#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
-.login-box{width:100%;max-width:360px;}
-.login-logo{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:36px;}
-.login-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:6px;}
-.login-sub{color:var(--muted);font-size:13px;text-align:center;margin-bottom:32px;}
-.login-field{margin-bottom:16px;}
-.login-lbl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:block;}
-.login-input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--border);
-  background:var(--card);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;}
-.login-input:focus{border-color:var(--blue);}
-.login-btn{width:100%;padding:14px;border-radius:10px;border:none;background:var(--blue);
-  color:#00151f;font-weight:800;font-size:14px;cursor:pointer;margin-top:8px;}
-.login-err{color:#ff6363;font-size:12px;text-align:center;margin-top:14px;display:none;}
 </style>
 </head>
 <body>
 
 <div id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">
-      <svg width="18" height="30" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpgl" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgl)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgl)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgl)" opacity=".5"/></svg>
-      <div class="wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  <div class="lbox">
+    <div class="lbox-top">
+      <div class="lbox-logo">
+        <svg width="24" height="41" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="loginlogo" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#loginlogo)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#loginlogo)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#loginlogo)" opacity=".5"/></svg>
+        <span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span>
+      </div>
+      <div class="lbox-ver">PORTAL</div>
+      <div class="lbox-desc">Enter your company code to access your account.</div>
     </div>
-    <div class="login-title">Sign in to your portal</div>
-    <div class="login-sub">Everything for your courier operation, in one place.</div>
-    <div class="login-field">
-      <label class="login-lbl">Username</label>
-      <input type="text" class="login-input" id="loginUser" autocomplete="username"/>
+    <div class="lbox-form">
+      <label class="lf-lbl">Company Code</label>
+      <input type="text" class="lf-in" id="loginOrgCode" placeholder="e.g. quickhaul" autocomplete="off" onkeydown="if(event.key==='Enter')doPortalLogin()"/>
+      <label class="lf-lbl">Password</label>
+      <input type="password" class="lf-in" id="loginOrgPassword" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')doPortalLogin()"/>
+      <div id="loginError" style="color:var(--orange);font-size:0.846rem;margin:-6px 0 12px;display:none;">Company code not recognized.</div>
+      <button class="lf-btn" onclick="doPortalLogin()">Sign In</button>
     </div>
-    <div class="login-field">
-      <label class="login-lbl">Password</label>
-      <input type="password" class="login-input" id="loginPass" autocomplete="current-password" onkeydown="if(event.key==='Enter')doPortalLogin()"/>
-    </div>
-    <button class="login-btn" onclick="doPortalLogin()">Sign in</button>
-    <div class="login-err" id="loginErr">That username or password isn't right.</div>
   </div>
 </div>
 
@@ -122,7 +135,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
 
     <div class="grid">
-
       <a href="smartsort.html" class="tile" style="--tile-accent:#19b7ef;">
         <div class="tile-top">
           <div class="tile-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M7 9l5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
@@ -132,7 +144,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="tile-desc">Drop in a CSV — 3 stops or 300 — and TackPath builds the route automatically. No manual entry.</div>
         <div class="tile-cta">Upload a manifest <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       </a>
-
       <a href="dispatcher.html" class="tile" style="--tile-accent:#8d5cff;">
         <div class="tile-top">
           <div class="tile-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
@@ -142,7 +153,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="tile-desc">Your live command center — active jobs, driver status, and everything moving right now.</div>
         <div class="tile-cta">Open dispatch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       </a>
-
       <a href="dispatcher.html#drivers" class="tile" style="--tile-accent:#53ff88;">
         <div class="tile-top">
           <div class="tile-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.2.3 4 2.3 4 5.8"/></svg></div>
@@ -152,7 +162,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="tile-desc">Add drivers, see who's active, and manage who's currently taking jobs.</div>
         <div class="tile-cta">Manage drivers <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       </a>
-
       <a href="driver-app.html" class="tile" style="--tile-accent:#ff961e;">
         <div class="tile-top">
           <div class="tile-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></svg></div>
@@ -162,7 +171,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="tile-desc">Send this to your drivers — a real installable app, not a browser tab.</div>
         <div class="tile-cta">Get the download link <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       </a>
-
     </div>
 
     <div class="foot-note" id="footNote"></div>
@@ -175,45 +183,39 @@ const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
 
-const TEST_SLUG='abccouriers';
-const TEST_NAME='ABC Couriers';
-
 async function doPortalLogin(){
-  const user=document.getElementById('loginUser').value.trim();
-  const pass=document.getElementById('loginPass').value;
-  const errEl=document.getElementById('loginErr');
+  const codeInput=document.getElementById('loginOrgCode');
+  const errEl=document.getElementById('loginError');
+  const code=codeInput?codeInput.value.trim().toLowerCase():'';
+  if(!code)return;
   errEl.style.display='none';
-
-  if(user!=='bbrian'||pass!=='BMW8212ebeb'){
-    errEl.style.display='block';
-    return;
-  }
-
-  let orgId=null, orgName=TEST_NAME, orgSlug=TEST_SLUG;
   try{
-    const r=await fetch(SB_URL+'/rest/v1/organizations?slug=eq.'+encodeURIComponent(TEST_SLUG),{headers:H});
+    const r=await fetch(SB_URL+'/rest/v1/organizations?slug=eq.'+encodeURIComponent(code),{headers:H});
     const rows=await r.json();
-    if(rows&&rows[0]){
-      orgId=rows[0].id; orgName=rows[0].name; orgSlug=rows[0].slug;
+    if(!rows||!rows[0]){
+      errEl.style.display='block';
+      return;
     }
-  }catch(e){}
-
-  localStorage.setItem('tp_dispatch_org',JSON.stringify({id:orgId,slug:orgSlug,name:orgName}));
-  showDashboard();
+    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:rows[0].id,slug:rows[0].slug,name:rows[0].name}));
+    showDashboard();
+  }catch(e){
+    errEl.textContent='Something went wrong. Please try again.';
+    errEl.style.display='block';
+  }
 }
 
 function portalSignOut(){
   localStorage.removeItem('tp_dispatch_org');
   document.getElementById('dashScreen').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('loginUser').value='';
-  document.getElementById('loginPass').value='';
+  document.getElementById('loginOrgCode').value='';
+  document.getElementById('loginOrgPassword').value='';
 }
 
 function showDashboard(){
   let sessionOrg=null;
   try{ sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null'); }catch(e){}
-  const orgName=(sessionOrg&&sessionOrg.name)?sessionOrg.name:TEST_NAME;
+  const orgName=(sessionOrg&&sessionOrg.name)?sessionOrg.name:'Your Company';
   document.getElementById('orgPill').textContent=orgName;
   document.getElementById('footNote').textContent='Signed in as '+orgName+' \u00B7 Need something else? Contact support.';
   document.getElementById('loginScreen').style.display='none';
