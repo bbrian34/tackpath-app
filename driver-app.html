@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath — Driver App</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Montserrat:wght@500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;
+  --bg:#010e21;--card:#071828;--border:rgba(255,255,255,.07);
+  --text:#eef4ff;--muted:rgba(238,244,255,.65);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.wrap{max-width:560px;margin:0 auto;padding:64px 24px;}
+.back{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px;margin-bottom:40px;}
+.back:hover{color:var(--text);}
+
+.logo-row{display:flex;align-items:center;gap:9px;margin-bottom:36px;}
+.wordmark{font-family:'Montserrat',sans-serif;font-weight:500;font-size:17px;letter-spacing:1px;}
+
+.eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);margin-bottom:12px;}
+h1{font-size:30px;font-weight:800;letter-spacing:-.5px;margin-bottom:12px;}
+.sub{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:36px;}
+
+.dl-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:28px;}
+.dl-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  background:var(--orange);color:#1a0d00;font-weight:800;font-size:15px;
+  padding:16px;border-radius:12px;text-decoration:none;margin-bottom:14px;}
+.dl-meta{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+
+.steps{display:flex;flex-direction:column;gap:0;}
+.step{display:flex;gap:14px;padding:18px 0;border-bottom:1px solid var(--border);}
+.step:last-child{border-bottom:none;}
+.step-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--orange);
+  width:22px;height:22px;border:1px solid var(--orange);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.step-title{font-weight:700;font-size:14px;margin-bottom:3px;}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.55;}
+
+.note{font-size:12px;color:var(--muted);text-align:center;margin-top:28px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="customer_home.html" class="back">&#8592; Back to home</a>
+
+  <div class="logo-row">
+    <svg width="18" height="30" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/></svg>
+    <div class="wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  </div>
+
+  <div class="eyebrow">Driver app</div>
+  <h1>Get your drivers set up</h1>
+  <div class="sub">Send this page to each driver. It installs the real TackPath app on their phone — not a browser tab.</div>
+
+  <div class="dl-card">
+    <a href="#" class="dl-btn"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13M7 11l5 5 5-5M5 20h14"/></svg>Download for Android</a>
+    <div class="dl-meta">
+      <span>v1.0 &middot; Android</span>
+      <span>18 MB</span>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Tap download, then open the file</div>
+        <div class="step-desc">Once it finishes downloading, tap it from your notifications or Downloads folder.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Allow install from this source</div>
+        <div class="step-desc">Android will ask for permission the first time. Tap Settings, then turn on "Allow from this source."</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Install and open</div>
+        <div class="step-desc">Sign in with your phone number to start receiving jobs.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">iPhone drivers aren't supported yet on this page.<br/>Contact your dispatcher if you need help installing.</div>
+</div>
+</body>
+</html>
