@@ -130,7 +130,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="wrap">
     <div class="hero">
       <div class="hero-eyebrow">Home</div>
-      <div class="hero-title">Welcome back. Here's <em>everything</em> in one place.</div>
+      <div class="hero-title">Welcome back, <em id="heroOrgName">your company</em>.</div>
       <div class="hero-sub">Upload orders, run dispatch, manage your drivers, and get your team onto the app — all from here.</div>
     </div>
 
@@ -224,6 +224,7 @@ function showDashboard(){
   try{ sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null'); }catch(e){}
   const orgName=(sessionOrg&&sessionOrg.name)?sessionOrg.name:'Your Company';
   document.getElementById('orgPill').textContent=orgName;
+  document.getElementById('heroOrgName').textContent=orgName;
   document.getElementById('footNote').textContent='Signed in as '+orgName+' \u00B7 Need something else? Contact support.';
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('dashScreen').style.display='block';
