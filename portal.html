@@ -95,7 +95,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div id="loginScreen">
   <div class="lbox">
     <div class="lbox-top">
-      <div class="lbox-logo">
+      <div class="lbox-logo" style="font-family:'Montserrat',sans-serif;font-weight:500;letter-spacing:1px;font-size:1.846rem;">
         <svg width="24" height="41" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="loginlogo" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#loginlogo)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#loginlogo)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#loginlogo)" opacity=".5"/></svg>
         <span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span>
       </div>
@@ -185,8 +185,10 @@ const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
 
 async function doPortalLogin(){
   const codeInput=document.getElementById('loginOrgCode');
+  const passInput=document.getElementById('loginOrgPassword');
   const errEl=document.getElementById('loginError');
   const code=codeInput?codeInput.value.trim().toLowerCase():'';
+  const pass=passInput?passInput.value:'';
   if(!code)return;
   errEl.style.display='none';
   try{
@@ -196,7 +198,12 @@ async function doPortalLogin(){
       errEl.style.display='block';
       return;
     }
-    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:rows[0].id,slug:rows[0].slug,name:rows[0].name}));
+    const org=rows[0];
+    if(org.access_code&&org.access_code!==pass){
+      errEl.style.display='block';
+      return;
+    }
+    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:org.id,slug:org.slug,name:org.name}));
     showDashboard();
   }catch(e){
     errEl.textContent='Something went wrong. Please try again.';
