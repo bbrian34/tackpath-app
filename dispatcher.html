@@ -2364,8 +2364,10 @@ window.addEventListener('load',async function(){
       const driversBtn=Array.from(document.querySelectorAll('.tbtab')).find(function(b){return b.textContent.trim()==='Drivers';});
       if(driversBtn) setTab('drivers',driversBtn);
     }
+  } else {
+    window.location.href='portal.html';
   }
-  // Otherwise: leave the login screen showing (its default state), waiting for doLogin()
+  // If no session and no org param: redirected to portal.html, the single sign-in point
 });
 
 // ── GPS FLEET MAP ──
