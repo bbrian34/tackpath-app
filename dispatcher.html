@@ -1492,6 +1492,10 @@ async function rejectOCAItem(id){
 // ── RENDER ALL ──
 function renderAll(){
   renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();
+  const drawerEl=document.getElementById('drawer');
+  if(drawerEl&&drawerEl.classList.contains('open')&&currentJobId){
+    openDrawer(currentJobId);
+  }
   // Check for new driver messages if comms is open
   if(document.getElementById('opsChat').classList.contains('open')){
     const driverTab=document.getElementById('ch-drivers');
@@ -2059,13 +2063,27 @@ function openDrawer(id){
   const shortId=j.id?j.id.slice(0,8):'—';
   document.getElementById('drTitle').textContent='TP-'+shortId;
   const sd=document.getElementById('drStatusDisplay');if(sd)sd.textContent=(j.status||'pending').replace(/_/g,' ');
+  let drawerPickup=j.pickup_address||'—';
+  let drawerDropoff=j.dropoff_address||'—';
+  let drawerStops=j.surge_stops;
+  if(typeof drawerStops==='string'){try{drawerStops=JSON.parse(drawerStops);}catch(e){drawerStops=null;}}
+  if(drawerStops&&drawerStops.length>0){
+    const doneCount=j.stops_completed||0;
+    const currentIdx=Math.min(doneCount,drawerStops.length-1);
+    if(drawerStops[currentIdx]&&drawerStops[currentIdx].address){
+      drawerDropoff=drawerStops[currentIdx].address+' (stop '+(currentIdx+1)+' of '+drawerStops.length+')';
+    }
+    if(doneCount>0&&drawerStops[doneCount-1]&&drawerStops[doneCount-1].address){
+      drawerPickup=drawerStops[doneCount-1].address;
+    }
+  }
   document.getElementById('drFields').innerHTML=`
     <div class="dr-field"><div class="df-lbl">Job Title</div><div class="df-val">${j.title||'—'}</div></div>
     <div class="dr-field"><div class="df-lbl">Signal ID</div><div class="df-val" style="font-family:var(--mono);color:var(--blue);font-size:0.846rem;">TP-${shortId}</div></div>
     <div class="dr-field"><div class="df-lbl">Status</div><div class="df-val"><span class="spill s-${j.status||'pending'}">${(j.status||'pending').replace('_',' ')}</span></div></div>
     <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:0.846rem;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
-    <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${j.pickup_address||'—'}</div></div>
-    <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${j.dropoff_address||'—'}</div></div>
+    <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${drawerPickup}</div></div>
+    <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${drawerDropoff}</div></div>
     <div class="dr-field" style="grid-column:1/-1;">
       <div class="df-lbl">Driver Assignment</div>
       <div class="df-val" style="margin-bottom:8px;">${j.driver_name?j.driver_name:'Unassigned, open to any driver'}</div>
