@@ -124,6 +124,44 @@ test('driver.html: clears saved route state on delivery completion so a stale jo
   }
 });
 
+test('driver.html: a deleted job (not just cancelled) still clears the driver, so a hard delete can never strand a driver', async () => {
+  let jobExists = true;
+  const { dom, cleanup } = loadApp('driver.html', {
+    initialStorage: { tp_drv: JSON.stringify({ id: 'drv-1', phone: '4045551234', name: 'Marcus', first: 'Marcus' }) },
+    fetchHandler: async (url) => {
+      if (url.includes('/jobs') && url.includes('select=status')) {
+        return { ok: true, json: async () => (jobExists ? [{ status: 'in_transit' }] : []) };
+      }
+    },
+  });
+
+  try {
+    await wait(1200);
+    dom.window.eval(`
+      pendingJob = {
+        id: 'about-to-be-deleted', job_type: 'single',
+        surge_stops: JSON.stringify([{ address: '100 A St, Atlanta, GA', recipient: 'Alice' }]),
+        price: 30
+      };
+    `);
+    await dom.window.eval('acceptOffer()');
+    await wait(300);
+
+    assert.ok(dom.window.eval('currentJob') !== null, 'driver should have an active job before deletion');
+
+    jobExists = false; // simulates dispatcher hard-deleting the job
+    await wait(4300); // past one real poll cycle
+
+    assert.strictEqual(
+      dom.window.eval('currentJob'),
+      null,
+      'a deleted job should clear the driver automatically, same as a cancelled one'
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 test('driver.html: restores in-progress route state after a simulated app close/reopen', async () => {
   const { dom, storage, cleanup } = loadApp('driver.html', {
     initialStorage: {
