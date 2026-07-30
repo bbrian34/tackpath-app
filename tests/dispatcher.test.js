@@ -154,6 +154,47 @@ test('dispatcher.html: SmartPath shows the current active stop for a multi-stop 
   }
 });
 
+test('dispatcher.html: #drivers hash deep link opens the Drivers tab automatically, on both login paths', async () => {
+  const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
+  const fetchHandler = async (url) => {
+    if (url.includes('/organizations')) return { ok: true, json: async () => mockOrgs };
+    if (url.includes('driver_locations')) return { ok: true, json: async () => ([]) };
+    if (url.includes('/jobs')) return { ok: true, json: async () => ([]) };
+    return undefined;
+  };
+
+  const restoredApp = loadApp('dispatcher.html', {
+    url: 'https://tackpath.com/dispatcher.html#drivers',
+    initialStorage: { tp_dispatch_org: JSON.stringify({ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }) },
+    fetchHandler,
+  });
+  restoredApp.dom.window.google = { maps: { Map: function(){}, Marker: function(){}, SymbolPath: { CIRCLE: 0 } } };
+  try {
+    await wait(500);
+    assert.ok(
+      restoredApp.dom.window.document.getElementById('tab-drivers').classList.contains('on'),
+      'restored session with #drivers hash should land on the Drivers tab'
+    );
+  } finally {
+    restoredApp.cleanup();
+  }
+
+  const freshApp = loadApp('dispatcher.html', { url: 'https://tackpath.com/dispatcher.html#drivers', fetchHandler });
+  freshApp.dom.window.google = { maps: { Map: function(){}, Marker: function(){}, SymbolPath: { CIRCLE: 0 } } };
+  try {
+    await wait(300);
+    freshApp.dom.window.document.getElementById('loginOrgCode').value = 'demo';
+    await freshApp.dom.window.doLogin();
+    await wait(300);
+    assert.ok(
+      freshApp.dom.window.document.getElementById('tab-drivers').classList.contains('on'),
+      'fresh manual login with #drivers hash should land on the Drivers tab'
+    );
+  } finally {
+    freshApp.cleanup();
+  }
+});
+
 test('dispatcher.html: a job with no org_id (e.g. from SmartSort) still shows up when a specific org is logged in', async () => {
   const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
   const allJobs = [
