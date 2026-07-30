@@ -1491,7 +1491,7 @@ async function rejectOCAItem(id){
 
 // ── RENDER ALL ──
 function renderAll(){
-  renderKPIs();renderPipeline();renderTable();renderSidebar();
+  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();
   // Check for new driver messages if comms is open
   if(document.getElementById('opsChat').classList.contains('open')){
     const driverTab=document.getElementById('ch-drivers');
@@ -1563,11 +1563,22 @@ function renderTable(){
     const s=j.status||'pending';
     const shortId=j.id?j.id.slice(0,8):'—';
     const created=j.created_at?new Date(j.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+    let dropoffDisplay=j.dropoff_address||'—';
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    if(stops&&stops.length>0){
+      const doneCount=j.stops_completed||0;
+      const currentIdx=Math.min(doneCount,stops.length-1);
+      const currentStop=stops[currentIdx];
+      if(currentStop&&currentStop.address){
+        dropoffDisplay=currentStop.address+' (stop '+(currentIdx+1)+' of '+stops.length+')';
+      }
+    }
     return `<tr onclick="openDrawer('${j.id}')">
       <td><div class="tbl-sig">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route">${j.pickup_address||'—'}</div></td>
-      <td><div class="tbl-route">${j.dropoff_address||'—'}</div></td>
+      <td><div class="tbl-route">${dropoffDisplay}</div></td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
       <td><button class="act-btn" onclick="event.stopPropagation();${s==='pending'||s==='assigned'?`quickDispatch('${j.id}','${s}')`:`openDrawer('${j.id}')`}">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
