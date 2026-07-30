@@ -508,6 +508,7 @@ body::after{content:'';position:fixed;inset:0;
   font-size:0.923rem;font-weight:800;font-family:var(--sans);letter-spacing:.3px;
   cursor:pointer;box-shadow:0 8px 28px rgba(10,168,255,.4),0 0 0 1px rgba(10,168,255,.2);
   display:flex;align-items:center;gap:8px;z-index:8500;transition:all .2s;white-space:nowrap;}
+#drawer.open ~ #chatFab{right:484px;}
 #chatFab:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(10,168,255,.55);}
 #chatFab-dot{width:7px;height:7px;border-radius:50%;background:#53ff88;box-shadow:0 0 7px rgba(83,255,136,.9);}
 #chatFab-unread{min-width:18px;height:18px;border-radius:9px;background:var(--red);
@@ -1565,7 +1566,7 @@ function renderTable(){
       <td><div class="tbl-route">${j.dropoff_address||'—'}</div></td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
-      <td><button class="act-btn" onclick="event.stopPropagation();quickDispatch('${j.id}','${s}')">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
+      <td><button class="act-btn" onclick="event.stopPropagation();${s==='pending'||s==='assigned'?`quickDispatch('${j.id}','${s}')`:`openDrawer('${j.id}')`}">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
     </tr>`;
   }).join('');
 }
@@ -1595,10 +1596,23 @@ function renderSmartPath(){
     feed.innerHTML=transit.slice(0,2).map(j=>{
       const etaMins = j.estimated_delivery_at ? Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000) : null;
       const etaText = etaMins===null ? 'no estimate on file' : (etaMins<=0 ? 'past its estimated delivery time' : ('estimated in '+etaMins+' min'));
+      let fromAddr=j.pickup_address||'pickup', toAddr=j.dropoff_address||'dropoff', stopNote='';
+      let stops=j.surge_stops;
+      if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+      if(stops&&stops.length>0){
+        const doneCount=j.stops_completed||0;
+        const currentIdx=Math.min(doneCount,stops.length-1);
+        const currentStop=stops[currentIdx];
+        if(currentStop){
+          fromAddr='current stop';
+          toAddr=currentStop.address||'—';
+          stopNote=' (stop '+(currentIdx+1)+' of '+stops.length+')';
+        }
+      }
       return `
       <div class="sp-reasoning">
         <div class="spr-lbl">&#128203; Active Delivery</div>
-        <div class="spr-txt"><strong>${j.title||'Job'}</strong> — ${j.pickup_address||'pickup'} &#8594; ${j.dropoff_address||'dropoff'}. ${j.driver_name||'A driver'} en route, ${etaText}.</div>
+        <div class="spr-txt"><strong>${j.title||'Job'}</strong> — heading to ${toAddr}${stopNote}. ${j.driver_name||'A driver'} en route, ${etaText}.</div>
         <div class="spr-chips"><span class="spc spc-b">${j.driver_name||'Unassigned'}</span>${etaMins!==null?`<span class="spc spc-g">${etaText}</span>`:''}</div>
       </div>
     `;}).join('');
