@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>TackPath — Portal</title>
+<title>TackPath Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,400&family=Montserrat:wght@500&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -54,12 +54,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .signout{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;}
 .signout:hover{color:var(--text);}
 
-.hero{padding:56px 0 40px;}
+.hero{padding:56px 0 40px;text-align:center;}
 .hero-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:12px;}
 .hero-title{font-size:clamp(26px,3.5vw,38px);font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
 .hero-title2{font-size:clamp(19px,2.4vw,25px);font-weight:800;letter-spacing:-.3px;margin-bottom:8px;}
 .hero-title2 em{font-family:'Playfair Display',serif;font-style:italic;font-weight:400;color:var(--blue);}
-.hero-sub{color:var(--muted);font-size:15px;max-width:520px;}
+.hero-sub{color:var(--muted);font-size:15px;max-width:520px;margin:0 auto;}
 
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding-bottom:64px;}
 @media(max-width:720px){.grid{grid-template-columns:1fr;}.wrap{padding:0 20px;}}
@@ -133,7 +133,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="hero-eyebrow">Home</div>
       <div class="hero-title">Welcome back, <span id="heroOrgName" style="color:var(--text);">your company</span>.</div>
       <div class="hero-title2">Here's <em>everything</em> in one place.</div>
-      <div class="hero-sub">Upload orders, run dispatch, manage your drivers, and get your team onto the app — all from here.</div>
+      <div class="hero-sub">Upload orders, run dispatch, manage your drivers, and get your team onto the app. All from here.</div>
     </div>
 
     <div class="grid">
@@ -143,7 +143,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           <div class="tile-status"><div class="tile-dot"></div>Ready</div>
         </div>
         <div class="tile-name">Upload orders</div>
-        <div class="tile-desc">Drop in a CSV — 3 stops or 300 — and TackPath builds the route automatically. No manual entry.</div>
+        <div class="tile-desc">Drop in a CSV, 3 stops or 300, and TackPath builds the route automatically. No manual entry.</div>
         <div class="tile-cta">Upload a manifest <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       </a>
       <a href="dispatcher.html" class="tile" style="--tile-accent:#8d5cff;">
@@ -152,7 +152,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           <div class="tile-status"><div class="tile-dot"></div>Ready</div>
         </div>
         <div class="tile-name">Dispatch</div>
-        <div class="tile-desc">Your live command center — active jobs, driver status, and everything moving right now.</div>
+        <div class="tile-desc">Your live command center. Active jobs, driver status, and everything moving right now.</div>
         <div class="tile-cta">Open dispatch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       </a>
       <a href="dispatcher.html#drivers" class="tile" style="--tile-accent:#53ff88;">
@@ -170,7 +170,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           <div class="tile-status"><div class="tile-dot"></div>Ready</div>
         </div>
         <div class="tile-name">Driver app</div>
-        <div class="tile-desc">Send this to your drivers — a real installable app, not a browser tab.</div>
+        <div class="tile-desc">Send this to your drivers. A real installable app, not a browser tab.</div>
         <div class="tile-cta">Get the download link <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       </a>
     </div>
