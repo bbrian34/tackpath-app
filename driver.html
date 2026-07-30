@@ -1384,7 +1384,13 @@ async function startJobStatusPoll(){
     if(!currentJob)return;
     try{
       const jobs=await sbGet('jobs?id=eq.'+currentJob.id+'&select=status');
-      if(!jobs||!jobs.length)return;
+      if(!jobs||!jobs.length){
+        // The job no longer exists at all (e.g. deleted from dispatcher, not just cancelled).
+        // Without this, a deleted job leaves the driver permanently stuck with no way to detect it.
+        clearInterval(jobStatusInterval);stopDispatchPoll();
+        currentJob=null;clearRouteState();showHome();toast('This job is no longer available','warn');
+        return;
+      }
       const ns=jobs[0].status;
       // Only update from Supabase for real status changes
       // Local statuses (arrived_pickup, arrived_dropoff) are not in DB
