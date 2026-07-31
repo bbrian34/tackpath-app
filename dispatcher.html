@@ -684,7 +684,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab on" onclick="setTab('dispatch',this)">Dispatch</button>
       <button class="tbtab" onclick="setTab('smartpath',this)">SmartPath</button>
       <button class="tbtab" onclick="setTab('smarttrack',this)">SmartTrack</button>
-      <button class="tbtab" onclick="setTab('command',this)">Command</button>
+      <button class="tbtab" onclick="setTab('command',this)" style="display:none;">Command</button>
       <button class="tbtab" onclick="setTab('analytics',this)">Analytics</button>
       <button class="tbtab" onclick="setTab('sprint',this)" style="color:var(--blue);">Sprint</button>
       <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
@@ -729,7 +729,7 @@ body::after{content:'';position:fixed;inset:0;
           <div class="sb-icon" style="background:rgba(141,92,255,.08);border:1px solid rgba(141,92,255,.16);">&#129504;</div>
           <div class="sb-label">SmartPath AI</div>
         </div>
-        <div class="sb-item" onclick="setTab('command',null)">
+        <div class="sb-item" onclick="setTab('command',null)" style="display:none;">
           <div class="sb-icon" style="background:rgba(255,210,61,.07);border:1px solid rgba(255,210,61,.14);">&#127918;</div>
           <div class="sb-label">Command</div>
         </div>
