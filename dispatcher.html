@@ -2272,7 +2272,8 @@ function openDrawer(id){
     </div>
     ${j.status==='delivered'?renderTimingBreakdown(j):''}
     ${j.status==='delivered'?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="archiveJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:0.923rem;font-weight:700;cursor:pointer;">Archive This Delivery</button></div>`:''}
-    ${(j.status!=='delivered'&&j.status!=='cancelled')?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="cancelJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.923rem;font-weight:700;cursor:pointer;">Cancel This Job</button></div>`:''}
+    ${(j.status!=='delivered'&&j.status!=='cancelled'&&drawerStops&&drawerStops.length>1)?renderStopCancelList(j,drawerStops):''}
+    ${(j.status!=='delivered'&&j.status!=='cancelled'&&(!drawerStops||drawerStops.length<=1))?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="cancelJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.923rem;font-weight:700;cursor:pointer;">Cancel This Job</button></div>`:''}
   `;
   populateDriverPicker();
   // Load map
@@ -2354,6 +2355,60 @@ async function archiveJob(id){
     toast('Delivery archived','ok');
   }catch(e){
     toast('Could not archive delivery','warn');
+  }
+}
+
+function renderStopCancelList(j,stops){
+  const doneCount=j.stops_completed||0;
+  const rows=stops.map((s,i)=>{
+    if(i<doneCount||s.cancelled)return '';
+    const isCurrent=i===doneCount;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+        <div style="width:22px;height:22px;border-radius:50%;background:${isCurrent?'var(--green)':'var(--card2)'};color:${isCurrent?'#00230f':'var(--muted)'};display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.692rem;font-weight:700;flex-shrink:0;">${i+1}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.846rem;font-weight:700;color:var(--text);">${s.recipient||'Recipient'}${isCurrent?' <span style="color:var(--green);font-family:var(--mono);font-size:0.615rem;text-transform:uppercase;">Current</span>':''}</div>
+          <div style="font-size:0.769rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.address||'—'}</div>
+        </div>
+        <button onclick="cancelSpecificStop('${j.id}','${i}')" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.769rem;font-weight:700;cursor:pointer;flex-shrink:0;">Cancel</button>
+      </div>`;
+  }).join('');
+  return `
+    <div class="dr-field" style="grid-column:1/-1;">
+      <div class="df-lbl">Remaining Stops. Choose one to cancel</div>
+      <div style="margin-top:8px;max-height:280px;overflow-y:auto;">${rows||'<div style="color:var(--muted);font-size:0.846rem;padding:10px 0;">No remaining stops.</div>'}</div>
+    </div>`;
+}
+
+async function cancelSpecificStop(jobId,stopIndexStr){
+  const stopIndex=parseInt(stopIndexStr);
+  const j=jobs.find(x=>x.id===jobId);
+  if(!j)return;
+  let stops=j.surge_stops;
+  if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+  if(!stops||!stops[stopIndex])return;
+
+  const doneCount=j.stops_completed||0;
+  const isCurrent=stopIndex===doneCount;
+  const stopAddr=stops[stopIndex].address||'this stop';
+  if(!confirm('Cancel stop '+(stopIndex+1)+' ('+stopAddr+')? '+(isCurrent?'The driver moves to the next stop automatically.':'The rest of the route continues normally, and the driver will automatically skip this stop when they reach it.')))return;
+
+  try{
+    const updatedStops=stops.map((s,i)=>i===stopIndex?{...s,cancelled:true}:s);
+    const patch={surge_stops:updatedStops};
+    if(isCurrent){
+      patch.stops_completed=stopIndex+1;
+      if(stopIndex>=stops.length-1){
+        patch.status='delivered';
+        patch.delivered_at=new Date().toISOString();
+      }
+    }
+    await sbPatch('jobs?id=eq.'+jobId,patch);
+    closeDrawer();
+    loadJobs();
+    toast('Stop '+(stopIndex+1)+' cancelled','ok');
+  }catch(e){
+    toast('Could not cancel this stop','warn');
   }
 }
 
