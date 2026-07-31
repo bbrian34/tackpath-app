@@ -1383,7 +1383,7 @@ async function startJobStatusPoll(){
   jobStatusInterval=setInterval(async()=>{
     if(!currentJob)return;
     try{
-      const jobs=await sbGet('jobs?id=eq.'+currentJob.id+'&select=status');
+      const jobs=await sbGet('jobs?id=eq.'+currentJob.id+'&select=status,surge_stops,stops_completed');
       if(!jobs||!jobs.length){
         // The job no longer exists at all (e.g. deleted from dispatcher, not just cancelled).
         // Without this, a deleted job leaves the driver permanently stuck with no way to detect it.
@@ -1400,6 +1400,31 @@ async function startJobStatusPoll(){
       }else if(ns==='cancelled'){
         clearInterval(jobStatusInterval);stopDispatchPoll();
         currentJob=null;clearRouteState();showHome();toast('Order cancelled','warn');
+      }else if(isSurgeJob&&jobs[0].surge_stops){
+        let serverStops=jobs[0].surge_stops;
+        if(typeof serverStops==='string'){try{serverStops=JSON.parse(serverStops);}catch(e){serverStops=null;}}
+        if(serverStops&&serverStops.length){
+          const serverDone=jobs[0].stops_completed||0;
+          let newPos=Math.max(currentSurgeStop,serverDone);
+          let skippedAny=false;
+          while(newPos<serverStops.length&&serverStops[newPos]&&serverStops[newPos].cancelled){
+            newPos++;
+            skippedAny=true;
+          }
+          if(newPos!==currentSurgeStop){
+            surgeStops=serverStops;
+            currentSurgeStop=Math.min(newPos,serverStops.length-1);
+            saveRouteState('delivery');
+            if(skippedAny)toast('A stop was cancelled by dispatch, moving to the next stop','warn');
+            if(newPos>=serverStops.length-1&&serverStops[serverStops.length-1]&&serverStops[serverStops.length-1].cancelled){
+              // The final stop itself was cancelled -- the route is complete
+              clearInterval(jobStatusInterval);stopDispatchPoll();
+              currentJob=null;clearRouteState();showHome();toast('Route complete','ok');
+              return;
+            }
+            renderSurgeList();
+          }
+        }
       }
     }catch(e){}
   },4000);
