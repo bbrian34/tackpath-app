@@ -859,7 +859,7 @@ body::after{content:'';position:fixed;inset:0;
         </div>
         <div class="spark-row">
           <div class="spark-box"><div class="spark-lbl">Routes Optimized</div><div class="spark-val" style="color:var(--blue);" id="sp-routes">—</div><div class="bar-w"><div class="bar-f" id="sp-rbar" style="background:var(--blue);width:0%;"></div></div></div>
-          <div class="spark-box"><div class="spark-lbl">Avg Efficiency</div><div class="spark-val" style="color:var(--green);">94%</div><div class="bar-w"><div class="bar-f" style="width:94%;background:var(--green);"></div></div></div>
+          <div class="spark-box"><div class="spark-lbl">Avg Efficiency</div><div class="spark-val" style="color:var(--green);" id="sp-efficiency">—</div><div class="bar-w"><div class="bar-f" id="sp-ebar" style="background:var(--green);width:0%;"></div></div></div>
           <div class="spark-box"><div class="spark-lbl">AI Decisions Today</div><div class="spark-val" style="color:var(--purple);" id="sp-decisions">—</div><div class="bar-w"><div class="bar-f" id="sp-dbar" style="background:var(--purple);width:0%;"></div></div></div>
         </div>
         <div class="panel" style="border-color:rgba(141,92,255,.2);">
@@ -1789,6 +1789,13 @@ function renderSmartPath(){
   // Real assignment count -- jobs a driver has actually been assigned to, not a fabricated multiplier
   document.getElementById('sp-decisions').textContent=assigned.length;
   document.getElementById('sp-dbar').style.width=total>0?Math.round(assigned.length/total*100)+'%':'0%';
+  // Real efficiency -- percent of COMPLETED deliveries that were made on time (distinct from
+  // Route Confidence, which only looks at jobs currently in transit right now)
+  const delivered=jobs.filter(j=>j.status==='delivered'&&j.delivered_at);
+  const deliveredOnTime=delivered.filter(j=>!j.estimated_delivery_at||new Date(j.delivered_at).getTime()<=new Date(j.estimated_delivery_at).getTime());
+  const efficiency=delivered.length>0?Math.round(deliveredOnTime.length/delivered.length*100):null;
+  document.getElementById('sp-efficiency').textContent=efficiency===null?'—':efficiency+'%';
+  document.getElementById('sp-ebar').style.width=(efficiency===null?0:efficiency)+'%';
   // Real on-time rate -- percent of in-transit jobs not yet past their own estimated delivery time
   const lateCounted = transit.filter(j=>j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()).length;
   const conf = transit.length>0 ? Math.round((transit.length-lateCounted)/transit.length*100) : 100;
