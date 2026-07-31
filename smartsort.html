@@ -489,39 +489,97 @@ function renderTable(){
 }
 
 // ── SMARTSORT ──
-function buildRoutes(){
+const GKEY='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDS'+'NszCZk8';
+
+async function geocodeAddress(address){
+  try{
+    const resp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(address)+'&key='+GKEY);
+    const data=await resp.json();
+    if(data.status==='OK'&&data.results&&data.results[0]){
+      const loc=data.results[0].geometry.location;
+      return {lat:loc.lat,lng:loc.lng};
+    }
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+function haversineDistance(a,b){
+  const R=3958.8;
+  const dLat=(b.lat-a.lat)*Math.PI/180;
+  const dLng=(b.lng-a.lng)*Math.PI/180;
+  const lat1=a.lat*Math.PI/180;
+  const lat2=b.lat*Math.PI/180;
+  const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return R*2*Math.asin(Math.sqrt(h));
+}
+
+function nearestNeighborSort(stopsWithCoords){
+  if(stopsWithCoords.length<=1)return stopsWithCoords;
+  const remaining=[...stopsWithCoords];
+  const sorted=[remaining.shift()];
+  while(remaining.length>0){
+    const last=sorted[sorted.length-1];
+    let nearestIdx=0,nearestDist=Infinity;
+    for(let i=0;i<remaining.length;i++){
+      const d=haversineDistance(last.coords,remaining[i].coords);
+      if(d<nearestDist){nearestDist=d;nearestIdx=i;}
+    }
+    sorted.push(remaining.splice(nearestIdx,1)[0]);
+  }
+  return sorted;
+}
+
+async function buildRoutes(){
   const btn=document.getElementById('buildBtn');
   btn.disabled=true;
-  btn.innerHTML='&#9650; Sorting... <span class="build-badge">SmartSort running</span>';
-  setTimeout(()=>{
-    // One route -- all packages sequenced for this driver
-    const sorted=[...packages].sort((a,b)=>a.address.localeCompare(b.address));
-    const groups=[sorted];
-    // Build routes with SmartSort TP identifiers
-    routes=groups.map((stops,ri)=>{
-      const routeId='RT-'+String(ri+1).padStart(3,'0');
-      const masterCode='TP-ROUTE-'+stops[0].order_id.replace('TP','');
-      const stopsWithId=stops.map((s,si)=>({
-        ...s,
-        // SmartSort adds stop number and package count to TP identifier
-        smart_id:`${s.order_id}-${si+1}-${s.packages}`
-      }));
-      return{
-        id:routeId,
-        master_code:masterCode,
-        stops:stopsWithId,
-        total_packages:stops.reduce((s,p)=>s+p.packages,0),
-        est_miles:(1.8+stops.length*1.6).toFixed(1),
-        color:COLORS[ri%COLORS.length]
-      };
-    });
-    document.getElementById('statRoutes').textContent=routes.length;
-    document.getElementById('left').style.display='none';
-    renderRoutes();
-    btn.disabled=false;
-    btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+routes.length+' routes</span>';
-    toast(routes.length+' routes built','ok');
-  },1100);
+  btn.innerHTML='&#9650; Geocoding stops... <span class="build-badge">SmartSort running</span>';
+
+  const geocoded=[];
+  const failedAddresses=[];
+  for(const pkg of packages){
+    const coords=await geocodeAddress(pkg.address);
+    if(coords) geocoded.push({...pkg,coords});
+    else failedAddresses.push(pkg);
+  }
+
+  btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';
+  const sorted=[...nearestNeighborSort(geocoded),...failedAddresses];
+
+  const geoSortedOnly=sorted.filter(s=>s.coords);
+  let totalMiles=0;
+  for(let i=0;i<geoSortedOnly.length-1;i++){
+    totalMiles+=haversineDistance(geoSortedOnly[i].coords,geoSortedOnly[i+1].coords);
+  }
+
+  const groups=[sorted];
+  routes=groups.map((stops,ri)=>{
+    const routeId='RT-'+String(ri+1).padStart(3,'0');
+    const masterCode='TP-ROUTE-'+stops[0].order_id.replace('TP','');
+    const stopsWithId=stops.map((s,si)=>({
+      ...s,
+      smart_id:`${s.order_id}-${si+1}-${s.packages}`
+    }));
+    return{
+      id:routeId,
+      master_code:masterCode,
+      stops:stopsWithId,
+      total_packages:stops.reduce((s,p)=>s+p.packages,0),
+      est_miles:totalMiles.toFixed(1),
+      color:COLORS[ri%COLORS.length]
+    };
+  });
+  document.getElementById('statRoutes').textContent=routes.length;
+  document.getElementById('left').style.display='none';
+  renderRoutes();
+  btn.disabled=false;
+  btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+routes.length+' routes</span>';
+  if(failedAddresses.length){
+    toast(routes.length+' routes built. '+failedAddresses.length+' address(es) could not be located and were added at the end.','warn');
+  }else{
+    toast(routes.length+' routes built, sequenced by real distance','ok');
+  }
 }
 
 function renderRoutes(){
