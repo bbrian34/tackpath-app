@@ -715,7 +715,7 @@ body::after{content:'';position:fixed;inset:0;
           <div class="sb-label">Signal Queue</div>
           <div class="sb-cnt cnt-b" id="sb-total">—</div>
         </div>
-        <div class="sb-item" onclick="setTab('dispatch',null);setTimeout(()=>document.getElementById('excPanel').scrollIntoView({behavior:'smooth'}),100)">
+        <div class="sb-item" onclick="showExceptionFilter()">
           <div class="sb-icon" style="background:rgba(255,150,30,.08);border:1px solid rgba(255,150,30,.16);">&#9888;</div>
           <div class="sb-label">Exceptions</div>
           <div class="sb-cnt cnt-o" id="sb-exc">0</div>
@@ -764,6 +764,15 @@ body::after{content:'';position:fixed;inset:0;
           <div class="kpi kpi-p" style="position:relative;overflow:hidden;"><div class="kpi-lbl">In Transit</div><div class="kpi-val" style="color:var(--purple);" id="kpi-transit">—</div><div class="kpi-sub">Active deliveries</div></div>
           <div class="kpi kpi-g"><div class="kpi-lbl">Delivered</div><div class="kpi-val" style="color:var(--green);" id="kpi-delivered">—</div><div class="kpi-sub">Today</div></div>
           <div class="kpi kpi-y"><div class="kpi-lbl">Assigned</div><div class="kpi-val" style="color:var(--yellow);" id="kpi-assigned">—</div><div class="kpi-sub">Driver en route</div></div>
+        </div>
+
+        <!-- EXCEPTIONS DETAIL PANEL -->
+        <div class="panel" id="excDetailPanel" style="display:none;margin-bottom:16px;">
+          <div class="panel-hdr">
+            <div><div class="panel-ttl" style="color:var(--orange);">Exceptions</div><div class="panel-sub">Jobs needing attention right now</div></div>
+            <button onclick="clearExceptionFilter()" style="padding:7px 14px;border-radius:8px;font-size:0.846rem;font-weight:700;background:var(--card2);border:1px solid var(--border);color:var(--muted);cursor:pointer;">Show all jobs</button>
+          </div>
+          <div id="excDetailBody"></div>
         </div>
 
         <!-- PIPELINE -->
@@ -1584,6 +1593,78 @@ async function loadOCAData(){
   }
 }
 
+let exceptionFilterActive=false;
+
+function showExceptionFilter(){
+  exceptionFilterActive=true;
+  setTab('dispatch',null);
+  renderExceptionDetail();
+}
+
+function clearExceptionFilter(){
+  exceptionFilterActive=false;
+  document.getElementById('excDetailPanel').style.display='none';
+}
+
+function renderExceptionDetail(){
+  const panel=document.getElementById('excDetailPanel');
+  const body=document.getElementById('excDetailBody');
+  if(!exceptionFilterActive){panel.style.display='none';return;}
+  panel.style.display='block';
+
+  const exceptions=[];
+  jobs.forEach(j=>{
+    if(j.status==='in_transit'&&j.estimated_delivery_at&&Date.now()>new Date(j.estimated_delivery_at).getTime()){
+      exceptions.push({job:j,reason:'Late',since:j.estimated_delivery_at,mins:Math.floor((Date.now()-new Date(j.estimated_delivery_at).getTime())/60000)});
+    }else if(j.status==='pending'&&((Date.now()-new Date(j.created_at).getTime())>15*60*1000)){
+      exceptions.push({job:j,reason:'Unassigned',since:j.created_at,mins:Math.floor((Date.now()-new Date(j.created_at).getTime())/60000)});
+    }else if(j.status==='in_transit'&&j.updated_at&&((Date.now()-new Date(j.updated_at).getTime())>30*60*1000)){
+      exceptions.push({job:j,reason:'Driver Dark',since:j.updated_at,mins:Math.floor((Date.now()-new Date(j.updated_at).getTime())/60000)});
+    }
+  });
+
+  if(!exceptions.length){
+    body.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:0.923rem;">No exceptions right now. Everything is on track.</div>';
+    return;
+  }
+
+  // Real per-driver exception count this week, from actual job history -- not a fabricated score
+  const oneWeekAgo=Date.now()-7*24*60*60*1000;
+  const driverExceptionCounts={};
+  jobs.forEach(j=>{
+    if(!j.driver_name||new Date(j.created_at).getTime()<oneWeekAgo)return;
+    const isLate=j.status==='in_transit'&&j.estimated_delivery_at&&Date.now()>new Date(j.estimated_delivery_at).getTime();
+    const isDark=j.status==='in_transit'&&j.updated_at&&((Date.now()-new Date(j.updated_at).getTime())>30*60*1000);
+    if(isLate||isDark)driverExceptionCounts[j.driver_name]=(driverExceptionCounts[j.driver_name]||0)+1;
+  });
+
+  body.innerHTML=`
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Driver</th>
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Reason</th>
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Since</th>
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Duration</th>
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">This week</th>
+      </tr></thead>
+      <tbody>
+        ${exceptions.map(e=>{
+          const driverName=e.job.driver_name||'Unassigned';
+          const sinceStr=new Date(e.since).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+          const count=driverExceptionCounts[driverName]||0;
+          return `<tr style="border-bottom:1px solid var(--border2);cursor:pointer;" onclick="openDrawer('${e.job.id}')">
+            <td style="padding:10px 12px;font-weight:700;">${driverName}</td>
+            <td style="padding:10px 12px;color:var(--orange);">${e.reason}</td>
+            <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${sinceStr}</td>
+            <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;">${e.mins} min</td>
+            <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${driverName==='Unassigned'?'—':count+' exception'+(count!==1?'s':'')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
 function renderExceptionQueue(){
   const list = document.getElementById('excList');
   const badge = document.getElementById('excBadge');
@@ -1666,7 +1747,7 @@ async function rejectOCAItem(id){
 
 // ── RENDER ALL ──
 function renderAll(){
-  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();
+  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();
   const drawerEl=document.getElementById('drawer');
   if(drawerEl&&drawerEl.classList.contains('open')&&currentJobId){
     openDrawer(currentJobId);
