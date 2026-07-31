@@ -1452,11 +1452,19 @@ async function loadMessages(){
 
 // ── COMMS RUBY ──
 let commsRubyActive=false,commsRubyRecog=null;
-function activateCommsRuby(btn){
+async function activateCommsRuby(btn){
   unlockSpeech();
   if(commsRubyActive){stopCommsRuby(btn);return;}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){const msg=prompt('Type your message to dispatch:');if(msg&&msg.trim())sendCommsMsg(msg.trim());return;}
+  try{
+    const micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    micStream.getTracks().forEach(t=>t.stop());
+  }catch(e){
+    toast('Microphone permission is needed to speak to dispatch','warn');
+    const msg=prompt('Type your message to dispatch:');if(msg&&msg.trim())sendCommsMsg(msg.trim());
+    return;
+  }
   commsRubyActive=true;
   btn.className='ruby-btn listening';btn.textContent='...';
   document.getElementById('commsRubyTranscript').textContent='Listening...';
@@ -1516,23 +1524,42 @@ function setRubyState(state){
   else if(state==='thinking'){if(orb)orb.className='ruby-orb thinking';if(st)st.textContent='Thinking...';}
   else{if(orb)orb.className='ruby-orb';if(st)st.textContent='Tap a command or speak';}
 }
-function startRubyListen(){
+async function startRubyListen(){
   if(!rubyActive)return;
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){setRubyState('ready');return;}
+  try{
+    const micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    micStream.getTracks().forEach(t=>t.stop()); // just needed the permission grant, not to keep the stream open
+  }catch(e){
+    toast('Microphone permission is needed for Ruby to hear you','warn');
+    setRubyState('ready');
+    return;
+  }
+  if(!rubyActive)return; // driver may have closed Ruby while the permission prompt was showing
   document.getElementById('rubyOvTranscript').textContent='';
   rubyRecog=new SR();rubyRecog.lang='en-US';rubyRecog.continuous=false;rubyRecog.interimResults=true;
   rubyRecog.onresult=e=>{
     const text=Array.from(e.results).map(r=>r[0].transcript).join('').toLowerCase().trim();
     document.getElementById('rubyOvTranscript').textContent=text;
-    if(e.results[e.results.length-1].isFinal){setRubyState('thinking');processRubyCmd(text);}
+    if(e.results[e.results.length-1].isFinal){setRubyState('thinking');processRubyCmd(text,true);}
   };
   rubyRecog.onend=()=>{if(rubyActive&&document.getElementById('rubyOrb').className==='ruby-orb listening')setRubyState('ready');};
   rubyRecog.onerror=e=>{if(e.error!=='no-speech')toast('Ruby could not hear you','warn');setRubyState('ready');};
   try{rubyRecog.start();}catch(e){setRubyState('ready');}
 }
-async function rubyCmd(cmd){document.getElementById('rubyOvTranscript').textContent=cmd;processRubyCmd(cmd);}
-async function processRubyCmd(transcript){
+async function rubyCmd(cmd){
+  if(cmd==='message dispatch'){
+    // This chip means "let me tell you a message", not a literal command -- start listening
+    // for the actual message content instead of sending the label text itself.
+    document.getElementById('rubyOvTranscript').textContent='Say your message...';
+    setRubyState('listening');startRubyListen();
+    return;
+  }
+  document.getElementById('rubyOvTranscript').textContent=cmd;
+  processRubyCmd(cmd,false);
+}
+async function processRubyCmd(transcript,isVoice){
   if(!transcript)return;
   if(currentJob&&currentJob.id)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'[Ruby] '+transcript}).catch(()=>{});
   const jobCtx=currentJob?{status:currentJob.status,pickup:currentJob.pickup_address,dropoff:currentJob.dropoff_address}:null;
@@ -1544,44 +1571,44 @@ Current job: ${JSON.stringify(jobCtx)}. Driver: ${driver?.name}.
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:200,system:sys,messages:[{role:'user',content:transcript}]})});
     const data=await resp.json();
     const cmd=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json|```/g,''));
-    closeRuby();execRubyAction(cmd,transcript);
+    closeRuby();execRubyAction(cmd,transcript,isVoice);
   }catch(e){
     closeRuby();
     const t=transcript.toLowerCase();
-    if(t.includes('pickup')||t.includes('arrived at pickup')){arrivedAtPickup();speak('Got it, marked arrived at pickup.');}
-    else if(t.includes('got')||t.includes('have package')||t.includes('collected')){startDelivery();speak('Package confirmed, heading out.');}
-    else if(t.includes('dropoff')||t.includes('arrived at drop')){arrivedAtDropoff();speak('Got it, marked arrived at dropoff.');}
-    else if(t.includes('delivered')||t.includes('done')){showScreen('scPOD');speak('Opening proof of delivery.');}
+    if(t.includes('pickup')||t.includes('arrived at pickup')){arrivedAtPickup();if(isVoice)speak('Got it, marked arrived at pickup.');}
+    else if(t.includes('got')||t.includes('have package')||t.includes('collected')){startDelivery();if(isVoice)speak('Package confirmed, heading out.');}
+    else if(t.includes('dropoff')||t.includes('arrived at drop')){arrivedAtDropoff();if(isVoice)speak('Got it, marked arrived at dropoff.');}
+    else if(t.includes('delivered')||t.includes('done')){showScreen('scPOD');if(isVoice)speak('Opening proof of delivery.');}
     else if(t.includes('nobody home')){
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'INCIDENT: Nobody home.'}).catch(()=>{});
       toast('Incident reported','warn');
-      speak('Got it, I let dispatch know nobody was home.');
+      if(isVoice)speak('Got it, I let dispatch know nobody was home.');
     }
     else{
       // No specific action matched -- treat it as a general message to dispatch rather than doing nothing
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:transcript}).catch(()=>{});
       toast('Message sent to dispatch','ok');
-      speak('Got it, I sent that to dispatch.');
+      if(isVoice)speak('Got it, I sent that to dispatch.');
     }
   }
 }
-async function execRubyAction(cmd,transcript){
+async function execRubyAction(cmd,transcript,isVoice){
   switch(cmd.action){
     case 'navigate':
       const dest=currentJob?.status==='in_transit'?currentJob?.dropoff_address:currentJob?.pickup_address;
-      if(dest){startTurnByTurn(dest);speak('Starting navigation.');}break;
-    case 'arrived_pickup':arrivedAtPickup();speak('Got it, marked arrived at pickup.');break;
-    case 'got_package':startDelivery();speak('Package confirmed, heading out.');break;
-    case 'arrived_dropoff':arrivedAtDropoff();speak('Got it, marked arrived at dropoff.');break;
-    case 'open_pod':setTimeout(()=>showScreen('scPOD'),300);speak('Opening proof of delivery.');break;
+      if(dest){startTurnByTurn(dest);if(isVoice)speak('Starting navigation.');}break;
+    case 'arrived_pickup':arrivedAtPickup();if(isVoice)speak('Got it, marked arrived at pickup.');break;
+    case 'got_package':startDelivery();if(isVoice)speak('Package confirmed, heading out.');break;
+    case 'arrived_dropoff':arrivedAtDropoff();if(isVoice)speak('Got it, marked arrived at dropoff.');break;
+    case 'open_pod':setTimeout(()=>showScreen('scPOD'),300);if(isVoice)speak('Opening proof of delivery.');break;
     case 'create_incident':
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'INCIDENT ['+(cmd.incident_type||'OTHER').toUpperCase()+']: '+(cmd.incident_detail||transcript)}).catch(()=>{});
-      toast('Incident reported to dispatch','warn');speak('Got it, I let dispatch know.');break;
+      toast('Incident reported to dispatch','warn');if(isVoice)speak('Got it, I let dispatch know.');break;
     case 'send_message':
       if(cmd.message&&currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:cmd.message}).catch(()=>{});
-      speak('Got it, I sent that to dispatch.');break;
+      if(isVoice)speak('Got it, I sent that to dispatch.');break;
     case 'speak_only':
-      if(cmd.message)speak(cmd.message);break;
+      if(cmd.message&&isVoice)speak(cmd.message);break;
   }
 }
 
