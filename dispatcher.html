@@ -428,6 +428,119 @@ body::after{content:'';position:fixed;inset:0;
 #drawer.open{right:0;}
 #drawer::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+
+/* ── SMARTSORT DRAWER ── */
+#smartSortDrawer{position:fixed;right:-560px;top:52px;bottom:0;width:540px;
+  background:rgba(3,8,18,.99);border-left:1px solid rgba(25,183,239,.14);
+  z-index:8000;transition:right .35s cubic-bezier(.32,1.1,.6,1);
+  overflow-y:auto;padding:24px;backdrop-filter:blur(24px);}
+#smartSortDrawer.open{right:0;}
+#smartSortDrawer::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+#statsRow{display:none;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;}
+.stat-card{padding:14px;border-radius:10px;background:var(--card2);
+  border:1px solid var(--border);text-align:center;}
+.stat-n{font-family:var(--cond);font-size:2rem;font-weight:800;line-height:1;color:var(--text);}
+.stat-l{font-size:0.6923rem;color:var(--muted);margin-top:4px;font-family:var(--mono);
+  letter-spacing:.08em;text-transform:uppercase;}
+#dropZone{border:2px dashed rgba(25,183,239,.3);border-radius:14px;
+  padding:32px 20px;text-align:center;cursor:pointer;
+  background:rgba(25,183,239,.02);transition:all .2s;
+  margin-bottom:14px;position:relative;}
+#dropZone:hover,#dropZone.drag{border-color:var(--blue);background:rgba(25,183,239,.06);}
+#dropZone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz-icon{font-size:2.4615rem;margin-bottom:10px;}
+.dz-title{font-size:1.0769rem;font-weight:700;color:var(--text);margin-bottom:6px;}
+.dz-sub{font-size:0.8462rem;color:var(--muted);line-height:1.6;}
+.dz-sub code{font-family:var(--mono);font-size:0.6923rem;color:var(--blue);
+  background:rgba(25,183,239,.1);padding:2px 6px;border-radius:4px;}
+.action-btn{width:100%;padding:12px;border-radius:10px;font-size:0.923rem;font-weight:700;
+  cursor:pointer;font-family:var(--sans);border:1px solid var(--border);
+  color:var(--muted);background:var(--card2);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-bottom:10px;transition:all .15s;}
+.action-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(25,183,239,.05);}
+#buildBtn{width:100%;padding:14px;border-radius:12px;
+  background:linear-gradient(135deg,var(--green),#16803a);
+  border:none;color:#fff;font-size:1.0769rem;font-weight:800;
+  cursor:pointer;font-family:var(--sans);
+  box-shadow:0 6px 24px rgba(34,170,85,.25);
+  display:none;margin-top:14px;
+  align-items:center;justify-content:center;gap:10px;}
+#buildBtn:hover{box-shadow:0 8px 32px rgba(34,170,85,.4);}
+#buildBtn:disabled{opacity:.5;pointer-events:none;}
+.build-badge{background:rgba(0,0,0,.2);border-radius:20px;padding:3px 10px;font-size:0.846rem;}
+#packageTable{display:none;margin-top:14px;}
+.pkg-hdr{display:grid;grid-template-columns:130px 1fr 44px;
+  gap:8px;padding:8px 10px;
+  font-family:var(--mono);font-size:0.615rem;color:var(--muted);
+  letter-spacing:.1em;text-transform:uppercase;
+  border-bottom:1px solid var(--border);}
+.pkg-row{display:grid;grid-template-columns:130px 1fr 44px;
+  gap:8px;padding:9px 10px;
+  border-bottom:1px solid var(--border2);align-items:center;
+  transition:background .1s;}
+.pkg-row:hover{background:rgba(255,255,255,.02);}
+.pkg-tp{font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);}
+.pkg-name{font-size:0.846rem;font-weight:700;color:var(--text);}
+.pkg-addr{font-size:0.769rem;color:var(--muted);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pkg-count{font-family:var(--mono);font-size:0.846rem;font-weight:700;
+  color:var(--orange);text-align:center;}
+#ssEmptyState{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:200px;gap:12px;opacity:.85;
+  text-align:center;margin-top:20px;}
+.es-icon{font-size:3rem;}
+.es-title{font-family:var(--cond);font-size:1.385rem;font-weight:700;color:var(--text);}
+.es-sub{font-size:0.846rem;color:var(--muted);max-width:300px;line-height:1.6;}
+#routeGrid{display:none;flex-direction:column;gap:14px;margin-top:16px;}
+.route-card{background:var(--card2);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;}
+.rc-stripe{height:3px;}
+.s-blue{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.s-green{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.s-orange{background:linear-gradient(90deg,transparent,var(--orange),transparent);}
+.s-purple{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
+.rc-top{padding:14px 16px;border-bottom:1px solid var(--border);}
+.rc-id-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.rc-id{font-family:var(--mono);font-size:0.846rem;font-weight:700;color:var(--text);}
+.rc-badge{font-family:var(--mono);font-size:0.615rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 8px;border-radius:8px;
+  background:rgba(34,170,85,.1);border:1px solid rgba(34,170,85,.25);color:var(--green);}
+.rc-nums{display:flex;gap:18px;}
+.rc-num{text-align:center;}
+.rc-num-n{font-family:var(--cond);font-size:1.769rem;font-weight:800;line-height:1;color:var(--text);}
+.rc-num-l{font-size:0.615rem;color:var(--muted);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}
+.rc-stops{padding:10px 16px;max-height:280px;overflow-y:auto;}
+.rc-stop{display:flex;align-items:flex-start;gap:10px;padding:7px 0;
+  border-bottom:1px solid var(--border2);}
+.rc-stop:last-child{border-bottom:none;}
+.sn{width:22px;height:22px;border-radius:50%;
+  background:var(--blue);color:#fff;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:0.615rem;font-weight:700;flex-shrink:0;margin-top:1px;}
+.si{flex:1;min-width:0;}
+.si-tp{font-family:var(--mono);font-size:0.692rem;font-weight:700;margin-bottom:2px;color:var(--muted);}
+.si-name{font-size:0.846rem;font-weight:700;color:var(--text);}
+.si-addr{font-size:0.769rem;color:var(--muted);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.si-pkgs{font-family:var(--mono);font-size:0.615rem;font-weight:700;
+  color:#fff;background:var(--orange);
+  border-radius:10px;padding:2px 8px;flex-shrink:0;align-self:center;}
+.rc-master{padding:10px 16px;border-top:1px solid var(--border);
+  background:rgba(25,183,239,.04);}
+.mc-label{font-family:var(--mono);font-size:0.577rem;color:var(--muted);
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;}
+.mc-code{font-family:var(--mono);font-size:0.846rem;font-weight:700;color:var(--green);}
+.mc-hint{font-size:0.692rem;color:var(--muted);margin-top:3px;}
+.rc-footer{padding:10px 16px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;}
+.rc-dist{font-family:var(--mono);font-size:0.692rem;color:var(--muted);}
+.btn-assign{padding:7px 16px;border-radius:8px;font-size:0.846rem;font-weight:700;
+  background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);
+  color:var(--blue);cursor:pointer;font-family:var(--sans);transition:all .15s;}
+.btn-assign:hover{background:rgba(25,183,239,.16);}
+
 .dr-close{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:8px;
   background:rgba(255,255,255,.06);border:1px solid var(--border);
   color:var(--text);font-size:1.231rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
@@ -717,6 +830,7 @@ body::after{content:'';position:fixed;inset:0;
             </select>
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
+            <button onclick="openSmartSortDrawer()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
           </div>
           <div style="overflow-x:auto;">
             <table class="tbl">
@@ -1081,6 +1195,62 @@ body::after{content:'';position:fixed;inset:0;
   <div style="margin-top:7px;">
     <button class="dra dra-d" style="width:100%;" onclick="deleteJob()">&#128465; Delete Job</button>
   </div>
+</div>
+
+<!-- SMARTSORT DRAWER -->
+<div id="smartSortDrawer">
+  <button class="dr-close" onclick="closeSmartSortDrawer()">&#10005;</button>
+  <div class="dr-lbl">New Route</div>
+  <div class="dr-title">Upload CSV, SmartSort builds it</div>
+
+  <div id="statsRow">
+    <div class="stat-card">
+      <div class="stat-n" id="statPkgs" style="color:var(--blue);">0</div>
+      <div class="stat-l">Packages</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n" id="statStops" style="color:var(--green);">0</div>
+      <div class="stat-l">Stops</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n" id="statRoutes" style="color:var(--orange);">0</div>
+      <div class="stat-l">Routes</div>
+    </div>
+  </div>
+
+  <div id="dropZone">
+    <input type="file" accept=".csv" id="csvInput" onchange="handleFile(this.files[0])"/>
+    <div class="dz-icon">&#9783;</div>
+    <div class="dz-title">Drop your CSV here</div>
+    <div class="dz-sub">
+      or click to browse<br/><br/>
+      Required: <code>order_id</code> <code>recipient</code> <code>address</code> <code>packages</code>
+    </div>
+  </div>
+
+  <button class="action-btn" onclick="downloadTemplate()">&#8659; Download CSV Template</button>
+  <button class="action-btn" onclick="loadDemoData()" id="demoDataBtn">&#9654; Load Demo Data (20 packages)</button>
+
+  <div id="packageTable">
+    <div class="pkg-hdr">
+      <div>TP Order ID</div>
+      <div>Recipient / Address</div>
+      <div>Pkgs</div>
+    </div>
+    <div id="pkgRows"></div>
+  </div>
+
+  <button id="buildBtn" onclick="buildRoutes()">
+    &#9650; Run SmartSort
+    <span class="build-badge" id="buildCount"></span>
+  </button>
+
+  <div id="ssEmptyState">
+    <div class="es-icon">&#9650;</div>
+    <div class="es-title">SmartSort Ready</div>
+    <div class="es-sub">Upload a CSV or load demo data. One scan loads the entire route to the driver.</div>
+  </div>
+  <div id="routeGrid"></div>
 </div>
 
 <!-- COMMS HUB -->
@@ -2478,6 +2648,308 @@ async function sendSMS(type, phone, jobId, jobTitle){
       body:JSON.stringify({type, phone, job_id:jobId, job_title:jobTitle})
     });
   }catch(e){console.error('SMS error:',e);}
+}
+
+// ── SMARTSORT INTEGRATION ──
+const DEMO_PACKAGES = [
+  {order_id:'TP65782101',recipient:'Marcus Johnson',address:'142 Peachtree St NW, Atlanta GA 30303',packages:2},
+  {order_id:'TP65782102',recipient:'Sarah Williams',address:'890 Marietta St NW, Atlanta GA 30318',packages:1},
+  {order_id:'TP65782103',recipient:'David Chen',address:'1180 Peachtree St NE, Atlanta GA 30309',packages:3},
+  {order_id:'TP65782104',recipient:'Jennifer Davis',address:'75 5th St NW, Atlanta GA 30308',packages:1},
+  {order_id:'TP65782105',recipient:'Robert Miller',address:'400 W Peachtree St NW, Atlanta GA 30308',packages:2},
+  {order_id:'TP65782106',recipient:'Angela Thompson',address:'3393 Peachtree Rd NE, Atlanta GA 30326',packages:4},
+  {order_id:'TP65782107',recipient:'Kevin Harris',address:'2500 Cumberland Pkwy SE, Atlanta GA 30339',packages:1},
+  {order_id:'TP65782108',recipient:'Patricia Moore',address:'1544 Piedmont Ave NE, Atlanta GA 30324',packages:2},
+  {order_id:'TP65782109',recipient:'James Wilson',address:'640 W Peachtree St NW, Atlanta GA 30308',packages:1},
+  {order_id:'TP65782110',recipient:'Linda Anderson',address:'220 Interstate N Pkwy SE, Atlanta GA 30339',packages:3}
+];
+const SS_COLORS = ['s-blue','s-green','s-orange','s-purple'];
+let packages = [];
+let ssRoutes = [];
+
+function openSmartSortDrawer(){
+  document.getElementById('smartSortDrawer').classList.add('open');
+}
+function closeSmartSortDrawer(){
+  document.getElementById('smartSortDrawer').classList.remove('open');
+}
+
+function handleFile(file){
+  if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file','warn');return;}
+  const reader=new FileReader();
+  reader.onload=e=>parseCSV(e.target.result);
+  reader.readAsText(file);
+}
+
+function parseCSV(text){
+  const lines=text.trim().split('\n');
+  if(lines.length<2){toast('CSV needs a header and at least one row','warn');return;}
+  const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
+  const idx={
+    order_id:headers.indexOf('order_id'),
+    recipient:headers.indexOf('recipient'),
+    address:headers.indexOf('address'),
+    packages:headers.indexOf('packages')
+  };
+  if(idx.order_id<0||idx.recipient<0||idx.address<0){
+    toast('Missing required columns: order_id, recipient, address','warn');return;
+  }
+  packages=[];
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(',').map(v=>v.trim().replace(/"/g,''));
+    if(!c[idx.address])continue;
+    packages.push({
+      order_id:c[idx.order_id]||('TP'+String(65780000+i)),
+      recipient:c[idx.recipient]||'Unknown',
+      address:c[idx.address],
+      packages:parseInt(c[idx.packages])||1
+    });
+  }
+  if(!packages.length){toast('No valid packages found','warn');return;}
+  renderPackageTable();
+  toast(packages.length+' packages loaded','ok');
+}
+
+function loadDemoData(){
+  packages=[...DEMO_PACKAGES];
+  renderPackageTable();
+  toast(packages.length+' demo packages loaded','ok');
+}
+
+function downloadTemplate(){
+  const csv='order_id,recipient,address,packages\nTP1001,Jane Doe,123 Main St Atlanta GA,1\nTP1002,John Smith,456 Oak Ave Atlanta GA,2';
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='tackpath_route_template.csv';a.click();
+  URL.revokeObjectURL(url);
+}
+
+function renderPackageTable(){
+  document.getElementById('dropZone').style.display='none';
+  document.getElementById('demoDataBtn').style.display='none';
+  document.getElementById('packageTable').style.display='block';
+  document.getElementById('statsRow').style.display='grid';
+  document.getElementById('buildBtn').style.display='flex';
+  document.getElementById('buildCount').textContent=packages.length+' packages';
+  document.getElementById('statPkgs').textContent=packages.reduce((s,p)=>s+p.packages,0);
+  document.getElementById('statStops').textContent=packages.length;
+  document.getElementById('statRoutes').textContent='--';
+  document.getElementById('pkgRows').innerHTML=packages.map(p=>`
+    <div class="pkg-row">
+      <div class="pkg-tp">${p.order_id}</div>
+      <div>
+        <div class="pkg-name">${p.recipient}</div>
+        <div class="pkg-addr">${p.address}</div>
+      </div>
+      <div class="pkg-count">${p.packages}</div>
+    </div>`).join('');
+}
+
+async function geocodeAddress(address){
+  try{
+    const resp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(address)+'&key='+GKEY);
+    const data=await resp.json();
+    if(data.status==='OK'&&data.results&&data.results[0]){
+      const loc=data.results[0].geometry.location;
+      return {lat:loc.lat,lng:loc.lng};
+    }
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+function haversineDistance(a,b){
+  const R=3958.8;
+  const dLat=(b.lat-a.lat)*Math.PI/180;
+  const dLng=(b.lng-a.lng)*Math.PI/180;
+  const lat1=a.lat*Math.PI/180;
+  const lat2=b.lat*Math.PI/180;
+  const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return R*2*Math.asin(Math.sqrt(h));
+}
+
+function nearestNeighborSort(stopsWithCoords){
+  if(stopsWithCoords.length<=1)return stopsWithCoords;
+  const remaining=[...stopsWithCoords];
+  const sorted=[remaining.shift()];
+  while(remaining.length>0){
+    const last=sorted[sorted.length-1];
+    let nearestIdx=0,nearestDist=Infinity;
+    for(let i=0;i<remaining.length;i++){
+      const d=haversineDistance(last.coords,remaining[i].coords);
+      if(d<nearestDist){nearestDist=d;nearestIdx=i;}
+    }
+    sorted.push(remaining.splice(nearestIdx,1)[0]);
+  }
+  return sorted;
+}
+
+async function buildRoutes(){
+  const btn=document.getElementById('buildBtn');
+  btn.disabled=true;
+  btn.innerHTML='&#9650; Geocoding stops... <span class="build-badge">SmartSort running</span>';
+
+  const geocoded=[];
+  const failedAddresses=[];
+  for(const pkg of packages){
+    const coords=await geocodeAddress(pkg.address);
+    if(coords) geocoded.push({...pkg,coords});
+    else failedAddresses.push(pkg);
+  }
+
+  btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';
+  const sorted=[...nearestNeighborSort(geocoded),...failedAddresses];
+
+  const geoSortedOnly=sorted.filter(s=>s.coords);
+  let totalMiles=0;
+  for(let i=0;i<geoSortedOnly.length-1;i++){
+    totalMiles+=haversineDistance(geoSortedOnly[i].coords,geoSortedOnly[i+1].coords);
+  }
+
+  const groups=[sorted];
+  ssRoutes=groups.map((stops,ri)=>{
+    const routeId='RT-'+String(ri+1).padStart(3,'0');
+    const masterCode='TP-ROUTE-'+stops[0].order_id.replace('TP','');
+    const stopsWithId=stops.map((s,si)=>({
+      ...s,
+      smart_id:`${s.order_id}-${si+1}-${s.packages}`
+    }));
+    return{
+      id:routeId,
+      master_code:masterCode,
+      stops:stopsWithId,
+      total_packages:stops.reduce((s,p)=>s+p.packages,0),
+      est_miles:totalMiles.toFixed(1),
+      color:SS_COLORS[ri%SS_COLORS.length]
+    };
+  });
+  document.getElementById('statRoutes').textContent=ssRoutes.length;
+  renderSSRoutes();
+  btn.disabled=false;
+  btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';
+  if(failedAddresses.length){
+    toast(ssRoutes.length+' routes built. '+failedAddresses.length+' address(es) could not be located and were added at the end.','warn');
+  }else{
+    toast(ssRoutes.length+' routes built, sequenced by real distance','ok');
+  }
+}
+
+function renderSSRoutes(){
+  const grid=document.getElementById('routeGrid');
+  const empty=document.getElementById('ssEmptyState');
+  empty.style.display='none';
+  grid.style.display='flex';
+  grid.innerHTML=ssRoutes.map(r=>`
+    <div class="route-card">
+      <div class="rc-stripe ${r.color}"></div>
+      <div class="rc-top">
+        <div class="rc-id-row">
+          <div class="rc-id">${r.id}</div>
+          <div class="rc-badge">SmartSort &#9650;</div>
+        </div>
+        <div class="rc-nums">
+          <div class="rc-num">
+            <div class="rc-num-n" style="color:var(--blue);">${r.stops.length}</div>
+            <div class="rc-num-l">Stops</div>
+          </div>
+          <div class="rc-num">
+            <div class="rc-num-n" style="color:var(--orange);">${r.total_packages}</div>
+            <div class="rc-num-l">Packages</div>
+          </div>
+          <div class="rc-num">
+            <div class="rc-num-n" style="color:var(--green);">${r.est_miles}</div>
+            <div class="rc-num-l">Est. Miles</div>
+          </div>
+        </div>
+      </div>
+      <div class="rc-stops">
+        ${r.stops.map((s,i)=>`
+          <div class="rc-stop">
+            <div class="sn">${i+1}</div>
+            <div class="si">
+              <div class="si-tp">${s.smart_id}</div>
+              <div class="si-name">${s.recipient}</div>
+              <div class="si-addr">${s.address}</div>
+            </div>
+            <div class="si-pkgs">${s.packages} pkg${s.packages!==1?'s':''}</div>
+          </div>`).join('')}
+      </div>
+      <div class="rc-master">
+        <div class="mc-label">Master Scan Code. Driver scans once to load entire route</div>
+        <div class="mc-code">${r.master_code}</div>
+        <div class="mc-hint">1 scan &rarr; ${r.stops.length} stops &rarr; ${r.total_packages} packages loaded on driver app</div>
+      </div>
+      <div class="rc-footer">
+        <div class="rc-dist">&#9654; ${r.est_miles} miles estimated</div>
+        <button class="btn-assign" onclick="assignSSRoute('${r.id}')">Assign Driver &rarr;</button>
+      </div>
+    </div>`).join('');
+}
+
+async function assignSSRoute(routeId){
+  const route=ssRoutes.find(r=>r.id===routeId);
+  if(!route){toast('Route not found','warn');return;}
+
+  const job={
+    title:'Surge Route '+route.id,
+    job_type:'surge',
+    status:'pending',
+    org_id: currentOrgId,
+    pickup_address: route.stops[0]?.address||'See route',
+    dropoff_address: route.stops[route.stops.length-1]?.address||'See route',
+    surge_stops: route.stops.map((s,i)=>({
+      order_id: s.order_id,
+      smart_id: s.smart_id,
+      recipient: s.recipient,
+      address: s.address,
+      packages: s.packages,
+      stop_number: i+1
+    })),
+    master_code: route.master_code,
+    total_stops: route.stops.length,
+    total_packages: route.total_packages,
+    price: (route.stops.length * 8 + route.total_packages * 2).toFixed(2),
+    distance_miles: parseFloat(route.est_miles)||0,
+    estimated_delivery_at: new Date(Date.now() + (15 + (parseFloat(route.est_miles)||0)*3 + route.stops.length*5) * 60000).toISOString(),
+    created_at: new Date().toISOString()
+  };
+
+  try{
+    const resp=await fetch(SB_URL+'/rest/v1/jobs',{
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'return=representation'
+      },
+      body:JSON.stringify(job)
+    });
+    if(!resp.ok){
+      const err=await resp.text();
+      toast('Could not assign: '+err.slice(0,60),'warn');
+      return;
+    }
+    toast('Route '+route.id+' created and broadcast to drivers','ok');
+    ssRoutes=ssRoutes.filter(r=>r.id!==routeId);
+    renderSSRoutes();
+    loadJobs();
+    if(!ssRoutes.length){
+      packages=[];
+      closeSmartSortDrawer();
+      document.getElementById('dropZone').style.display='block';
+      document.getElementById('demoDataBtn').style.display='flex';
+      document.getElementById('packageTable').style.display='none';
+      document.getElementById('statsRow').style.display='none';
+      document.getElementById('buildBtn').style.display='none';
+      document.getElementById('ssEmptyState').style.display='flex';
+      document.getElementById('routeGrid').style.display='none';
+    }
+  }catch(e){
+    toast('Could not assign route','warn');
+  }
 }
 
 </script>
