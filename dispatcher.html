@@ -863,7 +863,7 @@ body::after{content:'';position:fixed;inset:0;
           <div class="spark-box"><div class="spark-lbl">AI Decisions Today</div><div class="spark-val" style="color:var(--purple);" id="sp-decisions">—</div><div class="bar-w"><div class="bar-f" id="sp-dbar" style="background:var(--purple);width:0%;"></div></div></div>
         </div>
         <div class="panel" style="border-color:rgba(141,92,255,.2);">
-          <div class="panel-hdr"><div><div class="panel-ttl">SmartPath AI Reasoning</div><div class="panel-sub">LIVE DECISION LOG · ROUTE INTELLIGENCE</div></div><div class="ai-chip">&#129504; AI ACTIVE</div></div>
+          <div class="panel-hdr"><div><div class="panel-ttl">SmartPath AI Reasoning</div><div class="panel-sub">LIVE DECISION LOG · ROUTE INTELLIGENCE</div></div><div class="ai-chip" id="spAiChip">&#129504; AI ACTIVE</div></div>
           <div id="spReasonFeed"></div>
           <div class="conf-wrap">
             <div class="conf-lbl">Route Confidence · Current Active Signals</div>
@@ -1796,6 +1796,8 @@ function renderSmartPath(){
   document.getElementById('confVal').textContent=conf+'%';
   // Reasoning feed -- real job facts, not fabricated route/traffic narrative
   const feed=document.getElementById('spReasonFeed');
+  const aiChip=document.getElementById('spAiChip');
+  if(aiChip)aiChip.innerHTML=transit.length?'&#129504; AI ACTIVE':'&#9679; STANDBY';
   if(transit.length){
     feed.innerHTML=transit.slice(0,2).map(j=>{
       const etaMins = j.estimated_delivery_at ? Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000) : null;
@@ -1824,7 +1826,7 @@ function renderSmartPath(){
       </div>
     `;}).join('');
   } else {
-    feed.innerHTML='<div style="padding:16px;font-family:var(--mono);font-size:0.769rem;color:var(--faint);">No active transit signals — SmartPath standing by.</div>';
+    feed.innerHTML='<div style="padding:16px;font-family:var(--mono);font-size:0.769rem;color:var(--faint);">No active transit signals. SmartPath standing by.</div>';
   }
   // Active route
   const subtitle=document.getElementById('spRouteSubtitle');
