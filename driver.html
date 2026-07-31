@@ -1548,13 +1548,20 @@ Current job: ${JSON.stringify(jobCtx)}. Driver: ${driver?.name}.
   }catch(e){
     closeRuby();
     const t=transcript.toLowerCase();
-    if(t.includes('pickup')||t.includes('arrived at pickup'))arrivedAtPickup();
-    else if(t.includes('got')||t.includes('have package')||t.includes('collected'))startDelivery();
-    else if(t.includes('dropoff')||t.includes('arrived at drop'))arrivedAtDropoff();
-    else if(t.includes('delivered')||t.includes('done'))showScreen('scPOD');
+    if(t.includes('pickup')||t.includes('arrived at pickup')){arrivedAtPickup();speak('Got it, marked arrived at pickup.');}
+    else if(t.includes('got')||t.includes('have package')||t.includes('collected')){startDelivery();speak('Package confirmed, heading out.');}
+    else if(t.includes('dropoff')||t.includes('arrived at drop')){arrivedAtDropoff();speak('Got it, marked arrived at dropoff.');}
+    else if(t.includes('delivered')||t.includes('done')){showScreen('scPOD');speak('Opening proof of delivery.');}
     else if(t.includes('nobody home')){
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'INCIDENT: Nobody home.'}).catch(()=>{});
       toast('Incident reported','warn');
+      speak('Got it, I let dispatch know nobody was home.');
+    }
+    else{
+      // No specific action matched -- treat it as a general message to dispatch rather than doing nothing
+      if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:transcript}).catch(()=>{});
+      toast('Message sent to dispatch','ok');
+      speak('Got it, I sent that to dispatch.');
     }
   }
 }
@@ -1562,16 +1569,19 @@ async function execRubyAction(cmd,transcript){
   switch(cmd.action){
     case 'navigate':
       const dest=currentJob?.status==='in_transit'?currentJob?.dropoff_address:currentJob?.pickup_address;
-      if(dest)startTurnByTurn(dest);break;
-    case 'arrived_pickup':arrivedAtPickup();break;
-    case 'got_package':startDelivery();break;
-    case 'arrived_dropoff':arrivedAtDropoff();break;
-    case 'open_pod':setTimeout(()=>showScreen('scPOD'),300);break;
+      if(dest){startTurnByTurn(dest);speak('Starting navigation.');}break;
+    case 'arrived_pickup':arrivedAtPickup();speak('Got it, marked arrived at pickup.');break;
+    case 'got_package':startDelivery();speak('Package confirmed, heading out.');break;
+    case 'arrived_dropoff':arrivedAtDropoff();speak('Got it, marked arrived at dropoff.');break;
+    case 'open_pod':setTimeout(()=>showScreen('scPOD'),300);speak('Opening proof of delivery.');break;
     case 'create_incident':
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'INCIDENT ['+(cmd.incident_type||'OTHER').toUpperCase()+']: '+(cmd.incident_detail||transcript)}).catch(()=>{});
-      toast('Incident reported to dispatch','warn');break;
+      toast('Incident reported to dispatch','warn');speak('Got it, I let dispatch know.');break;
     case 'send_message':
-      if(cmd.message&&currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:cmd.message}).catch(()=>{});break;
+      if(cmd.message&&currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:cmd.message}).catch(()=>{});
+      speak('Got it, I sent that to dispatch.');break;
+    case 'speak_only':
+      if(cmd.message)speak(cmd.message);break;
   }
 }
 
