@@ -2118,7 +2118,7 @@ function startGPS(){
     },()=>{},{enableHighAccuracy:true,timeout:8000,maximumAge:5000});
   },10000);
   gpsWatcher=navigator.geolocation.watchPosition(
-    pos=>{if(!currentJob)return;sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed}).catch(()=>{});},
+    pos=>{if(!currentJob)return;sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed,updated_at:new Date().toISOString()}).catch(()=>{});},
     err=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:15000}
   );
 }
