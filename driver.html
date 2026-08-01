@@ -1588,7 +1588,6 @@ Current job: ${JSON.stringify(jobCtx)}. Driver: ${driver?.name}.
       // No specific action matched -- treat it as a general message to dispatch rather than doing nothing
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:transcript}).catch(()=>{});
       toast('Message sent to dispatch','ok');
-      if(isVoice)speak('Got it, I sent that to dispatch.');
     }
   }
 }
@@ -1606,7 +1605,7 @@ async function execRubyAction(cmd,transcript,isVoice){
       toast('Incident reported to dispatch','warn');if(isVoice)speak('Got it, I let dispatch know.');break;
     case 'send_message':
       if(cmd.message&&currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:cmd.message}).catch(()=>{});
-      if(isVoice)speak('Got it, I sent that to dispatch.');break;
+      break;
     case 'speak_only':
       if(cmd.message&&isVoice)speak(cmd.message);break;
   }
