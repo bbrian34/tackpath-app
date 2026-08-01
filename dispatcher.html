@@ -2889,6 +2889,47 @@ async function geocodeAddress(address){
   }
 }
 
+// Real traffic-aware leg duration via Google's Directions API.
+// Note: duration_in_traffic is ONLY returned for a simple two-point request,
+// NOT when using waypoints -- so each leg of a multi-stop route needs its own call.
+async function getTrafficAwareLegSeconds(originCoords,destCoords){
+  try{
+    const url='https://maps.googleapis.com/maps/api/directions/json'
+      +'?origin='+originCoords.lat+','+originCoords.lng
+      +'&destination='+destCoords.lat+','+destCoords.lng
+      +'&departure_time=now'
+      +'&key='+GKEY;
+    const resp=await fetch(url);
+    const data=await resp.json();
+    if(data.status==='OK'&&data.routes&&data.routes[0]&&data.routes[0].legs&&data.routes[0].legs[0]){
+      const leg=data.routes[0].legs[0];
+      if(leg.duration_in_traffic) return leg.duration_in_traffic.value;
+      if(leg.duration) return leg.duration.value; // fallback: no traffic data available for this leg, use plain estimate
+    }
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+// Real, traffic-aware total duration across every leg of a multi-stop route.
+// Falls back to the simple distance-based formula only for legs where the real API call fails.
+async function getTrafficAwareRouteSeconds(stops){
+  let totalSeconds=0;
+  let anyRealData=false;
+  for(let i=0;i<stops.length-1;i++){
+    if(!stops[i].coords||!stops[i+1].coords)continue;
+    const legSeconds=await getTrafficAwareLegSeconds(stops[i].coords,stops[i+1].coords);
+    if(legSeconds!==null){
+      totalSeconds+=legSeconds;
+      anyRealData=true;
+    }else{
+      totalSeconds+=(3*60); // safe fallback for just this one leg if the API call failed
+    }
+  }
+  return anyRealData?totalSeconds:null;
+}
+
 function haversineDistance(a,b){
   const R=3958.8;
   const dLat=(b.lat-a.lat)*Math.PI/180;
@@ -3021,6 +3062,10 @@ async function assignSSRoute(routeId){
   const route=ssRoutes.find(r=>r.id===routeId);
   if(!route){toast('Route not found','warn');return;}
 
+  const fallbackMinutes=15 + (parseFloat(route.est_miles)||0)*3 + route.stops.length*5;
+  const realTrafficSeconds=await getTrafficAwareRouteSeconds(route.stops);
+  const estimatedMinutes=realTrafficSeconds!==null ? (realTrafficSeconds/60) : fallbackMinutes;
+
   const job={
     title:'Surge Route '+route.id,
     job_type:'surge',
@@ -3041,7 +3086,7 @@ async function assignSSRoute(routeId){
     total_packages: route.total_packages,
     price: (route.stops.length * 8 + route.total_packages * 2).toFixed(2),
     distance_miles: parseFloat(route.est_miles)||0,
-    estimated_delivery_at: new Date(Date.now() + (15 + (parseFloat(route.est_miles)||0)*3 + route.stops.length*5) * 60000).toISOString(),
+    estimated_delivery_at: new Date(Date.now() + estimatedMinutes * 60000).toISOString(),
     created_at: new Date().toISOString()
   };
 
