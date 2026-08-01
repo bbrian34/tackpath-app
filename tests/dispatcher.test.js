@@ -227,22 +227,29 @@ test('dispatcher.html: Sprint-tab exceptions panel correctly detects Late, Unass
   const now = Date.now();
   const allJobs = [
     { id: 'j-late', title: 'Late job', org_id: 'org-demo-uuid', status: 'in_transit', archived: false,
-      created_at: new Date(now - 60*60000).toISOString(), updated_at: new Date(now - 5*60000).toISOString(),
+      created_at: new Date(now - 60*60000).toISOString(),
       estimated_delivery_at: new Date(now - 10*60000).toISOString(), driver_name: 'Marcus' },
     { id: 'j-unassigned', title: 'Unassigned job', org_id: 'org-demo-uuid', status: 'pending', archived: false,
       created_at: new Date(now - 20*60000).toISOString() },
     { id: 'j-dark', title: 'Dark driver job', org_id: 'org-demo-uuid', status: 'in_transit', archived: false,
-      created_at: new Date(now - 90*60000).toISOString(), updated_at: new Date(now - 40*60000).toISOString(),
-      driver_name: 'Alex' },
+      created_at: new Date(now - 90*60000).toISOString(), driver_name: 'Alex' },
     { id: 'j-cancelled', title: 'Cancelled job', org_id: 'org-demo-uuid', status: 'cancelled', archived: false,
       created_at: new Date(now - 30*60000).toISOString() },
     { id: 'j-healthy', title: 'Healthy job', org_id: 'org-demo-uuid', status: 'in_transit', archived: false,
-      created_at: new Date(now - 5*60000).toISOString(), updated_at: new Date(now - 1*60000).toISOString(),
+      created_at: new Date(now - 5*60000).toISOString(),
       estimated_delivery_at: new Date(now + 20*60000).toISOString(), driver_name: 'Sam' },
+  ];
+  // Real per-driver last-seen GPS pings -- this is what Driver Dark detection now relies on,
+  // since jobs.updated_at cannot be reliably assumed to exist in the real schema
+  const driverLocations = [
+    { driver_name: 'Marcus', updated_at: new Date(now - 5*60000).toISOString() },
+    { driver_name: 'Alex', updated_at: new Date(now - 40*60000).toISOString() },
+    { driver_name: 'Sam', updated_at: new Date(now - 1*60000).toISOString() },
   ];
 
   const fetchHandler = async (url) => {
     if (url.includes('/organizations')) return { ok: true, json: async () => mockOrgs };
+    if (url.includes('driver_locations')) return { ok: true, json: async () => driverLocations };
     if (url.includes('/jobs')) return { ok: true, json: async () => allJobs };
     return undefined;
   };
