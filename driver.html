@@ -850,7 +850,7 @@ const GH={'apikey':KEY,'Authorization':'Bearer '+KEY};
 const PH={...GH,'Content-Type':'application/json','Prefer':'return=representation'};
 const sbu=p=>SB+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+KEY;
 const sbGet=async p=>{const r=await fetch(sbu(p),{headers:GH});if(!r.ok)throw Error(await r.text());return r.json();};
-const sbPatch=async(p,b)=>{if(p.startsWith('jobs')&&!('updated_at' in b))b={...b,updated_at:new Date().toISOString()};const r=await fetch(sbu(p),{method:'PATCH',headers:PH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
+const sbPatch=async(p,b)=>{const r=await fetch(sbu(p),{method:'PATCH',headers:PH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
 const sbPost=async(p,b)=>{const r=await fetch(sbu(p),{method:'POST',headers:PH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
 
 // ── STATE ──
@@ -1172,7 +1172,7 @@ async function acceptOffer(){
   stopOfferAlert();unlockSpeech();
   currentJob=pendingJob;pendingJob=null;
   currentJob.status='customer_confirmed';
-  try{await sbPatch('jobs?id=eq.'+currentJob.id,{status:'customer_confirmed',driver_name:driver.name,customer_confirmed:true});}catch(e){}
+  try{await sbPatch('jobs?id=eq.'+currentJob.id,{status:'customer_confirmed',driver_name:driver.name});}catch(e){}
   scannedPackages=[];
   // Detect Surge job -- parse surge_stops if it came back as a string
   let surgeSt=currentJob.surge_stops;
