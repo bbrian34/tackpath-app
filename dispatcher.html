@@ -1600,12 +1600,7 @@ function clearExceptionFilter(){
   document.getElementById('excDetailPanel').style.display='none';
 }
 
-function renderExceptionDetail(){
-  const panel=document.getElementById('excDetailPanel');
-  const body=document.getElementById('excDetailBody');
-  if(!exceptionFilterActive){panel.style.display='none';return;}
-  panel.style.display='block';
-
+function getRealExceptions(){
   const exceptions=[];
   jobs.forEach(j=>{
     const lastSeen=driverLastSeen[j.driver_name]||j.picked_up_at||j.created_at;
@@ -1617,6 +1612,16 @@ function renderExceptionDetail(){
       exceptions.push({job:j,reason:'Driver Dark',since:lastSeen,mins:Math.floor((Date.now()-new Date(lastSeen).getTime())/60000)});
     }
   });
+  return exceptions;
+}
+
+function renderExceptionDetail(){
+  const panel=document.getElementById('excDetailPanel');
+  const body=document.getElementById('excDetailBody');
+  if(!exceptionFilterActive){panel.style.display='none';return;}
+  panel.style.display='block';
+
+  const exceptions=getRealExceptions();
 
   if(!exceptions.length){
     body.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:0.923rem;">No exceptions right now. Everything is on track.</div>';
@@ -1712,7 +1717,7 @@ function renderExceptionQueue(){
 
 // ── RENDER ALL ──
 function renderAll(){
-  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();
+  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();
   const drawerEl=document.getElementById('drawer');
   if(drawerEl&&drawerEl.classList.contains('open')&&currentJobId){
     openDrawer(currentJobId);
@@ -1734,7 +1739,7 @@ function renderKPIs(){
   document.getElementById('kpi-delivered').textContent=counts.delivered;
   document.getElementById('kpi-assigned').textContent=counts.assigned;
   document.getElementById('sb-total').textContent=jobs.length;
-  document.getElementById('sb-exc').textContent=counts.pending>3?counts.pending-3:0;
+  document.getElementById('sb-exc').textContent=getRealExceptions().length;
   document.getElementById('sb-active').textContent=counts.in_transit+counts.assigned;
   document.getElementById('sf-active').textContent=counts.in_transit+counts.assigned;
   document.getElementById('sf-pending').textContent=counts.pending;
