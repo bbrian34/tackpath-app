@@ -1382,6 +1382,7 @@ async function getMessages(jobId){
 
 // ── STATE ──
 let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
+let driverLastSeen={};
 let lastDropoffByJobId={};
 
 // ── LOGIN ──
@@ -1570,6 +1571,14 @@ async function loadJobs(){
     });
     jobs=newJobs;
     syncSurgeBlocksFromJobs();
+    try{
+      const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
+      driverLastSeen={};
+      (locs||[]).forEach(function(l){
+        if(!driverLastSeen[l.driver_name]||new Date(l.updated_at)>new Date(driverLastSeen[l.driver_name]))
+          driverLastSeen[l.driver_name]=l.updated_at;
+      });
+    }catch(e){}
     renderAll();
   }catch(e){
     ring.style.display='none';ps.textContent='Error';
@@ -1599,12 +1608,13 @@ function renderExceptionDetail(){
 
   const exceptions=[];
   jobs.forEach(j=>{
+    const lastSeen=driverLastSeen[j.driver_name];
     if(j.status==='in_transit'&&j.estimated_delivery_at&&Date.now()>new Date(j.estimated_delivery_at).getTime()){
       exceptions.push({job:j,reason:'Late',since:j.estimated_delivery_at,mins:Math.floor((Date.now()-new Date(j.estimated_delivery_at).getTime())/60000)});
     }else if(j.status==='pending'&&((Date.now()-new Date(j.created_at).getTime())>15*60*1000)){
       exceptions.push({job:j,reason:'Unassigned',since:j.created_at,mins:Math.floor((Date.now()-new Date(j.created_at).getTime())/60000)});
-    }else if(j.status==='in_transit'&&j.updated_at&&((Date.now()-new Date(j.updated_at).getTime())>30*60*1000)){
-      exceptions.push({job:j,reason:'Driver Dark',since:j.updated_at,mins:Math.floor((Date.now()-new Date(j.updated_at).getTime())/60000)});
+    }else if(j.status==='in_transit'&&lastSeen&&((Date.now()-new Date(lastSeen).getTime())>30*60*1000)){
+      exceptions.push({job:j,reason:'Driver Dark',since:lastSeen,mins:Math.floor((Date.now()-new Date(lastSeen).getTime())/60000)});
     }
   });
 
@@ -1619,7 +1629,7 @@ function renderExceptionDetail(){
   jobs.forEach(j=>{
     if(!j.driver_name||new Date(j.created_at).getTime()<oneWeekAgo)return;
     const isLate=j.status==='in_transit'&&j.estimated_delivery_at&&Date.now()>new Date(j.estimated_delivery_at).getTime();
-    const isDark=j.status==='in_transit'&&j.updated_at&&((Date.now()-new Date(j.updated_at).getTime())>30*60*1000);
+    const isDark=j.status==='in_transit'&&driverLastSeen[j.driver_name]&&((Date.now()-new Date(driverLastSeen[j.driver_name]).getTime())>30*60*1000);
     if(isLate||isDark)driverExceptionCounts[j.driver_name]=(driverExceptionCounts[j.driver_name]||0)+1;
   });
 
@@ -1670,12 +1680,12 @@ function renderExceptionQueue(){
 
   const stalledJobs = jobs.filter(j =>
     j.status === 'in_transit' &&
-    j.updated_at &&
-    ((Date.now() - new Date(j.updated_at).getTime()) > 30 * 60 * 1000)
+    driverLastSeen[j.driver_name] &&
+    ((Date.now() - new Date(driverLastSeen[j.driver_name]).getTime()) > 30 * 60 * 1000)
   ).map(j => ({
     id: j.id,
     title: 'Stalled: ' + (j.title || j.id.slice(0,8)),
-    description: 'No update in ' + Math.floor((Date.now() - new Date(j.updated_at).getTime())/60000) + ' min · ' + (j.driver_name || 'unknown driver'),
+    description: 'No update in ' + Math.floor((Date.now() - new Date(driverLastSeen[j.driver_name]).getTime())/60000) + ' min · ' + (j.driver_name || 'unknown driver'),
     priority: 'high',
     source: 'dispatcher',
     confidence_score: 1
@@ -2067,7 +2077,7 @@ function renderSprint(){
     // UNASSIGNED: sat pending too long with no driver
     if(j.status==='pending' && ((Date.now() - new Date(j.created_at).getTime()) > 15*60*1000)) return true;
     // DRIVER DARK: in transit but no update in a while
-    if(j.status==='in_transit' && j.updated_at && ((Date.now() - new Date(j.updated_at).getTime()) > 30*60*1000)) return true;
+    if(j.status==='in_transit' && driverLastSeen[j.driver_name] && ((Date.now() - new Date(driverLastSeen[j.driver_name]).getTime()) > 30*60*1000)) return true;
     return false;
   });
 
@@ -2122,7 +2132,7 @@ function renderSprint(){
           if(j.status==='cancelled') return 'Order cancelled';
           if(j.status==='in_transit' && j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()) return 'Late - past estimated delivery time';
           if(j.status==='pending') return 'Unassigned - no driver in ' + Math.floor((Date.now()-new Date(j.created_at).getTime())/60000) + ' min';
-          if(j.status==='in_transit') return 'Driver dark - no update in ' + Math.floor((Date.now()-new Date(j.updated_at).getTime())/60000) + ' min';
+          if(j.status==='in_transit') return 'Driver dark - no update in ' + Math.floor((Date.now()-new Date(driverLastSeen[j.driver_name]||j.created_at).getTime())/60000) + ' min';
           return 'Needs attention';
         })()}</div>
         <button onclick="sprintFeedEntry('TP-${j.id?j.id.slice(0,8):'—'}','Reassign attempted')" style="padding:5px 11px;border-radius:5px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);font-family:var(--mono);font-size:0.769rem;cursor:pointer;">REASSIGN</button>
@@ -2163,8 +2173,8 @@ function syncSurgeBlocksFromJobs(){
       exception=true; exceptionMsg='Late - past estimated delivery time';
     } else if(j.status==='pending' && ((Date.now()-new Date(j.created_at).getTime())>15*60*1000)){
       exception=true; exceptionMsg='Unassigned - no driver in '+Math.floor((Date.now()-new Date(j.created_at).getTime())/60000)+' min';
-    } else if(j.status==='in_transit' && j.updated_at && ((Date.now()-new Date(j.updated_at).getTime())>30*60*1000)){
-      exception=true; exceptionMsg='Driver dark - no update in '+Math.floor((Date.now()-new Date(j.updated_at).getTime())/60000)+' min';
+    } else if(j.status==='in_transit' && driverLastSeen[j.driver_name] && ((Date.now()-new Date(driverLastSeen[j.driver_name]).getTime())>30*60*1000)){
+      exception=true; exceptionMsg='Driver dark - no update in '+Math.floor((Date.now()-new Date(driverLastSeen[j.driver_name]).getTime())/60000)+' min';
     }
 
     return {
