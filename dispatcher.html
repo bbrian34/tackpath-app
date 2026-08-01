@@ -2889,22 +2889,31 @@ async function geocodeAddress(address){
   }
 }
 
-// Real traffic-aware leg duration via Google's Directions API.
-// Note: duration_in_traffic is ONLY returned for a simple two-point request,
-// NOT when using waypoints -- so each leg of a multi-stop route needs its own call.
+// Real traffic-aware leg duration via Google's modern Routes API (not the legacy Directions API,
+// per house policy: TackPath should not run on the same legacy infrastructure we're helping
+// couriers move away from). Each leg of a multi-stop route needs its own call, same as before.
 async function getTrafficAwareLegSeconds(originCoords,destCoords){
   try{
-    const url='https://maps.googleapis.com/maps/api/directions/json'
-      +'?origin='+originCoords.lat+','+originCoords.lng
-      +'&destination='+destCoords.lat+','+destCoords.lng
-      +'&departure_time=now'
-      +'&key='+GKEY;
-    const resp=await fetch(url);
+    const resp=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'X-Goog-Api-Key':GKEY,
+        'X-Goog-FieldMask':'routes.duration,routes.distanceMeters'
+      },
+      body:JSON.stringify({
+        origin:{location:{latLng:{latitude:originCoords.lat,longitude:originCoords.lng}}},
+        destination:{location:{latLng:{latitude:destCoords.lat,longitude:destCoords.lng}}},
+        travelMode:'DRIVE',
+        routingPreference:'TRAFFIC_AWARE',
+        departureTime:new Date().toISOString()
+      })
+    });
     const data=await resp.json();
-    if(data.status==='OK'&&data.routes&&data.routes[0]&&data.routes[0].legs&&data.routes[0].legs[0]){
-      const leg=data.routes[0].legs[0];
-      if(leg.duration_in_traffic) return leg.duration_in_traffic.value;
-      if(leg.duration) return leg.duration.value; // fallback: no traffic data available for this leg, use plain estimate
+    if(data.routes&&data.routes[0]&&data.routes[0].duration){
+      // Routes API returns duration as a string like "165s" -- parse out the number of seconds
+      const seconds=parseInt(data.routes[0].duration.replace('s',''));
+      if(!isNaN(seconds))return seconds;
     }
     return null;
   }catch(e){
