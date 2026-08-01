@@ -1571,25 +1571,10 @@ async function loadJobs(){
     jobs=newJobs;
     syncSurgeBlocksFromJobs();
     renderAll();
-    loadOCAData();
   }catch(e){
     ring.style.display='none';ps.textContent='Error';
     console.error('DB error:',e);
     addIntelEvent('Database connection error — retrying in 10s.','var(--red)');
-  }
-}
-
-// ── OCA AGENT DATA ──
-// Pulls work items from OCA Edge Function tables and merges into exception queue
-let ocaWorkItems = [];
-
-async function loadOCAData(){
-  try{
-    const items = await sbGet('work_items?status=in.(routing,pending,assigned,customer_confirmed,in_transit)&order=created_at.desc&limit=20');
-    ocaWorkItems = items || [];
-    renderExceptionQueue();
-  }catch(e){
-    // Silent -- OCA tables may not be active yet
   }
 }
 
@@ -1696,18 +1681,7 @@ function renderExceptionQueue(){
     confidence_score: 1
   }));
 
-  // OCA work items
-  const ocaItems = ocaWorkItems.map(i => ({
-    id: i.id,
-    title: i.title,
-    description: i.description || '',
-    priority: i.priority,
-    source: 'oca',
-    confidence_score: i.confidence_score || 0,
-    work_item_id: i.id
-  }));
-
-  const allExceptions = [...ocaItems, ...criticalJobs, ...stalledJobs];
+  const allExceptions = [...criticalJobs, ...stalledJobs];
 
   if(badge) badge.textContent = allExceptions.length + ' OPEN';
 
@@ -1723,26 +1697,8 @@ function renderExceptionQueue(){
       <div style="flex:1;min-width:0;">
         <div style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
         <div style="font-size:0.769rem;color:var(--muted);">${exc.description}</div>
-        ${exc.source==='oca' ? `<div style="font-family:var(--mono);font-size:0.615rem;color:var(--blue);margin-top:3px;">&#129504; OCA · ${Math.round((exc.confidence_score||0)*100)}% confidence</div>` : ''}
       </div>
-      ${exc.source==='oca' ? `
-      <div style="display:flex;gap:4px;flex-shrink:0;">
-        <button onclick="approveOCAItem('${exc.work_item_id}')" style="font-size:0.692rem;padding:3px 8px;border-radius:5px;background:rgba(76,175,125,.15);border:1px solid rgba(76,175,125,.3);color:#4caf7d;cursor:pointer;font-family:var(--mono);">✓</button>
-        <button onclick="rejectOCAItem('${exc.work_item_id}')" style="font-size:0.692rem;padding:3px 8px;border-radius:5px;background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--red);cursor:pointer;font-family:var(--mono);">✕</button>
-      </div>` : ''}
     </div>`).join('');
-}
-
-async function approveOCAItem(id){
-  await sbPatch('work_items?id=eq.'+id,{status:'approved'}).catch(()=>{});
-  addIntelEvent('&#129504; OCA recommendation approved','var(--green)');
-  loadOCAData();
-}
-
-async function rejectOCAItem(id){
-  await sbPatch('work_items?id=eq.'+id,{status:'rejected'}).catch(()=>{});
-  addIntelEvent('OCA recommendation rejected','var(--muted)');
-  loadOCAData();
 }
 
 // ── RENDER ALL ──
