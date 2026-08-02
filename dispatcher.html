@@ -1770,8 +1770,9 @@ function renderPipeline(){
   const statuses=['pending','assigned','in_transit','delivered','cancelled'];
   statuses.forEach(s=>{
     const col=cols[s];
-    const cnt=document.getElementById('pc-'+s);
-    const body=document.getElementById('pp-'+s);
+    const idSuffix=s==='in_transit'?'transit':s;
+    const cnt=document.getElementById('pc-'+idSuffix);
+    const body=document.getElementById('pp-'+idSuffix);
     if(cnt) cnt.textContent=col.length;
     if(!body) return;
     if(!col.length){body.innerHTML='<div class="pipe-empty">No '+s.replace('_',' ')+' jobs</div>';return;}
