@@ -1788,6 +1788,24 @@ function renderKPIs(){
 function renderPipeline(){
   const cols={pending:[],assigned:[],in_transit:[],delivered:[],cancelled:[]};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(cols[s]) cols[s].push(j); });
+
+  // "Assigned" means "has a driver and is still active" -- an in-transit job still has
+  // a driver assigned to it, so it correctly belongs in both boxes, not just one
+  cols.assigned=jobs.filter(j=>j.driver_name&&(j.status==='assigned'||j.status==='in_transit'));
+
+  // Jobs that aren't fully cancelled, but have at least one individually cancelled stop
+  // within a multi-stop Surge route -- these should still surface in the Cancelled box
+  const partiallyCancelled=[];
+  jobs.forEach(j=>{
+    if(j.status==='cancelled')return; // already counted above, avoid duplicates
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    if(stops&&Array.isArray(stops)&&stops.some(s=>s&&s.cancelled)){
+      partiallyCancelled.push(j);
+    }
+  });
+  cols.cancelled=[...cols.cancelled,...partiallyCancelled];
+
   const statuses=['pending','assigned','in_transit','delivered','cancelled'];
   statuses.forEach(s=>{
     const col=cols[s];
@@ -1800,9 +1818,10 @@ function renderPipeline(){
     body.innerHTML=col.slice(0,4).map(j=>{
       const shortId=j.id?j.id.slice(0,8):'—';
       const age=j.created_at?timeAgo(j.created_at):'';
+      const isPartial=s==='cancelled'&&j.status!=='cancelled';
       return `<div class="pcard" onclick="openDrawer('${j.id}')">
         <div class="pcard-sig">TP-${shortId}</div>
-        <div class="pcard-name">${j.title||'Untitled Job'}</div>
+        <div class="pcard-name">${j.title||'Untitled Job'}${isPartial?' <span style="color:var(--orange);font-size:0.7em;">(1 stop cancelled)</span>':''}</div>
         <div class="pcard-route">${j.pickup_address||'—'}</div>
         <div class="pcard-age">${age}</div>
       </div>`;
