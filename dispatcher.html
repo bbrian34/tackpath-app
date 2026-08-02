@@ -172,6 +172,18 @@ body::after{content:'';position:fixed;inset:0;
 .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+.kpi-total-banner{display:flex;align-items:center;gap:16px;padding:18px 24px;border-radius:14px;
+  background:linear-gradient(120deg,rgba(25,183,239,.12),var(--card) 65%);
+  border:1px solid rgba(25,183,239,.22);margin-bottom:18px;position:relative;overflow:hidden;}
+.kpi-total-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:.9;}
+.kpi-total-icon{width:44px;height:44px;border-radius:12px;background:rgba(25,183,239,.14);
+  display:flex;align-items:center;justify-content:center;color:var(--blue);flex-shrink:0;}
+.kpi-total-icon svg{width:22px;height:22px;}
+.kpi-total-lbl{font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;}
+.kpi-total-sub{font-size:0.769rem;color:var(--faint);margin-top:2px;}
+.kpi-total-val{font-size:2.25rem;font-weight:800;color:var(--blue);margin-left:auto;letter-spacing:-1px;}
 .kpi{padding:14px 16px;border-radius:13px;background:var(--card);
   border:1px solid var(--border);position:relative;overflow:hidden;cursor:default;}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:.9;}
@@ -759,11 +771,16 @@ body::after{content:'';position:fixed;inset:0;
       <div class="tab on" id="tab-dispatch">
         <!-- KPI ROW -->
         <div class="kpi-row">
-          <div class="kpi kpi-b"><div class="kpi-lbl">Total Jobs</div><div class="kpi-val" style="color:var(--blue);" id="kpi-total">—</div><div class="kpi-sub">All statuses</div></div>
-          <div class="kpi kpi-o"><div class="kpi-lbl">Pending</div><div class="kpi-val" style="color:var(--orange);" id="kpi-pending">—</div><div class="kpi-sub">Awaiting dispatch</div></div>
-          <div class="kpi kpi-p" style="position:relative;overflow:hidden;"><div class="kpi-lbl">In Transit</div><div class="kpi-val" style="color:var(--purple);" id="kpi-transit">—</div><div class="kpi-sub">Active deliveries</div></div>
-          <div class="kpi kpi-g"><div class="kpi-lbl">Delivered</div><div class="kpi-val" style="color:var(--green);" id="kpi-delivered">—</div><div class="kpi-sub">Today</div></div>
-          <div class="kpi kpi-y"><div class="kpi-lbl">Assigned</div><div class="kpi-val" style="color:var(--yellow);" id="kpi-assigned">—</div><div class="kpi-sub">Driver en route</div></div>
+          <div class="kpi-total-banner">
+            <div class="kpi-total-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7"/></svg>
+            </div>
+            <div>
+              <div class="kpi-total-lbl">Total Jobs</div>
+              <div class="kpi-total-sub">All statuses</div>
+            </div>
+            <div class="kpi-total-val" id="kpi-total">—</div>
+          </div>
         </div>
 
         <!-- EXCEPTIONS DETAIL PANEL -->
@@ -1734,10 +1751,6 @@ function renderKPIs(){
   const counts={pending:0,assigned:0,in_transit:0,delivered:0,cancelled:0};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(counts[s]!==undefined) counts[s]++; });
   document.getElementById('kpi-total').textContent=jobs.length;
-  document.getElementById('kpi-pending').textContent=counts.pending;
-  document.getElementById('kpi-transit').textContent=counts.in_transit;
-  document.getElementById('kpi-delivered').textContent=counts.delivered;
-  document.getElementById('kpi-assigned').textContent=counts.assigned;
   document.getElementById('sb-total').textContent=jobs.length;
   document.getElementById('sb-exc').textContent=getRealExceptions().length;
   document.getElementById('sb-active').textContent=counts.in_transit+counts.assigned;
