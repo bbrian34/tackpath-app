@@ -701,7 +701,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab" onclick="setTab('smarttrack',this)">SmartTrack</button>
       <button class="tbtab" onclick="setTab('command',this)" style="display:none;">Command</button>
       <button class="tbtab" onclick="setTab('analytics',this)">Analytics</button>
-      <button class="tbtab" onclick="setTab('sprint',this)" style="color:var(--blue);">Sprint</button>
+      <button class="tbtab" id="tab-sprint-btn" onclick="setTab('sprint',this)" style="color:var(--blue);">Sprint</button>
       <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
       <button class="tbtab" onclick="setTab('drivers',this)" style="color:var(--green,#53ff88);">Drivers</button>
       <button class="tbtab" onclick="setTab('history',this)" style="color:var(--muted);">History</button>
@@ -1463,6 +1463,13 @@ function startClock(){
 
 // ── TABS ──
 function setTab(id,btn){
+  if(id==='sprint'){
+    const activeSurge=jobs.some(j=>j.job_type==='surge'&&(j.status==='assigned'||j.status==='in_transit'));
+    if(activeSurge){
+      toast('Sprint is unavailable while a Surge delivery is active');
+      return;
+    }
+  }
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.tbtab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('on'));
@@ -1735,6 +1742,20 @@ function renderExceptionQueue(){
 // ── RENDER ALL ──
 function renderAll(){
   renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();
+
+  const sprintBtn=document.getElementById('tab-sprint-btn');
+  const activeSurgeNow=jobs.some(j=>j.job_type==='surge'&&(j.status==='assigned'||j.status==='in_transit'));
+  if(sprintBtn){
+    sprintBtn.style.opacity=activeSurgeNow?'.35':'1';
+    sprintBtn.style.cursor=activeSurgeNow?'not-allowed':'pointer';
+    sprintBtn.title=activeSurgeNow?'Unavailable during an active Surge delivery':'';
+  }
+  const sprintTabEl=document.getElementById('tab-sprint');
+  if(activeSurgeNow&&sprintTabEl&&sprintTabEl.classList.contains('on')){
+    setTab('dispatch',document.querySelector('.tbtab.on')||document.querySelector('.tbtab'));
+    toast('Switched out of Sprint - a Surge delivery is now active');
+  }
+
   const drawerEl=document.getElementById('drawer');
   if(drawerEl&&drawerEl.classList.contains('open')&&currentJobId){
     openDrawer(currentJobId);
@@ -2085,10 +2106,11 @@ function renderCommand(){
 
 // ── SLING ──
 function renderSprint(){
-  const active    = jobs.filter(j=>j.status==='assigned'||j.status==='in_transit');
-  const pending   = jobs.filter(j=>j.status==='pending');
-  const delivered = jobs.filter(j=>j.status==='delivered');
-  const exceptions= jobs.filter(j=>{
+  const sprintJobs = jobs.filter(j=>j.job_type!=='surge');
+  const active    = sprintJobs.filter(j=>j.status==='assigned'||j.status==='in_transit');
+  const pending   = sprintJobs.filter(j=>j.status==='pending');
+  const delivered = sprintJobs.filter(j=>j.status==='delivered');
+  const exceptions= sprintJobs.filter(j=>{
     if(j.status==='cancelled') return true;
     // LATE: still moving but past its own estimated delivery time
     if(j.status==='in_transit' && j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()) return true;
@@ -2099,15 +2121,15 @@ function renderSprint(){
     return false;
   });
 
-  const total = jobs.length;
+  const total = sprintJobs.length;
 
   document.getElementById('sl-active').textContent    = active.length;
-  document.getElementById('sl-transit').textContent   = jobs.filter(j=>j.status==='in_transit').length;
+  document.getElementById('sl-transit').textContent   = sprintJobs.filter(j=>j.status==='in_transit').length;
   document.getElementById('sl-pending').textContent   = pending.length;
   document.getElementById('sl-delivered').textContent = delivered.length;
 
   document.getElementById('sl-abar').style.width = total ? Math.min(active.length/total*100,100)+'%' : '0%';
-  document.getElementById('sl-tbar').style.width = total ? Math.min(jobs.filter(j=>j.status==='in_transit').length/total*100,100)+'%' : '0%';
+  document.getElementById('sl-tbar').style.width = total ? Math.min(sprintJobs.filter(j=>j.status==='in_transit').length/total*100,100)+'%' : '0%';
   document.getElementById('sl-pbar').style.width = total ? Math.min(pending.length/total*100,100)+'%' : '0%';
   document.getElementById('sl-dbar').style.width = total ? Math.min(delivered.length/total*100,100)+'%' : '0%';
 
@@ -2116,10 +2138,10 @@ function renderSprint(){
   const board = document.getElementById('sl-board');
   const statusColor={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--green)',delivered:'var(--green)',cancelled:'var(--red)'};
 
-  if(!jobs.length){
+  if(!sprintJobs.length){
     board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:0.846rem;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>';
   } else {
-    board.innerHTML=jobs.map(j=>{
+    board.innerHTML=sprintJobs.map(j=>{
       const sc=statusColor[j.status]||'var(--muted)';
       const driver=j.driver_name||j.title?.split('—')[0]?.trim()||'Unassigned';
       const route=`${j.pickup_address||'—'} → ${j.dropoff_address||'—'}`;
