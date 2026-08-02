@@ -210,7 +210,7 @@ body::after{content:'';position:fixed;inset:0;
 .pipe-hdr{padding:10px 12px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;}
 .pipe-title{font-family:var(--mono);font-size:0.615rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
 .pipe-cnt{font-family:var(--mono);font-size:0.769rem;font-weight:700;padding:2px 8px;border-radius:5px;}
-.pipe-body{padding:8px;display:flex;flex-direction:column;gap:6px;}
+.pipe-body{padding:8px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
 .pcard{padding:10px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);
   cursor:pointer;transition:all .15s;position:relative;}
 .pcard:hover{border-color:rgba(25,183,239,.3);background:var(--card3);transform:translateY(-1px);}
@@ -1786,27 +1786,14 @@ function renderKPIs(){
 
 // ── PIPELINE ──
 function renderPipeline(){
-  const cols={pending:[],assigned:[],in_transit:[],delivered:[],cancelled:[]};
+  const cols={pending:[],assigned:[],in_transit:[],delivered:[]};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(cols[s]) cols[s].push(j); });
 
   // "Assigned" means "has a driver and is still active" -- an in-transit job still has
   // a driver assigned to it, so it correctly belongs in both boxes, not just one
   cols.assigned=jobs.filter(j=>j.driver_name&&(j.status==='assigned'||j.status==='in_transit'));
 
-  // Jobs that aren't fully cancelled, but have at least one individually cancelled stop
-  // within a multi-stop Surge route -- these should still surface in the Cancelled box
-  const partiallyCancelled=[];
-  jobs.forEach(j=>{
-    if(j.status==='cancelled')return; // already counted above, avoid duplicates
-    let stops=j.surge_stops;
-    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
-    if(stops&&Array.isArray(stops)&&stops.some(s=>s&&s.cancelled)){
-      partiallyCancelled.push(j);
-    }
-  });
-  cols.cancelled=[...cols.cancelled,...partiallyCancelled];
-
-  const statuses=['pending','assigned','in_transit','delivered','cancelled'];
+  const statuses=['pending','assigned','in_transit','delivered'];
   statuses.forEach(s=>{
     const col=cols[s];
     const idSuffix=s==='in_transit'?'transit':s;
@@ -1818,15 +1805,51 @@ function renderPipeline(){
     body.innerHTML=col.slice(0,4).map(j=>{
       const shortId=j.id?j.id.slice(0,8):'—';
       const age=j.created_at?timeAgo(j.created_at):'';
-      const isPartial=s==='cancelled'&&j.status!=='cancelled';
       return `<div class="pcard" onclick="openDrawer('${j.id}')">
         <div class="pcard-sig">TP-${shortId}</div>
-        <div class="pcard-name">${j.title||'Untitled Job'}${isPartial?' <span style="color:var(--orange);font-size:0.7em;">(1 stop cancelled)</span>':''}</div>
+        <div class="pcard-name">${j.title||'Untitled Job'}</div>
         <div class="pcard-route">${j.pickup_address||'—'}</div>
         <div class="pcard-age">${age}</div>
       </div>`;
     }).join('')+(col.length>4?`<div class="pipe-empty">+${col.length-4} more</div>`:'');
   });
+
+  // Cancelled is handled separately: every individual cancellation gets its own visible
+  // entry -- a fully cancelled job counts as one entry, and each individually cancelled
+  // stop within a multi-stop route counts as its own separate entry too, not lumped together
+  const cancellationEntries=[];
+  jobs.forEach(j=>{
+    if(j.status==='cancelled'){
+      cancellationEntries.push({jobId:j.id,title:j.title||'Untitled Job',detail:j.pickup_address||'—',age:j.created_at?timeAgo(j.created_at):'',whole:true});
+      return;
+    }
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    if(stops&&Array.isArray(stops)){
+      stops.forEach((stp,i)=>{
+        if(stp&&stp.cancelled){
+          cancellationEntries.push({jobId:j.id,title:(j.title||'Untitled Job')+' — stop '+(i+1),detail:stp.address||'—',age:j.created_at?timeAgo(j.created_at):'',whole:false});
+        }
+      });
+    }
+  });
+
+  const cancelCnt=document.getElementById('pc-cancelled');
+  const cancelBody=document.getElementById('pp-cancelled');
+  if(cancelCnt) cancelCnt.textContent=cancellationEntries.length;
+  if(cancelBody){
+    if(!cancellationEntries.length){
+      cancelBody.innerHTML='<div class="pipe-empty">No cancelled jobs</div>';
+    }else{
+      cancelBody.innerHTML=cancellationEntries.map(e=>`
+        <div class="pcard" onclick="openDrawer('${e.jobId}')">
+          <div class="pcard-sig">TP-${e.jobId.slice(0,8)}</div>
+          <div class="pcard-name">${e.title}${e.whole?'':' <span style="color:var(--orange);font-size:0.7em;">(stop cancelled)</span>'}</div>
+          <div class="pcard-route">${e.detail}</div>
+          <div class="pcard-age">${e.age}</div>
+        </div>`).join('');
+    }
+  }
 }
 
 // ── TABLE ──
