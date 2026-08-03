@@ -1002,10 +1002,6 @@ body::after{content:'';position:fixed;inset:0;
               <label style="font-size:0.769rem;color:var(--muted);display:block;margin-bottom:4px;">Phone</label>
               <input type="tel" id="newDriverPhone" class="fi2" placeholder="(404) 555-0100"/>
             </div>
-            <div>
-              <label style="font-size:0.769rem;color:var(--muted);display:block;margin-bottom:4px;">Vehicle Type</label>
-              <input type="text" id="newDriverVehicle" class="fi2" placeholder="Sedan, Van, etc (optional)"/>
-            </div>
             <button class="btn-primary" onclick="addDriver()" style="padding:9px 18px;font-size:0.923rem;white-space:nowrap;">Save</button>
           </div>
         </div>
@@ -1512,7 +1508,7 @@ async function renderDriverRoster(){
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
       <div>
         <div style="font-weight:700;font-size:1.077rem;">${d.name}</div>
-        <div style="font-size:0.923rem;color:var(--muted);font-family:var(--mono);">${d.phone}${d.vehicle_type?' · '+d.vehicle_type:''}</div>
+        <div style="font-size:0.923rem;color:var(--muted);font-family:var(--mono);">${d.phone}</div>
       </div>
     </div>
   `).join('');
@@ -1527,7 +1523,7 @@ async function addDriver(){
   const vehicle=document.getElementById('newDriverVehicle').value.trim();
   if(!name||!phone){toast('Name and phone are required','warn');return;}
   try{
-    const r=await fetch(sbUrl('drivers'),{method:'POST',headers:H,body:JSON.stringify({name,phone,vehicle_type:vehicle||null})});
+    const r=await fetch(sbUrl('drivers'),{method:'POST',headers:H,body:JSON.stringify({name,phone})});
     if(!r.ok){
       const errText=await r.text();
       console.error('Add driver failed:',errText);
@@ -1553,7 +1549,7 @@ async function populateDriverPicker(){
     }
     const allDrivers=await res.json();
     sel.innerHTML='<option value="">Select a driver...</option>'+
-      allDrivers.map(d=>`<option value="${d.name}">${d.name}${d.vehicle_type?' ('+d.vehicle_type+')':''}</option>`).join('');
+      allDrivers.map(d=>`<option value="${d.name}">${d.name}</option>`).join('');
   }catch(e){
     sel.innerHTML='<option value="">No drivers available</option>';
   }
