@@ -1028,7 +1028,17 @@ async function verifyCode(){
   const entered=(document.getElementById('loginCode').value||'').trim().replace(/\D/g,'');
   if(entered.length!==6){toast('Enter a 6-digit code','warn');return;}
   const phone=pendingPhone||'0000000000';
-  driver={id:'drv-'+phone,phone:phone,name:'Driver',email:'',first:'Driver'};
+  let realName='Driver';
+  try{
+    const matches=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&limit=1');
+    if(matches&&matches.length&&matches[0].name){
+      realName=matches[0].name;
+    }
+  }catch(e){
+    // If the lookup fails for any reason, fall back to the generic placeholder
+    // rather than blocking login entirely
+  }
+  driver={id:'drv-'+phone,phone:phone,name:realName,email:'',first:realName.split(' ')[0]||realName};
   localStorage.setItem('tp_drv',JSON.stringify(driver));
   unlockSpeech();initApp();
 }
