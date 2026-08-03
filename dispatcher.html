@@ -1805,10 +1805,11 @@ function renderPipeline(){
     body.innerHTML=col.slice(0,4).map(j=>{
       const shortId=j.id?j.id.slice(0,8):'—';
       const age=j.created_at?timeAgo(j.created_at):'';
+      const secondLine=(s==='assigned'&&j.driver_name)?('Assigned to '+j.driver_name):(j.pickup_address||'—');
       return `<div class="pcard" onclick="openDrawer('${j.id}')">
         <div class="pcard-sig">TP-${shortId}</div>
         <div class="pcard-name">${j.title||'Untitled Job'}</div>
-        <div class="pcard-route">${j.pickup_address||'—'}</div>
+        <div class="pcard-route">${secondLine}</div>
         <div class="pcard-age">${age}</div>
       </div>`;
     }).join('')+(col.length>4?`<div class="pipe-empty">+${col.length-4} more</div>`:'');
