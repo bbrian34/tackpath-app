@@ -1520,7 +1520,6 @@ function showAddDriverForm(){
 async function addDriver(){
   const name=document.getElementById('newDriverName').value.trim();
   const phone=document.getElementById('newDriverPhone').value.trim();
-  const vehicle=document.getElementById('newDriverVehicle').value.trim();
   if(!name||!phone){toast('Name and phone are required','warn');return;}
   try{
     const r=await fetch(sbUrl('drivers'),{method:'POST',headers:H,body:JSON.stringify({name,phone})});
@@ -1533,7 +1532,6 @@ async function addDriver(){
     toast('Driver added','ok');
     document.getElementById('newDriverName').value='';
     document.getElementById('newDriverPhone').value='';
-    document.getElementById('newDriverVehicle').value='';
     document.getElementById('addDriverForm').style.display='none';
     renderDriverRoster();
   }catch(e){toast('Could not add driver: '+e.message,'warn');}
