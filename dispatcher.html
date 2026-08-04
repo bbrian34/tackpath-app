@@ -84,10 +84,10 @@ body::after{content:'';position:fixed;inset:0;
 .lf-note{text-align:center;margin-top:13px;font-family:var(--mono);font-size:0.692rem;color:var(--faint);letter-spacing:.07em;}
 
 /* ── SHELL ── */
-#shell{display:none;height:100vh;max-height:100vh;flex-direction:column;position:relative;z-index:1;overflow:hidden;}
+#shell{display:none;height:100vh;max-height:100vh;flex-direction:column;position:relative;z-index:1;overflow:hidden;width:100%;min-width:0;max-width:100vw;}
 
 /* ── TOPBAR ── */
-#topbar{height:52px;display:flex;align-items:center;padding:0 14px;flex-wrap:nowrap;
+#topbar{height:52px;display:flex;align-items:center;padding:0 14px;flex-wrap:nowrap;min-width:0;
   background:rgba(2,6,14,.96);border-bottom:1px solid rgba(25,183,239,.1);
   backdrop-filter:blur(24px);gap:18px;flex-shrink:0;z-index:200;overflow:hidden;}
 .tb-brand{display:flex;align-items:center;gap:9px;flex-shrink:0;}
@@ -143,7 +143,7 @@ body::after{content:'';position:fixed;inset:0;
 @media(max-width:800px){.tb-clock{display:none;}.sys-status span:not(.sys-dot){display:none;}}
 
 /* ── LAYOUT ── */
-#layout{display:flex;flex:1;overflow:hidden;min-height:0;}
+#layout{display:flex;flex:1;overflow:hidden;min-height:0;min-width:0;}
 
 /* ── SIDEBAR ── */
 #sidebar{width:196px;flex-shrink:0;border-right:1px solid var(--border);
