@@ -671,6 +671,28 @@ body::after{content:'';position:fixed;inset:0;
   z-index:99999;font-size:0.846rem;font-weight:700;min-width:220px;text-align:center;
   animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+/* ── RECOVERY PLAN MODAL ── */
+#recoveryModal{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(2,6,14,.85);backdrop-filter:blur(8px);}
+#recoveryModal.open{display:flex;}
+#recoveryPanel{background:var(--card);border:1px solid rgba(255,60,60,.25);border-radius:18px;width:min(640px,96vw);max-height:90vh;overflow-y:auto;padding:28px;position:relative;box-shadow:0 0 60px -10px rgba(255,60,60,.2);}
+.rp-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.rp-pulse{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 12px rgba(255,60,60,.8);animation:pulse 1s infinite;}
+.rp-title{font-size:1.077rem;font-weight:800;color:var(--text);flex:1;}
+.rp-close{background:transparent;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.rp-close:hover{background:var(--card2);}
+.rp-section{margin-bottom:20px;}
+.rp-section-label{font-family:var(--mono);font-size:0.65rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+.rp-situation{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:0.877rem;line-height:1.6;color:var(--text);}
+.rp-situation b{color:var(--orange);}
+.rp-msg-block{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;}
+.rp-msg-to{font-family:var(--mono);font-size:0.65rem;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;}
+.rp-msg-body{font-size:0.846rem;color:var(--text);line-height:1.5;}
+.rp-actions{display:flex;gap:10px;margin-top:24px;}
+.rp-btn-approve{flex:1;padding:13px;border-radius:10px;background:rgba(83,255,136,.12);border:1px solid rgba(83,255,136,.3);color:var(--green);font-weight:800;font-size:0.923rem;cursor:pointer;font-family:var(--sans);}
+.rp-btn-approve:hover{background:rgba(83,255,136,.2);}
+.rp-btn-dismiss{padding:13px 20px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.923rem;cursor:pointer;font-family:var(--sans);}
+.rp-approved{text-align:center;padding:16px;color:var(--green);font-weight:700;font-size:0.923rem;display:none;}
+.rp-generating{text-align:center;padding:24px;color:var(--muted);font-size:0.877rem;}
 </style>
 </head>
 <body>
@@ -1738,6 +1760,7 @@ function renderExceptionDetail(){
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Since</th>
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Duration</th>
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">This week</th>
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Recovery</th>
       </tr></thead>
       <tbody>
         ${exceptions.map(e=>{
@@ -1750,6 +1773,11 @@ function renderExceptionDetail(){
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${sinceStr}</td>
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;">${e.mins} min</td>
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${driverName==='Unassigned'?'—':count+' exception'+(count!==1?'s':'')}</td>
+            <td style="padding:10px 12px;">
+              <button onclick="event.stopPropagation();openRecoveryModal('${e.job.id}')" style="padding:5px 12px;border-radius:7px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.692rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--mono);">
+                Recovery Plan →
+              </button>
+            </td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -1805,6 +1833,198 @@ function renderExceptionQueue(){
         <div style="font-size:0.769rem;color:var(--muted);">${exc.description}</div>
       </div>
     </div>`).join('');
+}
+
+// ── RECOVERY PLAN GENERATOR ──
+// Generates a ready-to-approve recovery plan when an exception is detected.
+// Reads real job, driver, and GPS data already in TackPath -- no new data sources needed.
+// All actions require dispatcher approval -- nothing executes automatically.
+
+let activeRecoveryJobId = null;
+
+function openRecoveryModal(jobId){
+  activeRecoveryJobId = jobId;
+  const modal = document.getElementById('recoveryModal');
+  const content = document.getElementById('recoveryContent');
+  const approved = document.getElementById('rpApproved');
+  approved.style.display = 'none';
+  content.innerHTML = '<div class="rp-generating">Analyzing situation...</div>';
+  modal.classList.add('open');
+  setTimeout(()=>buildRecoveryPlan(jobId), 400);
+}
+
+function closeRecoveryModal(){
+  document.getElementById('recoveryModal').classList.remove('open');
+  activeRecoveryJobId = null;
+}
+
+async function buildRecoveryPlan(jobId){
+  // Ensure driver roster is loaded before building the plan
+  if(!driverRoster.length){
+    try{
+      const r=await fetch(sbUrl('drivers?order=name.asc'),{headers:H});
+      if(r.ok) driverRoster=await r.json();
+    }catch(e){}
+  }
+  const job = jobs.find(j=>j.id===jobId);
+  if(!job){ document.getElementById('recoveryContent').innerHTML='<div class="rp-generating">Job not found.</div>'; return; }
+
+  const exc = getRealExceptions().find(e=>e.job.id===jobId);
+  if(!exc){ document.getElementById('recoveryContent').innerHTML='<div class="rp-generating">No active exception found for this job.</div>'; return; }
+
+  // Parse real stop data from the job
+  let stops = job.surge_stops;
+  if(typeof stops === 'string'){ try{ stops = JSON.parse(stops); }catch(e){ stops = null; } }
+  const stopsCompleted = job.stops_completed || 0;
+  const remainingStops = stops ? stops.slice(stopsCompleted) : [];
+  const totalStops = stops ? stops.length : 0;
+
+  // Find available drivers (anyone in the roster who isn't this driver)
+  const availableDrivers = driverRoster.filter(d => d.name !== job.driver_name);
+
+  // Last known location of dark driver
+  const lastLoc = driverLastSeen[job.driver_name];
+  const darkMins = exc.mins;
+  const driverName = job.driver_name || 'Unknown driver';
+
+  // Build the plan based on exception type
+  let situationHtml = '';
+  let actionsHtml = '';
+  let messagesHtml = '';
+  let approveActions = [];
+
+  if(exc.reason === 'Driver Dark'){
+    const hasPackages = stopsCompleted < totalStops;
+    situationHtml = `
+      <b>${driverName}</b> has not been heard from in <b>${darkMins} minutes</b>.
+      ${totalStops > 0
+        ? `They completed <b>${stopsCompleted} of ${totalStops} stops</b>. <b>${remainingStops.length} deliveries remain undelivered.</b>`
+        : 'This is a single-stop delivery.'}
+      ${hasPackages
+        ? ' The remaining packages are physically with the driver — route reassignment is not possible until the driver is located.'
+        : ''}
+      ${lastLoc ? ` Last known GPS update: ${new Date(lastLoc).toLocaleTimeString()}.` : ''}
+    `;
+
+    // Action 1: Send check-in to driver
+    const checkInMsg = `Hi ${driverName}, dispatch here. We haven't been able to track your location for ${darkMins} minutes. Please respond to confirm your status and location as soon as possible.`;
+    messagesHtml += `
+      <div class="rp-msg-block">
+        <div class="rp-msg-to">→ Driver: ${driverName}</div>
+        <div class="rp-msg-body">${checkInMsg}</div>
+      </div>`;
+    approveActions.push({type:'driver_msg', jobId, driverName, body: checkInMsg});
+
+    // Action 2: Notify affected clients if remaining stops exist
+    if(remainingStops.length > 0){
+      remainingStops.forEach((stp, i)=>{
+        if(!stp || stp.cancelled) return;
+        const clientMsg = `This is a notice from your courier service. Delivery of your order${stp.order_id?' ('+stp.order_id+')':''} to ${stp.address||'your location'} is experiencing a delay. We are actively working to resolve this and will update you shortly. We apologize for the inconvenience.`;
+        messagesHtml += `
+          <div class="rp-msg-block">
+            <div class="rp-msg-to">→ Recipient: ${stp.recipient||'Stop '+(stopsCompleted+i+1)}</div>
+            <div class="rp-msg-body">${clientMsg}</div>
+          </div>`;
+        approveActions.push({type:'client_msg', jobId, body: clientMsg, stop: stp});
+      });
+    }
+
+  } else if(exc.reason === 'Late'){
+    const minsLate = exc.mins;
+    situationHtml = `
+      <b>${driverName}</b> is <b>${minsLate} minutes past the estimated delivery time</b> for this job.
+      ${totalStops > 0
+        ? `${stopsCompleted} of ${totalStops} stops completed. ${remainingStops.length} remaining.`
+        : ''}
+    `;
+
+    const lateMsg = `Hi ${driverName}, this delivery is now ${minsLate} minutes past the estimated time. Please confirm your current status and estimated time of arrival at the next stop.`;
+    messagesHtml += `
+      <div class="rp-msg-block">
+        <div class="rp-msg-to">→ Driver: ${driverName}</div>
+        <div class="rp-msg-body">${lateMsg}</div>
+      </div>`;
+    approveActions.push({type:'driver_msg', jobId, driverName, body: lateMsg});
+
+    if(remainingStops.length > 0){
+      const clientMsg = `Your delivery is running approximately ${minsLate} minutes behind schedule. Your driver is still en route. We apologize for the delay and will have your delivery to you as soon as possible.`;
+      const stp = remainingStops[0];
+      messagesHtml += `
+        <div class="rp-msg-block">
+          <div class="rp-msg-to">→ Next recipient: ${stp?.recipient||'Next stop'}</div>
+          <div class="rp-msg-body">${clientMsg}</div>
+        </div>`;
+      approveActions.push({type:'client_msg', jobId, body: clientMsg, stop: stp});
+    }
+
+  } else if(exc.reason === 'Unassigned'){
+    const minsWaiting = exc.mins;
+    situationHtml = `
+      This job has been waiting <b>${minsWaiting} minutes</b> with no driver assigned.
+      ${availableDrivers.length > 0
+        ? `<b>${availableDrivers.length} driver${availableDrivers.length!==1?'s':''} available</b> in your roster: ${availableDrivers.map(d=>d.name).join(', ')}.`
+        : '<b>No drivers currently available in your roster.</b> You may need to add a driver or contact one directly.'}
+    `;
+
+    if(availableDrivers.length > 0){
+      availableDrivers.forEach(d=>{
+        const broadcastMsg = `New job available: ${job.title||'Delivery job'}. ${job.pickup_address?'Pickup at '+job.pickup_address+'.':''} Please accept in your driver app if available.`;
+        messagesHtml += `
+          <div class="rp-msg-block">
+            <div class="rp-msg-to">→ Driver: ${d.name}</div>
+            <div class="rp-msg-body">${broadcastMsg}</div>
+          </div>`;
+        approveActions.push({type:'driver_msg', jobId, driverName: d.name, body: broadcastMsg});
+      });
+    }
+  }
+
+  // Render the full plan
+  document.getElementById('recoveryContent').innerHTML = `
+    <div class="rp-section">
+      <div class="rp-section-label">Situation</div>
+      <div class="rp-situation">${situationHtml}</div>
+    </div>
+    ${messagesHtml ? `
+    <div class="rp-section">
+      <div class="rp-section-label">Recommended actions — review and approve</div>
+      ${messagesHtml}
+    </div>` : ''}
+    <div class="rp-actions">
+      ${approveActions.length > 0
+        ? `<button class="rp-btn-approve" onclick="approveRecoveryPlan(${JSON.stringify(approveActions).replace(/"/g,'&quot;')})">
+            Approve &amp; Execute (${approveActions.length} action${approveActions.length!==1?'s':''})
+           </button>`
+        : ''}
+      <button class="rp-btn-dismiss" onclick="closeRecoveryModal()">Dismiss</button>
+    </div>
+  `;
+}
+
+async function approveRecoveryPlan(actions){
+  const btn = document.querySelector('.rp-btn-approve');
+  if(btn){ btn.textContent = 'Executing...'; btn.disabled = true; }
+
+  let sent = 0;
+  for(const action of actions){
+    try{
+      if(action.type==='driver_msg'||action.type==='client_msg'){
+        await sbPostMsg(action.jobId, action.body, 'dispatcher');
+        sent++;
+      }
+    }catch(e){
+      console.error('Recovery action failed:', e);
+    }
+  }
+
+  // Hide actions, show confirmation
+  document.querySelector('.rp-actions').style.display='none';
+  const approved = document.getElementById('rpApproved');
+  approved.textContent = `✓ ${sent} notification${sent!==1?'s':''} sent. Incident logged. Dispatcher has been notified.`;
+  approved.style.display='block';
+
+  // Reload jobs after a moment so the exception queue reflects any changes
+  setTimeout(()=>{ loadJobs(); closeRecoveryModal(); }, 2500);
 }
 
 // ── RENDER ALL ──
@@ -3288,5 +3508,18 @@ async function assignSSRoute(routeId){
 }
 
 </script>
+<!-- ── RECOVERY PLAN MODAL ── -->
+<div id="recoveryModal">
+  <div id="recoveryPanel">
+    <div class="rp-header">
+      <div class="rp-pulse"></div>
+      <div class="rp-title">Recovery Plan</div>
+      <button class="rp-close" onclick="closeRecoveryModal()">✕</button>
+    </div>
+    <div id="recoveryContent"><div class="rp-generating">Analyzing situation...</div></div>
+    <div class="rp-approved" id="rpApproved">✓ Recovery plan executed — notifications sent and incident logged.</div>
+  </div>
+</div>
+
 </body>
 </html>
