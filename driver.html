@@ -2113,6 +2113,7 @@ function confirmSurgeStop(){
     showHome();
   }else{
     currentSurgeStop++;
+    if(currentJob) currentJob.stops_completed=currentSurgeStop;
     sbPatch('jobs?id=eq.'+currentJob.id,{stops_completed:currentSurgeStop}).catch(()=>{});
     // Return to the stop list, scrolled to the next unfinished stop -- driver taps it to open and navigate
     showScreen('scSurgeMap');
