@@ -890,7 +890,7 @@ async function submitNewJob(){
       pickup_address:pickup,dropoff_address:dropoff,
       customer_name:customer||'Direct',recipient,price,
       total_packages:pkgs,total_stops:1,priority:njPri,
-      route_summary:notes||null,customer_confirmed:true,
+      route_summary:notes||null,
       created_at:new Date().toISOString()
     });
     toast('Job dispatched');
