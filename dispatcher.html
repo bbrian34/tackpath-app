@@ -1415,6 +1415,7 @@ async function getMessages(jobId){
 
 // ── STATE ──
 let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
+let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
 let driverLastSeen={};
 let lastDropoffByJobId={};
 
@@ -1671,6 +1672,22 @@ async function loadJobs(){
           driverLastSeen[l.driver_name]=l.updated_at;
       });
     }catch(e){}
+    // Fetch individual stop delivery records from messages table
+    try{
+      const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||j.status==='delivered').map(j=>j.id);
+      if(activeJobIds.length){
+        const msgs=await sbGet('messages?sender_role=eq.driver&order=created_at.desc&limit=200');
+        stopDeliveries=(msgs||[])
+          .filter(m=>m.body&&m.body.startsWith('STOP_DELIVERED::'))
+          .map(m=>{
+            try{
+              const data=JSON.parse(m.body.replace('STOP_DELIVERED::',''));
+              return{...data,job_id:m.job_id,created_at:m.created_at};
+            }catch(e){return null;}
+          })
+          .filter(Boolean);
+      }
+    }catch(e){stopDeliveries=[];}
     renderAll();
   }catch(e){
     ring.style.display='none';ps.textContent='Error';
@@ -1861,8 +1878,8 @@ function renderPipeline(){
   // a driver assigned to it, so it correctly belongs in both boxes, not just one
   cols.assigned=jobs.filter(j=>j.driver_name&&(j.status==='assigned'||j.status==='in_transit'));
 
-  const statuses=['pending','assigned','in_transit','delivered'];
-  statuses.forEach(s=>{
+  // Pending, Assigned, In Transit -- job-level cards as before
+  ['pending','assigned','in_transit'].forEach(s=>{
     const col=cols[s];
     const idSuffix=s==='in_transit'?'transit':s;
     const cnt=document.getElementById('pc-'+idSuffix);
@@ -1882,6 +1899,56 @@ function renderPipeline(){
       </div>`;
     }).join('')+(col.length>4?`<div class="pipe-empty">+${col.length-4} more</div>`:'');
   });
+
+  // Delivered box: individual stop completions from STOP_DELIVERED messages,
+  // plus fully delivered jobs that have no individual stop records yet
+  const deliveredCnt=document.getElementById('pc-delivered');
+  const deliveredBody=document.getElementById('pp-delivered');
+  const deliveredEntries=[];
+
+  stopDeliveries.forEach(sd=>{
+    const job=jobs.find(j=>j.id===sd.job_id);
+    const jobTitle=job?job.title||'Delivery':'Delivery';
+    deliveredEntries.push({
+      jobId:sd.job_id,
+      title:jobTitle,
+      stopLabel:'Stop '+sd.stop_number+' of '+sd.stop_total,
+      detail:(sd.recipient?sd.recipient+' · ':'')+sd.address,
+      age:sd.delivered_at?timeAgo(sd.delivered_at):'',
+      shortId:sd.job_id?sd.job_id.slice(0,8):'—'
+    });
+  });
+
+  cols.delivered.forEach(j=>{
+    if(!stopDeliveries.some(sd=>sd.job_id===j.id)){
+      deliveredEntries.push({
+        jobId:j.id,
+        title:j.title||'Untitled Job',
+        stopLabel:'All stops complete',
+        detail:j.pickup_address||'—',
+        age:j.created_at?timeAgo(j.created_at):'',
+        shortId:j.id?j.id.slice(0,8):'—'
+      });
+    }
+  });
+
+  if(deliveredCnt) deliveredCnt.textContent=deliveredEntries.length;
+  if(deliveredBody){
+    if(!deliveredEntries.length){
+      deliveredBody.innerHTML='<div class="pipe-empty">No delivered stops yet</div>';
+    }else{
+      deliveredBody.innerHTML=deliveredEntries.slice(0,6).map(e=>`
+        <div class="pcard" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
+          <div class="pcard-sig" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>TP-${e.shortId}</span>
+            <span style="color:var(--green);font-size:0.615rem;font-family:var(--mono);">${e.stopLabel}</span>
+          </div>
+          <div class="pcard-name">${e.title}</div>
+          <div class="pcard-route" style="font-size:0.769rem;">${e.detail}</div>
+          <div class="pcard-age">${e.age}</div>
+        </div>`).join('')+(deliveredEntries.length>6?`<div class="pipe-empty">+${deliveredEntries.length-6} more</div>`:'');
+    }
+  }
 
   // Cancelled is handled separately: every individual cancellation gets its own visible
   // entry -- a fully cancelled job counts as one entry, and each individually cancelled
