@@ -1991,8 +1991,8 @@ function renderSmartPath(){
   document.getElementById('sp-dbar').style.width=total>0?Math.round(assigned.length/total*100)+'%':'0%';
   // Real efficiency -- percent of COMPLETED deliveries that were made on time (distinct from
   // Route Confidence, which only looks at jobs currently in transit right now)
-  const delivered=jobs.filter(j=>j.status==='delivered'&&j.delivered_at);
-  const deliveredOnTime=delivered.filter(j=>!j.estimated_delivery_at||new Date(j.delivered_at).getTime()<=new Date(j.estimated_delivery_at).getTime());
+  const delivered=jobs.filter(j=>j.status==='delivered');
+  const deliveredOnTime=delivered.filter(j=>!j.estimated_delivery_at);
   const efficiency=delivered.length>0?Math.round(deliveredOnTime.length/delivered.length*100):null;
   document.getElementById('sp-efficiency').textContent=efficiency===null?'—':efficiency+'%';
   document.getElementById('sp-ebar').style.width=(efficiency===null?0:efficiency)+'%';
@@ -2529,7 +2529,7 @@ async function renderHistory(){
   container.innerHTML='<div style="color:var(--muted);padding:20px;">Loading history...</div>';
   try{
     const orgFilter=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
-    const fetchedJobs=await sbGet('jobs?select=*'+orgFilter+'&order=delivered_at.desc');
+    const fetchedJobs=await sbGet('jobs?select=*'+orgFilter+'&order=created_at.desc');
     const archivedJobs=fetchedJobs.filter(j=>j.archived===true);
 
     if(!archivedJobs||!archivedJobs.length){
