@@ -1931,7 +1931,7 @@ async function submitPOD(){
     const resp=await fetch(SB+'/rest/v1/jobs?id=eq.'+currentJob.id,{
       method:'PATCH',
       headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({status:'delivered',driver_name:driver.name,delivered_at:new Date().toISOString()})
+      body:JSON.stringify({status:'delivered',driver_name:driver.name})
     });
     if(!resp.ok){const err=await resp.text();throw new Error('Status '+resp.status+': '+err.slice(0,80));}
     // Notify dispatch
@@ -2075,7 +2075,7 @@ function confirmSurgeStop(){
   }
   window._surgePODMode=false;
   if(currentSurgeStop>=total-1){
-    sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name,delivered_at:new Date().toISOString(),stops_completed:total}).catch(()=>{});
+    sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name,stops_completed:total}).catch(()=>{});
     clearJobNotification();
   if(window._gpsInterval)clearInterval(window._gpsInterval); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
