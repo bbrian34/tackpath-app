@@ -1780,8 +1780,18 @@ function navigateToStop(){
 }
 
 function surgeTapStop(i){
-  if(i<currentSurgeStop)return;
   if(!currentJob||currentJob.status!=='in_transit')return;
+  // Block going back to already-completed stops
+  if(i<currentSurgeStop)return;
+  // Block jumping ahead past the current stop -- must complete stops in order
+  if(i>currentSurgeStop){
+    const stop=surgeStops[i];
+    // Only allow tapping a cancelled stop -- skip it visually but don't allow delivery confirmation
+    if(!stop||!stop.cancelled){
+      toast('Complete stop '+(currentSurgeStop+1)+' first');
+      return;
+    }
+  }
   currentSurgeStop=i;
   saveRouteState('delivery');
   const stop=surgeStops[i];
@@ -2068,9 +2078,26 @@ function openSurgePOD(){
 function confirmSurgeStop(){
   const total=surgeStops.length;
   const stop=surgeStops[currentSurgeStop];
+
+  // Safety guard -- block confirming if previous non-cancelled stops haven't been completed
+  const nonCancelledBefore=surgeStops.slice(0,currentSurgeStop).filter(s=>!s.cancelled).length;
+  const actuallyCompleted=currentJob?currentJob.stops_completed||0:0;
+  if(actuallyCompleted<nonCancelledBefore){
+    toast('Complete stop '+(nonCancelledBefore)+' first');
+    return;
+  }
+
   if(currentJob&&currentJob.id){
+    // Write a structured stop-level delivery record the dispatcher reads for the Delivered box
     sbPost('messages',{job_id:currentJob.id,sender:driver.name,sender_role:'driver',
-      body:'Delivered: '+(stop.smart_id||stop.order_id)+' to '+stop.recipient+' (Stop '+(currentSurgeStop+1)+' of '+total+')'
+      body:'STOP_DELIVERED::'+JSON.stringify({
+        stop_number:currentSurgeStop+1,
+        stop_total:total,
+        recipient:stop.recipient||'',
+        address:stop.address||'',
+        order_id:stop.smart_id||stop.order_id||'',
+        delivered_at:new Date().toISOString()
+      })
     }).catch(()=>{});
   }
   window._surgePODMode=false;
