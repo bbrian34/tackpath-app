@@ -2013,11 +2013,31 @@ function renderPipeline(){
     body.innerHTML=col.slice(0,4).map(j=>{
       const shortId=j.id?j.id.slice(0,8):'—';
       const age=j.created_at?timeAgo(j.created_at):'';
-      const secondLine=(s==='assigned'&&j.driver_name)?('Assigned to '+j.driver_name):(j.pickup_address||'—');
+      let secondLine='';
+      if(s==='assigned'&&j.driver_name){
+        secondLine='Assigned to '+j.driver_name;
+      } else if(s==='in_transit'){
+        let stops=j.surge_stops;
+        if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+        const total=stops&&Array.isArray(stops)?stops.length:0;
+        const done=j.stops_completed||0;
+        if(total>1){
+          const currentStop=stops[done];
+          const currentAddr=currentStop?currentStop.address:(j.pickup_address||'—');
+          secondLine='Stop '+(done+1)+' of '+total+(j.driver_name?' · '+j.driver_name:'');
+          j._transitAddr=currentAddr;
+        } else {
+          secondLine=(j.driver_name?j.driver_name+' · ':''+(j.pickup_address||'—'));
+          j._transitAddr='';
+        }
+      } else {
+        secondLine=j.pickup_address||'—';
+      }
       return `<div class="pcard" onclick="openDrawer('${j.id}')">
         <div class="pcard-sig">TP-${shortId}</div>
         <div class="pcard-name">${j.title||'Untitled Job'}</div>
         <div class="pcard-route">${secondLine}</div>
+        ${s==='in_transit'&&j._transitAddr?`<div class="pcard-route" style="color:var(--muted);font-size:0.715rem;margin-top:1px;">${j._transitAddr}</div>`:''}
         <div class="pcard-age">${age}</div>
       </div>`;
     }).join('')+(col.length>4?`<div class="pipe-empty">+${col.length-4} more</div>`:'');
