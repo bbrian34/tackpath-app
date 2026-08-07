@@ -702,10 +702,9 @@ body::after{content:'';position:fixed;inset:0;
   background:#010e21;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   opacity:1;
-  transition:opacity 1.2s cubic-bezier(.4,0,.2,1);
+  transition:none;
   pointer-events:all;
 }
-#ascendSplash.fade-out{opacity:0;pointer-events:none;}
 #ascendSplash.gone{display:none;}
 
 .splash-glow-top{
@@ -3697,11 +3696,7 @@ async function rpApprove(actions){
 
   // Hold for 2.8s then begin fade
   setTimeout(function(){
-    splash.classList.add('fade-out');
-    // Remove from DOM fully after transition completes so it doesn't intercept clicks
-    setTimeout(function(){
-      splash.classList.add('gone');
-    }, 1300);
+    splash.classList.add('gone');
   }, 4800);
 })();
 </script>
