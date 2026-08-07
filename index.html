@@ -281,15 +281,6 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40
 
 <div class="wrap" style="display:flex; flex-direction:column; align-items:center; font-family:'DM Sans',sans-serif; box-sizing:border-box;">
 
-  <div style="margin-bottom:20px;">
-    <svg width="36" height="65" viewBox="0 0 38 70" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
-      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
-      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
-      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
-    </svg>
-  </div>
-
   <div style="position:relative;display:inline-block;margin-bottom:64px;padding-top:72px;">
     <div style="position:absolute;top:0;left:calc(7.8ch);">
       <svg width="32" height="58" viewBox="0 0 38 70" xmlns="http://www.w3.org/2000/svg">
@@ -424,7 +415,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40
       .tier-pill{font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:5px;}
       .tier-italic{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:.875rem;color:rgba(238,244,255,.6);margin-left:auto;}
       .tier-bdy{background:#0a1929;padding:20px 24px 26px;}
-      .prod-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;}
+      .prod-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
       .prod-card{border-radius:12px;padding:16px;position:relative;overflow:hidden;}
       .prod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
       .t-bloom .prod-card{background:#071828;border:1px solid rgba(25,183,239,.1);}
@@ -438,6 +429,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40
       .prod-desc{font-size:.78rem;color:rgba(238,244,255,.6);line-height:1.5;margin-bottom:10px;}
       .prod-feat{font-size:.75rem;padding:2px 0;display:flex;align-items:flex-start;gap:6px;color:rgba(238,244,255,.5);}
       .prod-feat::before{content:'✓';flex-shrink:0;font-size:.65rem;margin-top:2px;}
+      @media(max-width:700px){.prod-row{grid-template-columns:1fr;}}
     </style>
 
     <!-- BLOOM -->
