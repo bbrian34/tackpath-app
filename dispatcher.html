@@ -268,37 +268,14 @@ body::after{content:'';position:fixed;inset:0;
 
 /* ── EXCEPTION QUEUE ── */
 .exc-panel{background:var(--card);border:1px solid rgba(255,150,30,.14);
-  border-radius:13px;overflow:hidden;display:flex;flex-direction:column;}
+  border-radius:13px;overflow:hidden;}
 .exc-hdr{padding:13px 16px;border-bottom:1px solid rgba(255,150,30,.1);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
   background:linear-gradient(135deg,rgba(255,150,30,.04),transparent);}
 .exc-badge{padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.12);
   border:1px solid rgba(255,150,30,.25);font-family:var(--mono);font-size:0.692rem;
   font-weight:700;color:var(--orange);}
-.exc-split{display:flex;flex:1;min-height:0;overflow:hidden;}
-.exc-list{flex:0 0 220px;overflow-y:auto;border-right:1px solid rgba(255,150,30,.1);}
-.exc-detail-pane{flex:1;overflow-y:auto;padding:14px;display:none;}
-.exc-detail-pane.show{display:block;}
-.exc-detail-situation{background:var(--card2);border:1px solid var(--border);border-radius:9px;
-  padding:12px;font-size:0.815rem;line-height:1.6;margin-bottom:12px;color:var(--text);}
-.exc-detail-situation b{color:var(--orange);}
-.exc-detail-lbl{font-family:var(--mono);font-size:0.58rem;letter-spacing:.12em;color:var(--muted);
-  text-transform:uppercase;margin-bottom:8px;margin-top:12px;}
-.exc-action-row{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;
-  background:var(--card2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;}
-.exc-action-row input[type=checkbox]{margin-top:2px;flex-shrink:0;cursor:pointer;}
-.exc-action-body{flex:1;}
-.exc-action-to{font-family:var(--mono);font-size:0.58rem;color:var(--blue);margin-bottom:4px;text-transform:uppercase;}
-.exc-action-msg{font-size:0.77rem;color:var(--text);line-height:1.5;}
-.exc-note{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:7px;
-  padding:7px 10px;color:var(--text);font-size:0.8rem;font-family:var(--sans);resize:none;margin-top:4px;}
-.exc-note:focus{outline:none;border-color:rgba(83,255,136,.3);}
-.exc-approve{width:100%;padding:10px;border-radius:8px;background:rgba(83,255,136,.1);
-  border:1px solid rgba(83,255,136,.25);color:var(--green);font-weight:800;font-size:0.846rem;
-  cursor:pointer;font-family:var(--sans);margin-top:10px;}
-.exc-approve:hover{background:rgba(83,255,136,.18);}
-.exc-approve:disabled{opacity:.4;cursor:not-allowed;}
-.exc-done{text-align:center;padding:10px;color:var(--green);font-size:0.815rem;font-weight:700;display:none;}
+.exc-list{max-height:260px;overflow-y:auto;}
 .exc-item{padding:12px 14px;border-bottom:1px solid var(--border2);display:flex;gap:10px;}
 .exc-item:last-child{border-bottom:none;}
 .exc-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
@@ -999,13 +976,8 @@ body::after{content:'';position:fixed;inset:0;
               <div class="panel-title" style="color:var(--orange);font-size:1rem;">&#9888; Exception Queue</div>
               <div class="exc-badge" id="excBadge">0 OPEN</div>
             </div>
-            <div class="exc-split">
-              <div class="exc-list" id="excList">
-                <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>
-              </div>
-              <div class="exc-detail-pane" id="excDetailPane">
-                <!-- Populated by selectException() -->
-              </div>
+            <div class="exc-list" id="excList">
+              <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>
             </div>
           </div>
         </div>
@@ -1965,122 +1937,14 @@ function renderExceptionQueue(){
   }
 
   const priorityColor = {critical:'var(--red)',high:'var(--orange)',standard:'var(--blue)',low:'var(--muted)'};
-  list.innerHTML = allExceptions.map((exc,i) => `
-    <div id="exc-row-${i}" onclick="selectException('${exc.id}',${i})" style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);display:flex;gap:10px;align-items:flex-start;cursor:pointer;transition:background .12s;">
-      <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;box-shadow:0 0 6px ${priorityColor[exc.priority]||'var(--orange)'};"></div>
+  list.innerHTML = allExceptions.map(exc => `
+    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);display:flex;gap:10px;align-items:flex-start;">
+      <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;"></div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:var(--mono);font-size:0.692rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
-        <div style="font-size:0.692rem;color:var(--muted);">${exc.description}</div>
+        <div style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
+        <div style="font-size:0.769rem;color:var(--muted);">${exc.description}</div>
       </div>
     </div>`).join('');
-
-  // Auto-select first exception so the pane is never blank when exceptions exist
-  if(allExceptions.length) selectException(allExceptions[0].id, 0);
-}
-
-async function selectException(jobId, rowIdx){
-  // Highlight selected row
-  document.querySelectorAll('[id^="exc-row-"]').forEach(el=>{
-    el.style.background = el.id === 'exc-row-'+rowIdx ? 'rgba(255,150,30,.08)' : '';
-  });
-
-  const pane = document.getElementById('excDetailPane');
-  if(!pane) return;
-  pane.classList.add('show');
-  pane.innerHTML = '<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">Analyzing...</div>';
-  document.getElementById('excDone') && (document.getElementById('excDone').style.display='none');
-
-  const job = jobs.find(j=>j.id===jobId);
-  if(!job){ pane.innerHTML='<div style="padding:14px;color:var(--muted);font-size:0.815rem;">Job not found.</div>'; return; }
-
-  const exc = getRealExceptions().find(e=>e.job.id===jobId);
-
-  // Parse stop data
-  let stops = job.surge_stops;
-  if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
-  const stopsCompleted = job.stops_completed||0;
-  const remainingStops = stops ? stops.slice(stopsCompleted).filter(s=>!s.cancelled) : [];
-  const totalStops = stops ? stops.length : 0;
-  const driverName = job.driver_name||'the driver';
-  const darkMins = exc ? exc.mins : 0;
-  const reason = exc ? exc.reason : 'Exception';
-
-  // Load driver roster if needed
-  if(!driverRoster.length){
-    try{const r=await fetch(sbUrl('drivers?order=name.asc'),{headers:H});if(r.ok)driverRoster=await r.json();}catch(e){}
-  }
-
-  // Build situation
-  let situation = '';
-  let actions = [];
-
-  if(reason==='Driver Dark'){
-    situation = `<b>${driverName}</b> has not been heard from in <b>${darkMins} minutes</b>.`;
-    if(totalStops>0) situation += ` Completed <b>${stopsCompleted} of ${totalStops} stops</b>. <b>${remainingStops.length} deliveries remain.</b>`;
-    if(stopsCompleted<totalStops) situation += ` Packages are physically with the driver.`;
-    actions.push({to:'Driver: '+driverName, msg:`Hi ${driverName}, dispatch here. No location update for ${darkMins} minutes. Please confirm your status and location immediately.`, checked:true});
-    remainingStops.slice(0,3).forEach((stp,i)=>{
-      actions.push({to:'Recipient: '+(stp.recipient||'Stop '+(stopsCompleted+i+1)), msg:`Your delivery to ${stp.address||'your location'} is experiencing a delay. We are actively working to resolve this and will update you shortly.`, checked:remainingStops.length<=2});
-    });
-  } else if(reason==='Late'){
-    situation = `<b>${driverName}</b> is <b>${darkMins} minutes past the estimated delivery time</b>.`;
-    if(totalStops>0) situation += ` ${stopsCompleted} of ${totalStops} stops completed.`;
-    actions.push({to:'Driver: '+driverName, msg:`Hi ${driverName}, this delivery is now ${darkMins} minutes past the estimated time. Please confirm your ETA to the next stop.`, checked:true});
-    if(remainingStops.length>0){
-      const stp=remainingStops[0];
-      actions.push({to:'Next recipient: '+(stp.recipient||'Next stop'), msg:`Your delivery is running approximately ${darkMins} minutes behind schedule. Your driver is still en route. We apologize for the delay.`, checked:true});
-    }
-  } else if(reason==='Unassigned'){
-    const others=driverRoster.filter(d=>d.name!==driverName);
-    situation = `This job has been waiting <b>${darkMins} minutes</b> with no driver assigned.`;
-    if(others.length) situation += ` <b>${others.length} driver${others.length!==1?'s':''} available</b>: ${others.map(d=>d.name).join(', ')}.`;
-    else situation += ` No drivers currently in your roster.`;
-    others.forEach(d=>{
-      actions.push({to:'Driver: '+d.name, msg:`Hi ${d.name}, a new job is available: ${job.title||'Delivery'}${job.pickup_address?' — pickup at '+job.pickup_address:''}. Please accept in the driver app if available.`, checked:true});
-    });
-  } else {
-    situation = exc ? exc.description || reason : 'Exception detected on this job.';
-  }
-
-  const actionsHtml = actions.map((a,i)=>`
-    <div class="exc-action-row">
-      <input type="checkbox" id="exca-${i}" ${a.checked?'checked':''}>
-      <div class="exc-action-body">
-        <div class="exc-action-to">→ ${a.to}</div>
-        <div class="exc-action-msg">${a.msg}</div>
-      </div>
-    </div>`).join('');
-
-  pane.innerHTML = `
-    <div style="font-family:var(--mono);font-size:0.6rem;letter-spacing:.1em;color:var(--orange);text-transform:uppercase;margin-bottom:8px;">${reason}</div>
-    <div class="exc-detail-situation">${situation}</div>
-    ${actions.length ? `
-    <div class="exc-detail-lbl">Recovery Actions</div>
-    ${actionsHtml}
-    <div class="exc-detail-lbl">Dispatcher Note</div>
-    <textarea class="exc-note" id="excNoteField" rows="2" placeholder="Optional — logged against this job..."></textarea>
-    <button class="exc-approve" id="excApproveBtn" onclick="excApprove('${jobId}',${JSON.stringify(actions).replace(/"/g,'&quot;')})">
-      Approve &amp; Send (${actions.length} action${actions.length!==1?'s':''})
-    </button>` : `<div style="font-size:0.815rem;color:var(--muted);padding:8px 0;">No automated actions available. Handle manually.</div>`}
-    <div class="exc-done" id="excDone"></div>
-  `;
-}
-
-async function excApprove(jobId, actions){
-  const btn=document.getElementById('excApproveBtn');
-  if(btn){btn.disabled=true;btn.textContent='Sending...';}
-  const note=(document.getElementById('excNoteField')||{}).value||'';
-  let sent=0;
-  for(let i=0;i<actions.length;i++){
-    const cb=document.getElementById('exca-'+i);
-    if(!cb||!cb.checked) continue;
-    try{await sbPostMsg(jobId,actions[i].msg,'dispatcher');sent++;}catch(e){}
-  }
-  if(note.trim()) try{await sbPostMsg(jobId,'DISPATCHER NOTE: '+note.trim(),'dispatcher');}catch(e){}
-  const done=document.getElementById('excDone');
-  if(done){done.textContent='✓ '+sent+' message'+(sent!==1?'s':'')+' sent'+(note.trim()?' · Note logged':'');done.style.display='block';}
-  if(btn) btn.style.display='none';
-  setTimeout(()=>loadJobs(), 2500);
 }
 
 // ── RENDER ALL ──
