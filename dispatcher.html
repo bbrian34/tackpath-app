@@ -774,6 +774,33 @@ body::after{content:'';position:fixed;inset:0;
   from{opacity:0;transform:translateY(16px);}
   to{opacity:1;transform:translateY(0);}
 }
+.splash-loading{
+  position:absolute;bottom:48px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  opacity:0;animation:splashFadeUp .5s 1.4s forwards;
+}
+.splash-loading-label{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.6rem;letter-spacing:.25em;text-transform:uppercase;
+  color:rgba(141,92,255,.4);
+}
+.splash-progress-track{
+  width:160px;height:2px;
+  background:rgba(141,92,255,.15);
+  border-radius:2px;overflow:hidden;
+}
+.splash-progress-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#8d5cff,#c4a0ff);
+  border-radius:2px;
+  animation:splashProgress 4s 1.5s forwards cubic-bezier(.4,0,.2,1);
+}
+@keyframes splashProgress{
+  0%{width:0%;}
+  60%{width:75%;}
+  85%{width:90%;}
+  100%{width:100%;}
+}
 </style>
 </head>
 <body>
@@ -3651,6 +3678,12 @@ async function rpApprove(actions){
   <div class="splash-wordmark">Ascend</div>
   <div class="splash-tagline">Built for growth, as courier operations scale their daily volume.</div>
   <div class="splash-tier-badge">02 &mdash; Growth Plan &nbsp;·&nbsp; Unlimited Drivers</div>
+  <div class="splash-loading">
+    <div class="splash-progress-track">
+      <div class="splash-progress-fill"></div>
+    </div>
+    <div class="splash-loading-label">Loading</div>
+  </div>
   <div class="splash-bar"></div>
 </div>
 
@@ -3669,7 +3702,7 @@ async function rpApprove(actions){
     setTimeout(function(){
       splash.classList.add('gone');
     }, 1300);
-  }, 2800);
+  }, 4800);
 })();
 </script>
 </body>
