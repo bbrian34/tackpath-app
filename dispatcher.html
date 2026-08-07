@@ -1937,13 +1937,37 @@ function renderExceptionQueue(){
   }
 
   const priorityColor = {critical:'var(--red)',high:'var(--orange)',standard:'var(--blue)',low:'var(--muted)'};
+
+  // Build a one-line situation summary per exception using real job data
+  function excSituation(exc){
+    const job = jobs.find(j=>j.id===exc.id);
+    if(!job) return exc.description;
+    let stops=job.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    const total=stops&&Array.isArray(stops)?stops.length:0;
+    const done=job.stops_completed||0;
+    const remaining=total>0?total-done:0;
+    const rpe = getRealExceptions().find(e=>e.job.id===exc.id);
+    const mins=rpe?rpe.mins:0;
+    const reason=rpe?rpe.reason:'';
+    if(reason==='Driver Dark') return (job.driver_name||'Driver')+' dark '+mins+'min · '+(remaining>0?remaining+' stop'+(remaining!==1?'s':'')+' undelivered':'all stops done');
+    if(reason==='Late') return (job.driver_name||'Driver')+' '+mins+'min past ETA'+(remaining>0?' · '+remaining+' stop'+(remaining!==1?'s':'')+' remain':'');
+    if(reason==='Unassigned') return 'Waiting '+mins+'min · no driver assigned';
+    return exc.description;
+  }
+
   list.innerHTML = allExceptions.map(exc => `
-    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);display:flex;gap:10px;align-items:flex-start;">
-      <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;"></div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
-        <div style="font-size:0.769rem;color:var(--muted);">${exc.description}</div>
+    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);">
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;box-shadow:0 0 5px ${priorityColor[exc.priority]||'var(--orange)'};"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--mono);font-size:0.692rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
+          <div style="font-size:0.692rem;color:var(--orange);font-style:italic;">${excSituation(exc)}</div>
+        </div>
       </div>
+      <button onclick="rpOpen('${exc.id}')" style="width:100%;padding:5px 0;border-radius:6px;border:1px solid rgba(255,60,60,.25);background:rgba(255,60,60,.06);color:#ff6363;font-size:0.615rem;font-weight:700;cursor:pointer;font-family:var(--mono);letter-spacing:.04em;">
+        View Situation &amp; Recovery Plan →
+      </button>
     </div>`).join('');
 }
 
