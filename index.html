@@ -403,65 +403,168 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40
 <!-- OFFERINGS -->
 <section id="offerings" style="background:linear-gradient(180deg,rgba(141,92,255,.06),rgba(141,92,255,.01) 60%,transparent),var(--bg);padding:100px 0;">
   <div class="wrap">
-    <div class="section-label">Offerings</div>
+    <div class="section-label">What's Inside Each Plan</div>
     <h2 class="section-h2">Built for every stage of your operation.</h2>
-    <p class="section-p">Whether you are dispatching your first driver or managing a full courier fleet, TackPath has a tier built for where you are right now -- and where you are going.</p>
+    <p class="section-p">Whether you are dispatching your first driver or managing a full courier fleet, TackPath has a plan built for where you are right now -- and where you are going.</p>
 
-    <div class="products-grid" style="margin-top:48px;">
+    <style>
+      .tier-block{margin-bottom:36px;border-radius:18px;overflow:hidden;position:relative;}
+      .tier-block::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;z-index:2;}
+      .tier-block.t-bloom{border:1px solid rgba(25,183,239,.2);box-shadow:0 0 50px -20px rgba(25,183,239,.25);}
+      .tier-block.t-bloom::before{background:linear-gradient(90deg,transparent,#19b7ef,transparent);}
+      .tier-block.t-ascend{border:1px solid rgba(141,92,255,.3);box-shadow:0 0 60px -20px rgba(141,92,255,.3);}
+      .tier-block.t-ascend::before{background:linear-gradient(90deg,transparent,#8d5cff,transparent);}
+      .tier-block.t-lotus{border:1px solid rgba(255,150,30,.25);box-shadow:0 0 60px -18px rgba(255,150,30,.28);}
+      .tier-block.t-lotus::before{background:linear-gradient(90deg,transparent,#ff961e,#c9a84c,transparent);}
+      .tier-hdr{display:flex;align-items:center;gap:12px;padding:22px 26px;background:#071828;position:relative;flex-wrap:wrap;}
+      .tier-glow-inner{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:260px;height:130px;filter:blur(55px);border-radius:50%;opacity:.15;pointer-events:none;}
+      .tier-dot-inner{width:9px;height:9px;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;}
+      .tier-num-inner{font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;opacity:.5;}
+      .tier-name-inner{font-size:1.15rem;font-weight:800;}
+      .tier-pill{font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:5px;}
+      .tier-italic{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:.875rem;color:rgba(238,244,255,.6);margin-left:auto;}
+      .tier-bdy{background:#0a1929;padding:20px 24px 26px;}
+      .prod-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;}
+      .prod-card{border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+      .prod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+      .t-bloom .prod-card{background:#071828;border:1px solid rgba(25,183,239,.1);}
+      .t-bloom .prod-card::before{background:linear-gradient(90deg,transparent,rgba(25,183,239,.4),transparent);}
+      .t-ascend .prod-card{background:#071828;border:1px solid rgba(141,92,255,.12);}
+      .t-ascend .prod-card::before{background:linear-gradient(90deg,transparent,rgba(141,92,255,.4),transparent);}
+      .t-lotus .prod-card{background:#071828;border:1px solid rgba(255,150,30,.12);}
+      .t-lotus .prod-card::before{background:linear-gradient(90deg,transparent,rgba(255,150,30,.4),transparent);}
+      .prod-tag{font-size:.72rem;font-weight:600;margin-bottom:6px;}
+      .prod-name{font-size:1rem;font-weight:700;margin-bottom:8px;color:#eef4ff;}
+      .prod-desc{font-size:.78rem;color:rgba(238,244,255,.6);line-height:1.5;margin-bottom:10px;}
+      .prod-feat{font-size:.75rem;padding:2px 0;display:flex;align-items:flex-start;gap:6px;color:rgba(238,244,255,.5);}
+      .prod-feat::before{content:'✓';flex-shrink:0;font-size:.65rem;margin-top:2px;}
+    </style>
 
-      <div class="product-card pc-blue">
-        <div class="product-tag" style="color:var(--blue);">On-demand</div>
-        <div class="product-name" style="background:linear-gradient(135deg,#fff,var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent;">Sling</div>
-        <div class="product-desc">A single pickup. A single dropoff. Right now. Sling handles on-demand point-to-point deliveries from the moment a customer places an order to the moment a driver confirms delivery. Fast, simple, professional.</div>
-        <div class="product-features">
-          <div class="pf" style="color:var(--blue);">Customer portal order entry</div>
-          <div class="pf" style="color:var(--blue);">Instant driver notification and acceptance</div>
-          <div class="pf" style="color:var(--blue);">Real-time job status updates</div>
-          <div class="pf" style="color:var(--blue);">Digital proof of delivery at the door</div>
-          <div class="pf" style="color:var(--blue);">Automated customer delivery confirmation</div>
+    <!-- BLOOM -->
+    <div class="tier-block t-bloom">
+      <div class="tier-glow-inner" style="background:#19b7ef;"></div>
+      <div class="tier-hdr">
+        <div class="tier-dot-inner" style="background:#19b7ef;box-shadow:0 0 8px rgba(25,183,239,.8);"></div>
+        <div class="tier-num-inner">01</div>
+        <div class="tier-name-inner" style="color:#19b7ef;">Bloom</div>
+        <div class="tier-pill" style="background:rgba(25,183,239,.1);color:#19b7ef;border:1px solid rgba(25,183,239,.25);">Entry &mdash; Capped at 3 drivers</div>
+        <div class="tier-italic">The entry point for courier teams launching their first automated routes.</div>
+      </div>
+      <div class="tier-bdy">
+        <div class="prod-row">
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#19b7ef;">On-demand delivery</div>
+            <div class="prod-name">Sling</div>
+            <div class="prod-desc">A single pickup. A single dropoff. Right now. Fast, simple, professional.</div>
+            <div class="prod-feat">Customer portal order entry</div>
+            <div class="prod-feat">Instant driver notification and acceptance</div>
+            <div class="prod-feat">Real-time job status updates</div>
+            <div class="prod-feat">Digital proof of delivery at the door</div>
+          </div>
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#19b7ef;">Multi-stop routes</div>
+            <div class="prod-name">Surge</div>
+            <div class="prod-desc">When one stop is not enough. Upload your manifest, sequence the route, dispatch to your driver.</div>
+            <div class="prod-feat">CSV manifest upload and route building</div>
+            <div class="prod-feat">SmartSort intelligent stop sequencing</div>
+            <div class="prod-feat">Barcode scanning at every stop</div>
+            <div class="prod-feat">Full route audit trail for billing</div>
+          </div>
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#19b7ef;">Client portal</div>
+            <div class="prod-name">Customer Portal</div>
+            <div class="prod-desc">Your clients place orders, track deliveries, and receive confirmations through your branded portal.</div>
+            <div class="prod-feat">Live tracking for every delivery</div>
+            <div class="prod-feat">Automated delivery confirmation</div>
+            <div class="prod-feat">White-label ready</div>
+          </div>
         </div>
       </div>
-
-      <div class="product-card pc-purple">
-        <div class="product-tag" style="color:var(--purple);">Multi-stop routes</div>
-        <div class="product-name" style="background:linear-gradient(135deg,#fff,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;">Surge</div>
-        <div class="product-desc">When one stop is not enough. Surge powers contracted block routes and multi-stop manifests. Upload your delivery list, let TackPath sequence the route, and dispatch it to your driver. Every stop tracked. Every package scanned. Every delivery confirmed.</div>
-        <div class="product-features">
-          <div class="pf" style="color:var(--purple);">CSV manifest upload and route building</div>
-          <div class="pf" style="color:var(--purple);">SmartSort intelligent stop sequencing</div>
-          <div class="pf" style="color:var(--purple);">Barcode scanning at every stop</div>
-          <div class="pf" style="color:var(--purple);">POD collected and stored at every door</div>
-          <div class="pf" style="color:var(--purple);">Full route audit trail for billing</div>
-        </div>
-      </div>
-
-      <div class="product-card pc-gold">
-        <div class="product-tag" style="color:var(--gold);">Managed operations</div>
-        <div class="product-name" style="background:linear-gradient(135deg,#f5e4b0,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;">Symphony+</div>
-        <div class="product-desc">Your operation. Professionally managed. Symphony+ is TackPath's managed logistics operations center. Pay a flat monthly fee and TackPath runs your dispatch -- monitoring your fleet, handling exceptions, communicating with customers, and keeping every delivery moving. No dispatcher on your payroll required.</div>
-        <div class="product-features">
-          <div class="pf" style="color:var(--gold);">TackPath runs your dispatch operation</div>
-          <div class="pf" style="color:var(--gold);">AI agents monitoring every job 24 hours a day</div>
-          <div class="pf" style="color:var(--gold);">Exception detection and resolution</div>
-          <div class="pf" style="color:var(--gold);">Automated customer communications</div>
-          <div class="pf" style="color:var(--gold);">Flat monthly fee -- no per-delivery charges</div>
-        </div>
-      </div>
-
-      <div class="product-card pc-green">
-        <div class="product-tag" style="color:var(--green);">Owner intelligence</div>
-        <div class="product-name" style="background:linear-gradient(135deg,#fff,var(--green));-webkit-background-clip:text;background-clip:text;color:transparent;">OWL</div>
-        <div class="product-desc">The owner's command center. OWL -- Owner Workforce Layer -- gives courier company owners complete visibility into their operation and their business. Revenue intelligence, client health, AI agent activity, and one-tap approvals. Everything you need to make decisions, nothing you don't.</div>
-        <div class="product-features">
-          <div class="pf" style="color:var(--green);">RIA revenue intelligence and client analysis</div>
-          <div class="pf" style="color:var(--green);">Client health scores and concentration risk</div>
-          <div class="pf" style="color:var(--green);">Complete AI agent audit trail</div>
-          <div class="pf" style="color:var(--green);">Work item approvals with one tap</div>
-          <div class="pf" style="color:var(--green);">Full business performance dashboard</div>
-        </div>
-      </div>
-
     </div>
+
+    <!-- ASCEND -->
+    <div class="tier-block t-ascend">
+      <div class="tier-glow-inner" style="background:#8d5cff;"></div>
+      <div class="tier-hdr">
+        <div class="tier-dot-inner" style="background:#8d5cff;box-shadow:0 0 8px rgba(141,92,255,.8);"></div>
+        <div class="tier-num-inner">02</div>
+        <div class="tier-name-inner" style="color:#8d5cff;">Ascend</div>
+        <div class="tier-pill" style="background:rgba(141,92,255,.1);color:#8d5cff;border:1px solid rgba(141,92,255,.25);">Growth &mdash; Unlimited drivers</div>
+        <div class="tier-italic">Built for growth, as courier operations scale their daily volume.</div>
+      </div>
+      <div class="tier-bdy">
+        <div class="prod-row">
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#8d5cff;">Route intelligence</div>
+            <div class="prod-name">SmartSort</div>
+            <div class="prod-desc">Pre-sort manifests, geocode addresses, and sequence stops for maximum efficiency before dispatch.</div>
+            <div class="prod-feat">Real geocoding with nearest-neighbor sequencing</div>
+            <div class="prod-feat">Barcode scanning at every stop</div>
+            <div class="prod-feat">POD collected and stored at every door</div>
+          </div>
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#8d5cff;">Fleet visibility</div>
+            <div class="prod-name">Live GPS Fleet Map</div>
+            <div class="prod-desc">Every driver on a live map. Traffic-aware ETAs. Exception detection for late, unassigned, and dark drivers.</div>
+            <div class="prod-feat">Real-time driver location tracking</div>
+            <div class="prod-feat">Traffic-aware ETA calculations</div>
+            <div class="prod-feat">Driver Dark, Late, Unassigned detection</div>
+            <div class="prod-feat">Recovery Plan Generator for exceptions</div>
+          </div>
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#8d5cff;">Owner intelligence</div>
+            <div class="prod-name">OWL Dashboard</div>
+            <div class="prod-desc">Revenue intelligence, client health, and business performance. Everything to make decisions, nothing you don't need.</div>
+            <div class="prod-feat">Per-client revenue and margin analysis</div>
+            <div class="prod-feat">Exception tracking and audit trail</div>
+            <div class="prod-feat">Signal Pipeline live operations view</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOTUS -->
+    <div class="tier-block t-lotus">
+      <div class="tier-glow-inner" style="background:#ff961e;"></div>
+      <div class="tier-hdr">
+        <div class="tier-dot-inner" style="background:#ff961e;box-shadow:0 0 8px rgba(255,150,30,.8);"></div>
+        <div class="tier-num-inner">03</div>
+        <div class="tier-name-inner" style="color:#ff961e;">Lotus</div>
+        <div class="tier-pill" style="background:rgba(255,150,30,.1);color:#ff961e;border:1px solid rgba(255,150,30,.25);">Fully Managed &mdash; Custom pricing</div>
+        <div class="tier-italic">Fully managed. TackPath's team runs your dispatch, end to end.</div>
+      </div>
+      <div class="tier-bdy">
+        <div class="prod-row">
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#ff961e;">Managed dispatch</div>
+            <div class="prod-name">Full Operations</div>
+            <div class="prod-desc">Everything in Ascend, plus TackPath's team actively monitoring and managing your operation every shift.</div>
+            <div class="prod-feat">TackPath operators run your dispatch</div>
+            <div class="prod-feat">Full AI agent suite across every function</div>
+            <div class="prod-feat">Exception detection and resolution</div>
+            <div class="prod-feat">Automated customer communications</div>
+          </div>
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#ff961e;">White label</div>
+            <div class="prod-name">Your Brand</div>
+            <div class="prod-desc">Customer portals and driver apps branded to your company. Your clients never see TackPath.</div>
+            <div class="prod-feat">White label branding</div>
+            <div class="prod-feat">Branded driver communications</div>
+            <div class="prod-feat">Custom domain and identity</div>
+          </div>
+          <div class="prod-card">
+            <div class="prod-tag" style="color:#ff961e;">Full service</div>
+            <div class="prod-name">Enterprise Support</div>
+            <div class="prod-desc">Dedicated account manager, custom onboarding, custom API integrations, and priority feature requests.</div>
+            <div class="prod-feat">Dedicated account manager</div>
+            <div class="prod-feat">Custom onboarding &amp; training</div>
+            <div class="prod-feat">Custom API integrations</div>
+            <div class="prod-feat">Priority feature requests</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
