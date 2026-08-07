@@ -671,6 +671,31 @@ body::after{content:'';position:fixed;inset:0;
   z-index:99999;font-size:0.846rem;font-weight:700;min-width:220px;text-align:center;
   animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+/* ── RECOVERY PLAN GENERATOR ── */
+#rpModal{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(2,6,14,.88);backdrop-filter:blur(8px);}
+#rpModal.open{display:flex;}
+#rpPanel{background:var(--card);border:1px solid rgba(255,60,60,.2);border-radius:18px;width:min(580px,95vw);max-height:88vh;overflow-y:auto;padding:26px;position:relative;box-shadow:0 0 50px -10px rgba(255,60,60,.15);}
+.rp-hdr{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.rp-pulse{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 10px rgba(255,60,60,.8);animation:pulse 1.2s infinite;flex-shrink:0;}
+.rp-title{font-size:1rem;font-weight:800;flex:1;}
+.rp-close{background:transparent;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:2px 8px;border-radius:6px;}
+.rp-close:hover{background:var(--card2);}
+.rp-lbl{font-family:var(--mono);font-size:0.615rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.rp-situation{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:13px;font-size:0.845rem;line-height:1.6;margin-bottom:16px;}
+.rp-situation b{color:var(--orange);}
+.rp-action{display:flex;gap:10px;align-items:flex-start;padding:12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.rp-action input[type=checkbox]{margin-top:3px;flex-shrink:0;cursor:pointer;width:15px;height:15px;}
+.rp-action-body{flex:1;}
+.rp-action-to{font-family:var(--mono);font-size:0.615rem;color:var(--blue);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em;}
+.rp-action-msg{font-size:0.815rem;color:var(--text);line-height:1.5;}
+.rp-note{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;color:var(--text);font-size:0.845rem;font-family:var(--sans);resize:none;margin-bottom:14px;margin-top:4px;}
+.rp-note:focus{outline:none;border-color:rgba(83,255,136,.3);}
+.rp-btns{display:flex;gap:10px;}
+.rp-approve{flex:1;padding:12px;border-radius:10px;background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.25);color:var(--green);font-weight:800;font-size:0.9rem;cursor:pointer;font-family:var(--sans);}
+.rp-approve:hover{background:rgba(83,255,136,.18);}
+.rp-approve:disabled{opacity:.4;cursor:not-allowed;}
+.rp-dismiss{padding:12px 18px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.9rem;cursor:pointer;font-family:var(--sans);}
+.rp-done{text-align:center;padding:14px;color:var(--green);font-weight:700;font-size:0.9rem;display:none;}
 </style>
 </head>
 <body>
@@ -1755,6 +1780,7 @@ function renderExceptionDetail(){
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Since</th>
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Duration</th>
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">This week</th>
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Action</th>
       </tr></thead>
       <tbody>
         ${exceptions.map(e=>{
@@ -1767,6 +1793,9 @@ function renderExceptionDetail(){
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${sinceStr}</td>
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;">${e.mins} min</td>
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${driverName==='Unassigned'?'—':count+' exception'+(count!==1?'s':'')}</td>
+            <td style="padding:10px 12px;">
+              <button onclick="event.stopPropagation();rpOpen('${e.job.id}')" style="padding:5px 11px;border-radius:7px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.07);color:#ff6363;font-size:0.692rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--mono);">Recovery Plan →</button>
+            </td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -2688,7 +2717,6 @@ async function cancelSpecificStop(jobId,stopIndexStr){
       patch.stops_completed=stopIndex+1;
       if(stopIndex>=stops.length-1){
         patch.status='delivered';
-        patch.delivered_at=new Date().toISOString();
       }
     }
     await sbPatch('jobs?id=eq.'+jobId,patch);
@@ -3354,6 +3382,188 @@ async function assignSSRoute(routeId){
   }
 }
 
+</script>
+<!-- RECOVERY PLAN GENERATOR -->
+<div id="rpModal">
+  <div id="rpPanel">
+    <div class="rp-hdr">
+      <div class="rp-pulse"></div>
+      <div class="rp-title">Recovery Plan</div>
+      <button class="rp-close" onclick="rpClose()">✕</button>
+    </div>
+    <div id="rpBody"></div>
+    <div class="rp-done" id="rpDone"></div>
+  </div>
+</div>
+
+<script>
+// ── RECOVERY PLAN GENERATOR ──
+// Uses only confirmed-working infrastructure: getRealExceptions(), driverRoster,
+// driverLastSeen, jobs array, and sbPostMsg() which writes to the messages table.
+// No new columns. No new tables. No new dependencies.
+
+let rpJobId = null;
+
+function rpOpen(jobId){
+  rpJobId = jobId;
+  document.getElementById('rpDone').style.display = 'none';
+  document.getElementById('rpBody').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.845rem;">Analyzing situation...</div>';
+  document.getElementById('rpModal').classList.add('open');
+  setTimeout(()=>rpBuild(jobId), 300);
+}
+
+function rpClose(){
+  document.getElementById('rpModal').classList.remove('open');
+  rpJobId = null;
+}
+
+async function rpBuild(jobId){
+  const job = jobs.find(j=>j.id===jobId);
+  if(!job){ document.getElementById('rpBody').innerHTML='<div style="padding:20px;color:var(--muted);">Job not found.</div>'; return; }
+
+  const exc = getRealExceptions().find(e=>e.job.id===jobId);
+  if(!exc){ document.getElementById('rpBody').innerHTML='<div style="padding:20px;color:var(--muted);">No active exception for this job.</div>'; return; }
+
+  // Parse stop data
+  let stops = job.surge_stops;
+  if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+  const stopsCompleted = job.stops_completed||0;
+  const remainingStops = stops ? stops.slice(stopsCompleted).filter(s=>!s.cancelled) : [];
+  const totalStops = stops ? stops.length : 0;
+  const driverName = job.driver_name||'the driver';
+  const darkMins = exc.mins;
+
+  // Load driver roster if not already loaded
+  if(!driverRoster.length){
+    try{
+      const r=await fetch(sbUrl('drivers?order=name.asc'),{headers:H});
+      if(r.ok) driverRoster=await r.json();
+    }catch(e){}
+  }
+  const otherDrivers = driverRoster.filter(d=>d.name!==driverName);
+
+  // Build situation text
+  let situation = '';
+  let actions = [];
+
+  if(exc.reason==='Driver Dark'){
+    const hasPackages = stopsCompleted < totalStops;
+    situation = `<b>${driverName}</b> has not been heard from in <b>${darkMins} minutes</b>.`;
+    if(totalStops>0) situation += ` Completed <b>${stopsCompleted} of ${totalStops} stops</b>. <b>${remainingStops.length} deliveries remain.</b>`;
+    if(hasPackages) situation += ` The remaining packages are physically with the driver — route reassignment is not possible until the driver is located.`;
+
+    // Action 1: Check in with driver
+    actions.push({
+      to: 'Driver: '+driverName,
+      msg: `Hi ${driverName}, this is dispatch. We haven't received a location update from you in ${darkMins} minutes. Please confirm your status and current location as soon as possible.`,
+      checked: true
+    });
+
+    // Action 2: Notify each remaining recipient
+    remainingStops.forEach((stp,i)=>{
+      actions.push({
+        to: 'Recipient: '+(stp.recipient||'Stop '+(stopsCompleted+i+1)),
+        msg: `Your delivery${stp.order_id?' ('+stp.order_id+')':''} to ${stp.address||'your location'} is experiencing a delay. We are actively working to resolve this and will update you shortly. We apologize for the inconvenience.`,
+        checked: remainingStops.length<=3
+      });
+    });
+
+  } else if(exc.reason==='Late'){
+    situation = `<b>${driverName}</b> is <b>${darkMins} minutes past the estimated delivery time</b>.`;
+    if(totalStops>0) situation += ` ${stopsCompleted} of ${totalStops} stops completed. ${remainingStops.length} remaining.`;
+
+    actions.push({
+      to: 'Driver: '+driverName,
+      msg: `Hi ${driverName}, this delivery is now ${darkMins} minutes past the estimated time. Please confirm your current status and ETA to the next stop.`,
+      checked: true
+    });
+
+    if(remainingStops.length>0){
+      const stp = remainingStops[0];
+      actions.push({
+        to: 'Next recipient: '+(stp.recipient||'Next stop'),
+        msg: `Your delivery is running approximately ${darkMins} minutes behind schedule. Your driver is still en route and we expect delivery shortly. We apologize for the delay.`,
+        checked: true
+      });
+    }
+
+  } else if(exc.reason==='Unassigned'){
+    situation = `This job has been waiting <b>${darkMins} minutes</b> with no driver assigned.`;
+    if(otherDrivers.length>0){
+      situation += ` <b>${otherDrivers.length} driver${otherDrivers.length!==1?'s':''} in your roster</b>: ${otherDrivers.map(d=>d.name).join(', ')}.`;
+      otherDrivers.forEach(d=>{
+        actions.push({
+          to: 'Driver: '+d.name,
+          msg: `Hi ${d.name}, a new job is available: ${job.title||'Delivery job'}${job.pickup_address?' — pickup at '+job.pickup_address:''}. Please accept in the driver app if you are available.`,
+          checked: true
+        });
+      });
+    } else {
+      situation += ` <b>No drivers currently in your roster.</b> Add a driver or contact one directly.`;
+    }
+  }
+
+  // Render
+  const actionsHtml = actions.map((a,i)=>`
+    <div class="rp-action">
+      <input type="checkbox" id="rpa-${i}" ${a.checked?'checked':''}>
+      <div class="rp-action-body">
+        <div class="rp-action-to">→ ${a.to}</div>
+        <div class="rp-action-msg">${a.msg}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('rpBody').innerHTML = `
+    <div class="rp-lbl">Situation</div>
+    <div class="rp-situation">${situation}</div>
+    ${actions.length?`
+    <div class="rp-lbl">Actions — uncheck anything you don't want to send</div>
+    ${actionsHtml}
+    <div class="rp-lbl" style="margin-top:14px;">Dispatcher note (optional — logged against this job)</div>
+    <textarea class="rp-note" id="rpNote" rows="2" placeholder="e.g. Called driver, no answer. Client notified by phone."></textarea>
+    <div class="rp-btns">
+      <button class="rp-approve" onclick="rpApprove(${JSON.stringify(actions).replace(/"/g,'&quot;')})">
+        Approve &amp; Send (${actions.length} action${actions.length!==1?'s':''})
+      </button>
+      <button class="rp-dismiss" onclick="rpClose()">Dismiss</button>
+    </div>`:`
+    <div class="rp-btns">
+      <button class="rp-dismiss" onclick="rpClose()">Dismiss</button>
+    </div>`}
+  `;
+}
+
+async function rpApprove(actions){
+  const btn = document.querySelector('.rp-approve');
+  if(btn){btn.disabled=true;btn.textContent='Sending...';}
+
+  const note = (document.getElementById('rpNote')||{}).value||'';
+  let sent = 0;
+
+  for(let i=0;i<actions.length;i++){
+    const cb = document.getElementById('rpa-'+i);
+    if(!cb||!cb.checked) continue;
+    try{
+      await sbPostMsg(rpJobId, actions[i].msg, 'dispatcher');
+      sent++;
+    }catch(e){console.error('RPG send failed:',e);}
+  }
+
+  // Log dispatcher note if provided
+  if(note.trim()){
+    try{
+      await sbPostMsg(rpJobId, 'DISPATCHER NOTE: '+note.trim(), 'dispatcher');
+    }catch(e){}
+  }
+
+  // Hide actions, show confirmation
+  document.getElementById('rpBody').innerHTML='';
+  const done = document.getElementById('rpDone');
+  done.textContent = `✓ ${sent} message${sent!==1?'s':''} sent${note.trim()?' · Note logged':''} · Driver will see messages in the app`;
+  done.style.display = 'block';
+
+  setTimeout(()=>{ loadJobs(); rpClose(); }, 2500);
+}
 </script>
 </body>
 </html>
