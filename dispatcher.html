@@ -219,14 +219,12 @@ body::after{content:'';position:fixed;inset:0;
 .up{color:var(--green);}.dn{color:var(--red);}
 
 /* ── SIGNAL PIPELINE (Kanban) ── */
-.pipeline-wrap{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px;}
+.pipeline-section{margin-bottom:18px;}
 .pipeline-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.18em;
   color:var(--muted);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
 .pipeline-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
-.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-@media(max-width:1000px){
-  .pipeline{grid-template-columns:repeat(2,1fr);}
-}
+.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+@media(max-width:1000px){.pipeline{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:1100px){.pipeline{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:700px){.pipeline{grid-template-columns:repeat(2,1fr);}}
 .pipe-col{background:var(--card);border-radius:13px;border:1px solid var(--border);overflow:hidden;min-height:120px;}
@@ -944,9 +942,8 @@ body::after{content:'';position:fixed;inset:0;
           <div id="excDetailBody"></div>
         </div>
 
-        <!-- PIPELINE + EXCEPTIONS ROW -->
-        <div class="two-col" style="grid-template-columns:1fr 1fr;align-items:stretch;">
-        <div class="pipeline-wrap">
+        <!-- PIPELINE + EXCEPTIONS -->
+        <div class="pipeline-section">
           <div class="pipeline-lbl">Signal Pipeline · Live</div>
           <div class="pipeline">
             <div class="pipe-col">
@@ -965,20 +962,17 @@ body::after{content:'';position:fixed;inset:0;
               <div class="pipe-hdr"><div class="pipe-title" style="color:var(--red);">Cancelled</div><div class="pipe-cnt" style="background:rgba(255,59,48,.08);color:var(--red);" id="pc-cancelled">0</div></div>
               <div class="pipe-body" id="pp-cancelled"><div class="pipe-empty">None</div></div>
             </div>
+            <div class="pipe-col" id="excPanel" style="border-color:rgba(255,150,30,.2);">
+              <div class="pipe-hdr" style="background:linear-gradient(135deg,rgba(255,150,30,.04),transparent);">
+                <div class="pipe-title" style="color:var(--orange);">&#9888; Exceptions</div>
+                <div class="pipe-cnt" style="background:rgba(255,150,30,.1);color:var(--orange);" id="excBadge">0 OPEN</div>
+              </div>
+              <div class="pipe-body" id="excList">
+                <div class="pipe-empty">No exceptions · System healthy</div>
+              </div>
+            </div>
           </div>
         </div>
-
-          <!-- EXCEPTION QUEUE -->
-          <div class="exc-panel" id="excPanel">
-            <div class="exc-hdr">
-              <div class="panel-title" style="color:var(--orange);font-size:1rem;">&#9888; Exception Queue</div>
-              <div class="exc-badge" id="excBadge">0 OPEN</div>
-            </div>
-            <div class="exc-list" id="excList">
-              <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>
-            </div>
-          </div>
-        </div><!-- end two-col -->
 
         <!-- SIGNAL TABLE -->
         <div class="sig-panel">
@@ -1930,7 +1924,7 @@ function renderExceptionQueue(){
   if(badge) badge.textContent = allExceptions.length + ' OPEN';
 
   if(!allExceptions.length){
-    list.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>';
+    list.innerHTML = '<div class="pipe-empty">No exceptions</div>';
     return;
   }
 
