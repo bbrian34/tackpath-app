@@ -2027,7 +2027,9 @@ function renderKPIs(){
 // ── PIPELINE ──
 function renderPipeline(){
   const cols={pending:[],assigned:[],in_transit:[],delivered:[]};
-  jobs.forEach(j=>{ const s=j.status||'pending'; if(cols[s]) cols[s].push(j); });
+  // Treat customer_confirmed as in_transit -- driver has accepted
+  jobs.forEach(j=>{ if(j.status==='customer_confirmed') j._displayStatus='in_transit'; });
+  jobs.forEach(j=>{ const s=j._displayStatus||j.status||'pending'; if(cols[s]) cols[s].push(j); });
 
   // "Assigned" means "has a driver and is still active" -- an in-transit job still has
   // a driver assigned to it, so it correctly belongs in both boxes, not just one
