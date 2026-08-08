@@ -2033,7 +2033,7 @@ function renderPipeline(){
 
   // "Assigned" means "has a driver and is still active" -- an in-transit job still has
   // a driver assigned to it, so it correctly belongs in both boxes, not just one
-  cols.assigned=jobs.filter(j=>j.driver_name&&(j.status==='assigned'||j.status==='in_transit'));
+  cols.assigned=jobs.filter(j=>j.status==='assigned');
 
   // Pending, Assigned, In Transit -- job-level cards as before
   ['pending','assigned','in_transit'].forEach(s=>{
