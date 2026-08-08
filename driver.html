@@ -1181,8 +1181,7 @@ async function acceptOffer(){
   if(!pendingJob)return;
   stopOfferAlert();unlockSpeech();
   currentJob=pendingJob;pendingJob=null;
-  currentJob.status='customer_confirmed';
-  try{await sbPatch('jobs?id=eq.'+currentJob.id,{status:'customer_confirmed',driver_name:driver.name});}catch(e){}
+  currentJob.status='in_transit';
   scannedPackages=[];
   // Detect Surge job -- parse surge_stops if it came back as a string
   let surgeSt=currentJob.surge_stops;
@@ -1216,7 +1215,7 @@ async function acceptOffer(){
   // All jobs go straight to surge map -- identical flow regardless of job type
   currentJob.status='in_transit';
   saveRouteState('list');
-  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name,picked_up_at:new Date().toISOString()}).catch(()=>{});
+  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   showJobNotification(surgeStops.length>1?'Delivering -- '+surgeStops.length+' stops':'Heading to delivery');
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
