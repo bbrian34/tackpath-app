@@ -235,6 +235,7 @@ body::after{content:'';position:fixed;inset:0;
   cursor:pointer;transition:all .15s;position:relative;}
 .pcard:hover{border-color:rgba(25,183,239,.3);background:var(--card3);transform:translateY(-1px);}
 .pcard-sig{font-family:var(--mono);font-size:0.692rem;color:var(--blue);margin-bottom:3px;}
+.pcard.pipe-highlight{border-color:var(--blue) !important;box-shadow:0 0 0 2px rgba(25,183,239,.3);transition:border-color .15s,box-shadow .15s;}
 .pcard-name{font-size:0.846rem;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pcard-route{font-size:0.769rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pcard-age{font-family:var(--mono);font-size:0.615rem;color:var(--faint);margin-top:5px;}
@@ -945,10 +946,7 @@ body::after{content:'';position:fixed;inset:0;
         <div class="pipeline-wrap">
           <div class="pipeline-lbl">Signal Pipeline · Live</div>
           <div class="pipeline">
-            <div class="pipe-col">
-              <div class="pipe-hdr"><div class="pipe-title" style="color:var(--muted);">Pending</div><div class="pipe-cnt" style="background:rgba(255,255,255,.05);color:var(--muted);" id="pc-pending">0</div></div>
-              <div class="pipe-body" id="pp-pending"><div class="pipe-empty">No pending jobs</div></div>
-            </div>
+
             <div class="pipe-col">
               <div class="pipe-hdr"><div class="pipe-title" style="color:var(--blue);">Assigned</div><div class="pipe-cnt" style="background:rgba(25,183,239,.1);color:var(--blue);" id="pc-assigned">0</div></div>
               <div class="pipe-body" id="pp-assigned"><div class="pipe-empty">No assigned jobs</div></div>
@@ -964,6 +962,15 @@ body::after{content:'';position:fixed;inset:0;
             <div class="pipe-col">
               <div class="pipe-hdr"><div class="pipe-title" style="color:var(--red);">Cancelled</div><div class="pipe-cnt" style="background:rgba(255,59,48,.08);color:var(--red);" id="pc-cancelled">0</div></div>
               <div class="pipe-body" id="pp-cancelled"><div class="pipe-empty">None</div></div>
+            </div>
+            <div class="pipe-col" style="border-color:rgba(255,150,30,.2);">
+              <div class="pipe-hdr" style="background:linear-gradient(135deg,rgba(255,150,30,.04),transparent);">
+                <div class="pipe-title" style="color:var(--orange);">&#9888; Exceptions</div>
+                <div class="pipe-cnt" style="background:rgba(255,150,30,.1);color:var(--orange);" id="excBadge">0 OPEN</div>
+              </div>
+              <div class="pipe-body" id="excList">
+                <div class="pipe-empty">No exceptions</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1558,7 +1565,7 @@ async function doLogin(){
     document.getElementById('shell').style.display='flex';
     startClock();loadJobs();if(typeof loadDrivers==='function')loadDrivers();
     if(dispatchPollId)clearInterval(dispatchPollId);
-    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},5000);
+    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},2000);
     setTimeout(refreshFleetMap,3000);
     if(window.location.hash==='#drivers'){
       const driversBtn=Array.from(document.querySelectorAll('.tbtab')).find(function(b){return b.textContent.trim()==='Drivers';});
@@ -1947,6 +1954,13 @@ function renderExceptionQueue(){
     </div>`).join('');
 }
 
+// ── PIPELINE HIGHLIGHT ──
+function highlightPipelineCard(jobId,on){
+  document.querySelectorAll('.pcard[data-jobid="'+jobId+'"]').forEach(function(card){
+    on?card.classList.add('pipe-highlight'):card.classList.remove('pipe-highlight');
+  });
+}
+
 // ── RENDER ALL ──
 function renderAll(){
   renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();
@@ -2033,7 +2047,7 @@ function renderPipeline(){
       } else {
         secondLine=j.pickup_address||'—';
       }
-      return `<div class="pcard" onclick="openDrawer('${j.id}')">
+      return `<div class="pcard" data-jobid="${j.id}" onclick="openDrawer('${j.id}')">
         <div class="pcard-sig">TP-${shortId}</div>
         <div class="pcard-name">${j.title||'Untitled Job'}</div>
         <div class="pcard-route">${secondLine}</div>
@@ -2174,7 +2188,7 @@ function renderTable(){
     const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
     const pickupColor=pickupChanged?'color:#ff6363;font-weight:700;':'';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
-      <td><div class="tbl-sig">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
+      <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
@@ -2899,6 +2913,7 @@ async function quickDispatch(id,status){
 // ── INTEL FEED ──
 function addIntelEvent(text,color){
   const feed=document.getElementById('intelFeed');
+  if(!feed) return; // Intel feed not present on this tab - skip silently
   const el=document.createElement('div');
   el.className='ifeed-item';
   const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
@@ -3064,7 +3079,7 @@ window.addEventListener('load',async function(){
     startClock();
     loadJobs();
     if(typeof loadDrivers==='function') loadDrivers();
-    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},5000);
+    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},2000);
     setTimeout(refreshFleetMap,3000);
     if(window.location.hash==='#drivers'){
       const driversBtn=Array.from(document.querySelectorAll('.tbtab')).find(function(b){return b.textContent.trim()==='Drivers';});
