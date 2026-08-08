@@ -233,6 +233,10 @@ body::after{content:'';position:fixed;inset:0;
 .pipe-cnt{font-family:var(--mono);font-size:0.769rem;font-weight:700;padding:2px 8px;border-radius:5px;}
 .pipe-body{padding:8px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
 .pcard{padding:10px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);
+  transition:border-color .2s,box-shadow .2s;}
+.pcard.pipe-highlight{border-color:var(--blue);box-shadow:0 0 0 2px rgba(25,183,239,.25);
+  animation:pipeGlow .6s ease 2;}
+@keyframes pipeGlow{0%,100%{box-shadow:0 0 0 2px rgba(25,183,239,.25);}50%{box-shadow:0 0 0 4px rgba(25,183,239,.45);}}
   cursor:pointer;transition:all .15s;position:relative;}
 .pcard:hover{border-color:rgba(25,183,239,.3);background:var(--card3);transform:translateY(-1px);}
 .pcard-sig{font-family:var(--mono);font-size:0.692rem;color:var(--blue);margin-bottom:3px;}
@@ -325,6 +329,7 @@ body::after{content:'';position:fixed;inset:0;
 .tbl tbody tr:last-child{border-bottom:none;}
 .tbl td{padding:11px 13px;vertical-align:middle;}
 .tbl-sig{font-family:var(--mono);font-size:0.769rem;color:var(--blue);}
+.tbl-sig:hover{text-decoration:underline;}
 .tbl-order{font-family:var(--mono);font-size:0.615rem;color:var(--faint);}
 .tbl-name{font-size:0.923rem;font-weight:500;}
 .tbl-route{font-size:0.769rem;color:var(--muted);}
@@ -1963,6 +1968,27 @@ function renderExceptionQueue(){
     </div>`).join('');
 }
 
+// ── PIPELINE HIGHLIGHT ──
+// Called when a TP number in the Signal/Job table is clicked.
+// Finds the matching pipeline card by data-jobid, scrolls it into view,
+// and briefly glows it to draw the eye. View button still opens the drawer.
+function highlightPipelineCard(jobId){
+  // Clear any existing highlights
+  document.querySelectorAll('.pcard.pipe-highlight').forEach(el=>{
+    el.classList.remove('pipe-highlight');
+  });
+  // Find the matching card
+  const card = document.querySelector(`.pcard[data-jobid="${jobId}"]`);
+  if(!card) return;
+  // Scroll the pipeline into view first, then the card
+  card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  // Apply highlight on next frame so scroll and animation don't fight
+  requestAnimationFrame(()=>{
+    card.classList.add('pipe-highlight');
+    setTimeout(()=>card.classList.remove('pipe-highlight'), 2000);
+  });
+}
+
 // ── RENDER ALL ──
 function renderAll(){
   renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();
@@ -2190,7 +2216,7 @@ function renderTable(){
     const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
     const pickupColor=pickupChanged?'color:#ff6363;font-weight:700;':'';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
-      <td><div class="tbl-sig">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
+      <td><div class="tbl-sig" onclick="event.stopPropagation();highlightPipelineCard('${j.id}')" style="cursor:pointer;" title="Highlight in pipeline">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
