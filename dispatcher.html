@@ -278,14 +278,14 @@ body::after{content:'';position:fixed;inset:0;
 
 /* ── EXCEPTION QUEUE ── */
 .exc-panel{background:var(--card);border:1px solid rgba(255,150,30,.14);
-  border-radius:13px;overflow:hidden;}
+  border-radius:13px;overflow:hidden;display:flex;flex-direction:column;height:100%;}
 .exc-hdr{padding:13px 16px;border-bottom:1px solid rgba(255,150,30,.1);
-  display:flex;align-items:center;justify-content:space-between;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
   background:linear-gradient(135deg,rgba(255,150,30,.04),transparent);}
 .exc-badge{padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.12);
   border:1px solid rgba(255,150,30,.25);font-family:var(--mono);font-size:0.692rem;
   font-weight:700;color:var(--orange);}
-.exc-list{max-height:260px;overflow-y:auto;}
+.exc-list{flex:1;overflow-y:auto;}
 .exc-item{padding:12px 14px;border-bottom:1px solid var(--border2);display:flex;gap:10px;}
 .exc-item:last-child{border-bottom:none;}
 .exc-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
