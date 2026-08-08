@@ -234,9 +234,7 @@ body::after{content:'';position:fixed;inset:0;
 .pipe-body{padding:8px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
 .pcard{padding:10px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);
   transition:border-color .2s,box-shadow .2s;}
-.pcard.pipe-highlight{border-color:var(--blue);box-shadow:0 0 0 2px rgba(25,183,239,.25);
-  animation:pipeGlow .6s ease 2;}
-@keyframes pipeGlow{0%,100%{box-shadow:0 0 0 2px rgba(25,183,239,.25);}50%{box-shadow:0 0 0 4px rgba(25,183,239,.45);}}
+.pcard.pipe-highlight{border-color:var(--blue) !important;box-shadow:0 0 0 2px rgba(25,183,239,.3),0 0 12px rgba(25,183,239,.15);}
   cursor:pointer;transition:all .15s;position:relative;}
 .pcard:hover{border-color:rgba(25,183,239,.3);background:var(--card3);transform:translateY(-1px);}
 .pcard-sig{font-family:var(--mono);font-size:0.692rem;color:var(--blue);margin-bottom:3px;}
@@ -1969,23 +1967,15 @@ function renderExceptionQueue(){
 }
 
 // ── PIPELINE HIGHLIGHT ──
-// Called when a TP number in the Signal/Job table is clicked.
-// Finds the matching pipeline card by data-jobid, scrolls it into view,
-// and briefly glows it to draw the eye. View button still opens the drawer.
-function highlightPipelineCard(jobId){
-  // Clear any existing highlights
-  document.querySelectorAll('.pcard.pipe-highlight').forEach(el=>{
-    el.classList.remove('pipe-highlight');
-  });
-  // Find the matching card
-  const card = document.querySelector(`.pcard[data-jobid="${jobId}"]`);
-  if(!card) return;
-  // Scroll the pipeline into view first, then the card
-  card.scrollIntoView({behavior:'smooth', block:'nearest'});
-  // Apply highlight on next frame so scroll and animation don't fight
-  requestAnimationFrame(()=>{
-    card.classList.add('pipe-highlight');
-    setTimeout(()=>card.classList.remove('pipe-highlight'), 2000);
+// Hover on a TP number in the Signal table to light up the matching
+// pipeline card above. Works across all columns. Stays lit while hovering.
+function highlightPipelineCard(jobId, on){
+  document.querySelectorAll('.pcard[data-jobid="'+jobId+'"]').forEach(card=>{
+    if(on){
+      card.classList.add('pipe-highlight');
+    } else {
+      card.classList.remove('pipe-highlight');
+    }
   });
 }
 
@@ -2123,7 +2113,7 @@ function renderPipeline(){
       deliveredBody.innerHTML='<div class="pipe-empty">No delivered stops yet</div>';
     }else{
       deliveredBody.innerHTML=deliveredEntries.slice(0,6).map(e=>`
-        <div class="pcard" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
+        <div class="pcard" data-jobid="${e.jobId}" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
           <div class="pcard-sig" style="display:flex;justify-content:space-between;align-items:center;">
             <span>TP-${e.shortId}</span>
             <span style="color:var(--green);font-size:0.615rem;font-family:var(--mono);">${e.stopLabel}</span>
@@ -2163,7 +2153,7 @@ function renderPipeline(){
       cancelBody.innerHTML='<div class="pipe-empty">No cancelled jobs</div>';
     }else{
       cancelBody.innerHTML=cancellationEntries.map(e=>`
-        <div class="pcard" onclick="openDrawer('${e.jobId}')">
+        <div class="pcard" data-jobid="${e.jobId}" onclick="openDrawer('${e.jobId}')">
           <div class="pcard-sig">TP-${e.jobId.slice(0,8)}</div>
           <div class="pcard-name">${e.title}${e.whole?'':' <span style="color:var(--orange);font-size:0.7em;">(stop cancelled)</span>'}</div>
           <div class="pcard-route">${e.detail}</div>
@@ -2216,7 +2206,7 @@ function renderTable(){
     const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
     const pickupColor=pickupChanged?'color:#ff6363;font-weight:700;':'';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
-      <td><div class="tbl-sig" onclick="event.stopPropagation();highlightPipelineCard('${j.id}')" style="cursor:pointer;" title="Highlight in pipeline">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
+      <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)" style="cursor:default;" title="Hover to highlight in pipeline above">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
