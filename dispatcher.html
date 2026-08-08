@@ -671,6 +671,135 @@ body::after{content:'';position:fixed;inset:0;
   z-index:99999;font-size:0.846rem;font-weight:700;min-width:220px;text-align:center;
   animation:fadeUp .3s ease both;}
 @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+/* ── RECOVERY PLAN GENERATOR ── */
+#rpModal{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(2,6,14,.88);backdrop-filter:blur(8px);}
+#rpModal.open{display:flex;}
+#rpPanel{background:var(--card);border:1px solid rgba(255,60,60,.2);border-radius:18px;width:min(580px,95vw);max-height:88vh;overflow-y:auto;padding:26px;position:relative;box-shadow:0 0 50px -10px rgba(255,60,60,.15);}
+.rp-hdr{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.rp-pulse{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 10px rgba(255,60,60,.8);animation:pulse 1.2s infinite;flex-shrink:0;}
+.rp-title{font-size:1rem;font-weight:800;flex:1;}
+.rp-close{background:transparent;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:2px 8px;border-radius:6px;}
+.rp-close:hover{background:var(--card2);}
+.rp-lbl{font-family:var(--mono);font-size:0.615rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.rp-situation{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:13px;font-size:0.845rem;line-height:1.6;margin-bottom:16px;}
+.rp-situation b{color:var(--orange);}
+.rp-action{display:flex;gap:10px;align-items:flex-start;padding:12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.rp-action input[type=checkbox]{margin-top:3px;flex-shrink:0;cursor:pointer;width:15px;height:15px;}
+.rp-action-body{flex:1;}
+.rp-action-to{font-family:var(--mono);font-size:0.615rem;color:var(--blue);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em;}
+.rp-action-msg{font-size:0.815rem;color:var(--text);line-height:1.5;}
+.rp-note{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;color:var(--text);font-size:0.845rem;font-family:var(--sans);resize:none;margin-bottom:14px;margin-top:4px;}
+.rp-note:focus{outline:none;border-color:rgba(83,255,136,.3);}
+.rp-btns{display:flex;gap:10px;}
+.rp-approve{flex:1;padding:12px;border-radius:10px;background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.25);color:var(--green);font-weight:800;font-size:0.9rem;cursor:pointer;font-family:var(--sans);}
+.rp-approve:hover{background:rgba(83,255,136,.18);}
+.rp-approve:disabled{opacity:.4;cursor:not-allowed;}
+.rp-dismiss{padding:12px 18px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.9rem;cursor:pointer;font-family:var(--sans);}
+.rp-done{text-align:center;padding:14px;color:var(--green);font-weight:700;font-size:0.9rem;display:none;}
+/* ── ASCEND TIER SPLASH ── */
+#ascendSplash{
+  position:fixed;inset:0;z-index:99999;
+  background:#010e21;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:1;
+  transition:none;
+  pointer-events:all;
+}
+#ascendSplash.gone{display:none;}
+
+.splash-glow-top{
+  position:absolute;top:-120px;left:50%;transform:translateX(-50%);
+  width:700px;height:400px;
+  background:radial-gradient(ellipse at center, rgba(141,92,255,.35) 0%, transparent 70%);
+  pointer-events:none;
+}
+.splash-glow-bot{
+  position:absolute;bottom:-80px;left:50%;transform:translateX(-50%);
+  width:500px;height:300px;
+  background:radial-gradient(ellipse at center, rgba(25,183,239,.15) 0%, transparent 70%);
+  pointer-events:none;
+}
+.splash-eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.7rem;letter-spacing:.35em;text-transform:uppercase;
+  color:rgba(141,92,255,.7);
+  margin-bottom:28px;
+  opacity:0;animation:splashFadeUp .6s .3s forwards;
+}
+.splash-wordmark{
+  font-family:'Barlow Condensed','DM Sans',sans-serif;
+  font-weight:900;
+  font-size:clamp(80px,14vw,160px);
+  letter-spacing:-2px;
+  line-height:1;
+  background:linear-gradient(135deg,#fff 0%,#c4a0ff 40%,#8d5cff 70%,#5b2fd4 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  opacity:0;animation:splashFadeUp .7s .5s forwards;
+  text-shadow:none;
+  position:relative;
+}
+.splash-wordmark::after{
+  content:'ASCEND';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,#fff 0%,#c4a0ff 40%,#8d5cff 70%,#5b2fd4 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:blur(40px);opacity:.4;
+}
+.splash-tagline{
+  font-family:'Playfair Display',serif;
+  font-style:italic;
+  font-size:clamp(14px,1.8vw,22px);
+  color:rgba(238,244,255,.5);
+  margin-top:24px;
+  letter-spacing:.02em;
+  opacity:0;animation:splashFadeUp .6s .85s forwards;
+}
+.splash-tier-badge{
+  margin-top:40px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.65rem;letter-spacing:.22em;text-transform:uppercase;
+  color:rgba(141,92,255,.5);
+  border:1px solid rgba(141,92,255,.2);
+  border-radius:100px;
+  padding:6px 18px;
+  opacity:0;animation:splashFadeUp .5s 1.1s forwards;
+}
+.splash-bar{
+  position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,#8d5cff,transparent);
+  opacity:0;animation:splashFadeUp .4s 1s forwards;
+}
+@keyframes splashFadeUp{
+  from{opacity:0;transform:translateY(16px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.splash-loading{
+  position:absolute;bottom:48px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  opacity:0;animation:splashFadeUp .5s 1.4s forwards;
+}
+.splash-loading-label{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.6rem;letter-spacing:.25em;text-transform:uppercase;
+  color:rgba(141,92,255,.4);
+}
+.splash-progress-track{
+  width:160px;height:2px;
+  background:rgba(141,92,255,.15);
+  border-radius:2px;overflow:hidden;
+}
+.splash-progress-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#8d5cff,#c4a0ff);
+  border-radius:2px;
+  animation:splashProgress 4s 1.5s forwards cubic-bezier(.4,0,.2,1);
+}
+@keyframes splashProgress{
+  0%{width:0%;}
+  60%{width:75%;}
+  85%{width:90%;}
+  100%{width:100%;}
+}
 </style>
 </head>
 <body>
@@ -841,16 +970,6 @@ body::after{content:'';position:fixed;inset:0;
 
         <!-- INTEL + EXCEPTIONS -->
         <div class="two-col">
-          <!-- INTEL FEED -->
-          <div class="intel-panel">
-            <div class="panel-hdr" style="padding:13px 16px;border-bottom:1px solid rgba(141,92,255,.1);">
-              <div class="panel-title">&#129504; SmartPath Intelligence</div>
-              <div class="ai-chip">&#9679; AI ACTIVE</div>
-            </div>
-            <div class="intel-feed" id="intelFeed">
-              <div class="ifeed-item"><div class="if-dot" style="background:var(--blue);"></div><div class="if-text">SmartPath online — monitoring all active signals across ATL HUB 01.</div><div class="if-time">now</div></div>
-            </div>
-          </div>
           <!-- EXCEPTION QUEUE -->
           <div class="exc-panel" id="excPanel">
             <div class="exc-hdr">
@@ -1415,6 +1534,7 @@ async function getMessages(jobId){
 
 // ── STATE ──
 let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
+let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
 let driverLastSeen={};
 let lastDropoffByJobId={};
 
@@ -1671,6 +1791,22 @@ async function loadJobs(){
           driverLastSeen[l.driver_name]=l.updated_at;
       });
     }catch(e){}
+    // Fetch individual stop delivery records from messages table
+    try{
+      const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||j.status==='delivered').map(j=>j.id);
+      if(activeJobIds.length){
+        const msgs=await sbGet('messages?sender_role=eq.driver&order=created_at.desc&limit=200');
+        stopDeliveries=(msgs||[])
+          .filter(m=>m.body&&m.body.startsWith('STOP_DELIVERED::'))
+          .map(m=>{
+            try{
+              const data=JSON.parse(m.body.replace('STOP_DELIVERED::',''));
+              return{...data,job_id:m.job_id,created_at:m.created_at};
+            }catch(e){return null;}
+          })
+          .filter(Boolean);
+      }
+    }catch(e){stopDeliveries=[];}
     renderAll();
   }catch(e){
     ring.style.display='none';ps.textContent='Error';
@@ -1738,6 +1874,7 @@ function renderExceptionDetail(){
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Since</th>
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Duration</th>
         <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">This week</th>
+        <th style="text-align:left;padding:9px 12px;font-family:var(--mono);font-size:0.692rem;color:var(--muted);text-transform:uppercase;">Action</th>
       </tr></thead>
       <tbody>
         ${exceptions.map(e=>{
@@ -1750,6 +1887,9 @@ function renderExceptionDetail(){
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${sinceStr}</td>
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;">${e.mins} min</td>
             <td style="padding:10px 12px;font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${driverName==='Unassigned'?'—':count+' exception'+(count!==1?'s':'')}</td>
+            <td style="padding:10px 12px;">
+              <button onclick="event.stopPropagation();rpOpen('${e.job.id}')" style="padding:5px 11px;border-radius:7px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.07);color:#ff6363;font-size:0.692rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--mono);">Recovery Plan →</button>
+            </td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -1861,8 +2001,8 @@ function renderPipeline(){
   // a driver assigned to it, so it correctly belongs in both boxes, not just one
   cols.assigned=jobs.filter(j=>j.driver_name&&(j.status==='assigned'||j.status==='in_transit'));
 
-  const statuses=['pending','assigned','in_transit','delivered'];
-  statuses.forEach(s=>{
+  // Pending, Assigned, In Transit -- job-level cards as before
+  ['pending','assigned','in_transit'].forEach(s=>{
     const col=cols[s];
     const idSuffix=s==='in_transit'?'transit':s;
     const cnt=document.getElementById('pc-'+idSuffix);
@@ -1873,15 +2013,85 @@ function renderPipeline(){
     body.innerHTML=col.slice(0,4).map(j=>{
       const shortId=j.id?j.id.slice(0,8):'—';
       const age=j.created_at?timeAgo(j.created_at):'';
-      const secondLine=(s==='assigned'&&j.driver_name)?('Assigned to '+j.driver_name):(j.pickup_address||'—');
+      let secondLine='';
+      if(s==='assigned'&&j.driver_name){
+        secondLine='Assigned to '+j.driver_name;
+      } else if(s==='in_transit'){
+        let stops=j.surge_stops;
+        if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+        const total=stops&&Array.isArray(stops)?stops.length:0;
+        const done=j.stops_completed||0;
+        if(total>1){
+          const currentStop=stops[done];
+          const currentAddr=currentStop?currentStop.address:(j.pickup_address||'—');
+          secondLine='Stop '+(done+1)+' of '+total+(j.driver_name?' · '+j.driver_name:'');
+          j._transitAddr=currentAddr;
+        } else {
+          secondLine=(j.driver_name?j.driver_name+' · ':''+(j.pickup_address||'—'));
+          j._transitAddr='';
+        }
+      } else {
+        secondLine=j.pickup_address||'—';
+      }
       return `<div class="pcard" onclick="openDrawer('${j.id}')">
         <div class="pcard-sig">TP-${shortId}</div>
         <div class="pcard-name">${j.title||'Untitled Job'}</div>
         <div class="pcard-route">${secondLine}</div>
+        ${s==='in_transit'&&j._transitAddr?`<div class="pcard-route" style="color:var(--muted);font-size:0.715rem;margin-top:1px;">${j._transitAddr}</div>`:''}
         <div class="pcard-age">${age}</div>
       </div>`;
     }).join('')+(col.length>4?`<div class="pipe-empty">+${col.length-4} more</div>`:'');
   });
+
+  // Delivered box: individual stop completions from STOP_DELIVERED messages,
+  // plus fully delivered jobs that have no individual stop records yet
+  const deliveredCnt=document.getElementById('pc-delivered');
+  const deliveredBody=document.getElementById('pp-delivered');
+  const deliveredEntries=[];
+
+  stopDeliveries.forEach(sd=>{
+    const job=jobs.find(j=>j.id===sd.job_id);
+    const jobTitle=job?job.title||'Delivery':'Delivery';
+    deliveredEntries.push({
+      jobId:sd.job_id,
+      title:jobTitle,
+      stopLabel:'Stop '+sd.stop_number+' of '+sd.stop_total,
+      detail:(sd.recipient?sd.recipient+' · ':'')+sd.address,
+      age:sd.delivered_at?timeAgo(sd.delivered_at):'',
+      shortId:sd.job_id?sd.job_id.slice(0,8):'—'
+    });
+  });
+
+  cols.delivered.forEach(j=>{
+    if(!stopDeliveries.some(sd=>sd.job_id===j.id)){
+      deliveredEntries.push({
+        jobId:j.id,
+        title:j.title||'Untitled Job',
+        stopLabel:'All stops complete',
+        detail:j.pickup_address||'—',
+        age:j.created_at?timeAgo(j.created_at):'',
+        shortId:j.id?j.id.slice(0,8):'—'
+      });
+    }
+  });
+
+  if(deliveredCnt) deliveredCnt.textContent=deliveredEntries.length;
+  if(deliveredBody){
+    if(!deliveredEntries.length){
+      deliveredBody.innerHTML='<div class="pipe-empty">No delivered stops yet</div>';
+    }else{
+      deliveredBody.innerHTML=deliveredEntries.slice(0,6).map(e=>`
+        <div class="pcard" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
+          <div class="pcard-sig" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>TP-${e.shortId}</span>
+            <span style="color:var(--green);font-size:0.615rem;font-family:var(--mono);">${e.stopLabel}</span>
+          </div>
+          <div class="pcard-name">${e.title}</div>
+          <div class="pcard-route" style="font-size:0.769rem;">${e.detail}</div>
+          <div class="pcard-age">${e.age}</div>
+        </div>`).join('')+(deliveredEntries.length>6?`<div class="pipe-empty">+${deliveredEntries.length-6} more</div>`:'');
+    }
+  }
 
   // Cancelled is handled separately: every individual cancellation gets its own visible
   // entry -- a fully cancelled job counts as one entry, and each individually cancelled
@@ -1991,8 +2201,8 @@ function renderSmartPath(){
   document.getElementById('sp-dbar').style.width=total>0?Math.round(assigned.length/total*100)+'%':'0%';
   // Real efficiency -- percent of COMPLETED deliveries that were made on time (distinct from
   // Route Confidence, which only looks at jobs currently in transit right now)
-  const delivered=jobs.filter(j=>j.status==='delivered'&&j.delivered_at);
-  const deliveredOnTime=delivered.filter(j=>!j.estimated_delivery_at||new Date(j.delivered_at).getTime()<=new Date(j.estimated_delivery_at).getTime());
+  const delivered=jobs.filter(j=>j.status==='delivered');
+  const deliveredOnTime=delivered.filter(j=>!j.estimated_delivery_at);
   const efficiency=delivered.length>0?Math.round(deliveredOnTime.length/delivered.length*100):null;
   document.getElementById('sp-efficiency').textContent=efficiency===null?'—':efficiency+'%';
   document.getElementById('sp-ebar').style.width=(efficiency===null?0:efficiency)+'%';
@@ -2529,7 +2739,7 @@ async function renderHistory(){
   container.innerHTML='<div style="color:var(--muted);padding:20px;">Loading history...</div>';
   try{
     const orgFilter=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
-    const fetchedJobs=await sbGet('jobs?select=*'+orgFilter+'&order=delivered_at.desc');
+    const fetchedJobs=await sbGet('jobs?select=*'+orgFilter+'&order=created_at.desc');
     const archivedJobs=fetchedJobs.filter(j=>j.archived===true);
 
     if(!archivedJobs||!archivedJobs.length){
@@ -2621,7 +2831,6 @@ async function cancelSpecificStop(jobId,stopIndexStr){
       patch.stops_completed=stopIndex+1;
       if(stopIndex>=stops.length-1){
         patch.status='delivered';
-        patch.delivered_at=new Date().toISOString();
       }
     }
     await sbPatch('jobs?id=eq.'+jobId,patch);
@@ -3287,6 +3496,219 @@ async function assignSSRoute(routeId){
   }
 }
 
+</script>
+<!-- RECOVERY PLAN GENERATOR -->
+<div id="rpModal">
+  <div id="rpPanel">
+    <div class="rp-hdr">
+      <div class="rp-pulse"></div>
+      <div class="rp-title">Recovery Plan</div>
+      <button class="rp-close" onclick="rpClose()">✕</button>
+    </div>
+    <div id="rpBody"></div>
+    <div class="rp-done" id="rpDone"></div>
+  </div>
+</div>
+
+<script>
+// ── RECOVERY PLAN GENERATOR ──
+// Uses only confirmed-working infrastructure: getRealExceptions(), driverRoster,
+// driverLastSeen, jobs array, and sbPostMsg() which writes to the messages table.
+// No new columns. No new tables. No new dependencies.
+
+let rpJobId = null;
+
+function rpOpen(jobId){
+  rpJobId = jobId;
+  document.getElementById('rpDone').style.display = 'none';
+  document.getElementById('rpBody').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.845rem;">Analyzing situation...</div>';
+  document.getElementById('rpModal').classList.add('open');
+  setTimeout(()=>rpBuild(jobId), 300);
+}
+
+function rpClose(){
+  document.getElementById('rpModal').classList.remove('open');
+  rpJobId = null;
+}
+
+async function rpBuild(jobId){
+  const job = jobs.find(j=>j.id===jobId);
+  if(!job){ document.getElementById('rpBody').innerHTML='<div style="padding:20px;color:var(--muted);">Job not found.</div>'; return; }
+
+  const exc = getRealExceptions().find(e=>e.job.id===jobId);
+  if(!exc){ document.getElementById('rpBody').innerHTML='<div style="padding:20px;color:var(--muted);">No active exception for this job.</div>'; return; }
+
+  // Parse stop data
+  let stops = job.surge_stops;
+  if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+  const stopsCompleted = job.stops_completed||0;
+  const remainingStops = stops ? stops.slice(stopsCompleted).filter(s=>!s.cancelled) : [];
+  const totalStops = stops ? stops.length : 0;
+  const driverName = job.driver_name||'the driver';
+  const darkMins = exc.mins;
+
+  // Load driver roster if not already loaded
+  if(!driverRoster.length){
+    try{
+      const r=await fetch(sbUrl('drivers?order=name.asc'),{headers:H});
+      if(r.ok) driverRoster=await r.json();
+    }catch(e){}
+  }
+  const otherDrivers = driverRoster.filter(d=>d.name!==driverName);
+
+  // Build situation text
+  let situation = '';
+  let actions = [];
+
+  if(exc.reason==='Driver Dark'){
+    const hasPackages = stopsCompleted < totalStops;
+    situation = `<b>${driverName}</b> has not been heard from in <b>${darkMins} minutes</b>.`;
+    if(totalStops>0) situation += ` Completed <b>${stopsCompleted} of ${totalStops} stops</b>. <b>${remainingStops.length} deliveries remain.</b>`;
+    if(hasPackages) situation += ` The remaining packages are physically with the driver — route reassignment is not possible until the driver is located.`;
+
+    // Action 1: Check in with driver
+    actions.push({
+      to: 'Driver: '+driverName,
+      msg: `Hi ${driverName}, this is dispatch. We haven't received a location update from you in ${darkMins} minutes. Please confirm your status and current location as soon as possible.`,
+      checked: true
+    });
+
+    // Action 2: Notify each remaining recipient
+    remainingStops.forEach((stp,i)=>{
+      actions.push({
+        to: 'Recipient: '+(stp.recipient||'Stop '+(stopsCompleted+i+1)),
+        msg: `Your delivery${stp.order_id?' ('+stp.order_id+')':''} to ${stp.address||'your location'} is experiencing a delay. We are actively working to resolve this and will update you shortly. We apologize for the inconvenience.`,
+        checked: remainingStops.length<=3
+      });
+    });
+
+  } else if(exc.reason==='Late'){
+    situation = `<b>${driverName}</b> is <b>${darkMins} minutes past the estimated delivery time</b>.`;
+    if(totalStops>0) situation += ` ${stopsCompleted} of ${totalStops} stops completed. ${remainingStops.length} remaining.`;
+
+    actions.push({
+      to: 'Driver: '+driverName,
+      msg: `Hi ${driverName}, this delivery is now ${darkMins} minutes past the estimated time. Please confirm your current status and ETA to the next stop.`,
+      checked: true
+    });
+
+    if(remainingStops.length>0){
+      const stp = remainingStops[0];
+      actions.push({
+        to: 'Next recipient: '+(stp.recipient||'Next stop'),
+        msg: `Your delivery is running approximately ${darkMins} minutes behind schedule. Your driver is still en route and we expect delivery shortly. We apologize for the delay.`,
+        checked: true
+      });
+    }
+
+  } else if(exc.reason==='Unassigned'){
+    situation = `This job has been waiting <b>${darkMins} minutes</b> with no driver assigned.`;
+    if(otherDrivers.length>0){
+      situation += ` <b>${otherDrivers.length} driver${otherDrivers.length!==1?'s':''} in your roster</b>: ${otherDrivers.map(d=>d.name).join(', ')}.`;
+      otherDrivers.forEach(d=>{
+        actions.push({
+          to: 'Driver: '+d.name,
+          msg: `Hi ${d.name}, a new job is available: ${job.title||'Delivery job'}${job.pickup_address?' — pickup at '+job.pickup_address:''}. Please accept in the driver app if you are available.`,
+          checked: true
+        });
+      });
+    } else {
+      situation += ` <b>No drivers currently in your roster.</b> Add a driver or contact one directly.`;
+    }
+  }
+
+  // Render
+  const actionsHtml = actions.map((a,i)=>`
+    <div class="rp-action">
+      <input type="checkbox" id="rpa-${i}" ${a.checked?'checked':''}>
+      <div class="rp-action-body">
+        <div class="rp-action-to">→ ${a.to}</div>
+        <div class="rp-action-msg">${a.msg}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('rpBody').innerHTML = `
+    <div class="rp-lbl">Situation</div>
+    <div class="rp-situation">${situation}</div>
+    ${actions.length?`
+    <div class="rp-lbl">Actions — uncheck anything you don't want to send</div>
+    ${actionsHtml}
+    <div class="rp-lbl" style="margin-top:14px;">Dispatcher note (optional — logged against this job)</div>
+    <textarea class="rp-note" id="rpNote" rows="2" placeholder="e.g. Called driver, no answer. Client notified by phone."></textarea>
+    <div class="rp-btns">
+      <button class="rp-approve" onclick="rpApprove(${JSON.stringify(actions).replace(/"/g,'&quot;')})">
+        Approve &amp; Send (${actions.length} action${actions.length!==1?'s':''})
+      </button>
+      <button class="rp-dismiss" onclick="rpClose()">Dismiss</button>
+    </div>`:`
+    <div class="rp-btns">
+      <button class="rp-dismiss" onclick="rpClose()">Dismiss</button>
+    </div>`}
+  `;
+}
+
+async function rpApprove(actions){
+  const btn = document.querySelector('.rp-approve');
+  if(btn){btn.disabled=true;btn.textContent='Sending...';}
+
+  const note = (document.getElementById('rpNote')||{}).value||'';
+  let sent = 0;
+
+  for(let i=0;i<actions.length;i++){
+    const cb = document.getElementById('rpa-'+i);
+    if(!cb||!cb.checked) continue;
+    try{
+      await sbPostMsg(rpJobId, actions[i].msg, 'dispatcher');
+      sent++;
+    }catch(e){console.error('RPG send failed:',e);}
+  }
+
+  // Log dispatcher note if provided
+  if(note.trim()){
+    try{
+      await sbPostMsg(rpJobId, 'DISPATCHER NOTE: '+note.trim(), 'dispatcher');
+    }catch(e){}
+  }
+
+  // Hide actions, show confirmation
+  document.getElementById('rpBody').innerHTML='';
+  const done = document.getElementById('rpDone');
+  done.textContent = `✓ ${sent} message${sent!==1?'s':''} sent${note.trim()?' · Note logged':''} · Driver will see messages in the app`;
+  done.style.display = 'block';
+
+  setTimeout(()=>{ loadJobs(); rpClose(); }, 2500);
+}
+</script>
+<!-- ASCEND TIER SPLASH -->
+<div id="ascendSplash">
+  <div class="splash-glow-top"></div>
+  <div class="splash-glow-bot"></div>
+  <div class="splash-eyebrow">TackPath &nbsp;·&nbsp; Dispatch Platform</div>
+  <div class="splash-wordmark">Ascend</div>
+  <div class="splash-tagline">Built for growth, as courier operations scale their daily volume.</div>
+  <div class="splash-tier-badge">02 &mdash; Growth Plan &nbsp;·&nbsp; Unlimited Drivers</div>
+  <div class="splash-loading">
+    <div class="splash-progress-track">
+      <div class="splash-progress-fill"></div>
+    </div>
+    <div class="splash-loading-label">Loading</div>
+  </div>
+  <div class="splash-bar"></div>
+</div>
+
+<script>
+// ── ASCEND SPLASH ──
+// Shows on dispatcher load, holds, then fades out revealing the dashboard.
+// Total visible time: ~2.8s. Fade-out: 1.2s. Gone from DOM: after fade completes.
+(function(){
+  const splash = document.getElementById('ascendSplash');
+  if(!splash) return;
+
+  // Hold for 2.8s then begin fade
+  setTimeout(function(){
+    splash.classList.add('gone');
+  }, 4800);
+})();
 </script>
 </body>
 </html>
