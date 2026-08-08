@@ -219,20 +219,13 @@ body::after{content:'';position:fixed;inset:0;
 .up{color:var(--green);}.dn{color:var(--red);}
 
 /* ── SIGNAL PIPELINE (Kanban) ── */
-.pipeline-wrap{margin-bottom:18px;}
+.pipeline-wrap{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px;}
 .pipeline-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.18em;
   color:var(--muted);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
 .pipeline-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
-.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
-@media(max-width:1400px){
-  .pipeline{grid-template-columns:repeat(3,1fr);}
-  .pipe-col:nth-child(2){display:none;} /* Hide Assigned - shown in In Transit */
-  .pipe-col:nth-child(5){display:none;} /* Hide Cancelled - less critical */
-}
+.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 @media(max-width:1000px){
-  .pipeline{grid-template-columns:repeat(5,1fr);}
-  .pipe-col:nth-child(2){display:block;}
-  .pipe-col:nth-child(5){display:block;}
+  .pipeline{grid-template-columns:repeat(2,1fr);}
 }
 @media(max-width:1100px){.pipeline{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:700px){.pipeline{grid-template-columns:repeat(2,1fr);}}
@@ -952,14 +945,10 @@ body::after{content:'';position:fixed;inset:0;
         </div>
 
         <!-- PIPELINE + EXCEPTIONS ROW -->
-        <div class="two-col" style="grid-template-columns:1fr 300px;">
+        <div class="two-col" style="grid-template-columns:1fr 1fr;align-items:stretch;">
         <div class="pipeline-wrap">
           <div class="pipeline-lbl">Signal Pipeline · Live</div>
           <div class="pipeline">
-            <div class="pipe-col">
-              <div class="pipe-hdr"><div class="pipe-title" style="color:var(--muted);">Pending</div><div class="pipe-cnt" style="background:rgba(255,255,255,.05);color:var(--muted);" id="pc-pending">0</div></div>
-              <div class="pipe-body" id="pp-pending"><div class="pipe-empty">No pending jobs</div></div>
-            </div>
             <div class="pipe-col">
               <div class="pipe-hdr"><div class="pipe-title" style="color:var(--blue);">Assigned</div><div class="pipe-cnt" style="background:rgba(25,183,239,.1);color:var(--blue);" id="pc-assigned">0</div></div>
               <div class="pipe-body" id="pp-assigned"><div class="pipe-empty">No assigned jobs</div></div>
