@@ -2075,7 +2075,7 @@ function renderPipeline(){
       } else {
         secondLine=j.pickup_address||'—';
       }
-      return `<div class="pcard" onclick="openDrawer('${j.id}')">
+      return `<div class="pcard" data-jobid="${j.id}" onclick="openDrawer('${j.id}')">
         <div class="pcard-sig">TP-${shortId}</div>
         <div class="pcard-name">${j.title||'Untitled Job'}</div>
         <div class="pcard-route">${secondLine}</div>
