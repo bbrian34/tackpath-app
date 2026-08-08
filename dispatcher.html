@@ -219,12 +219,11 @@ body::after{content:'';position:fixed;inset:0;
 .up{color:var(--green);}.dn{color:var(--red);}
 
 /* ── SIGNAL PIPELINE (Kanban) ── */
-.pipeline-section{margin-bottom:18px;}
+.pipeline-wrap{margin-bottom:18px;}
 .pipeline-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.18em;
   color:var(--muted);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
 .pipeline-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
 .pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
-@media(max-width:1000px){.pipeline{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:1100px){.pipeline{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:700px){.pipeline{grid-template-columns:repeat(2,1fr);}}
 .pipe-col{background:var(--card);border-radius:13px;border:1px solid var(--border);overflow:hidden;min-height:120px;}
@@ -232,12 +231,11 @@ body::after{content:'';position:fixed;inset:0;
 .pipe-title{font-family:var(--mono);font-size:0.615rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
 .pipe-cnt{font-family:var(--mono);font-size:0.769rem;font-weight:700;padding:2px 8px;border-radius:5px;}
 .pipe-body{padding:8px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
-.pcard{padding:10px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);
-  transition:border-color .2s,box-shadow .2s;}
-.pcard.pipe-highlight{border-color:var(--blue) !important;box-shadow:0 0 0 2px rgba(25,183,239,.3),0 0 12px rgba(25,183,239,.15);}
+.pcard{padding:10px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);transition:border-color .15s,box-shadow .15s;
   cursor:pointer;transition:all .15s;position:relative;}
 .pcard:hover{border-color:rgba(25,183,239,.3);background:var(--card3);transform:translateY(-1px);}
 .pcard-sig{font-family:var(--mono);font-size:0.692rem;color:var(--blue);margin-bottom:3px;}
+.pcard.pipe-highlight{border-color:var(--blue) !important;box-shadow:0 0 0 2px rgba(25,183,239,.3);}
 .pcard-name{font-size:0.846rem;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pcard-route{font-size:0.769rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pcard-age{font-family:var(--mono);font-size:0.615rem;color:var(--faint);margin-top:5px;}
@@ -271,14 +269,14 @@ body::after{content:'';position:fixed;inset:0;
 
 /* ── EXCEPTION QUEUE ── */
 .exc-panel{background:var(--card);border:1px solid rgba(255,150,30,.14);
-  border-radius:13px;overflow:hidden;display:flex;flex-direction:column;height:100%;}
+  border-radius:13px;overflow:hidden;}
 .exc-hdr{padding:13px 16px;border-bottom:1px solid rgba(255,150,30,.1);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
   background:linear-gradient(135deg,rgba(255,150,30,.04),transparent);}
 .exc-badge{padding:3px 9px;border-radius:5px;background:rgba(255,150,30,.12);
   border:1px solid rgba(255,150,30,.25);font-family:var(--mono);font-size:0.692rem;
   font-weight:700;color:var(--orange);}
-.exc-list{flex:1;overflow-y:auto;}
+.exc-list{max-height:260px;overflow-y:auto;}
 .exc-item{padding:12px 14px;border-bottom:1px solid var(--border2);display:flex;gap:10px;}
 .exc-item:last-child{border-bottom:none;}
 .exc-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
@@ -327,7 +325,6 @@ body::after{content:'';position:fixed;inset:0;
 .tbl tbody tr:last-child{border-bottom:none;}
 .tbl td{padding:11px 13px;vertical-align:middle;}
 .tbl-sig{font-family:var(--mono);font-size:0.769rem;color:var(--blue);}
-.tbl-sig:hover{text-decoration:underline;}
 .tbl-order{font-family:var(--mono);font-size:0.615rem;color:var(--faint);}
 .tbl-name{font-size:0.923rem;font-weight:500;}
 .tbl-route{font-size:0.769rem;color:var(--muted);}
@@ -945,10 +942,11 @@ body::after{content:'';position:fixed;inset:0;
           <div id="excDetailBody"></div>
         </div>
 
-        <!-- PIPELINE + EXCEPTIONS -->
-        <div class="pipeline-section">
+        <!-- PIPELINE -->
+        <div class="pipeline-wrap">
           <div class="pipeline-lbl">Signal Pipeline · Live</div>
           <div class="pipeline">
+
             <div class="pipe-col">
               <div class="pipe-hdr"><div class="pipe-title" style="color:var(--blue);">Assigned</div><div class="pipe-cnt" style="background:rgba(25,183,239,.1);color:var(--blue);" id="pc-assigned">0</div></div>
               <div class="pipe-body" id="pp-assigned"><div class="pipe-empty">No assigned jobs</div></div>
@@ -965,14 +963,28 @@ body::after{content:'';position:fixed;inset:0;
               <div class="pipe-hdr"><div class="pipe-title" style="color:var(--red);">Cancelled</div><div class="pipe-cnt" style="background:rgba(255,59,48,.08);color:var(--red);" id="pc-cancelled">0</div></div>
               <div class="pipe-body" id="pp-cancelled"><div class="pipe-empty">None</div></div>
             </div>
-            <div class="pipe-col" id="excPanel" style="border-color:rgba(255,150,30,.2);">
+            <div class="pipe-col" style="border-color:rgba(255,150,30,.2);">
               <div class="pipe-hdr" style="background:linear-gradient(135deg,rgba(255,150,30,.04),transparent);">
                 <div class="pipe-title" style="color:var(--orange);">&#9888; Exceptions</div>
                 <div class="pipe-cnt" style="background:rgba(255,150,30,.1);color:var(--orange);" id="excBadge">0 OPEN</div>
               </div>
               <div class="pipe-body" id="excList">
-                <div class="pipe-empty">No exceptions · System healthy</div>
+                <div class="pipe-empty">No exceptions</div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INTEL + EXCEPTIONS -->
+        <div class="two-col">
+          <!-- EXCEPTION QUEUE -->
+          <div class="exc-panel" id="excPanel">
+            <div class="exc-hdr">
+              <div class="panel-title" style="color:var(--orange);font-size:1rem;">&#9888; Exception Queue</div>
+              <div class="exc-badge" id="excBadge">0 OPEN</div>
+            </div>
+            <div class="exc-list" id="excList">
+              <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>
             </div>
           </div>
         </div>
@@ -1927,55 +1939,25 @@ function renderExceptionQueue(){
   if(badge) badge.textContent = allExceptions.length + ' OPEN';
 
   if(!allExceptions.length){
-    list.innerHTML = '<div class="pipe-empty">No exceptions</div>';
+    list.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>';
     return;
   }
 
   const priorityColor = {critical:'var(--red)',high:'var(--orange)',standard:'var(--blue)',low:'var(--muted)'};
-
-  // Build a one-line situation summary per exception using real job data
-  function excSituation(exc){
-    const job = jobs.find(j=>j.id===exc.id);
-    if(!job) return exc.description;
-    let stops=job.surge_stops;
-    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
-    const total=stops&&Array.isArray(stops)?stops.length:0;
-    const done=job.stops_completed||0;
-    const remaining=total>0?total-done:0;
-    const rpe = getRealExceptions().find(e=>e.job.id===exc.id);
-    const mins=rpe?rpe.mins:0;
-    const reason=rpe?rpe.reason:'';
-    if(reason==='Driver Dark') return (job.driver_name||'Driver')+' dark '+mins+'min · '+(remaining>0?remaining+' stop'+(remaining!==1?'s':'')+' undelivered':'all stops done');
-    if(reason==='Late') return (job.driver_name||'Driver')+' '+mins+'min past ETA'+(remaining>0?' · '+remaining+' stop'+(remaining!==1?'s':'')+' remain':'');
-    if(reason==='Unassigned') return 'Waiting '+mins+'min · no driver assigned';
-    return exc.description;
-  }
-
   list.innerHTML = allExceptions.map(exc => `
-    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);">
-      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;">
-        <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;box-shadow:0 0 5px ${priorityColor[exc.priority]||'var(--orange)'};"></div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-family:var(--mono);font-size:0.692rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
-          <div style="font-size:0.692rem;color:var(--orange);font-style:italic;">${excSituation(exc)}</div>
-        </div>
+    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,150,0,.08);display:flex;gap:10px;align-items:flex-start;">
+      <div style="width:7px;height:7px;border-radius:50%;background:${priorityColor[exc.priority]||'var(--orange)'};margin-top:4px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);margin-bottom:2px;">${exc.title}</div>
+        <div style="font-size:0.769rem;color:var(--muted);">${exc.description}</div>
       </div>
-      <button onclick="rpOpen('${exc.id}')" style="width:100%;padding:5px 0;border-radius:6px;border:1px solid rgba(255,60,60,.25);background:rgba(255,60,60,.06);color:#ff6363;font-size:0.615rem;font-weight:700;cursor:pointer;font-family:var(--mono);letter-spacing:.04em;">
-        View Situation &amp; Recovery Plan →
-      </button>
     </div>`).join('');
 }
 
 // ── PIPELINE HIGHLIGHT ──
-// Hover on a TP number in the Signal table to light up the matching
-// pipeline card above. Works across all columns. Stays lit while hovering.
-function highlightPipelineCard(jobId, on){
+function highlightPipelineCard(jobId,on){
   document.querySelectorAll('.pcard[data-jobid="'+jobId+'"]').forEach(card=>{
-    if(on){
-      card.classList.add('pipe-highlight');
-    } else {
-      card.classList.remove('pipe-highlight');
-    }
+    on?card.classList.add('pipe-highlight'):card.classList.remove('pipe-highlight');
   });
 }
 
@@ -2027,13 +2009,11 @@ function renderKPIs(){
 // ── PIPELINE ──
 function renderPipeline(){
   const cols={pending:[],assigned:[],in_transit:[],delivered:[]};
-  // Treat customer_confirmed as in_transit -- driver has accepted
-  jobs.forEach(j=>{ if(j.status==='customer_confirmed') j._displayStatus='in_transit'; });
-  jobs.forEach(j=>{ const s=j._displayStatus||j.status||'pending'; if(cols[s]) cols[s].push(j); });
+  jobs.forEach(j=>{ const s=j.status||'pending'; if(cols[s]) cols[s].push(j); });
 
   // "Assigned" means "has a driver and is still active" -- an in-transit job still has
   // a driver assigned to it, so it correctly belongs in both boxes, not just one
-  cols.assigned=jobs.filter(j=>j.status==='assigned');
+  cols.assigned=jobs.filter(j=>j.driver_name&&(j.status==='assigned'||j.status==='in_transit'));
 
   // Pending, Assigned, In Transit -- job-level cards as before
   ['pending','assigned','in_transit'].forEach(s=>{
@@ -2115,7 +2095,7 @@ function renderPipeline(){
       deliveredBody.innerHTML='<div class="pipe-empty">No delivered stops yet</div>';
     }else{
       deliveredBody.innerHTML=deliveredEntries.slice(0,6).map(e=>`
-        <div class="pcard" data-jobid="${e.jobId}" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
+        <div class="pcard" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
           <div class="pcard-sig" style="display:flex;justify-content:space-between;align-items:center;">
             <span>TP-${e.shortId}</span>
             <span style="color:var(--green);font-size:0.615rem;font-family:var(--mono);">${e.stopLabel}</span>
@@ -2155,7 +2135,7 @@ function renderPipeline(){
       cancelBody.innerHTML='<div class="pipe-empty">No cancelled jobs</div>';
     }else{
       cancelBody.innerHTML=cancellationEntries.map(e=>`
-        <div class="pcard" data-jobid="${e.jobId}" onclick="openDrawer('${e.jobId}')">
+        <div class="pcard" onclick="openDrawer('${e.jobId}')">
           <div class="pcard-sig">TP-${e.jobId.slice(0,8)}</div>
           <div class="pcard-name">${e.title}${e.whole?'':' <span style="color:var(--orange);font-size:0.7em;">(stop cancelled)</span>'}</div>
           <div class="pcard-route">${e.detail}</div>
@@ -2208,7 +2188,7 @@ function renderTable(){
     const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
     const pickupColor=pickupChanged?'color:#ff6363;font-weight:700;':'';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
-      <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)" style="cursor:default;" title="Hover to highlight in pipeline above">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
+      <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
