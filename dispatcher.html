@@ -1553,7 +1553,7 @@ async function doLogin(){
     document.getElementById('shell').style.display='flex';
     startClock();loadJobs();if(typeof loadDrivers==='function')loadDrivers();
     if(dispatchPollId)clearInterval(dispatchPollId);
-    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},5000);
+    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},2000);
     setTimeout(refreshFleetMap,3000);
     if(window.location.hash==='#drivers'){
       const driversBtn=Array.from(document.querySelectorAll('.tbtab')).find(function(b){return b.textContent.trim()==='Drivers';});
@@ -3098,7 +3098,7 @@ window.addEventListener('load',async function(){
     startClock();
     loadJobs();
     if(typeof loadDrivers==='function') loadDrivers();
-    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},5000);
+    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},2000);
     setTimeout(refreshFleetMap,3000);
     if(window.location.hash==='#drivers'){
       const driversBtn=Array.from(document.querySelectorAll('.tbtab')).find(function(b){return b.textContent.trim()==='Drivers';});
