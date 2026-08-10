@@ -328,6 +328,10 @@ body::after{content:'';position:fixed;inset:0;
 .tbl-order{font-family:var(--mono);font-size:0.615rem;color:var(--faint);}
 .tbl-name{font-size:0.923rem;font-weight:500;}
 .tbl-route{font-size:0.769rem;color:var(--muted);}
+.prog-wrap{display:flex;flex-direction:column;gap:3px;min-width:80px;}
+.prog-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:2px;}
+.prog-lbl{font-family:var(--mono);font-size:0.538rem;color:var(--muted);}
 .tbl-driver{font-size:0.846rem;}
 .tbl-eta{font-family:var(--mono);font-size:0.846rem;font-weight:600;}
 .tbl-quote{font-family:var(--mono);font-size:0.846rem;font-weight:600;color:var(--green);}
@@ -1004,6 +1008,7 @@ body::after{content:'';position:fixed;inset:0;
                 <th>Title</th>
                 <th>Pickup</th>
                 <th>Dropoff</th>
+                <th>Progress</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th></th>
@@ -2218,6 +2223,16 @@ function renderTable(){
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
+      <td>${(()=>{
+        let jstops=j.surge_stops;
+        if(typeof jstops==='string'){try{jstops=JSON.parse(jstops);}catch(e){jstops=null;}}
+        const total=jstops&&Array.isArray(jstops)?jstops.filter(function(x){return !x.cancelled;}).length:0;
+        const done=Math.min(j.stops_completed||0,total);
+        const pct=total>0?Math.round(done/total*100):(s==='delivered'?100:0);
+        const color=pct===100?'#53ff88':(pct>60?'linear-gradient(90deg,#19b7ef,#53ff88)':'linear-gradient(90deg,#19b7ef,#8d5cff)');
+        const label=total>0?(done+' of '+total+' · '+pct+'%'):(pct+'%');
+        return '<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+color+';"></div></div><div class="prog-lbl">'+label+'</div></div>';
+      })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
       <td><button class="act-btn" onclick="event.stopPropagation();${s==='pending'||s==='assigned'?`quickDispatch('${j.id}','${s}')`:`openDrawer('${j.id}')`}">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
