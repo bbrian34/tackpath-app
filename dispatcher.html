@@ -1014,7 +1014,7 @@ body::after{content:'';position:fixed;inset:0;
                 <th>Title</th>
                 <th>Pickup</th>
                 <th>Dropoff</th>
-                <th>Progress</th>
+                <th style="text-align:center;">Progress</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th></th>
@@ -2229,7 +2229,7 @@ function renderTable(){
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
-      <td>${(()=>{
+      <td style="text-align:center;vertical-align:middle;">${(()=>{
         let jstops=j.surge_stops;
         if(typeof jstops==='string'){try{jstops=JSON.parse(jstops);}catch(e){jstops=null;}}
         const total=jstops&&Array.isArray(jstops)?jstops.filter(function(x){return !x.cancelled;}).length:0;
