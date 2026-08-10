@@ -994,8 +994,8 @@ body::after{content:'';position:fixed;inset:0;
             </select>
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
-            <button onclick="document.getElementById('quickUploadInput').click()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
-<input type="file" id="quickUploadInput" accept=".csv" style="display:none" onchange="handleFile(this.files[0]);setTimeout(()=>{this.value='';},100)"/>
+            <button onclick="triggerCSVUpload()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
+<input type="file" id="quickUploadInput" accept=".csv" style="display:none"/>
 <button onclick="openSmartSortDrawer()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:transparent;border:1px solid rgba(25,183,239,.3);color:var(--blue);">Demo</button>
           </div>
           <div style="overflow-x:auto;">
@@ -1950,6 +1950,18 @@ function highlightPipelineCard(jobId,on){
   document.querySelectorAll('.pcard[data-jobid="'+jobId+'"]').forEach(function(card){
     on?card.classList.add('pipe-highlight'):card.classList.remove('pipe-highlight');
   });
+}
+
+// ── CSV UPLOAD ──
+function triggerCSVUpload(){
+  // Always create a fresh input to guarantee onchange fires even for the same file
+  const old=document.getElementById('quickUploadInput');
+  const input=document.createElement('input');
+  input.type='file';input.accept='.csv';input.id='quickUploadInput';input.style.display='none';
+  input.onchange=function(){if(this.files[0])handleFile(this.files[0]);};
+  if(old) old.parentNode.replaceChild(input,old);
+  else document.body.appendChild(input);
+  input.click();
 }
 
 // ── RENDER ALL ──
@@ -2917,7 +2929,7 @@ function addIntelEvent(text,color){
 // ── COMMS HUB ──
 let activeCommsJob=null;
 let commsLoadInterval=null;
-let lastSeenDriverMsgCount=0;
+let lastSeenDriverMsgTs=null; // timestamp of last driver message seen by dispatcher
 
 function switchCommsTab(ch,btn){
   document.querySelectorAll('.oc-tab').forEach(b=>b.classList.remove('on'));
@@ -2965,16 +2977,19 @@ async function loadDriverMessages(){
       container.innerHTML+='<div class="oc-msg oc-system">No messages yet for this job</div>';
     }
     if(atBottom) container.scrollTop=container.scrollHeight;
-    // Check for new unread driver messages and pulse the FAB if chat is closed
+    // Pulse FAB if there are unread driver messages and chat is closed
     const driverMsgs=(msgs||[]).filter(m=>m.sender_role==='driver'&&!m.body.startsWith('STOP_DELIVERED::'));
+    const latestMsg=driverMsgs.length?driverMsgs[driverMsgs.length-1]:null;
+    const latestTs=latestMsg?latestMsg.created_at:null;
     const chatOpen=document.getElementById('opsChat')&&document.getElementById('opsChat').classList.contains('open');
     const fab=document.getElementById('chatFab');
-    if(driverMsgs.length>lastSeenDriverMsgCount&&!chatOpen){
-      if(fab) fab.classList.add('has-unread');
-    }
     if(chatOpen){
-      lastSeenDriverMsgCount=driverMsgs.length;
+      // Chat is open -- dispatcher is reading -- mark all as seen
+      lastSeenDriverMsgTs=latestTs;
       if(fab) fab.classList.remove('has-unread');
+    } else if(latestTs&&latestTs!==lastSeenDriverMsgTs){
+      // New message arrived that dispatcher hasn't seen yet
+      if(fab) fab.classList.add('has-unread');
     }
     // Update driver dropdown with real driver name
     const sel=document.getElementById('sel-driver');
@@ -3044,6 +3059,8 @@ function toggleChat(){
   if(c.classList.contains('open')){
     const fab=document.getElementById('chatFab');
     if(fab) fab.classList.remove('has-unread');
+    // Mark all current driver messages as seen
+    lastSeenDriverMsgTs=null; // will be set on next loadDriverMessages call
     updateUnreadCount();
     // Always load real driver messages, clear any stale content first
     document.getElementById('msgs-drivers').innerHTML='<div class="oc-msg oc-system">Loading messages...</div>';
