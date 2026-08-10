@@ -328,16 +328,10 @@ body::after{content:'';position:fixed;inset:0;
 .tbl-order{font-family:var(--mono);font-size:0.615rem;color:var(--faint);}
 .tbl-name{font-size:0.923rem;font-weight:500;}
 .tbl-route{font-size:0.769rem;color:var(--muted);}
-.prog-wrap{display:flex;align-items:center;justify-content:center;}
-.ring-outer{position:relative;width:48px;height:48px;flex-shrink:0;}
-.ring-outer svg{position:absolute;inset:0;}
-.ring-outer-spin{animation:routerspin 3s linear infinite;transform-origin:24px 24px;}
-.ring-inner-spin{animation:rinnerspin 1.8s linear infinite;transform-origin:24px 24px;}
-@keyframes routerspin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-@keyframes rinnerspin{from{transform:rotate(0deg);}to{transform:rotate(-360deg);}}
-.ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:0.75rem;font-weight:900;letter-spacing:-.5px;
-  color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.9);}
+.prog-wrap{display:flex;flex-direction:column;gap:3px;min-width:80px;}
+.prog-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:2px;}
+.prog-lbl{font-family:var(--mono);font-size:0.538rem;color:var(--muted);}
 .tbl-driver{font-size:0.846rem;}
 .tbl-eta{font-family:var(--mono);font-size:0.846rem;font-weight:600;}
 .tbl-quote{font-family:var(--mono);font-size:0.846rem;font-weight:600;color:var(--green);}
@@ -1014,7 +1008,7 @@ body::after{content:'';position:fixed;inset:0;
                 <th>Title</th>
                 <th>Pickup</th>
                 <th>Dropoff</th>
-                <th style="text-align:center;">Progress</th>
+                <th>Progress</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th></th>
@@ -2229,7 +2223,7 @@ function renderTable(){
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
-      <td style="text-align:center;vertical-align:middle;">${(()=>{
+      <td>${(()=>{
         let jstops=j.surge_stops;
         if(typeof jstops==='string'){try{jstops=JSON.parse(jstops);}catch(e){jstops=null;}}
         const total=jstops&&Array.isArray(jstops)?jstops.filter(function(x){return !x.cancelled;}).length:0;
@@ -2237,34 +2231,9 @@ function renderTable(){
         const pct=total>0?Math.round(done/total*100):(s==='delivered'?100:0);
         const color=pct===100?'#53ff88':(pct>60?'linear-gradient(90deg,#19b7ef,#53ff88)':'linear-gradient(90deg,#19b7ef,#8d5cff)');
         const label=total>0?(done+' of '+total+' · '+pct+'%'):(pct+'%');
-        var outerC=125.6,innerC=81.7;
-        var outerOff=outerC-(pct/100*outerC);
-        var innerOff=innerC-(pct/100*innerC);
-        var isActive=pct>0&&pct<100;
-        var outerColor=pct===100?'#53ff88':(pct>60?'#53ff88':'#19b7ef');var outerW='1.5';var innerW='1';
-        var innerColor=pct===100?'#53ff88':'#8d5cff';
-        var pctColor=pct>0?'#fff':'rgba(255,255,255,.2)';
-        var outerSpin=isActive?'ring-outer-spin':'';
-        var outerSpeed=pct>75?'animation-duration:4s;':'';
-        var innerSpin=isActive?'ring-inner-spin':'';
-        var innerSpeed=pct>75?'animation-duration:1.1s;':'';
-        return '<div class="prog-wrap"><div class="ring-outer">'+
-          '<svg width="48" height="48" viewBox="0 0 48 48">'+
-            '<circle fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1.5" cx="24" cy="24" r="20"/>'+
-            '<circle fill="none" stroke="rgba(255,255,255,.04)" stroke-width="1" cx="24" cy="24" r="13"/>'+
-          '</svg>'+
-          '<svg width="48" height="48" viewBox="0 0 48 48" class="'+outerSpin+'" style="'+outerSpeed+'">'+
-            '<circle fill="none" stroke="'+outerColor+'" stroke-width="3" stroke-linecap="round" cx="24" cy="24" r="20"'+
-            ' stroke-dasharray="'+outerC+'" stroke-dashoffset="'+outerOff+'"'+
-            ' transform="rotate(-90 24 24)"/>'+
-          '</svg>'+
-          '<svg width="48" height="48" viewBox="0 0 48 48" class="'+innerSpin+'" style="'+innerSpeed+'">'+
-            '<circle fill="none" stroke="'+innerColor+'" stroke-width="2" stroke-linecap="round" cx="24" cy="24" r="13"'+
-            ' stroke-dasharray="'+innerC+'" stroke-dashoffset="'+innerOff+'"'+
-            ' transform="rotate(-90 24 24)"/>'+
-          '</svg>'+
-          '<div class="ring-pct" style="color:'+pctColor+';">'+pct+'%</div>'+
-        '</div></div>';
+        var progColor=pct===100?'#53ff88':(pct>60?'linear-gradient(90deg,#19b7ef,#53ff88)':'linear-gradient(90deg,#19b7ef,#8d5cff)');
+        var progLabel=total>0?(done+' of '+total+' · '+pct+'%'):(pct+'%');
+        return '<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+color+';"></div></div><div class="prog-lbl">'+label+'</div></div>';
       })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
