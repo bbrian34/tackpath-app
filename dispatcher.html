@@ -328,10 +328,13 @@ body::after{content:'';position:fixed;inset:0;
 .tbl-order{font-family:var(--mono);font-size:0.615rem;color:var(--faint);}
 .tbl-name{font-size:0.923rem;font-weight:500;}
 .tbl-route{font-size:0.769rem;color:var(--muted);}
-.prog-wrap{display:flex;flex-direction:column;gap:3px;min-width:80px;}
-.prog-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
-.prog-fill{height:100%;border-radius:2px;}
-.prog-lbl{font-family:var(--mono);font-size:0.538rem;color:var(--muted);}
+.prog-wrap{display:flex;align-items:center;justify-content:center;}
+.ring-outer{position:relative;width:40px;height:40px;flex-shrink:0;}
+.ring-outer svg{position:absolute;inset:0;}
+.ring-spin{animation:ringspin 2.5s linear infinite;transform-origin:20px 20px;}
+.ring-spin-slow{animation:ringspin 4s linear infinite;transform-origin:20px 20px;}
+@keyframes ringspin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.538rem;font-weight:800;}
 .tbl-driver{font-size:0.846rem;}
 .tbl-eta{font-family:var(--mono);font-size:0.846rem;font-weight:600;}
 .tbl-quote{font-family:var(--mono);font-size:0.846rem;font-weight:600;color:var(--green);}
@@ -2231,7 +2234,23 @@ function renderTable(){
         const pct=total>0?Math.round(done/total*100):(s==='delivered'?100:0);
         const color=pct===100?'#53ff88':(pct>60?'linear-gradient(90deg,#19b7ef,#53ff88)':'linear-gradient(90deg,#19b7ef,#8d5cff)');
         const label=total>0?(done+' of '+total+' · '+pct+'%'):(pct+'%');
-        return '<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+color+';"></div></div><div class="prog-lbl">'+label+'</div></div>';
+        var circumference=100.5;
+        var offset=circumference-(pct/100*circumference);
+        var spinClass=pct===0||pct===100?'':pct>70?'ring-spin-slow':'ring-spin';
+        var trackStroke='rgba(255,255,255,.07)';
+        var fillStroke=pct===100?'#53ff88':(pct>60?'#8d5cff':'#19b7ef');
+        var pctColor=pct===100?'#53ff88':(pct>60?'#8d5cff':(pct>0?'#19b7ef':'rgba(255,255,255,.25)'));
+        return '<div class="prog-wrap"><div class="ring-outer">'+
+          '<svg width="40" height="40" viewBox="0 0 40 40">'+
+            '<circle fill="none" stroke="'+trackStroke+'" stroke-width="3.5" cx="20" cy="20" r="16"/>'+
+          '</svg>'+
+          '<svg width="40" height="40" viewBox="0 0 40 40" class="'+spinClass+'">'+
+            '<circle fill="none" stroke="'+fillStroke+'" stroke-width="3.5" stroke-linecap="round" cx="20" cy="20" r="16"'+
+            ' stroke-dasharray="'+circumference+'" stroke-dashoffset="'+offset+'"'+
+            ' transform="rotate(-90 20 20)"/>'+
+          '</svg>'+
+          '<div class="ring-pct" style="color:'+pctColor+';">'+pct+'%</div>'+
+        '</div></div>';
       })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
