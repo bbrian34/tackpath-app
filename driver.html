@@ -1779,7 +1779,7 @@ function navigateToStop(){
 }
 
 function surgeTapStop(i){
-  if(!currentJob||currentJob.status!=='in_transit')return;
+  if(!currentJob||(!['in_transit','assigned','customer_confirmed'].includes(currentJob.status)))return;
   // Block going back to already-completed stops
   if(i<currentSurgeStop)return;
   // Block jumping ahead past the current stop -- must complete stops in order
@@ -2081,7 +2081,8 @@ function confirmSurgeStop(){
   // Safety guard -- block confirming if previous non-cancelled stops haven't been completed
   const nonCancelledBefore=surgeStops.slice(0,currentSurgeStop).filter(s=>!s.cancelled).length;
   const actuallyCompleted=currentJob?currentJob.stops_completed||0:0;
-  if(actuallyCompleted<nonCancelledBefore){
+  // Only block if clearly out of sequence -- never block stop 0
+  if(currentSurgeStop>0&&actuallyCompleted<nonCancelledBefore){
     toast('Complete stop '+(nonCancelledBefore)+' first');
     return;
   }
