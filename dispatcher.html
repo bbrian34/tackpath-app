@@ -3256,6 +3256,8 @@ function parseCSV(text){
     });
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
+  // Reset route state from any previous upload before auto-dispatching
+  ssRoutes=[];
   // Open drawer so progress is visible, render the package list, then auto-run
   openSmartSortDrawer();
   renderPackageTable();
