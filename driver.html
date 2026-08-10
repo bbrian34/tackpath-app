@@ -1753,9 +1753,8 @@ function renderSurgeList(){
 
 // ── SURGE DELIVERY STEP FUNCTIONS ──
 function sdAtStop(){
-  // Driver confirmed they are at the stop -- show scan button
-  document.getElementById('sdAtStopBtn').style.display='none';
-  document.getElementById('sdScanBtn').style.display='block';
+  // Driver confirmed they are at the stop -- go straight to POD
+  openSurgePOD();
 }
 
 function sdScanPackage(){
