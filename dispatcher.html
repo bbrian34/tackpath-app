@@ -1805,6 +1805,21 @@ async function loadJobs(){
           .filter(Boolean);
       }
     }catch(e){stopDeliveries=[];}
+
+    // Check for unread driver messages and pulse comms FAB
+    try{
+      const chatOpen=document.getElementById('opsChat')&&document.getElementById('opsChat').classList.contains('open');
+      if(!chatOpen&&activeJobIds.length){
+        const driverMsgs=await sbGet('messages?sender_role=eq.driver&order=created_at.desc&limit=1');
+        const latestMsg=driverMsgs&&driverMsgs.length?driverMsgs[0]:null;
+        const latestTs=latestMsg?latestMsg.created_at:null;
+        const fab=document.getElementById('chatFab');
+        if(latestTs&&latestTs!==lastSeenDriverMsgTs&&latestMsg&&!latestMsg.body.startsWith('STOP_DELIVERED::')){
+          if(fab) fab.classList.add('has-unread');
+        }
+      }
+    }catch(e){}
+
     renderAll();
   }catch(e){
     ring.style.display='none';ps.textContent='Error';
@@ -1954,13 +1969,18 @@ function highlightPipelineCard(jobId,on){
 
 // ── CSV UPLOAD ──
 function triggerCSVUpload(){
-  // Always create a fresh input to guarantee onchange fires even for the same file
-  const old=document.getElementById('quickUploadInput');
+  // Remove old input and create fresh one every time so onchange always fires
+  const existing=document.getElementById('quickUploadInput');
+  if(existing) existing.remove();
   const input=document.createElement('input');
-  input.type='file';input.accept='.csv';input.id='quickUploadInput';input.style.display='none';
-  input.onchange=function(){if(this.files[0])handleFile(this.files[0]);};
-  if(old) old.parentNode.replaceChild(input,old);
-  else document.body.appendChild(input);
+  input.type='file';
+  input.accept='.csv';
+  input.id='quickUploadInput';
+  input.style.display='none';
+  input.addEventListener('change',function(){
+    if(this.files&&this.files[0]) handleFile(this.files[0]);
+  });
+  document.body.appendChild(input);
   input.click();
 }
 
