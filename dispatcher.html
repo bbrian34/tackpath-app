@@ -660,6 +660,8 @@ body::after{content:'';position:fixed;inset:0;
 #drawer.open ~ #chatFab{right:484px;}
 #smartSortDrawer.open ~ #chatFab{right:564px;}
 #chatFab:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(10,168,255,.55);}
+#chatFab.has-unread{animation:fabPulse 1.2s ease-in-out infinite;}
+@keyframes fabPulse{0%,100%{background:linear-gradient(135deg,#0aa8ff,#005fcc);}50%{background:#fff;color:#0aa8ff;}}
 #chatFab-dot{width:7px;height:7px;border-radius:50%;background:#53ff88;box-shadow:0 0 7px rgba(83,255,136,.9);}
 #chatFab-unread{min-width:18px;height:18px;border-radius:9px;background:var(--red);
   color:#fff;font-size:0.692rem;font-weight:900;display:none;align-items:center;justify-content:center;
@@ -2915,6 +2917,7 @@ function addIntelEvent(text,color){
 // ── COMMS HUB ──
 let activeCommsJob=null;
 let commsLoadInterval=null;
+let lastSeenDriverMsgCount=0;
 
 function switchCommsTab(ch,btn){
   document.querySelectorAll('.oc-tab').forEach(b=>b.classList.remove('on'));
@@ -2962,6 +2965,17 @@ async function loadDriverMessages(){
       container.innerHTML+='<div class="oc-msg oc-system">No messages yet for this job</div>';
     }
     if(atBottom) container.scrollTop=container.scrollHeight;
+    // Check for new unread driver messages and pulse the FAB if chat is closed
+    const driverMsgs=(msgs||[]).filter(m=>m.sender_role==='driver'&&!m.body.startsWith('STOP_DELIVERED::'));
+    const chatOpen=document.getElementById('opsChat')&&document.getElementById('opsChat').classList.contains('open');
+    const fab=document.getElementById('chatFab');
+    if(driverMsgs.length>lastSeenDriverMsgCount&&!chatOpen){
+      if(fab) fab.classList.add('has-unread');
+    }
+    if(chatOpen){
+      lastSeenDriverMsgCount=driverMsgs.length;
+      if(fab) fab.classList.remove('has-unread');
+    }
     // Update driver dropdown with real driver name
     const sel=document.getElementById('sel-driver');
     if(sel&&activeJob.driver_name){
@@ -3028,6 +3042,8 @@ function updateUnreadCount(){
 function toggleChat(){
   const c=document.getElementById('opsChat');c.classList.toggle('open');
   if(c.classList.contains('open')){
+    const fab=document.getElementById('chatFab');
+    if(fab) fab.classList.remove('has-unread');
     updateUnreadCount();
     // Always load real driver messages, clear any stale content first
     document.getElementById('msgs-drivers').innerHTML='<div class="oc-msg oc-system">Loading messages...</div>';
