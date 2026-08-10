@@ -1791,8 +1791,9 @@ async function loadJobs(){
       const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||j.status==='delivered').map(j=>j.id);
       if(activeJobIds.length){
         const msgs=await sbGet('messages?sender_role=eq.driver&order=created_at.desc&limit=200');
+        const jobIds=new Set(newJobs.map(j=>j.id));
         stopDeliveries=(msgs||[])
-          .filter(m=>m.body&&m.body.startsWith('STOP_DELIVERED::'))
+          .filter(m=>m.body&&m.body.startsWith('STOP_DELIVERED::')&&jobIds.has(m.job_id))
           .map(m=>{
             try{
               const data=JSON.parse(m.body.replace('STOP_DELIVERED::',''));
