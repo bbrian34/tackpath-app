@@ -993,7 +993,7 @@ body::after{content:'';position:fixed;inset:0;
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
             <button onclick="document.getElementById('quickUploadInput').click()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
-<input type="file" id="quickUploadInput" accept=".csv" style="display:none" onchange="handleFile(this.files[0]);this.value=''"/>
+<input type="file" id="quickUploadInput" accept=".csv" style="display:none" onchange="handleFile(this.files[0]);setTimeout(()=>{this.value='';},100)"/>
 <button onclick="openSmartSortDrawer()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:transparent;border:1px solid rgba(25,183,239,.3);color:var(--blue);">Demo</button>
           </div>
           <div style="overflow-x:auto;">
@@ -1379,7 +1379,7 @@ body::after{content:'';position:fixed;inset:0;
   </div>
 
   <div id="dropZone">
-    <input type="file" accept=".csv" id="csvInput" onchange="handleFile(this.files[0])"/>
+    <input type="file" accept=".csv" id="csvInput" onchange="handleFile(this.files[0]);setTimeout(()=>{this.value='';},100)"/>
     <div class="dz-icon">&#9783;</div>
     <div class="dz-title">Drop your CSV here</div>
     <div class="dz-sub">
