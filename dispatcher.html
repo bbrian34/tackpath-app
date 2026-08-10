@@ -1359,7 +1359,7 @@ body::after{content:'';position:fixed;inset:0;
 <div id="smartSortDrawer">
   <button class="dr-close" onclick="closeSmartSortDrawer()">&#10005;</button>
   <div class="dr-lbl">New Route</div>
-  <div class="dr-title">Upload CSV, SmartSort builds it</div>
+  <div class="dr-title">Upload CSV — auto-dispatches instantly</div>
 
   <div id="statsRow">
     <div class="stat-card">
@@ -3198,7 +3198,9 @@ function parseCSV(text){
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
   renderPackageTable();
-  toast(packages.length+' packages loaded','ok');
+  toast(packages.length+' packages loaded — SmartSort building route...','ok');
+  // Auto-trigger full pipeline: geocode → sequence → create job → broadcast
+  setTimeout(()=>buildAndAutoDispatch(),300);
 }
 
 function loadDemoData(){
@@ -3325,6 +3327,17 @@ function nearestNeighborSort(stopsWithCoords){
     sorted.push(remaining.splice(nearestIdx,1)[0]);
   }
   return sorted;
+}
+
+async function buildAndAutoDispatch(){
+  // Runs the full pipeline automatically after CSV upload:
+  // geocode → sequence → create job in Supabase → broadcast to drivers
+  await buildRoutes();
+  if(!ssRoutes||!ssRoutes.length){toast('No routes to dispatch','warn');return;}
+  toast('Route built — dispatching to drivers...','ok');
+  for(const route of [...ssRoutes]){
+    await assignSSRoute(route.id);
+  }
 }
 
 async function buildRoutes(){
