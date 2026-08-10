@@ -3199,8 +3199,9 @@ function parseCSV(text){
   if(!packages.length){toast('No valid packages found','warn');return;}
   renderPackageTable();
   toast(packages.length+' packages loaded — SmartSort building route...','ok');
-  // Auto-trigger full pipeline: geocode → sequence → create job → broadcast
-  setTimeout(()=>buildAndAutoDispatch(),300);
+  // Open drawer so dispatcher can see progress, then auto-trigger full pipeline
+  openSmartSortDrawer();
+  setTimeout(()=>buildAndAutoDispatch(),400);
 }
 
 function loadDemoData(){
@@ -3342,8 +3343,7 @@ async function buildAndAutoDispatch(){
 
 async function buildRoutes(){
   const btn=document.getElementById('buildBtn');
-  btn.disabled=true;
-  btn.innerHTML='&#9650; Geocoding stops... <span class="build-badge">SmartSort running</span>';
+  if(btn){btn.disabled=true;btn.innerHTML='&#9650; Geocoding stops... <span class="build-badge">SmartSort running</span>';}
 
   const geocoded=[];
   const failedAddresses=[];
@@ -3353,7 +3353,7 @@ async function buildRoutes(){
     else failedAddresses.push(pkg);
   }
 
-  btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';
+  if(btn){btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';}
   const sorted=[...nearestNeighborSort(geocoded),...failedAddresses];
 
   const geoSortedOnly=sorted.filter(s=>s.coords);
@@ -3381,8 +3381,7 @@ async function buildRoutes(){
   });
   document.getElementById('statRoutes').textContent=ssRoutes.length;
   renderSSRoutes();
-  btn.disabled=false;
-  btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';
+  if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
   if(failedAddresses.length){
     toast(ssRoutes.length+' routes built. '+failedAddresses.length+' address(es) could not be located and were added at the end.','warn');
   }else{
