@@ -3118,8 +3118,8 @@ async function refreshFleetMap(){
       var m=new google.maps.Marker({
         position:{lat:parseFloat(loc.lat),lng:parseFloat(loc.lng)},
         map:fleetMap,
-        label:{text:(loc.driver_name||'?').charAt(0).toUpperCase(),color:'#fff',fontWeight:'800',fontSize:'11px'},
-        icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,
+        label:{text:(loc.driver_name||'?').split(' ')[0],color:'#fff',fontWeight:'800',fontSize:'10px'},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:20,
           fillColor:colors[i%colors.length],fillOpacity:age>60?0.4:1,
           strokeColor:'#fff',strokeWeight:2},
         title:loc.driver_name+' ('+Math.round(age)+'s ago)'
