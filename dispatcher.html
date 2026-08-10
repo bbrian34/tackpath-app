@@ -995,7 +995,6 @@ body::after{content:'';position:fixed;inset:0;
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
             <button onclick="triggerCSVUpload()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
-<input type="file" id="quickUploadInput" accept=".csv" style="display:none"/>
 <button onclick="openSmartSortDrawer()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:transparent;border:1px solid rgba(25,183,239,.3);color:var(--blue);">Demo</button>
           </div>
           <div style="overflow-x:auto;">
@@ -1809,7 +1808,7 @@ async function loadJobs(){
     // Check for unread driver messages and pulse comms FAB
     try{
       const chatOpen=document.getElementById('opsChat')&&document.getElementById('opsChat').classList.contains('open');
-      if(!chatOpen&&activeJobIds.length){
+      if(!chatOpen){
         const driverMsgs=await sbGet('messages?sender_role=eq.driver&order=created_at.desc&limit=1');
         const latestMsg=driverMsgs&&driverMsgs.length?driverMsgs[0]:null;
         const latestTs=latestMsg?latestMsg.created_at:null;
