@@ -3197,11 +3197,12 @@ function parseCSV(text){
     });
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
-  renderPackageTable();
-  toast(packages.length+' packages loaded — SmartSort building route...','ok');
-  // Open drawer so dispatcher can see progress, then auto-trigger full pipeline
+  // Open drawer so progress is visible, render the package list, then auto-run
   openSmartSortDrawer();
-  setTimeout(()=>buildAndAutoDispatch(),400);
+  renderPackageTable();
+  toast(packages.length+' packages loaded — auto-dispatching now...','ok');
+  // Small delay to let the DOM settle before starting geocoding
+  setTimeout(buildAndAutoDispatch, 600);
 }
 
 function loadDemoData(){
