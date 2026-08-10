@@ -1813,7 +1813,11 @@ async function loadJobs(){
         const latestMsg=driverMsgs&&driverMsgs.length?driverMsgs[0]:null;
         const latestTs=latestMsg?latestMsg.created_at:null;
         const fab=document.getElementById('chatFab');
-        if(latestTs&&latestTs!==lastSeenDriverMsgTs&&latestMsg&&!latestMsg.body.startsWith('STOP_DELIVERED::')){
+        if(lastSeenDriverMsgTs===null){
+          // First poll after login -- set baseline so we don't pulse on old messages
+          lastSeenDriverMsgTs=latestTs;
+        } else if(latestTs&&latestTs!==lastSeenDriverMsgTs&&latestMsg&&!latestMsg.body.startsWith('STOP_DELIVERED::')){
+          // Genuinely new message since login
           if(fab) fab.classList.add('has-unread');
         }
       }
