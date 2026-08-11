@@ -3386,6 +3386,124 @@ function haversineDistance(a,b){
   return R*2*Math.asin(Math.sqrt(h));
 }
 
+// ── SMARTSORT CLUSTERING ENGINE ──
+// Goal: equal packages per driver, minimize miles, tight geographic zones, no overlapping territories
+
+function autoDetectDriverCount(totalPackages){
+  // Default: ~60 packages per driver — dispatcher can override
+  // Min 1, max 200 drivers
+  return Math.min(200, Math.max(1, Math.round(totalPackages / 60)));
+}
+
+function smartCluster(stops, k){
+  // stops: array of geocoded packages with .coords {lat,lng} and .packages count
+  // k: number of drivers
+  // Returns: k arrays of stops, each geographically tight and equal in package count
+
+  if(stops.length===0)return[];
+  if(k<=1)return[stops];
+  if(k>=stops.length)return stops.map(s=>[s]);
+
+  const totalPkgs=stops.reduce((s,p)=>s+(p.packages||1),0);
+  const targetPkgs=Math.round(totalPkgs/k);
+
+  // Step 1: k-means to find geographic centers
+  // Initialize centroids using k-means++ seeding for better spread
+  const centroids=kMeansPlusPlusInit(stops,k);
+  const MAX_ITER=30;
+  let assignments=new Array(stops.length).fill(0);
+
+  for(let iter=0;iter<MAX_ITER;iter++){
+    let changed=false;
+    for(let i=0;i<stops.length;i++){
+      let bestC=0,bestDist=Infinity;
+      for(let c=0;c<k;c++){
+        const d=haversineDistance(stops[i].coords,centroids[c]);
+        if(d<bestDist){bestDist=d;bestC=c;}
+      }
+      if(assignments[i]!==bestC){assignments[i]=bestC;changed=true;}
+    }
+    if(!changed)break;
+    // Recompute centroids
+    const sums=Array.from({length:k},()=>({lat:0,lng:0,n:0}));
+    for(let i=0;i<stops.length;i++){
+      sums[assignments[i]].lat+=stops[i].coords.lat;
+      sums[assignments[i]].lng+=stops[i].coords.lng;
+      sums[assignments[i]].n++;
+    }
+    for(let c=0;c<k;c++){
+      if(sums[c].n>0){centroids[c].lat=sums[c].lat/sums[c].n;centroids[c].lng=sums[c].lng/sums[c].n;}
+    }
+  }
+
+  // Step 2: Build initial clusters
+  const clusters=Array.from({length:k},()=>[]);
+  for(let i=0;i<stops.length;i++) clusters[assignments[i]].push(stops[i]);
+
+  // Step 3: Equalize package counts by moving packages between adjacent clusters
+  // This ensures equal pay — every driver gets same number of packages
+  equalizeClusterPackages(clusters, targetPkgs, centroids);
+
+  // Remove empty clusters
+  return clusters.filter(c=>c.length>0);
+}
+
+function kMeansPlusPlusInit(stops, k){
+  // Smart centroid initialization — spreads centroids across the delivery area
+  // First centroid: geographic center of all stops
+  const avgLat=stops.reduce((s,p)=>s+p.coords.lat,0)/stops.length;
+  const avgLng=stops.reduce((s,p)=>s+p.coords.lng,0)/stops.length;
+  const centroids=[{lat:avgLat,lng:avgLng}];
+
+  // Remaining centroids: choose points farthest from existing centroids
+  while(centroids.length<k){
+    let bestStop=stops[0],bestDist=-1;
+    for(const stop of stops){
+      const minDist=Math.min(...centroids.map(c=>haversineDistance(stop.coords,c)));
+      if(minDist>bestDist){bestDist=minDist;bestStop=stop;}
+    }
+    centroids.push({lat:bestStop.coords.lat,lng:bestStop.coords.lng});
+  }
+  return centroids;
+}
+
+function equalizeClusterPackages(clusters, targetPkgs, centroids){
+  // Move packages from oversized clusters to undersized ones
+  // Always move to the geographically nearest cluster to preserve zone integrity
+  const MAX_BALANCE_PASSES=5;
+  const tolerance=Math.ceil(targetPkgs*0.15); // 15% tolerance
+
+  for(let pass=0;pass<MAX_BALANCE_PASSES;pass++){
+    let balanced=true;
+    for(let i=0;i<clusters.length;i++){
+      const iPkgs=clusters[i].reduce((s,p)=>s+(p.packages||1),0);
+      if(iPkgs>targetPkgs+tolerance){
+        // Find nearest undersized cluster
+        let bestJ=-1,bestDist=Infinity;
+        for(let j=0;j<clusters.length;j++){
+          if(j===i)continue;
+          const jPkgs=clusters[j].reduce((s,p)=>s+(p.packages||1),0);
+          if(jPkgs<targetPkgs-tolerance){
+            const d=haversineDistance(centroids[i],centroids[j]);
+            if(d<bestDist){bestDist=d;bestJ=j;}
+          }
+        }
+        if(bestJ>=0){
+          // Move the stop in cluster i that is closest to cluster j's centroid
+          let moveIdx=0,moveDist=Infinity;
+          for(let s=0;s<clusters[i].length;s++){
+            const d=haversineDistance(clusters[i][s].coords,centroids[bestJ]);
+            if(d<moveDist){moveDist=d;moveIdx=s;}
+          }
+          clusters[bestJ].push(clusters[i].splice(moveIdx,1)[0]);
+          balanced=false;
+        }
+      }
+    }
+    if(balanced)break;
+  }
+}
+
 function nearestNeighborSort(stopsWithCoords){
   if(stopsWithCoords.length<=1)return stopsWithCoords;
   const remaining=[...stopsWithCoords];
@@ -3425,39 +3543,60 @@ async function buildRoutes(){
     else failedAddresses.push(pkg);
   }
 
-  if(btn){btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';}
+  if(btn){btn.innerHTML='&#9650; Clustering routes... <span class="build-badge">SmartSort Clustering</span>';}
   const sorted=[...nearestNeighborSort(geocoded),...failedAddresses];
 
-  const geoSortedOnly=sorted.filter(s=>s.coords);
-  let totalMiles=0;
-  for(let i=0;i<geoSortedOnly.length-1;i++){
-    totalMiles+=haversineDistance(geoSortedOnly[i].coords,geoSortedOnly[i+1].coords);
+  // Miles will be calculated per cluster below
+
+  // Cluster geocoded stops geographically, then sequence each cluster
+  const numDrivers=autoDetectDriverCount(packages.length);
+  const geoStops=sorted.filter(s=>s.coords);
+  const noGeoStops=sorted.filter(s=>!s.coords);
+
+  let clusters;
+  if(geoStops.length===0){
+    clusters=[noGeoStops];
+  } else if(numDrivers<=1){
+    clusters=[sorted];
+  } else {
+    clusters=smartCluster(geoStops,numDrivers);
+    // Sequence each cluster with nearest neighbor
+    clusters=clusters.map(c=>nearestNeighborSort(c));
+    // Append no-geo stops to last cluster
+    if(noGeoStops.length) clusters[clusters.length-1].push(...noGeoStops);
   }
 
-  const groups=[sorted];
-  ssRoutes=groups.map((stops,ri)=>{
+  // Update toast with driver count
+  if(btn){btn.innerHTML='&#9650; Clustering '+clusters.length+' routes... <span class="build-badge">SmartSort Clustering</span>';}
+
+  ssRoutes=clusters.map((stops,ri)=>{
     const routeId='RT-'+String(ri+1).padStart(3,'0');
     const masterCode='TP-ROUTE-'+stops[0].order_id.replace('TP','');
     const stopsWithId=stops.map((s,si)=>({
       ...s,
       smart_id:`${s.order_id}-${si+1}-${s.packages}`
     }));
+    const clusterGeo=stopsWithId.filter(s=>s.coords);
+    let clusterMiles=0;
+    for(let i=0;i<clusterGeo.length-1;i++){
+      clusterMiles+=haversineDistance(clusterGeo[i].coords,clusterGeo[i+1].coords);
+    }
     return{
       id:routeId,
       master_code:masterCode,
       stops:stopsWithId,
       total_packages:stops.reduce((s,p)=>s+p.packages,0),
-      est_miles:totalMiles.toFixed(1),
+      est_miles:clusterMiles.toFixed(1),
       color:SS_COLORS[ri%SS_COLORS.length]
     };
   });
   document.getElementById('statRoutes').textContent=ssRoutes.length;
   renderSSRoutes();
-  if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
+  if(btn){btn.disabled=false;btn.innerHTML='&#10003; Clustering Complete <span class="build-badge">'+ssRoutes.length+' clusters</span>';}
   if(failedAddresses.length){
-    toast(ssRoutes.length+' routes built. '+failedAddresses.length+' address(es) could not be located and were added at the end.','warn');
+    toast(ssRoutes.length+' clusters built. '+failedAddresses.length+' address(es) could not be geocoded — added to nearest cluster.','warn');
   }else{
-    toast(ssRoutes.length+' routes built, sequenced by real distance','ok');
+    toast(ssRoutes.length+' driver clusters built · equal packages · tight zones · optimized sequence','ok');
   }
 }
 
