@@ -3284,11 +3284,18 @@ function downloadTemplate(){
 }
 
 function renderPackageTable(){
-  document.getElementById('dropZone').style.display='none';
-  document.getElementById('demoDataBtn').style.display='none';
-  document.getElementById('packageTable').style.display='block';
-  document.getElementById('statsRow').style.display='grid';
-  document.getElementById('buildBtn').style.display='flex';
+  const dz=document.getElementById('dropZone');
+  const db=document.getElementById('demoDataBtn');
+  const pt=document.getElementById('packageTable');
+  const sr=document.getElementById('statsRow');
+  const bb=document.getElementById('buildBtn');
+  const es=document.getElementById('ssEmptyState');
+  if(dz) dz.style.display='none';
+  if(db) db.style.display='none';
+  if(pt) pt.style.display='block';
+  if(sr) sr.style.display='grid';
+  if(bb) bb.style.display='flex';
+  if(es) es.style.display='none';
   document.getElementById('buildCount').textContent=packages.length+' packages';
   document.getElementById('statPkgs').textContent=packages.reduce((s,p)=>s+p.packages,0);
   document.getElementById('statStops').textContent=packages.length;
