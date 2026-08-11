@@ -1048,33 +1048,52 @@ document.getElementById('loginCode').addEventListener('keydown',e=>{if(e.key==='
 
 // ── INIT ──
 // ── FCM PUSH NOTIFICATIONS ──
+function onCapacitorReady(callback){
+  if(window.Capacitor&&window.Capacitor.isNativePlatform()){
+    callback();
+  } else {
+    document.addEventListener('deviceready',callback,false);
+  }
+}
+
 async function initFCM(){
+  const PN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.PushNotifications;
+  if(!PN){
+    console.error('PushNotifications plugin not loaded');
+    return;
+  }
   try{
-    // Wait for Capacitor to fully initialize
-    const PN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.PushNotifications;
-    if(!PN){
-      console.log('PushNotifications plugin not available');
+    // 1. Create notification channel -- required for Android 8+
+    await PN.createChannel({
+      id:'default',
+      name:'TackPath Notifications',
+      description:'Job alerts and dispatch notifications',
+      importance:5,
+      visibility:1,
+      sound:'default',
+      vibration:true
+    });
+
+    // 2. Check current permission status
+    let permStatus=await PN.checkPermissions();
+    console.log('Push permission status:',permStatus.receive);
+
+    // 3. Request only if promptable
+    if(permStatus.receive==='prompt'||permStatus.receive==='prompt-with-rationale'){
+      permStatus=await PN.requestPermissions();
+    }
+    if(permStatus.receive!=='granted'){
+      console.warn('Push notification permission denied');
       return;
     }
 
-    console.log('Requesting push notification permission...');
-    // Request permission
-    const permResult=await PN.requestPermissions();
-    console.log('Permission result:', JSON.stringify(permResult));
-    if(permResult.receive!=='granted'){
-      console.log('Push notification permission denied');
-      return;
-    }
+    // 4. Set up listeners BEFORE register()
+    await PN.removeAllListeners();
 
-    // Register with FCM
-    console.log('Registering with FCM...');
-    await PN.register();
-
-    // Listen for the token
-    PN.addListener('registration',async function(tokenData){
+    await PN.addListener('registration',async function(tokenData){
       const token=tokenData.value;
-      console.log('FCM token received:', token?token.slice(0,20)+'...':'none');
-      if(!token||!driver.phone) return;
+      console.log('FCM token received:',token?token.slice(0,20)+'...':'none');
+      if(!token||!driver||!driver.phone) return;
       try{
         await fetch(SB+'/rest/v1/driver_fcm_tokens',{
           method:'POST',
@@ -1085,17 +1104,23 @@ async function initFCM(){
       }catch(e){console.error('FCM token save error:',e);}
     });
 
-    // Handle notification received while app is open
-    PN.addListener('pushNotificationReceived',function(notification){
+    await PN.addListener('registrationError',function(err){
+      console.error('FCM registration error:',JSON.stringify(err));
+    });
+
+    await PN.addListener('pushNotificationReceived',function(notification){
       const body=notification.body||notification.title||'New job available';
       toast(body,'ok');
     });
 
-    // Handle notification tap
-    PN.addListener('pushNotificationActionPerformed',function(){
+    await PN.addListener('pushNotificationActionPerformed',function(){
       showScreen('scHome');
       pollJobs();
     });
+
+    // 5. Register with FCM
+    await PN.register();
+    console.log('FCM register() called');
 
   }catch(e){
     console.error('FCM init error:',e);
@@ -1104,8 +1129,8 @@ async function initFCM(){
 
 function initApp(){
   initJobNotifications();
-  // Delay FCM init to ensure Capacitor plugins are fully loaded
-  setTimeout(initFCM, 1500);
+  // Initialize FCM when Capacitor native bridge is fully ready
+  onCapacitorReady(function(){ initFCM(); });
   document.getElementById('moreName').textContent=driver.name||'Driver';
   document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
   document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
