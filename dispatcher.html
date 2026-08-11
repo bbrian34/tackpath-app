@@ -3296,11 +3296,11 @@ function renderPackageTable(){
   if(sr) sr.style.display='grid';
   if(bb) bb.style.display='flex';
   if(es) es.style.display='none';
-  document.getElementById('buildCount').textContent=packages.length+' packages';
-  document.getElementById('statPkgs').textContent=packages.reduce((s,p)=>s+p.packages,0);
-  document.getElementById('statStops').textContent=packages.length;
-  document.getElementById('statRoutes').textContent='--';
-  document.getElementById('pkgRows').innerHTML=packages.map(p=>`
+  const bcEl=document.getElementById('buildCount'); if(bcEl) bcEl.textContent=packages.length+' packages';
+  const spEl=document.getElementById('statPkgs'); if(spEl) spEl.textContent=packages.reduce((s,p)=>s+p.packages,0);
+  const ssEl=document.getElementById('statStops'); if(ssEl) ssEl.textContent=packages.length;
+  const srEl=document.getElementById('statRoutes'); if(srEl) srEl.textContent='--';
+  const prEl=document.getElementById('pkgRows'); if(prEl) prEl.innerHTML=packages.map(p=>`
     <div class="pkg-row">
       <div class="pkg-tp">${p.order_id}</div>
       <div>
