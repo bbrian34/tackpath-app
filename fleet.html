@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TackPath · Fleet Operations</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#02060e;--card:#07101e;--border:rgba(255,255,255,.06);
+  --blue:#19b7ef;--green:#53ff88;--purple:#8d5cff;--orange:#ff961e;--red:#ff3b30;
+  --muted:rgba(255,255,255,.35);--faint:rgba(255,255,255,.15);
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:#eef4ff;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--card);}
+.hdr-logo{font-family:var(--mono);font-size:1rem;font-weight:800;letter-spacing:-.5px;}
+.hdr-logo span{color:var(--blue);}
+.hdr-title{font-size:0.923rem;font-weight:700;color:var(--muted);}
+.live-chip{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:0.615rem;color:var(--green);letter-spacing:.1em;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.hdr-refresh{font-family:var(--mono);font-size:0.615rem;color:var(--muted);}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+
+/* Summary bar */
+.summary{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sum-item{padding:8px 18px;display:flex;flex-direction:column;gap:1px;border-right:1px solid var(--border);min-width:100px;}
+.sum-val{font-size:1.15rem;font-weight:800;font-family:var(--mono);}
+.sum-lbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
+
+/* Controls */
+.controls{display:flex;gap:8px;padding:7px 16px;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.03);}
+.ctrl-select{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:10px;color:rgba(255,255,255,.7);font-family:var(--mono);cursor:pointer;outline:none;}
+.ctrl-select:focus{border-color:rgba(25,183,239,.3);}
+.search-box{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:#eef4ff;font-family:var(--mono);width:180px;outline:none;}
+.search-box::placeholder{color:var(--muted);}
+.driver-count{margin-left:auto;font-size:9px;font-family:var(--mono);color:var(--muted);}
+
+/* Table header */
+.table-hdr{display:grid;grid-template-columns:200px 110px 1fr 150px 75px 90px 75px;gap:0;padding:5px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.th{font-size:8px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;cursor:pointer;user-select:none;}
+.th:hover{color:rgba(255,255,255,.7);}
+
+/* Driver list */
+.driver-list{flex:1;overflow-y:auto;}
+.driver-list::-webkit-scrollbar{width:3px;}
+.driver-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px;}
+
+.driver-row{display:grid;grid-template-columns:200px 110px 1fr 150px 75px 90px 75px;gap:0;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.025);align-items:center;cursor:pointer;transition:background .1s;border-left:2px solid transparent;}
+.driver-row:hover{background:rgba(255,255,255,.018);}
+.driver-row.exc{border-left-color:var(--orange);}
+.driver-row.done{opacity:.4;}
+.driver-row.hidden{display:none;}
+
+.d-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.d-sub{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:1px;}
+
+.status-pill{display:inline-flex;align-items:center;gap:3px;font-size:8px;font-family:var(--mono);padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap;}
+.s-transit{background:rgba(141,92,255,.12);color:var(--purple);}
+.s-delivered{background:rgba(83,255,136,.08);color:var(--green);}
+.s-assigned{background:rgba(25,183,239,.08);color:var(--blue);}
+.s-exception{background:rgba(255,150,30,.1);color:var(--orange);}
+.s-pending{background:rgba(255,255,255,.05);color:var(--muted);}
+
+.prog-wrap{display:flex;flex-direction:column;gap:3px;padding-right:12px;}
+.prog-top{display:flex;justify-content:space-between;align-items:baseline;}
+.prog-count{font-size:11px;font-weight:800;font-family:var(--mono);}
+.prog-pct{font-size:8px;color:var(--muted);font-family:var(--mono);}
+.prog-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:2px;transition:width .5s;}
+
+.ts{font-size:9px;font-family:var(--mono);color:var(--muted);}
+.rate-val{font-size:11px;font-weight:800;font-family:var(--mono);}
+.last-addr{font-size:9px;color:rgba(255,255,255,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.empty-state{flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.769rem;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo">TACK<span>PATH</span></div>
+  <div class="hdr-title">Fleet Operations</div>
+  <div class="live-chip"><div class="live-dot"></div>LIVE</div>
+  <div class="hdr-refresh" id="lastRefresh">—</div>
+  <div class="hdr-right">
+    <div style="font-family:var(--mono);font-size:9px;color:var(--muted);" id="orgLabel">Loading...</div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="sum-item"><div class="sum-val" style="color:var(--blue);" id="sumDrivers">—</div><div class="sum-lbl">Active Drivers</div></div>
+  <div class="sum-item"><div class="sum-val" id="sumPackages">—</div><div class="sum-lbl">Total Packages</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:var(--green);" id="sumDelivered">—</div><div class="sum-lbl">Delivered</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:var(--muted);" id="sumRemaining">—</div><div class="sum-lbl">Remaining</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:var(--orange);" id="sumExceptions">—</div><div class="sum-lbl">Exceptions</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:var(--green);" id="sumOverall">—</div><div class="sum-lbl">Overall Progress</div></div>
+</div>
+
+<div class="controls">
+  <select class="ctrl-select" id="sortSelect" onchange="applyFilters()">
+    <option value="progress">Sort: Progress</option>
+    <option value="name">Sort: Name A-Z</option>
+    <option value="rate_asc">Sort: Rate % Low-High</option>
+    <option value="rate_desc">Sort: Rate % High-Low</option>
+    <option value="exceptions">Sort: Exceptions First</option>
+    <option value="ping">Sort: Last Ping</option>
+    <option value="started">Sort: Started Time</option>
+  </select>
+  <select class="ctrl-select" id="filterSelect" onchange="applyFilters()">
+    <option value="all">Filter: All Drivers</option>
+    <option value="exc">⚠ Exceptions Only</option>
+    <option value="active">Active Only</option>
+    <option value="done">Completed Only</option>
+    <option value="assigned">Assigned Only</option>
+  </select>
+  <input class="search-box" id="searchBox" placeholder="&#128269; Search driver name..." oninput="applyFilters()"/>
+  <div class="driver-count" id="driverCount">— drivers</div>
+</div>
+
+<div class="table-hdr">
+  <div class="th">Driver</div>
+  <div class="th">Status</div>
+  <div class="th">Progress</div>
+  <div class="th">Last Stop</div>
+  <div class="th">Rate</div>
+  <div class="th">Last Ping</div>
+  <div class="th">Started</div>
+</div>
+
+<div class="driver-list" id="driverList">
+  <div class="empty-state">Loading fleet data...</div>
+</div>
+
+<script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'};
+
+let allDriverData=[];
+let driverLastSeen={};
+let pollTimer=null;
+
+function sbUrl(p){return SB+'/rest/v1/'+p;}
+
+async function sbGet(p){
+  const r=await fetch(sbUrl(p),{headers:H});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+
+function timeAgo(ts){
+  if(!ts)return '—';
+  const s=Math.floor((Date.now()-new Date(ts).getTime())/1000);
+  if(s<60)return s+'s ago';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  return Math.floor(s/3600)+'h ago';
+}
+
+function fmtTime(ts){
+  if(!ts)return '—';
+  return new Date(ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
+function getOrgFilter(){
+  // Read org from localStorage set by dispatcher login
+  const session=localStorage.getItem('dispatcherSession');
+  if(session){try{const s=JSON.parse(session);if(s.org_id)return '&org_id=eq.'+s.org_id;}catch(e){}}
+  return '';
+}
+
+async function loadFleet(){
+  try{
+    const orgFilter=getOrgFilter();
+
+    // Load active jobs
+    const jobs=await sbGet('jobs?select=*'+orgFilter+'&status=in.(assigned,in_transit,customer_confirmed)&order=created_at.asc');
+
+    // Load driver locations for last seen
+    const locs=await sbGet('driver_locations?order=updated_at.desc&limit=100');
+    driverLastSeen={};
+    (locs||[]).forEach(l=>{
+      if(!driverLastSeen[l.driver_name]||new Date(l.updated_at)>new Date(driverLastSeen[l.driver_name]))
+        driverLastSeen[l.driver_name]=l.updated_at;
+    });
+
+    // Build driver data from jobs
+    const driverMap={};
+    (jobs||[]).forEach(j=>{
+      if(!j.driver_name)return;
+      if(!driverMap[j.driver_name]){
+        driverMap[j.driver_name]={
+          name:j.driver_name,
+          status:j.status,
+          jobs:[],
+          totalPackages:0,
+          delivered:0,
+          startedAt:j.created_at,
+          lastAddr:'',
+          hasException:false,
+          jobId:j.id
+        };
+      }
+      const d=driverMap[j.driver_name];
+
+      // Parse surge stops for package counts
+      let stops=j.surge_stops;
+      if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+      const totalPkgs=stops&&Array.isArray(stops)?stops.reduce((s,st)=>s+(parseInt(st.packages)||1),0):(stops?1:1);
+      const done=j.stops_completed||0;
+
+      // estimate delivered packages from stops ratio
+      const stopTotal=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
+      const deliveredPkgs=stopTotal>0?Math.round((done/stopTotal)*totalPkgs):0;
+
+      d.totalPackages+=totalPkgs;
+      d.delivered+=deliveredPkgs;
+      d.jobs.push(j);
+
+      // last address from current stop
+      if(stops&&Array.isArray(stops)&&done<stops.length){
+        const cur=stops[done];
+        if(cur&&cur.address)d.lastAddr=cur.address.split(',')[0];
+      } else if(j.dropoff_address){
+        d.lastAddr=j.dropoff_address.split(',')[0];
+      }
+
+      // exception check
+      const lastSeen=driverLastSeen[j.driver_name]||j.created_at;
+      const minsSinceUpdate=(Date.now()-new Date(lastSeen).getTime())/60000;
+      if(j.status==='in_transit'&&minsSinceUpdate>30)d.hasException=true;
+
+      // earliest start
+      if(!d.startedAt||new Date(j.created_at)<new Date(d.startedAt))d.startedAt=j.created_at;
+    });
+
+    allDriverData=Object.values(driverMap);
+
+    // Update summary
+    const totalPkgs=allDriverData.reduce((s,d)=>s+d.totalPackages,0);
+    const totalDone=allDriverData.reduce((s,d)=>s+d.delivered,0);
+    const exceptions=allDriverData.filter(d=>d.hasException).length;
+    const pct=totalPkgs>0?Math.round(totalDone/totalPkgs*100):0;
+
+    document.getElementById('sumDrivers').textContent=allDriverData.length;
+    document.getElementById('sumPackages').textContent=totalPkgs;
+    document.getElementById('sumDelivered').textContent=totalDone;
+    document.getElementById('sumRemaining').textContent=totalPkgs-totalDone;
+    document.getElementById('sumExceptions').textContent=exceptions;
+    document.getElementById('sumOverall').textContent=pct+'%';
+    document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+
+    applyFilters();
+  }catch(e){
+    console.error('Fleet load error:',e);
+    document.getElementById('driverList').innerHTML='<div class="empty-state">Error loading fleet data</div>';
+  }
+}
+
+function applyFilters(){
+  const sort=document.getElementById('sortSelect').value;
+  const filter=document.getElementById('filterSelect').value;
+  const search=document.getElementById('searchBox').value.toLowerCase();
+
+  let data=[...allDriverData];
+
+  // Filter
+  if(filter==='exc')data=data.filter(d=>d.hasException);
+  else if(filter==='active')data=data.filter(d=>['in_transit','assigned','customer_confirmed'].includes(d.status));
+  else if(filter==='done')data=data.filter(d=>d.status==='delivered');
+  else if(filter==='assigned')data=data.filter(d=>d.status==='assigned');
+
+  // Search
+  if(search)data=data.filter(d=>d.name.toLowerCase().includes(search));
+
+  // Sort
+  if(sort==='name')data.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==='progress')data.sort((a,b)=>{
+    const pa=a.totalPackages>0?a.delivered/a.totalPackages:0;
+    const pb=b.totalPackages>0?b.delivered/b.totalPackages:0;
+    return pa-pb; // lowest progress first — needs attention
+  });
+  else if(sort==='rate_asc')data.sort((a,b)=>{
+    const ra=a.totalPackages>0?a.delivered/a.totalPackages:0;
+    const rb=b.totalPackages>0?b.delivered/b.totalPackages:0;
+    return ra-rb;
+  });
+  else if(sort==='rate_desc')data.sort((a,b)=>{
+    const ra=a.totalPackages>0?a.delivered/a.totalPackages:0;
+    const rb=b.totalPackages>0?b.delivered/b.totalPackages:0;
+    return rb-ra;
+  });
+  else if(sort==='exceptions')data.sort((a,b)=>(b.hasException?1:0)-(a.hasException?1:0));
+  else if(sort==='ping')data.sort((a,b)=>{
+    const la=new Date(driverLastSeen[a.name]||a.startedAt||0).getTime();
+    const lb=new Date(driverLastSeen[b.name]||b.startedAt||0).getTime();
+    return la-lb; // oldest ping first
+  });
+  else if(sort==='started')data.sort((a,b)=>new Date(a.startedAt)-new Date(b.startedAt));
+
+  renderDriverList(data);
+}
+
+function renderDriverList(data){
+  document.getElementById('driverCount').textContent=data.length+' driver'+(data.length!==1?'s':'');
+
+  if(!data.length){
+    document.getElementById('driverList').innerHTML='<div class="empty-state">No drivers match current filter</div>';
+    return;
+  }
+
+  const html=data.map(d=>{
+    const pct=d.totalPackages>0?Math.round(d.delivered/d.totalPackages*100):0;
+    const lastSeen=driverLastSeen[d.name];
+    const isExc=d.hasException;
+    const isDone=d.status==='delivered'||pct===100;
+
+    let barColor;
+    if(isExc)barColor='linear-gradient(90deg,#ff961e,#ff6b00)';
+    else if(pct>=80)barColor='linear-gradient(90deg,#53ff88,#19b7ef)';
+    else if(pct>=50)barColor='linear-gradient(90deg,#19b7ef,#53ff88)';
+    else barColor='linear-gradient(90deg,#19b7ef,#8d5cff)';
+
+    let rateColor=isExc?'var(--orange)':pct>=70?'var(--green)':'var(--blue)';
+
+    let statusHtml;
+    if(isExc)statusHtml='<span class="status-pill s-exception">⚠ Exception</span>';
+    else if(d.status==='in_transit'||d.status==='customer_confirmed')statusHtml='<span class="status-pill s-transit">● In Transit</span>';
+    else if(d.status==='delivered')statusHtml='<span class="status-pill s-delivered">✓ Complete</span>';
+    else statusHtml='<span class="status-pill s-assigned">◎ Assigned</span>';
+
+    return `<div class="driver-row${isExc?' exc':''}${isDone?' done':''}">
+      <div><div class="d-name">${d.name}</div><div class="d-sub">${d.jobs.length} route${d.jobs.length!==1?'s':''}</div></div>
+      <div>${statusHtml}</div>
+      <div class="prog-wrap">
+        <div class="prog-top"><span class="prog-count">${d.delivered} / ${d.totalPackages}</span><span class="prog-pct">${pct}%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${barColor};"></div></div>
+      </div>
+      <div class="last-addr">${d.lastAddr||'—'}</div>
+      <div class="rate-val" style="color:${rateColor};">${pct}%</div>
+      <div class="ts">${timeAgo(lastSeen)}</div>
+      <div class="ts">${fmtTime(d.startedAt)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('driverList').innerHTML=html;
+}
+
+// Poll every 10 seconds
+loadFleet();
+pollTimer=setInterval(loadFleet,10000);
+</script>
+</body>
+</html>
