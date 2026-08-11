@@ -1050,24 +1050,31 @@ document.getElementById('loginCode').addEventListener('keydown',e=>{if(e.key==='
 // ── FCM PUSH NOTIFICATIONS ──
 async function initFCM(){
   try{
+    // Wait for Capacitor to fully initialize
     const PN=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.PushNotifications;
-    if(!PN){return;} // Not running in native app -- skip
+    if(!PN){
+      console.log('PushNotifications plugin not available');
+      return;
+    }
 
+    console.log('Requesting push notification permission...');
     // Request permission
     const permResult=await PN.requestPermissions();
+    console.log('Permission result:', JSON.stringify(permResult));
     if(permResult.receive!=='granted'){
       console.log('Push notification permission denied');
       return;
     }
 
     // Register with FCM
+    console.log('Registering with FCM...');
     await PN.register();
 
     // Listen for the token
     PN.addListener('registration',async function(tokenData){
       const token=tokenData.value;
+      console.log('FCM token received:', token?token.slice(0,20)+'...':'none');
       if(!token||!driver.phone) return;
-      // Save token to Supabase linked to this driver's phone
       try{
         await fetch(SB+'/rest/v1/driver_fcm_tokens',{
           method:'POST',
@@ -1084,7 +1091,7 @@ async function initFCM(){
       toast(body,'ok');
     });
 
-    // Handle notification tap -- bring app to foreground and show jobs
+    // Handle notification tap
     PN.addListener('pushNotificationActionPerformed',function(){
       showScreen('scHome');
       pollJobs();
@@ -1097,8 +1104,8 @@ async function initFCM(){
 
 function initApp(){
   initJobNotifications();
-  // Register for FCM push notifications if running in native Capacitor app
-  initFCM();
+  // Delay FCM init to ensure Capacitor plugins are fully loaded
+  setTimeout(initFCM, 1500);
   document.getElementById('moreName').textContent=driver.name||'Driver';
   document.getElementById('moreEmail').textContent=driver.phone||driver.email||'';
   document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
