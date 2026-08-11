@@ -998,7 +998,10 @@ body::after{content:'';position:fixed;inset:0;
             </select>
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
-            <button onclick="triggerCSVUpload()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
+            <label style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;display:inline-block;">
+  + New Route
+  <input type="file" accept=".csv" style="display:none;" onchange="if(this.files[0]){handleFile(this.files[0]);this.value='';}">
+</label>
 <button onclick="openSmartSortDrawer()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:transparent;border:1px solid rgba(25,183,239,.3);color:var(--blue);">Demo</button>
           </div>
           <div style="overflow-x:auto;">
@@ -1973,23 +1976,6 @@ function highlightPipelineCard(jobId,on){
   document.querySelectorAll('.pcard[data-jobid="'+jobId+'"]').forEach(function(card){
     on?card.classList.add('pipe-highlight'):card.classList.remove('pipe-highlight');
   });
-}
-
-// ── CSV UPLOAD ──
-function triggerCSVUpload(){
-  // Remove old input and create fresh one every time so onchange always fires
-  const existing=document.getElementById('quickUploadInput');
-  if(existing) existing.remove();
-  const input=document.createElement('input');
-  input.type='file';
-  input.accept='.csv';
-  input.id='quickUploadInput';
-  input.style.display='none';
-  input.addEventListener('change',function(){
-    if(this.files&&this.files[0]) handleFile(this.files[0]);
-  });
-  document.body.appendChild(input);
-  input.click();
 }
 
 // ── RENDER ALL ──
