@@ -3229,6 +3229,15 @@ function closeSmartSortDrawer(){
 
 function handleFile(file){
   if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file','warn');return;}
+  // Full state reset so consecutive uploads behave identically to a fresh page load
+  packages=[];
+  ssRoutes=[];
+  // Reset any in-progress build button state
+  const btn=document.getElementById('buildBtn');
+  if(btn){btn.disabled=false;btn.innerHTML='&#9650; Run SmartSort';}
+  // Close drawer if open so it reopens cleanly
+  const drawer=document.getElementById('smartSortDrawer');
+  if(drawer) drawer.classList.remove('open');
   const reader=new FileReader();
   reader.onload=e=>parseCSV(e.target.result);
   reader.readAsText(file);
