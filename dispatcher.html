@@ -3226,6 +3226,8 @@ function closeSmartSortDrawer(){
 
 function handleFile(file){
   if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file','warn');return;}
+  packages=[];
+  ssRoutes=[];
   const reader=new FileReader();
   reader.onload=e=>parseCSV(e.target.result);
   reader.readAsText(file);
