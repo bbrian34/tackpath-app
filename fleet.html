@@ -358,9 +358,76 @@ function renderDriverList(data){
   document.getElementById('driverList').innerHTML=html;
 }
 
-// Poll every 10 seconds
-loadFleet();
-pollTimer=setInterval(loadFleet,10000);
+// Load demo data
+loadDemoFleet();
+pollTimer=setInterval(updateDemoProgress,3000);
+
+function loadDemoFleet(){
+  const now=Date.now();
+  allDriverData=[
+    {name:'Marcus Johnson',status:'in_transit',jobs:[{}],totalPackages:52,delivered:38,startedAt:new Date(now-7200000).toISOString(),lastAddr:'1245 Peachtree Rd NE',hasException:false,jobId:'job1'},
+    {name:'Denise Crawford',status:'in_transit',jobs:[{}],totalPackages:48,delivered:21,startedAt:new Date(now-6800000).toISOString(),lastAddr:'872 Piedmont Ave NE',hasException:false,jobId:'job2'},
+    {name:'Trevon Williams',status:'in_transit',jobs:[{}],totalPackages:61,delivered:14,startedAt:new Date(now-5400000).toISOString(),lastAddr:'3301 Buckeye Rd NE',hasException:true,jobId:'job3'},
+    {name:'Sandra Okafor',status:'in_transit',jobs:[{}],totalPackages:44,delivered:40,startedAt:new Date(now-8100000).toISOString(),lastAddr:'5600 Roswell Rd NE',hasException:false,jobId:'job4'},
+    {name:'James Tillman',status:'in_transit',jobs:[{}],totalPackages:55,delivered:8,startedAt:new Date(now-3600000).toISOString(),lastAddr:'1800 Howell Mill Rd NW',hasException:true,jobId:'job5'},
+    {name:'Keisha Monroe',status:'in_transit',jobs:[{}],totalPackages:49,delivered:43,startedAt:new Date(now-9000000).toISOString(),lastAddr:'2200 Cascade Rd SW',hasException:false,jobId:'job6'},
+    {name:'Andre Baptiste',status:'in_transit',jobs:[{}],totalPackages:57,delivered:29,startedAt:new Date(now-6200000).toISOString(),lastAddr:'650 Ponce De Leon Ave',hasException:false,jobId:'job7'},
+    {name:'Latoya Simmons',status:'delivered',jobs:[{}],totalPackages:46,delivered:46,startedAt:new Date(now-10800000).toISOString(),lastAddr:'All stops complete',hasException:false,jobId:'job8'},
+    {name:'Carlos Mendez',status:'in_transit',jobs:[{}],totalPackages:53,delivered:17,startedAt:new Date(now-4500000).toISOString(),lastAddr:'1100 Commerce Dr',hasException:false,jobId:'job9'},
+    {name:'Priya Nair',status:'in_transit',jobs:[{}],totalPackages:50,delivered:33,startedAt:new Date(now-7000000).toISOString(),lastAddr:'3800 Chamblee Tucker Rd',hasException:false,jobId:'job10'},
+    {name:'Darnell Foster',status:'in_transit',jobs:[{}],totalPackages:58,delivered:6,startedAt:new Date(now-2700000).toISOString(),lastAddr:'920 Ralph David Abernathy',hasException:true,jobId:'job11'},
+    {name:'Regina Holloway',status:'in_transit',jobs:[{}],totalPackages:45,delivered:38,startedAt:new Date(now-8400000).toISOString(),lastAddr:'7100 Peachtree Ind Blvd',hasException:false,jobId:'job12'},
+    {name:'Michael Osei',status:'in_transit',jobs:[{}],totalPackages:62,delivered:22,startedAt:new Date(now-5800000).toISOString(),lastAddr:'2750 Buford Hwy NE',hasException:false,jobId:'job13'},
+    {name:'Tamara Stokes',status:'delivered',jobs:[{}],totalPackages:43,delivered:43,startedAt:new Date(now-11400000).toISOString(),lastAddr:'All stops complete',hasException:false,jobId:'job14'},
+    {name:'Devon Reeves',status:'in_transit',jobs:[{}],totalPackages:51,delivered:31,startedAt:new Date(now-6600000).toISOString(),lastAddr:'1400 Metropolitan Pkwy SW',hasException:false,jobId:'job15'},
+    {name:'Angela Thompson',status:'in_transit',jobs:[{}],totalPackages:56,delivered:44,startedAt:new Date(now-8800000).toISOString(),lastAddr:'400 W Peachtree St NW',hasException:false,jobId:'job16'},
+    {name:'Robert Miller',status:'in_transit',jobs:[{}],totalPackages:47,delivered:19,startedAt:new Date(now-5100000).toISOString(),lastAddr:'890 Marietta St NW',hasException:false,jobId:'job17'},
+    {name:'Jennifer Davis',status:'in_transit',jobs:[{}],totalPackages:54,delivered:11,startedAt:new Date(now-3900000).toISOString(),lastAddr:'75 5th St NW',hasException:false,jobId:'job18'},
+    {name:'Kevin Harris',status:'in_transit',jobs:[{}],totalPackages:48,delivered:36,startedAt:new Date(now-7800000).toISOString(),lastAddr:'2500 Cumberland Pkwy SE',hasException:false,jobId:'job19'},
+    {name:'Patricia Moore',status:'in_transit',jobs:[{}],totalPackages:60,delivered:28,startedAt:new Date(now-6400000).toISOString(),lastAddr:'1544 Piedmont Ave NE',hasException:false,jobId:'job20'},
+  ];
+
+  // Set fake last seen times
+  driverLastSeen={};
+  allDriverData.forEach((d,i)=>{
+    driverLastSeen[d.name]=new Date(Date.now()-(i%5)*60000-(Math.random()*120000)).toISOString();
+  });
+
+  updateSummary();
+  applyFilters();
+  document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+}
+
+function updateDemoProgress(){
+  // Simulate drivers making deliveries in real time
+  allDriverData.forEach(d=>{
+    if(d.status==='in_transit'&&d.delivered<d.totalPackages){
+      if(Math.random()<0.4){
+        d.delivered=Math.min(d.totalPackages, d.delivered+Math.floor(Math.random()*2)+1);
+        if(d.delivered>=d.totalPackages) d.status='delivered';
+        // Update last seen
+        driverLastSeen[d.name]=new Date().toISOString();
+      }
+    }
+  });
+  updateSummary();
+  applyFilters();
+  document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+}
+
+function updateSummary(){
+  const totalPkgs=allDriverData.reduce((s,d)=>s+d.totalPackages,0);
+  const totalDone=allDriverData.reduce((s,d)=>s+d.delivered,0);
+  const exceptions=allDriverData.filter(d=>d.hasException).length;
+  const active=allDriverData.filter(d=>d.status==='in_transit').length;
+  const pct=totalPkgs>0?Math.round(totalDone/totalPkgs*100):0;
+  document.getElementById('sumDrivers').textContent=active;
+  document.getElementById('sumPackages').textContent=totalPkgs;
+  document.getElementById('sumDelivered').textContent=totalDone;
+  document.getElementById('sumRemaining').textContent=totalPkgs-totalDone;
+  document.getElementById('sumExceptions').textContent=exceptions;
+  document.getElementById('sumOverall').textContent=pct+'%';
+}
 </script>
 </body>
 </html>
