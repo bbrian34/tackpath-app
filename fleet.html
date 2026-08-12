@@ -4,430 +4,246 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TackPath · FleetView</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
-:root{
-  --bg:#02060e;--card:#07101e;--border:rgba(255,255,255,.06);
-  --blue:#19b7ef;--green:#53ff88;--purple:#8d5cff;--orange:#ff961e;--red:#ff3b30;
-  --muted:rgba(255,255,255,.35);--faint:rgba(255,255,255,.15);
-  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
-}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--sans);background:var(--bg);color:#eef4ff;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:#02060e;color:#eef4ff;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
 
 /* Header */
-.hdr{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--card);}
-.hdr-logo{font-family:var(--mono);font-size:1rem;font-weight:800;letter-spacing:-.5px;}
-.hdr-logo span{color:var(--blue);}
-.hdr-title{font-size:0.923rem;font-weight:700;color:#fff;}
-.live-chip{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:0.615rem;color:var(--green);letter-spacing:.1em;}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+.hdr{display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;background:#07101e;}
+.hdr-logo{display:flex;align-items:center;gap:8px;}
+.hdr-title{font-size:1rem;font-weight:700;color:#fff;}
+.live-chip{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:0.7rem;color:#53ff88;letter-spacing:.1em;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#53ff88;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
-.hdr-refresh{font-family:var(--mono);font-size:0.615rem;color:#fff;}
-.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.hdr-refresh{font-family:'DM Mono',monospace;font-size:0.65rem;color:rgba(255,255,255,.4);}
+.back-btn{margin-left:auto;padding:5px 14px;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;text-decoration:none;}
 
-/* Summary bar */
-.summary{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.sum-item{padding:8px 18px;display:flex;flex-direction:column;gap:1px;border-right:1px solid var(--border);min-width:100px;}
-.sum-val{font-size:1.15rem;font-weight:800;font-family:var(--mono);}
-.sum-lbl{font-size:8px;color:#fff;text-transform:uppercase;letter-spacing:.1em;}
+/* Summary */
+.summary{display:flex;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;background:#07101e;}
+.sum-item{padding:10px 24px;display:flex;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,.05);flex:1;}
+.sum-val{font-size:1.4rem;font-weight:800;font-family:'DM Mono',monospace;}
+.sum-lbl{font-size:0.7rem;color:#fff;text-transform:uppercase;letter-spacing:.08em;}
 
 /* Controls */
-.controls{display:flex;gap:8px;padding:7px 16px;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.03);}
-.ctrl-select{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:10px;color:rgba(255,255,255,.7);font-family:var(--mono);cursor:pointer;outline:none;}
-.ctrl-select:focus{border-color:rgba(25,183,239,.3);}
-.search-box{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:#eef4ff;font-family:var(--mono);width:180px;outline:none;}
-.search-box::placeholder{color:var(--muted);}
-.driver-count{margin-left:auto;font-size:9px;font-family:var(--mono);color:#fff;}
+.controls{display:flex;gap:10px;padding:8px 20px;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.04);}
+select{background:#07101e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 12px;font-size:0.8rem;color:#fff;font-family:'DM Mono',monospace;cursor:pointer;outline:none;}
+input{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:5px 12px;font-size:0.8rem;color:#fff;font-family:'DM Mono',monospace;width:200px;outline:none;}
+input::placeholder{color:rgba(255,255,255,.3);}
+.driver-count{margin-left:auto;font-size:0.75rem;font-family:'DM Mono',monospace;color:#fff;}
 
-/* Table header */
-.table-hdr{display:grid;width:100%;grid-template-columns:2fr 1.2fr 1.5fr 0.8fr 2fr 1fr 1fr;gap:0;padding:5px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
-.th{font-size:8px;font-family:var(--mono);color:#fff;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;user-select:none;}
-.th:hover{color:rgba(255,255,255,.7);}
+/* Table */
+.tbl-hdr{display:grid;grid-template-columns:220px 130px 200px 90px 1fr 100px 90px;padding:7px 20px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+.th{font-size:0.72rem;font-family:'DM Mono',monospace;color:#fff;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
 
-/* Driver list */
-.driver-list{flex:1;overflow-y:auto;width:100%;}
-.driver-list::-webkit-scrollbar{width:3px;}
-.driver-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px;}
+.list{flex:1;overflow-y:auto;}
+.list::-webkit-scrollbar{width:3px;}
+.list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
 
-.driver-row{display:grid;width:100%;grid-template-columns:2fr 1.2fr 1.5fr 0.8fr 2fr 1fr 1fr;gap:0;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.025);align-items:center;cursor:pointer;transition:background .1s;border-left:2px solid transparent;}
-.driver-row:hover{background:rgba(255,255,255,.018);}
-.driver-row.exc{border-left-color:var(--orange);}
-.driver-row.done{opacity:.4;}
-.driver-row.hidden{display:none;}
+.row{display:grid;grid-template-columns:220px 130px 200px 90px 1fr 100px 90px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.03);align-items:center;border-left:3px solid transparent;cursor:pointer;}
+.row:hover{background:rgba(255,255,255,.02);}
+.row.exc{border-left-color:#ff961e;}
+.row.done{opacity:.45;}
 
-.d-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.d-sub{font-size:9px;color:#fff;font-family:var(--mono);margin-top:1px;}
+.d-name{font-size:0.95rem;font-weight:700;color:#fff;}
+.d-sub{font-size:0.72rem;color:rgba(255,255,255,.5);font-family:'DM Mono',monospace;margin-top:2px;}
 
-.status-pill{display:inline-flex;align-items:center;gap:3px;font-size:8px;font-family:var(--mono);padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap;}
-.s-transit{background:rgba(141,92,255,.12);color:var(--purple);}
-.s-delivered{background:rgba(83,255,136,.08);color:var(--green);}
-.s-assigned{background:rgba(25,183,239,.08);color:var(--blue);}
-.s-exception{background:rgba(255,150,30,.1);color:var(--orange);}
-.s-pending{background:rgba(255,255,255,.05);color:var(--muted);}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;font-family:'DM Mono',monospace;padding:3px 9px;border-radius:5px;font-weight:700;white-space:nowrap;}
+.p-transit{background:rgba(141,92,255,.15);color:#8d5cff;}
+.p-done{background:rgba(83,255,136,.1);color:#53ff88;}
+.p-exc{background:rgba(255,150,30,.12);color:#ff961e;}
+.p-assigned{background:rgba(25,183,239,.1);color:#19b7ef;}
 
-.prog-wrap{display:flex;flex-direction:column;gap:3px;padding-right:12px;}
-.prog-top{display:flex;justify-content:space-between;align-items:baseline;}
-.prog-count{font-size:11px;font-weight:800;font-family:var(--mono);}
-.prog-pct{font-size:8px;color:#fff;font-family:var(--mono);}
-.prog-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;width:90px;}
-.prog-fill{height:100%;border-radius:2px;transition:width .5s;}
+/* Progress + Rate together */
+.prog-cell{display:flex;align-items:center;gap:10px;}
+.prog-wrap{display:flex;flex-direction:column;gap:4px;}
+.prog-count{font-size:0.85rem;font-weight:800;font-family:'DM Mono',monospace;color:#fff;}
+.prog-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;width:120px;}
+.prog-fill{height:100%;border-radius:2px;}
+.rate-val{font-size:0.9rem;font-weight:800;font-family:'DM Mono',monospace;min-width:42px;}
 
-.ts{font-size:9px;font-family:var(--mono);color:#fff;}
-.rate-val{font-size:11px;font-weight:800;font-family:var(--mono);}
-.last-addr{font-size:9px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-
-.empty-state{flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.769rem;color:var(--muted);}
+.addr{font-size:0.8rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ts{font-size:0.78rem;font-family:'DM Mono',monospace;color:#fff;}
 </style>
 </head>
 <body>
 
 <div class="hdr">
-  <div style="display:flex;align-items:center;gap:8px;">
+  <div class="hdr-logo">
     <svg width="15" height="27" viewBox="0 0 38 70" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
       <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
       <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
       <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
     </svg>
-    <span style="font-family:'Montserrat',sans-serif;font-size:1.03rem;font-weight:500;letter-spacing:1px;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span>
+    <span style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:500;letter-spacing:1px;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span>
   </div>
   <div class="hdr-title">FleetView</div>
   <div class="live-chip"><div class="live-dot"></div>LIVE</div>
   <div class="hdr-refresh" id="lastRefresh">—</div>
-  <div class="hdr-right">
-    <div style="font-family:var(--mono);font-size:9px;color:#fff;" id="orgLabel"></div>
-  </div>
+  <a href="dispatcher.html" class="back-btn">← Dispatcher</a>
 </div>
 
 <div class="summary">
-  <div class="sum-item"><div class="sum-val" style="color:var(--blue);" id="sumDrivers">—</div><div class="sum-lbl">Active Drivers</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:#19b7ef;" id="sumDrivers">—</div><div class="sum-lbl">Active Drivers</div></div>
   <div class="sum-item"><div class="sum-val" id="sumPackages">—</div><div class="sum-lbl">Total Packages</div></div>
-  <div class="sum-item"><div class="sum-val" style="color:var(--green);" id="sumDelivered">—</div><div class="sum-lbl">Delivered</div></div>
-  <div class="sum-item"><div class="sum-val" style="color:var(--muted);" id="sumRemaining">—</div><div class="sum-lbl">Remaining</div></div>
-  <div class="sum-item"><div class="sum-val" style="color:var(--orange);" id="sumExceptions">—</div><div class="sum-lbl">Exceptions</div></div>
-  <div class="sum-item"><div class="sum-val" style="color:var(--green);" id="sumOverall">—</div><div class="sum-lbl">Overall Progress</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:#53ff88;" id="sumDelivered">—</div><div class="sum-lbl">Delivered</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:rgba(255,255,255,.5);" id="sumRemaining">—</div><div class="sum-lbl">Remaining</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:#ff961e;" id="sumExceptions">—</div><div class="sum-lbl">Exceptions</div></div>
+  <div class="sum-item"><div class="sum-val" style="color:#53ff88;" id="sumOverall">—</div><div class="sum-lbl">Overall Progress</div></div>
 </div>
 
 <div class="controls">
-  <select class="ctrl-select" id="sortSelect" onchange="applyFilters()">
-    <option value="progress">Sort: Progress</option>
+  <select id="sortSel" onchange="render()">
+    <option value="progress">Sort: Needs Attention</option>
     <option value="name">Sort: Name A-Z</option>
-    <option value="rate_asc">Sort: Rate % Low-High</option>
-    <option value="rate_desc">Sort: Rate % High-Low</option>
-    <option value="exceptions">Sort: Exceptions First</option>
+    <option value="rate_desc">Sort: Rate High-Low</option>
+    <option value="rate_asc">Sort: Rate Low-High</option>
+    <option value="exc">Sort: Exceptions First</option>
     <option value="ping">Sort: Last Ping</option>
-    <option value="started">Sort: Started Time</option>
   </select>
-  <select class="ctrl-select" id="filterSelect" onchange="applyFilters()">
-    <option value="all">Filter: All Drivers</option>
+  <select id="filterSel" onchange="render()">
+    <option value="all">All Drivers</option>
     <option value="exc">⚠ Exceptions Only</option>
     <option value="active">Active Only</option>
     <option value="done">Completed Only</option>
-    <option value="assigned">Assigned Only</option>
   </select>
-  <input class="search-box" id="searchBox" placeholder="&#128269; Search driver name..." oninput="applyFilters()"/>
-  <div class="driver-count" id="driverCount">— drivers</div>
+  <input id="search" placeholder="🔍 Search driver..." oninput="render()"/>
+  <div class="driver-count" id="driverCount"></div>
 </div>
 
-<div class="table-hdr">
+<div class="tbl-hdr">
   <div class="th">Driver</div>
   <div class="th">Status</div>
-  <div class="th">Progress</div>
-  <div class="th">Rate</div>
+  <div class="th">Progress · Rate</div>
+  <div class="th"></div>
   <div class="th">Last Stop</div>
   <div class="th">Last Ping</div>
   <div class="th">Started</div>
 </div>
 
-<div class="driver-list" id="driverList">
-  <div class="empty-state">Loading fleet data...</div>
-</div>
+<div class="list" id="list"></div>
 
 <script>
-const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
-const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
-const H={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'};
-
-let allDriverData=[];
-let driverLastSeen={};
-let pollTimer=null;
-
-function sbUrl(p){return SB+'/rest/v1/'+p;}
-
-async function sbGet(p){
-  const r=await fetch(sbUrl(p),{headers:H});
-  if(!r.ok)throw new Error(await r.text());
-  return r.json();
-}
+let data=[];
+let lastSeen={};
 
 function timeAgo(ts){
-  if(!ts)return '—';
-  const s=Math.floor((Date.now()-new Date(ts).getTime())/1000);
+  if(!ts)return'—';
+  const s=Math.floor((Date.now()-new Date(ts))/1000);
   if(s<60)return s+'s ago';
   if(s<3600)return Math.floor(s/60)+'m ago';
   return Math.floor(s/3600)+'h ago';
 }
-
 function fmtTime(ts){
-  if(!ts)return '—';
+  if(!ts)return'—';
   return new Date(ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
 }
 
-function getOrgFilter(){
-  // Read org from localStorage set by dispatcher login
-  const session=localStorage.getItem('dispatcherSession');
-  if(session){try{const s=JSON.parse(session);if(s.org_id)return '&org_id=eq.'+s.org_id;}catch(e){}}
-  return '';
-}
-
-async function loadFleet(){
-  try{
-    const orgFilter=getOrgFilter();
-
-    // Load active jobs
-    const jobs=await sbGet('jobs?select=*'+orgFilter+'&status=in.(assigned,in_transit,customer_confirmed)&order=created_at.asc');
-
-    // Load driver locations for last seen
-    const locs=await sbGet('driver_locations?order=updated_at.desc&limit=100');
-    driverLastSeen={};
-    (locs||[]).forEach(l=>{
-      if(!driverLastSeen[l.driver_name]||new Date(l.updated_at)>new Date(driverLastSeen[l.driver_name]))
-        driverLastSeen[l.driver_name]=l.updated_at;
-    });
-
-    // Build driver data from jobs
-    const driverMap={};
-    (jobs||[]).forEach(j=>{
-      if(!j.driver_name)return;
-      if(!driverMap[j.driver_name]){
-        driverMap[j.driver_name]={
-          name:j.driver_name,
-          status:j.status,
-          jobs:[],
-          totalPackages:0,
-          delivered:0,
-          startedAt:j.created_at,
-          lastAddr:'',
-          hasException:false,
-          jobId:j.id
-        };
-      }
-      const d=driverMap[j.driver_name];
-
-      // Parse surge stops for package counts
-      let stops=j.surge_stops;
-      if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
-      const totalPkgs=stops&&Array.isArray(stops)?stops.reduce((s,st)=>s+(parseInt(st.packages)||1),0):(stops?1:1);
-      const done=j.stops_completed||0;
-
-      // estimate delivered packages from stops ratio
-      const stopTotal=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
-      const deliveredPkgs=stopTotal>0?Math.round((done/stopTotal)*totalPkgs):0;
-
-      d.totalPackages+=totalPkgs;
-      d.delivered+=deliveredPkgs;
-      d.jobs.push(j);
-
-      // last address from current stop
-      if(stops&&Array.isArray(stops)&&done<stops.length){
-        const cur=stops[done];
-        if(cur&&cur.address)d.lastAddr=cur.address.split(',')[0];
-      } else if(j.dropoff_address){
-        d.lastAddr=j.dropoff_address.split(',')[0];
-      }
-
-      // exception check
-      const lastSeen=driverLastSeen[j.driver_name]||j.created_at;
-      const minsSinceUpdate=(Date.now()-new Date(lastSeen).getTime())/60000;
-      if(j.status==='in_transit'&&minsSinceUpdate>30)d.hasException=true;
-
-      // earliest start
-      if(!d.startedAt||new Date(j.created_at)<new Date(d.startedAt))d.startedAt=j.created_at;
-    });
-
-    allDriverData=Object.values(driverMap);
-
-    // Update summary
-    const totalPkgs=allDriverData.reduce((s,d)=>s+d.totalPackages,0);
-    const totalDone=allDriverData.reduce((s,d)=>s+d.delivered,0);
-    const exceptions=allDriverData.filter(d=>d.hasException).length;
-    const pct=totalPkgs>0?Math.round(totalDone/totalPkgs*100):0;
-
-    document.getElementById('sumDrivers').textContent=allDriverData.length;
-    document.getElementById('sumPackages').textContent=totalPkgs;
-    document.getElementById('sumDelivered').textContent=totalDone;
-    document.getElementById('sumRemaining').textContent=totalPkgs-totalDone;
-    document.getElementById('sumExceptions').textContent=exceptions;
-    document.getElementById('sumOverall').textContent=pct+'%';
-    document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-
-    applyFilters();
-  }catch(e){
-    console.error('Fleet load error:',e);
-    document.getElementById('driverList').innerHTML='<div class="empty-state">Error loading fleet data</div>';
-  }
-}
-
-function applyFilters(){
-  const sort=document.getElementById('sortSelect').value;
-  const filter=document.getElementById('filterSelect').value;
-  const search=document.getElementById('searchBox').value.toLowerCase();
-
-  let data=[...allDriverData];
-
-  // Filter
-  if(filter==='exc')data=data.filter(d=>d.hasException);
-  else if(filter==='active')data=data.filter(d=>['in_transit','assigned','customer_confirmed'].includes(d.status));
-  else if(filter==='done')data=data.filter(d=>d.status==='delivered');
-  else if(filter==='assigned')data=data.filter(d=>d.status==='assigned');
-
-  // Search
-  if(search)data=data.filter(d=>d.name.toLowerCase().includes(search));
-
-  // Sort
-  if(sort==='name')data.sort((a,b)=>a.name.localeCompare(b.name));
-  else if(sort==='progress')data.sort((a,b)=>{
-    const pa=a.totalPackages>0?a.delivered/a.totalPackages:0;
-    const pb=b.totalPackages>0?b.delivered/b.totalPackages:0;
-    return pa-pb; // lowest progress first — needs attention
-  });
-  else if(sort==='rate_asc')data.sort((a,b)=>{
-    const ra=a.totalPackages>0?a.delivered/a.totalPackages:0;
-    const rb=b.totalPackages>0?b.delivered/b.totalPackages:0;
-    return ra-rb;
-  });
-  else if(sort==='rate_desc')data.sort((a,b)=>{
-    const ra=a.totalPackages>0?a.delivered/a.totalPackages:0;
-    const rb=b.totalPackages>0?b.delivered/b.totalPackages:0;
-    return rb-ra;
-  });
-  else if(sort==='exceptions')data.sort((a,b)=>(b.hasException?1:0)-(a.hasException?1:0));
-  else if(sort==='ping')data.sort((a,b)=>{
-    const la=new Date(driverLastSeen[a.name]||a.startedAt||0).getTime();
-    const lb=new Date(driverLastSeen[b.name]||b.startedAt||0).getTime();
-    return la-lb; // oldest ping first
-  });
-  else if(sort==='started')data.sort((a,b)=>new Date(a.startedAt)-new Date(b.startedAt));
-
-  renderDriverList(data);
-}
-
-function renderDriverList(data){
-  document.getElementById('driverCount').textContent=data.length+' driver'+(data.length!==1?'s':'');
-
-  if(!data.length){
-    document.getElementById('driverList').innerHTML='<div class="empty-state">No drivers match current filter</div>';
-    return;
-  }
-
-  const html=data.map(d=>{
-    const pct=d.totalPackages>0?Math.round(d.delivered/d.totalPackages*100):0;
-    const lastSeen=driverLastSeen[d.name];
-    const isExc=d.hasException;
-    const isDone=d.status==='delivered'||pct===100;
-
-    let barColor;
-    if(isExc)barColor='linear-gradient(90deg,#ff961e,#ff6b00)';
-    else if(pct>=80)barColor='linear-gradient(90deg,#53ff88,#19b7ef)';
-    else if(pct>=50)barColor='linear-gradient(90deg,#19b7ef,#53ff88)';
-    else barColor='linear-gradient(90deg,#19b7ef,#8d5cff)';
-
-    let rateColor=isExc?'var(--orange)':pct>=70?'var(--green)':'var(--blue)';
-
-    let statusHtml;
-    if(isExc)statusHtml='<span class="status-pill s-exception">⚠ Exception</span>';
-    else if(d.status==='in_transit'||d.status==='customer_confirmed')statusHtml='<span class="status-pill s-transit">● In Transit</span>';
-    else if(d.status==='delivered')statusHtml='<span class="status-pill s-delivered">✓ Complete</span>';
-    else statusHtml='<span class="status-pill s-assigned">◎ Assigned</span>';
-
-    return `<div class="driver-row${isExc?' exc':''}${isDone?' done':''}">
-      <div><div class="d-name">${d.name}</div><div class="d-sub">${d.jobs.length} route${d.jobs.length!==1?'s':''}</div></div>
-      <div>${statusHtml}</div>
-      <div class="prog-wrap">
-        <div class="prog-top"><span class="prog-count">${d.delivered} / ${d.totalPackages}</span><span class="prog-pct">${pct}%</span></div>
-        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${barColor};"></div></div>
-      </div>
-      <div class="rate-val" style="color:${rateColor};">${pct}%</div>
-      <div class="last-addr">${d.lastAddr||'—'}</div>
-      <div class="ts">${timeAgo(lastSeen)}</div>
-      <div class="ts">${fmtTime(d.startedAt)}</div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('driverList').innerHTML=html;
-}
-
-// Load demo data
-loadDemoFleet();
-pollTimer=setInterval(updateDemoProgress,3000);
-
-function loadDemoFleet(){
+function loadDemo(){
   const now=Date.now();
-  allDriverData=[
-    {name:'Marcus Johnson',status:'in_transit',jobs:[{}],totalPackages:52,delivered:38,startedAt:new Date(now-7200000).toISOString(),lastAddr:'1245 Peachtree Rd NE',hasException:false,jobId:'job1'},
-    {name:'Denise Crawford',status:'in_transit',jobs:[{}],totalPackages:48,delivered:21,startedAt:new Date(now-6800000).toISOString(),lastAddr:'872 Piedmont Ave NE',hasException:false,jobId:'job2'},
-    {name:'Trevon Williams',status:'in_transit',jobs:[{}],totalPackages:61,delivered:14,startedAt:new Date(now-5400000).toISOString(),lastAddr:'3301 Buckeye Rd NE',hasException:true,jobId:'job3'},
-    {name:'Sandra Okafor',status:'in_transit',jobs:[{}],totalPackages:44,delivered:40,startedAt:new Date(now-8100000).toISOString(),lastAddr:'5600 Roswell Rd NE',hasException:false,jobId:'job4'},
-    {name:'James Tillman',status:'in_transit',jobs:[{}],totalPackages:55,delivered:8,startedAt:new Date(now-3600000).toISOString(),lastAddr:'1800 Howell Mill Rd NW',hasException:true,jobId:'job5'},
-    {name:'Keisha Monroe',status:'in_transit',jobs:[{}],totalPackages:49,delivered:43,startedAt:new Date(now-9000000).toISOString(),lastAddr:'2200 Cascade Rd SW',hasException:false,jobId:'job6'},
-    {name:'Andre Baptiste',status:'in_transit',jobs:[{}],totalPackages:57,delivered:29,startedAt:new Date(now-6200000).toISOString(),lastAddr:'650 Ponce De Leon Ave',hasException:false,jobId:'job7'},
-    {name:'Latoya Simmons',status:'delivered',jobs:[{}],totalPackages:46,delivered:46,startedAt:new Date(now-10800000).toISOString(),lastAddr:'All stops complete',hasException:false,jobId:'job8'},
-    {name:'Carlos Mendez',status:'in_transit',jobs:[{}],totalPackages:53,delivered:17,startedAt:new Date(now-4500000).toISOString(),lastAddr:'1100 Commerce Dr',hasException:false,jobId:'job9'},
-    {name:'Priya Nair',status:'in_transit',jobs:[{}],totalPackages:50,delivered:33,startedAt:new Date(now-7000000).toISOString(),lastAddr:'3800 Chamblee Tucker Rd',hasException:false,jobId:'job10'},
-    {name:'Darnell Foster',status:'in_transit',jobs:[{}],totalPackages:58,delivered:6,startedAt:new Date(now-2700000).toISOString(),lastAddr:'920 Ralph David Abernathy',hasException:true,jobId:'job11'},
-    {name:'Regina Holloway',status:'in_transit',jobs:[{}],totalPackages:45,delivered:38,startedAt:new Date(now-8400000).toISOString(),lastAddr:'7100 Peachtree Ind Blvd',hasException:false,jobId:'job12'},
-    {name:'Michael Osei',status:'in_transit',jobs:[{}],totalPackages:62,delivered:22,startedAt:new Date(now-5800000).toISOString(),lastAddr:'2750 Buford Hwy NE',hasException:false,jobId:'job13'},
-    {name:'Tamara Stokes',status:'delivered',jobs:[{}],totalPackages:43,delivered:43,startedAt:new Date(now-11400000).toISOString(),lastAddr:'All stops complete',hasException:false,jobId:'job14'},
-    {name:'Devon Reeves',status:'in_transit',jobs:[{}],totalPackages:51,delivered:31,startedAt:new Date(now-6600000).toISOString(),lastAddr:'1400 Metropolitan Pkwy SW',hasException:false,jobId:'job15'},
-    {name:'Angela Thompson',status:'in_transit',jobs:[{}],totalPackages:56,delivered:44,startedAt:new Date(now-8800000).toISOString(),lastAddr:'400 W Peachtree St NW',hasException:false,jobId:'job16'},
-    {name:'Robert Miller',status:'in_transit',jobs:[{}],totalPackages:47,delivered:19,startedAt:new Date(now-5100000).toISOString(),lastAddr:'890 Marietta St NW',hasException:false,jobId:'job17'},
-    {name:'Jennifer Davis',status:'in_transit',jobs:[{}],totalPackages:54,delivered:11,startedAt:new Date(now-3900000).toISOString(),lastAddr:'75 5th St NW',hasException:false,jobId:'job18'},
-    {name:'Kevin Harris',status:'in_transit',jobs:[{}],totalPackages:48,delivered:36,startedAt:new Date(now-7800000).toISOString(),lastAddr:'2500 Cumberland Pkwy SE',hasException:false,jobId:'job19'},
-    {name:'Patricia Moore',status:'in_transit',jobs:[{}],totalPackages:60,delivered:28,startedAt:new Date(now-6400000).toISOString(),lastAddr:'1544 Piedmont Ave NE',hasException:false,jobId:'job20'},
+  data=[
+    {name:'Marcus Johnson',status:'in_transit',totalPackages:52,delivered:38,startedAt:new Date(now-7200000).toISOString(),lastAddr:'1245 Peachtree Rd NE',hasException:false},
+    {name:'Denise Crawford',status:'in_transit',totalPackages:48,delivered:21,startedAt:new Date(now-6800000).toISOString(),lastAddr:'872 Piedmont Ave NE',hasException:false},
+    {name:'Trevon Williams',status:'in_transit',totalPackages:61,delivered:14,startedAt:new Date(now-5400000).toISOString(),lastAddr:'3301 Buckeye Rd NE',hasException:true},
+    {name:'Sandra Okafor',status:'in_transit',totalPackages:44,delivered:40,startedAt:new Date(now-8100000).toISOString(),lastAddr:'5600 Roswell Rd NE',hasException:false},
+    {name:'James Tillman',status:'in_transit',totalPackages:55,delivered:8,startedAt:new Date(now-3600000).toISOString(),lastAddr:'1800 Howell Mill Rd NW',hasException:true},
+    {name:'Keisha Monroe',status:'in_transit',totalPackages:49,delivered:43,startedAt:new Date(now-9000000).toISOString(),lastAddr:'2200 Cascade Rd SW',hasException:false},
+    {name:'Andre Baptiste',status:'in_transit',totalPackages:57,delivered:29,startedAt:new Date(now-6200000).toISOString(),lastAddr:'650 Ponce De Leon Ave',hasException:false},
+    {name:'Latoya Simmons',status:'delivered',totalPackages:46,delivered:46,startedAt:new Date(now-10800000).toISOString(),lastAddr:'All stops complete',hasException:false},
+    {name:'Carlos Mendez',status:'in_transit',totalPackages:53,delivered:17,startedAt:new Date(now-4500000).toISOString(),lastAddr:'1100 Commerce Dr',hasException:false},
+    {name:'Priya Nair',status:'in_transit',totalPackages:50,delivered:33,startedAt:new Date(now-7000000).toISOString(),lastAddr:'3800 Chamblee Tucker Rd',hasException:false},
+    {name:'Darnell Foster',status:'in_transit',totalPackages:58,delivered:6,startedAt:new Date(now-2700000).toISOString(),lastAddr:'920 Ralph David Abernathy',hasException:true},
+    {name:'Regina Holloway',status:'in_transit',totalPackages:45,delivered:38,startedAt:new Date(now-8400000).toISOString(),lastAddr:'7100 Peachtree Ind Blvd',hasException:false},
+    {name:'Michael Osei',status:'in_transit',totalPackages:62,delivered:22,startedAt:new Date(now-5800000).toISOString(),lastAddr:'2750 Buford Hwy NE',hasException:false},
+    {name:'Tamara Stokes',status:'delivered',totalPackages:43,delivered:43,startedAt:new Date(now-11400000).toISOString(),lastAddr:'All stops complete',hasException:false},
+    {name:'Devon Reeves',status:'in_transit',totalPackages:51,delivered:31,startedAt:new Date(now-6600000).toISOString(),lastAddr:'1400 Metropolitan Pkwy SW',hasException:false},
+    {name:'Angela Thompson',status:'in_transit',totalPackages:56,delivered:44,startedAt:new Date(now-8800000).toISOString(),lastAddr:'400 W Peachtree St NW',hasException:false},
+    {name:'Robert Miller',status:'in_transit',totalPackages:47,delivered:19,startedAt:new Date(now-5100000).toISOString(),lastAddr:'890 Marietta St NW',hasException:false},
+    {name:'Jennifer Davis',status:'in_transit',totalPackages:54,delivered:11,startedAt:new Date(now-3900000).toISOString(),lastAddr:'75 5th St NW',hasException:false},
+    {name:'Kevin Harris',status:'in_transit',totalPackages:48,delivered:36,startedAt:new Date(now-7800000).toISOString(),lastAddr:'2500 Cumberland Pkwy SE',hasException:false},
+    {name:'Patricia Moore',status:'in_transit',totalPackages:60,delivered:28,startedAt:new Date(now-6400000).toISOString(),lastAddr:'1544 Piedmont Ave NE',hasException:false},
   ];
-
-  // Set fake last seen times
-  driverLastSeen={};
-  allDriverData.forEach((d,i)=>{
-    driverLastSeen[d.name]=new Date(Date.now()-(i%5)*60000-(Math.random()*120000)).toISOString();
-  });
-
+  data.forEach((d,i)=>{lastSeen[d.name]=new Date(Date.now()-(i%4)*45000-(Math.random()*90000)).toISOString();});
   updateSummary();
-  applyFilters();
-  document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-}
-
-function updateDemoProgress(){
-  // Simulate drivers making deliveries in real time
-  allDriverData.forEach(d=>{
-    if(d.status==='in_transit'&&d.delivered<d.totalPackages){
-      if(Math.random()<0.4){
-        d.delivered=Math.min(d.totalPackages, d.delivered+Math.floor(Math.random()*2)+1);
-        if(d.delivered>=d.totalPackages) d.status='delivered';
-        // Update last seen
-        driverLastSeen[d.name]=new Date().toISOString();
-      }
-    }
-  });
-  updateSummary();
-  applyFilters();
-  document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  render();
 }
 
 function updateSummary(){
-  const totalPkgs=allDriverData.reduce((s,d)=>s+d.totalPackages,0);
-  const totalDone=allDriverData.reduce((s,d)=>s+d.delivered,0);
-  const exceptions=allDriverData.filter(d=>d.hasException).length;
-  const active=allDriverData.filter(d=>d.status==='in_transit').length;
-  const pct=totalPkgs>0?Math.round(totalDone/totalPkgs*100):0;
+  const tot=data.reduce((s,d)=>s+d.totalPackages,0);
+  const done=data.reduce((s,d)=>s+d.delivered,0);
+  const exc=data.filter(d=>d.hasException).length;
+  const active=data.filter(d=>d.status==='in_transit').length;
+  const pct=tot>0?Math.round(done/tot*100):0;
   document.getElementById('sumDrivers').textContent=active;
-  document.getElementById('sumPackages').textContent=totalPkgs;
-  document.getElementById('sumDelivered').textContent=totalDone;
-  document.getElementById('sumRemaining').textContent=totalPkgs-totalDone;
-  document.getElementById('sumExceptions').textContent=exceptions;
+  document.getElementById('sumPackages').textContent=tot;
+  document.getElementById('sumDelivered').textContent=done;
+  document.getElementById('sumRemaining').textContent=tot-done;
+  document.getElementById('sumExceptions').textContent=exc;
   document.getElementById('sumOverall').textContent=pct+'%';
+  document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 }
+
+function render(){
+  const sort=document.getElementById('sortSel').value;
+  const filter=document.getElementById('filterSel').value;
+  const search=document.getElementById('search').value.toLowerCase();
+  let d=[...data];
+  if(filter==='exc')d=d.filter(x=>x.hasException);
+  else if(filter==='active')d=d.filter(x=>x.status==='in_transit');
+  else if(filter==='done')d=d.filter(x=>x.status==='delivered');
+  if(search)d=d.filter(x=>x.name.toLowerCase().includes(search));
+  if(sort==='name')d.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==='progress')d.sort((a,b)=>(a.delivered/a.totalPackages)-(b.delivered/b.totalPackages));
+  else if(sort==='rate_desc')d.sort((a,b)=>(b.delivered/b.totalPackages)-(a.delivered/a.totalPackages));
+  else if(sort==='rate_asc')d.sort((a,b)=>(a.delivered/a.totalPackages)-(b.delivered/b.totalPackages));
+  else if(sort==='exc')d.sort((a,b)=>(b.hasException?1:0)-(a.hasException?1:0));
+  else if(sort==='ping')d.sort((a,b)=>new Date(lastSeen[a.name]||0)-new Date(lastSeen[b.name]||0));
+
+  document.getElementById('driverCount').textContent=d.length+' driver'+(d.length!==1?'s':'');
+
+  const html=d.map(dr=>{
+    const pct=Math.round(dr.delivered/dr.totalPackages*100);
+    const isExc=dr.hasException;
+    const isDone=dr.status==='delivered';
+    const barColor=isExc?'linear-gradient(90deg,#ff961e,#ff6b00)':pct>=80?'#53ff88':pct>=50?'linear-gradient(90deg,#19b7ef,#53ff88)':'linear-gradient(90deg,#19b7ef,#8d5cff)';
+    const rateColor=isExc?'#ff961e':pct>=70?'#53ff88':'#19b7ef';
+    let pill;
+    if(isExc)pill='<span class="pill p-exc">⚠ Exception</span>';
+    else if(isDone)pill='<span class="pill p-done">✓ Complete</span>';
+    else pill='<span class="pill p-transit">● In Transit</span>';
+    return`<div class="row${isExc?' exc':''}${isDone?' done':''}">
+      <div><div class="d-name">${dr.name}</div><div class="d-sub">1 route</div></div>
+      <div>${pill}</div>
+      <div class="prog-cell">
+        <div class="prog-wrap">
+          <div class="prog-count">${dr.delivered} / ${dr.totalPackages}</div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${barColor};"></div></div>
+        </div>
+      </div>
+      <div class="rate-val" style="color:${rateColor};">${pct}%</div>
+      <div class="addr">${dr.lastAddr||'—'}</div>
+      <div class="ts">${timeAgo(lastSeen[dr.name])}</div>
+      <div class="ts">${fmtTime(dr.startedAt)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('list').innerHTML=html||'<div style="padding:40px;text-align:center;color:rgba(255,255,255,.3);font-family:\'DM Mono\',monospace;font-size:0.8rem;">No drivers match filter</div>';
+}
+
+function tick(){
+  data.forEach(d=>{
+    if(d.status==='in_transit'&&d.delivered<d.totalPackages&&Math.random()<0.35){
+      d.delivered=Math.min(d.totalPackages,d.delivered+1);
+      if(d.delivered>=d.totalPackages)d.status='delivered';
+      lastSeen[d.name]=new Date().toISOString();
+    }
+  });
+  updateSummary();
+  render();
+}
+
+loadDemo();
+setInterval(tick,3000);
 </script>
 </body>
 </html>
