@@ -40,7 +40,7 @@ input::placeholder{color:rgba(255,255,255,.3);}
 .list::-webkit-scrollbar{width:3px;}
 .list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
 
-.row{display:grid;grid-template-columns:18% 11% 18% 7% 1fr 9% 8%;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.03);align-items:center;border-left:3px solid transparent;cursor:pointer;}
+.row{display:grid;grid-template-columns:20% 12% 16% 7% 1fr 10% 9%;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.03);align-items:center;border-left:3px solid transparent;cursor:pointer;}
 .row:hover{background:rgba(255,255,255,.02);}
 .row.exc{border-left-color:#ff961e;}
 .row.done{opacity:.45;}
@@ -115,8 +115,8 @@ input::placeholder{color:rgba(255,255,255,.3);}
 <div class="tbl-hdr">
   <div class="th">Driver</div>
   <div class="th">Status</div>
-  <div class="th">Progress · Rate</div>
-  <div class="th"></div>
+  <div class="th">Progress</div>
+  <div class="th">Rate</div>
   <div class="th">Last Stop</div>
   <div class="th">Last Ping</div>
   <div class="th">Started</div>
@@ -213,7 +213,7 @@ function render(){
     else if(isDone)pill='<span class="pill p-done">✓ Complete</span>';
     else pill='<span class="pill p-transit">● In Transit</span>';
     return`<div class="row${isExc?' exc':''}${isDone?' done':''}">
-      <div><div class="d-name">${dr.name}</div><div class="d-sub">1 route</div></div>
+      <div><div class="d-name">${dr.name}</div></div>
       <div>${pill}</div>
       <div class="prog-cell">
         <div class="prog-wrap">
