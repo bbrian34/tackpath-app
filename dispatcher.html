@@ -995,9 +995,8 @@ body::after{content:'';position:fixed;inset:0;
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
             <button onclick="triggerCSVUpload()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
-<button onclick="openSmartSortDrawer()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:transparent;border:1px solid rgba(25,183,239,.3);color:var(--blue);">Demo</button>
-<button onclick="clearAllJobs()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(255,59,48,.08);border:1px solid rgba(255,59,48,.25);color:#ff3b30;">&#128465; Clear All Jobs</button>
-<button id="fleetToggleBtn" onclick="toggleFleetView()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.25);color:#53ff88;">&#9783; Fleet View</button>
+<button onclick="clearAllJobs()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#128465; Clear All Jobs</button>
+<button id="fleetToggleBtn" onclick="toggleFleetView()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#9783; Fleet View</button>
           </div>
           <div style="overflow-x:auto;">
             <table class="tbl">
@@ -2922,15 +2921,15 @@ function toggleFleetView(){
   const isOpen=panel.style.display!=='none';
   if(isOpen){
     panel.style.display='none';
-    btn.style.background='rgba(83,255,136,.08)';
-    btn.style.color='#53ff88';
+    btn.style.background='rgba(25,183,239,.08)';
+    btn.style.color='#19b7ef';
     btn.textContent='⬡ Fleet View';
   } else {
     panel.style.display='block';
     // Reload fleet iframe to get fresh data
     document.getElementById('fleetFrame').src='fleet.html';
-    btn.style.background='rgba(83,255,136,.2)';
-    btn.style.color='#53ff88';
+    btn.style.background='rgba(25,183,239,.2)';
+    btn.style.color='#19b7ef';
     btn.textContent='✕ Fleet View';
   }
 }
