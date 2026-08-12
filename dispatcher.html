@@ -1051,6 +1051,10 @@ body::after{content:'';position:fixed;inset:0;
       <div class="tab" id="tab-smarttrack">
         <div style="margin-bottom:16px;">
           <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">SmartTrack</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.15);border-radius:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#53ff88;animation:pulse 2s infinite;"></div>
+            <div style="font-family:var(--mono);font-size:0.692rem;color:#53ff88;">SmartTrack Agent Active · Monitoring every 2s · Dark threshold: 15 min</div>
+          </div>
           <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Fleet Live Map</div>
           <div style="margin-top:6px;font-size:0.923rem;color:var(--muted);">Real-time GPS telemetry · Atlanta Metro · ATL HUB 01</div>
         </div>
@@ -1531,6 +1535,11 @@ async function getMessages(jobId){
 
 // ── STATE ──
 let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
+
+// ── SMARTTRACK AGENT ──
+const SMARTTRACK_DARK_MINUTES=15; // driver dark threshold
+const SMARTTRACK_ALERTED=new Set(); // track which jobs already alerted this session
+let smartTrackEnabled=true;
 let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
 let driverLastSeen={};
 let lastDropoffByJobId={};
@@ -1757,6 +1766,41 @@ async function broadcastJob(jobId){
 }
 
 // ── LOAD JOBS ──
+// ── SMARTTRACK AGENT: autonomous driver monitoring ──
+async function runSmartTrack(){
+  if(!smartTrackEnabled)return;
+  try{
+    const now=Date.now();
+    const activeJobs=jobs.filter(j=>j.status==='in_transit'||j.status==='customer_confirmed');
+    for(const job of activeJobs){
+      if(!job.driver_name)continue;
+      const lastSeen=driverLastSeen[job.driver_name];
+      if(!lastSeen)continue;
+      const minsAgo=(now-new Date(lastSeen).getTime())/60000;
+      if(minsAgo>=SMARTTRACK_DARK_MINUTES&&!SMARTTRACK_ALERTED.has(job.id)){
+        SMARTTRACK_ALERTED.add(job.id);
+        // 1. Flag exception in Supabase
+        await sbPatch('jobs?id=eq.'+job.id,{exception_flag:true});
+        // 2. Post alert message to comms
+        const alertMsg='SMARTTRACK:: '+job.driver_name+' has not pinged in '+Math.round(minsAgo)+' minutes. Auto-flagged as exception.';
+        await sbPostMsg(job.id,alertMsg,'dispatcher');
+        // 3. Send direct message to driver
+        const driverMsg='Hey '+job.driver_name.split(' ')[0]+', TackPath has not received a location update from you in a while. Everything ok? Please confirm your status.';
+        await sbPostMsg(job.id,driverMsg,'dispatcher');
+        // 4. Intel feed alert
+        addIntelEvent('&#127947; SmartTrack flagged <strong>'+job.driver_name+'</strong> — no ping in '+Math.round(minsAgo)+' min','var(--orange)');
+        // 5. Pulse comms FAB so dispatcher sees it
+        const fab=document.getElementById('chatFab');
+        if(fab)fab.classList.add('has-unread');
+        // 6. Toast
+        toast('SmartTrack: '+job.driver_name.split(' ')[0]+' flagged — no ping in '+Math.round(minsAgo)+' min','warn');
+      }
+    }
+  }catch(e){
+    console.error('SmartTrack error:',e);
+  }
+}
+
 async function loadJobs(){
   await orgReady;
   const ring=document.getElementById('pollRing');
@@ -1788,6 +1832,8 @@ async function loadJobs(){
           driverLastSeen[l.driver_name]=l.updated_at;
       });
     }catch(e){}
+    // Run SmartTrack agent after driver locations are updated
+    runSmartTrack().catch(function(){});
     // Fetch individual stop delivery records from messages table
     try{
       const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||j.status==='delivered').map(j=>j.id);
