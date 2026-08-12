@@ -996,7 +996,7 @@ body::after{content:'';position:fixed;inset:0;
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
             <button onclick="triggerCSVUpload()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
 <button onclick="clearAllJobs()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#128465; Clear All Jobs</button>
-<button id="fleetToggleBtn" onclick="toggleFleetView()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#9783; Fleet View</button>
+<a href="fleet.html" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;text-decoration:none;">&#9783; FleetView</a>
           </div>
           <div style="overflow-x:auto;">
             <table class="tbl">
@@ -1416,13 +1416,6 @@ body::after{content:'';position:fixed;inset:0;
 </div>
 
 <!-- COMMS HUB -->
-<div id="fleetPanel" style="display:none;position:fixed;inset:0;z-index:500;background:#02060e;">
-  <div style="position:absolute;top:10px;right:16px;z-index:501;">
-    <button onclick="toggleFleetView()" style="padding:6px 14px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;">✕ Back to Dispatcher</button>
-  </div>
-  <iframe id="fleetFrame" src="fleet.html" style="width:100%;height:100%;border:none;"></iframe>
-</div>
-
 <div id="opsChat" >
   <div class="oc-hdr">
     <div class="oc-hdr-top">
@@ -2913,25 +2906,6 @@ async function saveStatus(){
     addIntelEvent('Job TP-'+currentJobId.slice(0,8)+' status updated to <strong>'+status.replace('_',' ')+'</strong> by dispatcher.','var(--green)');
     closeDrawer();loadJobs();
   }catch(e){toast('Failed to update status');console.error(e);}
-}
-
-function toggleFleetView(){
-  const panel=document.getElementById('fleetPanel');
-  const btn=document.getElementById('fleetToggleBtn');
-  const isOpen=panel.style.display!=='none';
-  if(isOpen){
-    panel.style.display='none';
-    btn.style.background='rgba(25,183,239,.08)';
-    btn.style.color='#19b7ef';
-    btn.textContent='⬡ Fleet View';
-  } else {
-    panel.style.display='block';
-    // Reload fleet iframe to get fresh data
-    document.getElementById('fleetFrame').src='fleet.html';
-    btn.style.background='rgba(25,183,239,.2)';
-    btn.style.color='#19b7ef';
-    btn.textContent='✕ Fleet View';
-  }
 }
 
 async function clearAllJobs(){
