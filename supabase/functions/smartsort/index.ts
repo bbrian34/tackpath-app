@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GKEY = "AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8";
 const SB_URL = "https://hofijsiphyjpdvujjzfi.supabase.co";
-const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SB_KEY = Deno.env.get("SERVICE_ROLE_KEY") || "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
