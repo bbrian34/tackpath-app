@@ -3392,7 +3392,7 @@ function haversineDistance(a,b){
 function autoDetectDriverCount(totalPackages){
   // Default: ~60 packages per driver — dispatcher can override
   // Min 1, max 200 drivers
-  return Math.min(200, Math.max(1, Math.round(totalPackages / 60)));
+  return Math.min(200, Math.max(1, Math.round(totalPackages / 26)));
 }
 
 function smartCluster(stops, k){
