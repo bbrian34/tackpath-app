@@ -3588,13 +3588,46 @@ function nearestNeighborSort(stopsWithCoords){
 }
 
 async function buildAndAutoDispatch(){
-  // Runs the full pipeline automatically after CSV upload:
-  // geocode → sequence → create job in Supabase → broadcast to drivers
-  await buildRoutes();
-  if(!ssRoutes||!ssRoutes.length){toast('No routes to dispatch','warn');return;}
-  toast('Route built — dispatching to drivers...','ok');
-  for(const route of [...ssRoutes]){
-    await assignSSRoute(route.id);
+  // SmartSort Agent — runs clustering server-side via Supabase Edge Function
+  // Browser just sends packages and waits for result
+  if(!packages||!packages.length){toast('No packages to dispatch','warn');return;}
+
+  const btn=document.getElementById('buildBtn');
+  if(btn){btn.disabled=true;btn.innerHTML='&#9650; SmartSort Agent running... <span class="build-badge">Clustering</span>';}
+  toast('SmartSort Agent is clustering '+packages.length+' stops server-side...','ok');
+
+  try{
+    const resp=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/smartsort',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+KEY
+      },
+      body:JSON.stringify({
+        packages:packages,
+        org_id:currentOrgId||null,
+        pkgs_per_driver:26
+      })
+    });
+
+    const result=await resp.json();
+
+    if(!result.success){
+      throw new Error(result.error||'SmartSort Agent failed');
+    }
+
+    toast(result.clusters+' driver routes clustered · '+result.total_packages+' packages dispatched'+(result.failed_addresses?' · '+result.failed_addresses+' addresses failed':''),'ok');
+    addIntelEvent('SmartSort Agent completed · <strong>'+result.clusters+'</strong> clusters · <strong>'+result.total_packages+'</strong> packages','var(--green)');
+
+    if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+result.clusters+' clusters</span>';}
+
+    // Refresh jobs to show new routes
+    await loadJobs();
+
+  }catch(e){
+    console.error('SmartSort Agent error:',e);
+    toast('SmartSort Agent error: '+e.message,'warn');
+    if(btn){btn.disabled=false;btn.innerHTML='&#9650; Run SmartSort';}
   }
 }
 
