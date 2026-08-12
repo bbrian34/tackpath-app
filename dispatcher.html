@@ -3443,75 +3443,76 @@ function autoDetectDriverCount(totalPackages){
 }
 
 function smartCluster(stops, k){
-  // stops: array of geocoded packages with .coords {lat,lng} and .packages count
-  // k: number of drivers
-  // Returns: k arrays of stops, each geographically tight and equal in package count
-
   if(stops.length===0)return[];
   if(k<=1)return[stops];
-  if(k>=stops.length)return stops.map(s=>[s]);
+  // Never create more clusters than stops
+  const actualK=Math.min(k, stops.length);
 
-  const totalPkgs=stops.reduce((s,p)=>s+(p.packages||1),0);
-  const targetPkgs=Math.round(totalPkgs/k);
+  // Initialize centroids: spread evenly across the delivery area using actual stop positions
+  // Pick k stops that are maximally spread apart (farthest-first seeding)
+  const centroids=[];
+  const used=new Set();
 
-  // Step 1: k-means to find geographic centers
-  // Initialize centroids using k-means++ seeding for better spread
-  const centroids=kMeansPlusPlusInit(stops,k);
-  const MAX_ITER=30;
+  // First centroid: stop closest to geographic center
+  const avgLat=stops.reduce((s,p)=>s+p.coords.lat,0)/stops.length;
+  const avgLng=stops.reduce((s,p)=>s+p.coords.lng,0)/stops.length;
+  let firstIdx=0,firstDist=Infinity;
+  for(let i=0;i<stops.length;i++){
+    const d=haversineDistance(stops[i].coords,{lat:avgLat,lng:avgLng});
+    if(d<firstDist){firstDist=d;firstIdx=i;}
+  }
+  centroids.push({lat:stops[firstIdx].coords.lat,lng:stops[firstIdx].coords.lng});
+  used.add(firstIdx);
+
+  // Remaining centroids: farthest from any existing centroid
+  while(centroids.length<actualK){
+    let bestIdx=0,bestDist=-1;
+    for(let i=0;i<stops.length;i++){
+      if(used.has(i))continue;
+      const minD=Math.min(...centroids.map(c=>haversineDistance(stops[i].coords,c)));
+      if(minD>bestDist){bestDist=minD;bestIdx=i;}
+    }
+    centroids.push({lat:stops[bestIdx].coords.lat,lng:stops[bestIdx].coords.lng});
+    used.add(bestIdx);
+  }
+
+  // Run k-means assignment
   let assignments=new Array(stops.length).fill(0);
-
-  for(let iter=0;iter<MAX_ITER;iter++){
+  for(let iter=0;iter<25;iter++){
     let changed=false;
     for(let i=0;i<stops.length;i++){
       let bestC=0,bestDist=Infinity;
-      for(let c=0;c<k;c++){
+      for(let c=0;c<actualK;c++){
         const d=haversineDistance(stops[i].coords,centroids[c]);
         if(d<bestDist){bestDist=d;bestC=c;}
       }
       if(assignments[i]!==bestC){assignments[i]=bestC;changed=true;}
     }
     if(!changed)break;
-    // Recompute centroids
-    const sums=Array.from({length:k},()=>({lat:0,lng:0,n:0}));
+    const sums=Array.from({length:actualK},()=>({lat:0,lng:0,n:0}));
     for(let i=0;i<stops.length;i++){
       sums[assignments[i]].lat+=stops[i].coords.lat;
       sums[assignments[i]].lng+=stops[i].coords.lng;
       sums[assignments[i]].n++;
     }
-    for(let c=0;c<k;c++){
-      if(sums[c].n>0){centroids[c].lat=sums[c].lat/sums[c].n;centroids[c].lng=sums[c].lng/sums[c].n;}
+    for(let c=0;c<actualK;c++){
+      if(sums[c].n>0){
+        centroids[c].lat=sums[c].lat/sums[c].n;
+        centroids[c].lng=sums[c].lng/sums[c].n;
+      }
     }
   }
 
-  // Step 2: Build initial clusters
-  const clusters=Array.from({length:k},()=>[]);
+  // Build clusters
+  const clusters=Array.from({length:actualK},()=>[]);
   for(let i=0;i<stops.length;i++) clusters[assignments[i]].push(stops[i]);
 
-  // Step 3: Equalize package counts by moving packages between adjacent clusters
-  // This ensures equal pay — every driver gets same number of packages
-  equalizeClusterPackages(clusters, targetPkgs, centroids);
+  // Equalize package counts
+  const totalPkgs=stops.reduce((s,p)=>s+(p.packages||1),0);
+  const targetPkgs=Math.round(totalPkgs/actualK);
+  equalizeClusterPackages(clusters,targetPkgs,centroids);
 
-  // Remove empty clusters
   return clusters.filter(c=>c.length>0);
-}
-
-function kMeansPlusPlusInit(stops, k){
-  // Smart centroid initialization — spreads centroids across the delivery area
-  // First centroid: geographic center of all stops
-  const avgLat=stops.reduce((s,p)=>s+p.coords.lat,0)/stops.length;
-  const avgLng=stops.reduce((s,p)=>s+p.coords.lng,0)/stops.length;
-  const centroids=[{lat:avgLat,lng:avgLng}];
-
-  // Remaining centroids: choose points farthest from existing centroids
-  while(centroids.length<k){
-    let bestStop=stops[0],bestDist=-1;
-    for(const stop of stops){
-      const minDist=Math.min(...centroids.map(c=>haversineDistance(stop.coords,c)));
-      if(minDist>bestDist){bestDist=minDist;bestStop=stop;}
-    }
-    centroids.push({lat:bestStop.coords.lat,lng:bestStop.coords.lng});
-  }
-  return centroids;
 }
 
 function equalizeClusterPackages(clusters, targetPkgs, centroids){
@@ -3596,7 +3597,8 @@ async function buildRoutes(){
   // Miles will be calculated per cluster below
 
   // Cluster geocoded stops geographically, then sequence each cluster
-  const numDrivers=autoDetectDriverCount(packages.length);
+  const totalPkgCount=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
+  const numDrivers=autoDetectDriverCount(totalPkgCount);
   const geoStops=sorted.filter(s=>s.coords);
   const noGeoStops=sorted.filter(s=>!s.coords);
 
