@@ -1397,16 +1397,16 @@ body::after{content:'';position:fixed;inset:0;
   <button class="action-btn" onclick="downloadTemplate()">&#8659; Download CSV Template</button>
   <button class="action-btn" onclick="loadDemoData()" id="demoDataBtn">&#9654; Load Demo Data (20 packages)</button>
 
-  <div id="packageTable">
-    <div class="pkg-hdr">
-      <div>TP Order ID</div>
-      <div>Recipient / Address</div>
-      <div>Pkgs</div>
+  <div id="packageTable" style="margin:16px 0;">
+    <div id="smartsortStatus" style="padding:20px;background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.15);border-radius:12px;text-align:center;">
+      <div style="font-family:var(--mono);font-size:0.769rem;color:var(--blue);margin-bottom:8px;" id="statusMsg">&#9650; SmartSort ready</div>
+      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;">
+        <div id="statusBar" style="height:100%;width:0%;background:linear-gradient(90deg,#19b7ef,#53ff88);border-radius:2px;transition:width 0.5s;"></div>
+      </div>
     </div>
-    <div id="pkgRows"></div>
   </div>
 
-  <button id="buildBtn" onclick="buildRoutes()">
+  <button id="buildBtn" onclick="buildRoutes()" style="display:none;">
     &#9650; Run SmartSort
     <span class="build-badge" id="buildCount"></span>
   </button>
@@ -3350,23 +3350,29 @@ function downloadTemplate(){
   URL.revokeObjectURL(url);
 }
 
+function updateSmartSortStatus(msg, pct){
+  const el=document.getElementById('statusMsg');
+  const bar=document.getElementById('statusBar');
+  if(el) el.textContent=msg;
+  if(bar) bar.style.width=(pct||0)+'%';
+}
+
 function renderPackageTable(){
   const dz=document.getElementById('dropZone');
   const db=document.getElementById('demoDataBtn');
   const pt=document.getElementById('packageTable');
   const sr=document.getElementById('statsRow');
-  const bb=document.getElementById('buildBtn');
   const es=document.getElementById('ssEmptyState');
   if(dz) dz.style.display='none';
   if(db) db.style.display='none';
   if(pt) pt.style.display='block';
   if(sr) sr.style.display='grid';
-  if(bb) bb.style.display='flex';
   if(es) es.style.display='none';
-  const bcEl=document.getElementById('buildCount'); if(bcEl) bcEl.textContent=packages.length+' packages';
-  const spEl=document.getElementById('statPkgs'); if(spEl) spEl.textContent=packages.reduce((s,p)=>s+p.packages,0);
+  const totalPkgs=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
+  const spEl=document.getElementById('statPkgs'); if(spEl) spEl.textContent=totalPkgs;
   const ssEl=document.getElementById('statStops'); if(ssEl) ssEl.textContent=packages.length;
   const srEl=document.getElementById('statRoutes'); if(srEl) srEl.textContent='--';
+  updateSmartSortStatus('&#9650; '+packages.length+' stops loaded · Geocoding addresses...', 10);
   const prEl=document.getElementById('pkgRows'); if(prEl) prEl.innerHTML=packages.map(p=>`
     <div class="pkg-row">
       <div class="pkg-tp">${p.order_id}</div>
@@ -3619,20 +3625,44 @@ async function buildRoutes(){
     totalMiles+=haversineDistance(geoSortedOnly[i].coords,geoSortedOnly[i+1].coords);
   }
 
-  const groups=[sorted];
-  ssRoutes=groups.map((stops,ri)=>{
+  // SmartSort Clustering: split all stops into geographically tight driver routes
+  const totalPkgCount=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
+  const numDrivers=autoDetectDriverCount(totalPkgCount);
+  const geoStops=sorted.filter(s=>s.coords);
+  const noGeoStops=sorted.filter(s=>!s.coords);
+
+  let clusters;
+  if(geoStops.length===0){
+    clusters=[noGeoStops];
+  } else if(numDrivers<=1){
+    clusters=[sorted];
+  } else {
+    clusters=smartCluster(geoStops,numDrivers);
+    clusters=clusters.map(c=>nearestNeighborSort(c));
+    if(noGeoStops.length) clusters[clusters.length-1].push(...noGeoStops);
+  }
+
+  if(btn){btn.innerHTML='&#9650; Building '+clusters.length+' routes... <span class="build-badge">SmartSort Clustering</span>';}
+
+  ssRoutes=clusters.map((stops,ri)=>{
     const routeId='RT-'+String(ri+1).padStart(3,'0');
-    const masterCode='TP-ROUTE-'+stops[0].order_id.replace('TP','');
+    const masterCode='TP-ROUTE-'+Math.random().toString(36).slice(2,8).toUpperCase();
     const stopsWithId=stops.map((s,si)=>({
       ...s,
-      smart_id:`${s.order_id}-${si+1}-${s.packages}`
+      stop_number:si+1,
+      smart_id:s.order_id+'-'+(si+1)
     }));
+    const clusterGeo=stopsWithId.filter(s=>s.coords);
+    let clusterMiles=0;
+    for(let i=0;i<clusterGeo.length-1;i++){
+      clusterMiles+=haversineDistance(clusterGeo[i].coords,clusterGeo[i+1].coords);
+    }
     return{
       id:routeId,
       master_code:masterCode,
       stops:stopsWithId,
-      total_packages:stops.reduce((s,p)=>s+p.packages,0),
-      est_miles:totalMiles.toFixed(1),
+      total_packages:stops.reduce((s,p)=>s+(parseInt(p.packages)||1),0),
+      est_miles:clusterMiles.toFixed(1),
       color:SS_COLORS[ri%SS_COLORS.length]
     };
   });
