@@ -128,7 +128,17 @@ col.c-started{width:10%;}
 </div>
 
 <script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
+
 let data=[], seen={};
+
+async function sbGet(path){
+  const r=await fetch(SB+'/rest/v1/'+path,{headers:H});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
 
 function timeAgo(ts){
   if(!ts)return'—';
@@ -142,100 +152,45 @@ function fmt(ts){
   return new Date(ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
 }
 
-function init(){
-  const now=Date.now();
-  const drivers=[
-    ['Marcus Johnson','in_transit',52,38,'1245 Peachtree Rd NE',7200000,false],
-    ['Denise Crawford','in_transit',48,21,'872 Piedmont Ave NE',6800000,false],
-    ['Trevon Williams','in_transit',61,14,'3301 Buckeye Rd NE',5400000,true],
-    ['Sandra Okafor','in_transit',44,40,'5600 Roswell Rd NE',8100000,false],
-    ['James Tillman','in_transit',55,8,'1800 Howell Mill Rd NW',3600000,true],
-    ['Keisha Monroe','in_transit',49,43,'2200 Cascade Rd SW',9000000,false],
-    ['Andre Baptiste','in_transit',57,29,'650 Ponce De Leon Ave',6200000,false],
-    ['Latoya Simmons','delivered',46,46,'All stops complete',10800000,false],
-    ['Carlos Mendez','in_transit',53,17,'1100 Commerce Dr',4500000,false],
-    ['Priya Nair','in_transit',50,33,'3800 Chamblee Tucker Rd',7000000,false],
-    ['Darnell Foster','in_transit',58,6,'920 Ralph David Abernathy',2700000,true],
-    ['Regina Holloway','in_transit',45,38,'7100 Peachtree Ind Blvd',8400000,false],
-    ['Michael Osei','in_transit',62,22,'2750 Buford Hwy NE',5800000,false],
-    ['Tamara Stokes','delivered',43,43,'All stops complete',11400000,false],
-    ['Devon Reeves','in_transit',51,31,'1400 Metropolitan Pkwy SW',6600000,false],
-    ['Angela Thompson','in_transit',56,44,'400 W Peachtree St NW',8800000,false],
-    ['Robert Miller','in_transit',47,19,'890 Marietta St NW',5100000,false],
-    ['Jennifer Davis','in_transit',54,11,'75 5th St NW',3900000,false],
-    ['Kevin Harris','in_transit',48,36,'2500 Cumberland Pkwy SE',7800000,false],
-    ['Patricia Moore','in_transit',60,28,'1544 Piedmont Ave NE',6400000,false],
-  ];
-  data=drivers.map(([name,status,tot,del,addr,offset,exc])=>({
-    name,status,totalPackages:tot,delivered:del,lastAddr:addr,
-    startedAt:new Date(now-offset).toISOString(),hasException:exc
-  }));
-  data.forEach((d,i)=>{seen[d.name]=new Date(now-(i%4)*45000-Math.random()*90000).toISOString();});
-  updateSummary();render();
+async function loadFleet(){
+  try{
+    const jobs=await sbGet('jobs?select=*&status=in.(assigned,in_transit,customer_confirmed,delivered)&order=created_at.desc&limit=200');
+    const locs=await sbGet('driver_locations?order=updated_at.desc&limit=100');
+    seen={};
+    (locs||[]).forEach(l=>{
+      if(!seen[l.driver_name]||new Date(l.updated_at)>new Date(seen[l.driver_name]))
+        seen[l.driver_name]=l.updated_at;
+    });
+    const driverMap={};
+    (jobs||[]).forEach(j=>{
+      if(!j.driver_name)return;
+      if(!driverMap[j.driver_name]){
+        driverMap[j.driver_name]={name:j.driver_name,status:j.status,totalPackages:0,delivered:0,lastAddr:'',startedAt:j.created_at,hasException:j.exception_flag||false};
+      }
+      const d=driverMap[j.driver_name];
+      let stops=j.surge_stops;
+      if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+      const total=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
+      const done=j.stops_completed||0;
+      const totalPkgs=stops&&Array.isArray(stops)?stops.reduce((s,st)=>s+(parseInt(st.packages)||1),0):1;
+      const donePkgs=total>0?Math.round((done/total)*totalPkgs):0;
+      d.totalPackages+=totalPkgs;
+      d.delivered+=donePkgs;
+      if(j.exception_flag)d.hasException=true;
+      if(stops&&Array.isArray(stops)&&done<stops.length){const cur=stops[done];if(cur&&cur.address)d.lastAddr=cur.address.split(',')[0];}
+      else if(j.dropoff_address){d.lastAddr=j.dropoff_address.split(',')[0];}
+      if(!d.startedAt||new Date(j.created_at)<new Date(d.startedAt))d.startedAt=j.created_at;
+    });
+    data=Object.values(driverMap);
+    updateSummary();render();
+    document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  }catch(e){
+    console.error('FleetView error:',e);
+  }
 }
 
-function updateSummary(){
-  const tot=data.reduce((s,d)=>s+d.totalPackages,0);
-  const del=data.reduce((s,d)=>s+d.delivered,0);
-  document.getElementById('s1').textContent=data.filter(d=>d.status==='in_transit').length;
-  document.getElementById('s2').textContent=tot;
-  document.getElementById('s3').textContent=del;
-  document.getElementById('s4').textContent=tot-del;
-  document.getElementById('s5').textContent=data.filter(d=>d.hasException).length;
-  document.getElementById('s6').textContent=tot>0?Math.round(del/tot*100)+'%':'—';
-  document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-}
-
-function render(){
-  const sort=document.getElementById('sortSel').value;
-  const filter=document.getElementById('filterSel').value;
-  const q=document.getElementById('search').value.toLowerCase();
-  let d=[...data];
-  if(filter==='exc')d=d.filter(x=>x.hasException);
-  else if(filter==='active')d=d.filter(x=>x.status==='in_transit');
-  else if(filter==='done')d=d.filter(x=>x.status==='delivered');
-  if(q)d=d.filter(x=>x.name.toLowerCase().includes(q));
-  const pct=x=>Math.round(x.delivered/x.totalPackages*100);
-  if(sort==='name')d.sort((a,b)=>a.name.localeCompare(b.name));
-  else if(sort==='hi')d.sort((a,b)=>pct(b)-pct(a));
-  else if(sort==='lo'||sort==='atten')d.sort((a,b)=>pct(a)-pct(b));
-  else if(sort==='exc')d.sort((a,b)=>(b.hasException?1:0)-(a.hasException?1:0));
-  else if(sort==='ping')d.sort((a,b)=>new Date(seen[a.name]||0)-new Date(seen[b.name]||0));
-  document.getElementById('dCount').textContent=d.length+' driver'+(d.length!==1?'s':'');
-  document.getElementById('tbody').innerHTML=d.map(dr=>{
-    const p=pct(dr);
-    const exc=dr.hasException,done=dr.status==='delivered';
-    const bar=exc?'linear-gradient(90deg,#ff961e,#ff6b00)':p>=80?'#53ff88':p>=50?'linear-gradient(90deg,#19b7ef,#53ff88)':'linear-gradient(90deg,#19b7ef,#8d5cff)';
-    const rc=exc?'#ff961e':p>=70?'#53ff88':'#19b7ef';
-    const pill=exc?'<span class="pill p-exc">⚠ Exception</span>':done?'<span class="pill p-done">✓ Complete</span>':'<span class="pill p-transit">● In Transit</span>';
-    return`<tr class="${exc?'exc':''}${done?' done':''}">
-      <td><div class="d-name">${dr.name}</div></td>
-      <td>${pill}</td>
-      <td>
-        <div class="prog-count">${dr.delivered} / ${dr.totalPackages}</div>
-        <div class="prog-bar"><div class="prog-fill" style="width:${p}%;background:${bar};"></div></div>
-      </td>
-      <td><span class="rate-val" style="color:${rc};">${p}%</span></td>
-      <td><span class="addr">${dr.lastAddr}</span></td>
-      <td><span class="ts">${timeAgo(seen[dr.name])}</span></td>
-      <td><span class="ts">${fmt(dr.startedAt)}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-function tick(){
-  data.forEach(d=>{
-    if(d.status==='in_transit'&&d.delivered<d.totalPackages&&Math.random()<0.35){
-      d.delivered=Math.min(d.totalPackages,d.delivered+1);
-      if(d.delivered>=d.totalPackages)d.status='delivered';
-      seen[d.name]=new Date().toISOString();
-    }
-  });
-  updateSummary();render();
-}
-
-init();
-setInterval(tick,3000);
+loadFleet();
+setInterval(loadFleet,5000);
 </script>
 </body>
 </html>
