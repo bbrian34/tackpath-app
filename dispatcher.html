@@ -2165,6 +2165,12 @@ function renderPipeline(){
         <div class="pcard-name">${j.title||'Untitled Job'}</div>
         <div class="pcard-route">${secondLine}</div>
         ${s==='in_transit'&&j._transitAddr?`<div class="pcard-route" style="color:var(--muted);font-size:0.715rem;margin-top:1px;">${j._transitAddr}</div>`:''}
+        ${s==='in_transit'&&j.estimated_delivery_at?(()=>{
+          const etaMins=Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000);
+          const etaColor=etaMins<=0?'var(--red)':etaMins<=20?'var(--orange)':'var(--green)';
+          const etaLabel=etaMins<=0?'Past due':etaMins+' min ETA';
+          return `<div class="pcard-route" style="color:${etaColor};font-size:0.692rem;font-weight:700;margin-top:2px;">&#9200; ${etaLabel}</div>`;
+        })():''}
         <div class="pcard-age">${age}</div>
       </div>`;
     }).join('')+(col.length>4?`<div class="pipe-empty">+${col.length-4} more</div>`:'');
@@ -2814,6 +2820,14 @@ function openDrawer(id){
     <div class="dr-field"><div class="df-lbl">Job Title</div><div class="df-val">${j.title||'—'}</div></div>
     <div class="dr-field"><div class="df-lbl">Signal ID</div><div class="df-val" style="font-family:var(--mono);color:var(--blue);font-size:0.846rem;">TP-${shortId}</div></div>
     <div class="dr-field"><div class="df-lbl">Status</div><div class="df-val"><span class="spill s-${j.status||'pending'}">${(j.status||'pending').replace('_',' ')}</span></div></div>
+    <div class="dr-field"><div class="df-lbl">ETA to Delivery</div><div class="df-val" id="drEtaField" style="font-weight:700;">${(()=>{
+      if(!j.estimated_delivery_at) return '<span style="color:var(--muted);">Not calculated</span>';
+      const etaMins=Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000);
+      const etaTime=new Date(j.estimated_delivery_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+      if(etaMins<=0) return '<span style="color:var(--red);">Past due · was expected '+etaTime+'</span>';
+      if(etaMins<=20) return '<span style="color:var(--orange);">'+etaMins+' min · by '+etaTime+'</span>';
+      return '<span style="color:var(--green);">'+etaMins+' min · by '+etaTime+'</span>';
+    })()}</div></div>
     <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:0.846rem;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${drawerPickup}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${drawerDropoff}</div></div>
