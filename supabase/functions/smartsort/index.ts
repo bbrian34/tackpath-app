@@ -77,6 +77,7 @@ serve(async (req) => {
           title: `Surge Route ${masterCode}`,
           job_type: "surge",
           status: "pending",
+          driver_name: null,
           pickup_address: pickup,
           dropoff_address: dropoff,
           surge_stops: stopsWithId,
@@ -92,13 +93,8 @@ serve(async (req) => {
       results.push({ job_id: job.id, master_code: masterCode, stops: stops.length, packages: totalPkgsInRoute });
     }
 
-    // Step 6: Broadcast all jobs to available drivers
-    for (const result of results) {
-      await supabase
-        .from("jobs")
-        .update({ status: "assigned" })
-        .eq("id", result.job_id);
-    }
+    // Step 6: Jobs are created as 'pending' - drivers see them and accept (first-accept mechanic)
+    // No need to update status - pending jobs are visible to all drivers
 
     return new Response(
       JSON.stringify({
