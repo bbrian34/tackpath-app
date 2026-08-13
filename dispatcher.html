@@ -2847,6 +2847,15 @@ function openDrawer(id){
       const origTime=new Date(orig).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
       return isPast?'<span style="color:var(--red);">'+origTime+' · exceeded</span>':'<span style="color:var(--muted);">'+origTime+'</span>';
     })()}</div></div>
+    <div class="dr-field"><div class="df-lbl">SmartTrack Exception Triggers</div><div class="df-val" style="font-size:0.846rem;">${(()=>{
+      if(j.exception_flag) return '<span style="color:var(--orange);font-weight:700;">&#9888; Already flagged</span>';
+      const orig=j.original_eta_at||j.estimated_delivery_at;
+      if(!orig||(j.status!=='in_transit'&&j.status!=='customer_confirmed')) return '<span style="color:var(--muted);">N/A</span>';
+      const triggerTime=new Date(new Date(orig).getTime()+20*60000);
+      const triggerLabel=triggerTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+      const minsUntil=Math.round((triggerTime.getTime()-Date.now())/60000);
+      return minsUntil<=0?'<span style="color:var(--orange);">Due now — next poll</span>':'<span style="color:var(--blue);">'+triggerLabel+' · in '+minsUntil+' min</span>';
+    })()}</div></div>
     <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:0.846rem;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${drawerPickup}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${drawerDropoff}</div></div>
