@@ -1767,6 +1767,30 @@ async function broadcastJob(jobId){
 
 // ── LOAD JOBS ──
 // ── SMARTTRACK AGENT: autonomous driver monitoring ──
+// ── AGENT MEMORY: shared log every agent writes to ──
+async function logAgentMemory(agentName, eventType, jobId, driverName, details, outcome){
+  try{
+    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/agent_memory',{
+      method:'POST',
+      headers:{
+        'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp',
+        'Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp',
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        agent_name:agentName,
+        event_type:eventType,
+        job_id:jobId||null,
+        driver_name:driverName||null,
+        details:details||{},
+        outcome:outcome||'open'
+      })
+    });
+  }catch(e){
+    console.error('Agent memory log error:',e);
+  }
+}
+
 async function runSmartTrack(){
   if(!smartTrackEnabled)return;
   try{
@@ -1794,6 +1818,8 @@ async function runSmartTrack(){
         if(fab)fab.classList.add('has-unread');
         // 6. Toast
         toast('SmartTrack: '+job.driver_name.split(' ')[0]+' flagged — no ping in '+Math.round(minsAgo)+' min','warn');
+        // 7. Log to agent memory
+        logAgentMemory('SmartTrack','driver_dark',job.id,job.driver_name,{minutes_dark:Math.round(minsAgo),status_at_flag:job.status},'escalated');
       }
     }
   }catch(e){
@@ -3702,6 +3728,14 @@ async function buildRoutes(){
   }else{
     toast(ssRoutes.length+' routes built, sequenced by real distance','ok');
   }
+  // Log clustering run to agent memory
+  logAgentMemory('SmartSort','cluster_created',null,null,{
+    total_stops:packages.length,
+    total_packages:packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0),
+    clusters_created:ssRoutes.length,
+    failed_geocodes:failedAddresses.length,
+    avg_packages_per_cluster:Math.round(ssRoutes.reduce((s,r)=>s+r.total_packages,0)/ssRoutes.length)
+  },'completed');
 }
 
 function viewRouteOnMap(routeId){
