@@ -1540,6 +1540,7 @@ let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
 const SMARTTRACK_MINUTES_PER_STOP=15; // expected average time per stop
 const SMARTTRACK_LATE_TOLERANCE_MIN=20; // grace period before flagging as behind pace
 const SMARTTRACK_ALERTED=new Set(); // track which jobs already alerted this session
+const SMARTTRACK_FALLBACK_DEADLINE={}; // client-side locked deadline for jobs missing original_eta_at
 let smartTrackEnabled=true;
 let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
 let driverLastSeen={};
@@ -1801,7 +1802,7 @@ async function runSmartTrack(){
     for(const job of activeJobs){
       if(!job.driver_name)continue;
       if(SMARTTRACK_ALERTED.has(job.id))continue;
-      if(!job.estimated_delivery_at)continue;
+      if(!job.original_eta_at&&!job.estimated_delivery_at)continue;
 
       let stops=job.surge_stops;
       if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
@@ -1809,7 +1810,16 @@ async function runSmartTrack(){
       const doneStops=job.stops_completed||0;
       if(doneStops>=totalStops)continue;
 
-      const minsLate=Math.round((now-new Date(job.estimated_delivery_at).getTime())/60000);
+      // For jobs missing original_eta_at (created before this field existed),
+      // lock the first ETA seen this session as a client-side fallback deadline
+      if(!job.original_eta_at){
+        if(!SMARTTRACK_FALLBACK_DEADLINE[job.id]){
+          SMARTTRACK_FALLBACK_DEADLINE[job.id]=job.estimated_delivery_at;
+        }
+      }
+      const deadline=job.original_eta_at||SMARTTRACK_FALLBACK_DEADLINE[job.id];
+      if(!deadline)continue;
+      const minsLate=Math.round((now-new Date(deadline).getTime())/60000);
 
       if(minsLate>=SMARTTRACK_LATE_TOLERANCE_MIN){
         SMARTTRACK_ALERTED.add(job.id);
@@ -2821,13 +2831,20 @@ function openDrawer(id){
     <div class="dr-field"><div class="df-lbl">Job Title</div><div class="df-val">${j.title||'—'}</div></div>
     <div class="dr-field"><div class="df-lbl">Signal ID</div><div class="df-val" style="font-family:var(--mono);color:var(--blue);font-size:0.846rem;">TP-${shortId}</div></div>
     <div class="dr-field"><div class="df-lbl">Status</div><div class="df-val"><span class="spill s-${j.status||'pending'}">${(j.status||'pending').replace('_',' ')}</span></div></div>
-    <div class="dr-field"><div class="df-lbl">ETA to Delivery</div><div class="df-val" id="drEtaField" style="font-weight:700;">${(()=>{
+    <div class="dr-field"><div class="df-lbl">Live ETA (Current Traffic)</div><div class="df-val" id="drEtaField" style="font-weight:700;">${(()=>{
       if(!j.estimated_delivery_at) return '<span style="color:var(--muted);">Not calculated</span>';
       const etaMins=Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000);
       const etaTime=new Date(j.estimated_delivery_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
       if(etaMins<=0) return '<span style="color:var(--red);">Past due · was expected '+etaTime+'</span>';
       if(etaMins<=20) return '<span style="color:var(--orange);">'+etaMins+' min · by '+etaTime+'</span>';
       return '<span style="color:var(--green);">'+etaMins+' min · by '+etaTime+'</span>';
+    })()}</div></div>
+    <div class="dr-field"><div class="df-lbl">Original Promise (Fixed)</div><div class="df-val" style="font-size:0.846rem;">${(()=>{
+      const orig=j.original_eta_at||j.estimated_delivery_at;
+      if(!orig) return '<span style="color:var(--muted);">Not set</span>';
+      const isPast=new Date(orig).getTime()<Date.now();
+      const origTime=new Date(orig).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+      return isPast?'<span style="color:var(--red);">'+origTime+' · exceeded</span>':'<span style="color:var(--muted);">'+origTime+'</span>';
     })()}</div></div>
     <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:0.846rem;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${drawerPickup}</div></div>
@@ -3916,6 +3933,7 @@ async function assignSSRoute(routeId){
     price: (route.stops.length * 8 + route.total_packages * 2).toFixed(2),
     distance_miles: parseFloat(route.est_miles)||0,
     estimated_delivery_at: new Date(Date.now() + estimatedMinutes * 60000).toISOString(),
+    original_eta_at: new Date(Date.now() + estimatedMinutes * 60000).toISOString(),
     created_at: new Date().toISOString()
   };
 
