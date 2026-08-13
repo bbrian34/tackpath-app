@@ -3492,9 +3492,17 @@ async function refreshLiveETA(job){
 
     const doneCount=job.stops_completed||0;
     const currentStop=stops[Math.min(doneCount,stops.length-1)];
-    if(!currentStop||!currentStop.coords)return;
+    if(!currentStop)return;
 
-    const legSeconds=await getTrafficAwareLegSeconds(loc,currentStop.coords);
+    // Fallback: if this stop was saved before coords were stored, geocode it live now
+    let destCoords=currentStop.coords;
+    if(!destCoords&&currentStop.address){
+      destCoords=await geocodeAddress(currentStop.address);
+      if(!destCoords)return;
+    }
+    if(!destCoords)return;
+
+    const legSeconds=await getTrafficAwareLegSeconds(loc,destCoords);
     if(legSeconds===null)return;
 
     const newEta=new Date(Date.now()+legSeconds*1000).toISOString();
@@ -3899,7 +3907,8 @@ async function assignSSRoute(routeId){
       recipient: s.recipient,
       address: s.address,
       packages: s.packages,
-      stop_number: i+1
+      stop_number: i+1,
+      coords: s.coords||null
     })),
     master_code: route.master_code,
     total_stops: route.stops.length,
