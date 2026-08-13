@@ -3533,7 +3533,7 @@ function smartCluster(stops, k){
   for(let i=0;i<stops.length;i++) clusters[assignments[i]].push(stops[i]);
 
   // Equalize package counts
-  const totalPkgs=stops.reduce((s,p)=>s+(p.packages||1),0);
+  const totalPkgs=stops.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
   const targetPkgs=Math.round(totalPkgs/actualK);
   equalizeClusterPackages(clusters,targetPkgs,centroids);
 
@@ -3549,13 +3549,13 @@ function equalizeClusterPackages(clusters, targetPkgs, centroids){
   for(let pass=0;pass<MAX_BALANCE_PASSES;pass++){
     let balanced=true;
     for(let i=0;i<clusters.length;i++){
-      const iPkgs=clusters[i].reduce((s,p)=>s+(p.packages||1),0);
+      const iPkgs=clusters[i].reduce((s,p)=>s+(parseInt(p.packages)||1),0);
       if(iPkgs>targetPkgs+tolerance){
         // Find nearest undersized cluster
         let bestJ=-1,bestDist=Infinity;
         for(let j=0;j<clusters.length;j++){
           if(j===i)continue;
-          const jPkgs=clusters[j].reduce((s,p)=>s+(p.packages||1),0);
+          const jPkgs=clusters[j].reduce((s,p)=>s+(parseInt(p.packages)||1),0);
           if(jPkgs<targetPkgs-tolerance){
             const d=haversineDistance(centroids[i],centroids[j]);
             if(d<bestDist){bestDist=d;bestJ=j;}
