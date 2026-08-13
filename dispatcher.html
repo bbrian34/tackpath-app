@@ -2006,16 +2006,20 @@ function renderExceptionQueue(){
   }));
 
   const stalledJobs = jobs.filter(j =>
-    j.status === 'in_transit' &&
-    ((Date.now() - new Date(driverLastSeen[j.driver_name]||j.picked_up_at||j.created_at).getTime()) > 30 * 60 * 1000)
-  ).map(j => ({
-    id: j.id,
-    title: 'Stalled: ' + (j.title || j.id.slice(0,8)),
-    description: 'No update in ' + Math.floor((Date.now() - new Date(driverLastSeen[j.driver_name]||j.picked_up_at||j.created_at).getTime())/60000) + ' min · ' + (j.driver_name || 'unknown driver'),
-    priority: 'high',
-    source: 'dispatcher',
-    confidence_score: 1
-  }));
+    (j.status === 'in_transit' || j.status === 'customer_confirmed') &&
+    j.exception_flag === true
+  ).map(j => {
+    const lastSeen = driverLastSeen[j.driver_name]||j.started_at||j.created_at;
+    const minsAgo = Math.floor((Date.now() - new Date(lastSeen).getTime())/60000);
+    return {
+      id: j.id,
+      title: 'SmartTrack: ' + (j.driver_name||'Unknown driver'),
+      description: 'No ping in ' + minsAgo + ' min · ' + (j.title || j.id.slice(0,8)),
+      priority: 'high',
+      source: 'smarttrack',
+      confidence_score: 1
+    };
+  });
 
   const allExceptions = [...criticalJobs, ...stalledJobs];
 
