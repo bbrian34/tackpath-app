@@ -3587,19 +3587,28 @@ async function getTrafficAwareLegSeconds(originCoords,destCoords){
 // Real, traffic-aware total duration across every leg of a multi-stop route.
 // Falls back to the simple distance-based formula only for legs where the real API call fails.
 async function getTrafficAwareRouteSeconds(stops){
+  const MINUTES_PER_STOP_HANDLING=4; // time to park, walk, hand off package at each stop
   let totalSeconds=0;
   let anyRealData=false;
+
   for(let i=0;i<stops.length-1;i++){
-    if(!stops[i].coords||!stops[i+1].coords)continue;
-    const legSeconds=await getTrafficAwareLegSeconds(stops[i].coords,stops[i+1].coords);
-    if(legSeconds!==null){
-      totalSeconds+=legSeconds;
-      anyRealData=true;
-    }else{
-      totalSeconds+=(3*60); // safe fallback for just this one leg if the API call failed
+    if(stops[i].coords&&stops[i+1].coords){
+      const legSeconds=await getTrafficAwareLegSeconds(stops[i].coords,stops[i+1].coords);
+      if(legSeconds!==null){
+        totalSeconds+=legSeconds;
+        anyRealData=true;
+        continue;
+      }
     }
+    // Missing coords or API failure on this leg -- use a safe drive-time fallback
+    // instead of silently skipping the leg entirely
+    totalSeconds+=(6*60);
   }
-  return anyRealData?totalSeconds:null;
+
+  // Add handling time for every stop, including the last one
+  totalSeconds+=stops.length*MINUTES_PER_STOP_HANDLING*60;
+
+  return totalSeconds;
 }
 
 function haversineDistance(a,b){
