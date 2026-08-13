@@ -1798,7 +1798,8 @@ async function runSmartTrack(){
     const activeJobs=jobs.filter(j=>j.status==='in_transit'||j.status==='customer_confirmed');
     for(const job of activeJobs){
       if(!job.driver_name)continue;
-      const lastSeen=driverLastSeen[job.driver_name];
+      // If driver never sent a GPS ping, treat job started_at (or created_at) as the reference point
+      const lastSeen=driverLastSeen[job.driver_name]||job.started_at||job.created_at;
       if(!lastSeen)continue;
       const minsAgo=(now-new Date(lastSeen).getTime())/60000;
       if(minsAgo>=SMARTTRACK_DARK_MINUTES&&!SMARTTRACK_ALERTED.has(job.id)){
