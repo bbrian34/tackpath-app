@@ -3588,46 +3588,13 @@ function nearestNeighborSort(stopsWithCoords){
 }
 
 async function buildAndAutoDispatch(){
-  // SmartSort Agent — runs clustering server-side via Supabase Edge Function
-  // Browser just sends packages and waits for result
-  if(!packages||!packages.length){toast('No packages to dispatch','warn');return;}
-
-  const btn=document.getElementById('buildBtn');
-  if(btn){btn.disabled=true;btn.innerHTML='&#9650; SmartSort Agent running... <span class="build-badge">Clustering</span>';}
-  toast('SmartSort Agent is clustering '+packages.length+' stops server-side...','ok');
-
-  try{
-    const resp=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/smartsort',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':'Bearer '+KEY
-      },
-      body:JSON.stringify({
-        packages:packages,
-        org_id:currentOrgId||null,
-        pkgs_per_driver:26
-      })
-    });
-
-    const result=await resp.json();
-
-    if(!result.success){
-      throw new Error(result.error||'SmartSort Agent failed');
-    }
-
-    toast(result.clusters+' driver routes clustered · '+result.total_packages+' packages dispatched'+(result.failed_addresses?' · '+result.failed_addresses+' addresses failed':''),'ok');
-    addIntelEvent('SmartSort Agent completed · <strong>'+result.clusters+'</strong> clusters · <strong>'+result.total_packages+'</strong> packages','var(--green)');
-
-    if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+result.clusters+' clusters</span>';}
-
-    // Refresh jobs to show new routes
-    await loadJobs();
-
-  }catch(e){
-    console.error('SmartSort Agent error:',e);
-    toast('SmartSort Agent error: '+e.message,'warn');
-    if(btn){btn.disabled=false;btn.innerHTML='&#9650; Run SmartSort';}
+  // Runs the full pipeline automatically after CSV upload:
+  // geocode → sequence → create job in Supabase → broadcast to drivers
+  await buildRoutes();
+  if(!ssRoutes||!ssRoutes.length){toast('No routes to dispatch','warn');return;}
+  toast('Route built — dispatching to drivers...','ok');
+  for(const route of [...ssRoutes]){
+    await assignSSRoute(route.id);
   }
 }
 
@@ -3643,61 +3610,39 @@ async function buildRoutes(){
     else failedAddresses.push(pkg);
   }
 
-  if(btn){btn.innerHTML='&#9650; Clustering routes... <span class="build-badge">SmartSort Clustering</span>';}
+  if(btn){btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';}
   const sorted=[...nearestNeighborSort(geocoded),...failedAddresses];
 
-  // Miles will be calculated per cluster below
-
-  // Cluster geocoded stops geographically, then sequence each cluster
-  const totalPkgCount=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
-  const numDrivers=autoDetectDriverCount(totalPkgCount);
-  const geoStops=sorted.filter(s=>s.coords);
-  const noGeoStops=sorted.filter(s=>!s.coords);
-
-  let clusters;
-  if(geoStops.length===0){
-    clusters=[noGeoStops];
-  } else if(numDrivers<=1){
-    clusters=[sorted];
-  } else {
-    clusters=smartCluster(geoStops,numDrivers);
-    // Sequence each cluster with nearest neighbor
-    clusters=clusters.map(c=>nearestNeighborSort(c));
-    // Append no-geo stops to last cluster
-    if(noGeoStops.length) clusters[clusters.length-1].push(...noGeoStops);
+  const geoSortedOnly=sorted.filter(s=>s.coords);
+  let totalMiles=0;
+  for(let i=0;i<geoSortedOnly.length-1;i++){
+    totalMiles+=haversineDistance(geoSortedOnly[i].coords,geoSortedOnly[i+1].coords);
   }
 
-  // Update toast with driver count
-  if(btn){btn.innerHTML='&#9650; Clustering '+clusters.length+' routes... <span class="build-badge">SmartSort Clustering</span>';}
-
-  ssRoutes=clusters.map((stops,ri)=>{
+  const groups=[sorted];
+  ssRoutes=groups.map((stops,ri)=>{
     const routeId='RT-'+String(ri+1).padStart(3,'0');
     const masterCode='TP-ROUTE-'+stops[0].order_id.replace('TP','');
     const stopsWithId=stops.map((s,si)=>({
       ...s,
       smart_id:`${s.order_id}-${si+1}-${s.packages}`
     }));
-    const clusterGeo=stopsWithId.filter(s=>s.coords);
-    let clusterMiles=0;
-    for(let i=0;i<clusterGeo.length-1;i++){
-      clusterMiles+=haversineDistance(clusterGeo[i].coords,clusterGeo[i+1].coords);
-    }
     return{
       id:routeId,
       master_code:masterCode,
       stops:stopsWithId,
       total_packages:stops.reduce((s,p)=>s+p.packages,0),
-      est_miles:clusterMiles.toFixed(1),
+      est_miles:totalMiles.toFixed(1),
       color:SS_COLORS[ri%SS_COLORS.length]
     };
   });
   document.getElementById('statRoutes').textContent=ssRoutes.length;
   renderSSRoutes();
-  if(btn){btn.disabled=false;btn.innerHTML='&#10003; Clustering Complete <span class="build-badge">'+ssRoutes.length+' clusters</span>';}
+  if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
   if(failedAddresses.length){
-    toast(ssRoutes.length+' clusters built. '+failedAddresses.length+' address(es) could not be geocoded — added to nearest cluster.','warn');
+    toast(ssRoutes.length+' routes built. '+failedAddresses.length+' address(es) could not be located and were added at the end.','warn');
   }else{
-    toast(ssRoutes.length+' driver clusters built · equal packages · tight zones · optimized sequence','ok');
+    toast(ssRoutes.length+' routes built, sequenced by real distance','ok');
   }
 }
 
