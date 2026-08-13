@@ -1537,7 +1537,8 @@ async function getMessages(jobId){
 let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
 
 // ── SMARTTRACK AGENT ──
-const SMARTTRACK_DARK_MINUTES=10; // driver dark threshold
+const SMARTTRACK_MINUTES_PER_STOP=15; // expected average time per stop
+const SMARTTRACK_LATE_TOLERANCE_MIN=20; // grace period before flagging as behind pace
 const SMARTTRACK_ALERTED=new Set(); // track which jobs already alerted this session
 let smartTrackEnabled=true;
 let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
@@ -1798,29 +1799,39 @@ async function runSmartTrack(){
     const activeJobs=jobs.filter(j=>j.status==='in_transit'||j.status==='customer_confirmed');
     for(const job of activeJobs){
       if(!job.driver_name)continue;
-      // If driver never sent a GPS ping, treat job started_at (or created_at) as the reference point
-      const lastSeen=driverLastSeen[job.driver_name]||job.started_at||job.created_at;
-      if(!lastSeen)continue;
-      const minsAgo=(now-new Date(lastSeen).getTime())/60000;
-      if(minsAgo>=SMARTTRACK_DARK_MINUTES&&!SMARTTRACK_ALERTED.has(job.id)){
+      if(SMARTTRACK_ALERTED.has(job.id))continue;
+
+      let stops=job.surge_stops;
+      if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+      const totalStops=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
+      const doneStops=job.stops_completed||0;
+      if(doneStops>=totalStops)continue;
+
+      const startedAt=job.started_at||job.created_at;
+      if(!startedAt)continue;
+      const minsSinceStart=(now-new Date(startedAt).getTime())/60000;
+
+      const expectedStopsByNow=minsSinceStart/SMARTTRACK_MINUTES_PER_STOP;
+      const stopsBehind=expectedStopsByNow-doneStops;
+      const minsLate=Math.round(stopsBehind*SMARTTRACK_MINUTES_PER_STOP);
+
+      if(minsLate>=SMARTTRACK_LATE_TOLERANCE_MIN){
         SMARTTRACK_ALERTED.add(job.id);
-        // 1. Flag exception in Supabase
         await sbPatch('jobs?id=eq.'+job.id,{exception_flag:true});
-        // 2. Post alert message to comms
-        const alertMsg='SMARTTRACK:: '+job.driver_name+' has not pinged in '+Math.round(minsAgo)+' minutes. Auto-flagged as exception.';
+        const alertMsg='SMARTTRACK:: '+job.driver_name+' is running approximately '+minsLate+' min behind expected pace. Stop '+(doneStops+1)+' of '+totalStops+'. Auto-flagged as exception.';
         await sbPostMsg(job.id,alertMsg,'dispatcher');
-        // 3. Send direct message to driver
-        const driverMsg='Hey '+job.driver_name.split(' ')[0]+', TackPath has not received a location update from you in a while. Everything ok? Please confirm your status.';
+        const driverMsg='Hey '+job.driver_name.split(' ')[0]+', you are running a bit behind on your route. Everything ok? Let us know if you need anything.';
         await sbPostMsg(job.id,driverMsg,'dispatcher');
-        // 4. Intel feed alert
-        addIntelEvent('&#127947; SmartTrack flagged <strong>'+job.driver_name+'</strong> — no ping in '+Math.round(minsAgo)+' min','var(--orange)');
-        // 5. Pulse comms FAB so dispatcher sees it
+        addIntelEvent('&#127947; SmartTrack flagged <strong>'+job.driver_name+'</strong> — running '+minsLate+' min behind pace','var(--orange)');
         const fab=document.getElementById('chatFab');
         if(fab)fab.classList.add('has-unread');
-        // 6. Toast
-        toast('SmartTrack: '+job.driver_name.split(' ')[0]+' flagged — no ping in '+Math.round(minsAgo)+' min','warn');
-        // 7. Log to agent memory
-        logAgentMemory('SmartTrack','driver_dark',job.id,job.driver_name,{minutes_dark:Math.round(minsAgo),status_at_flag:job.status},'escalated');
+        toast('SmartTrack: '+job.driver_name.split(' ')[0]+' running '+minsLate+' min behind pace','warn');
+        logAgentMemory('SmartTrack','delivery_behind_pace',job.id,job.driver_name,{
+          minutes_late:minsLate,
+          stops_completed:doneStops,
+          total_stops:totalStops,
+          minutes_since_start:Math.round(minsSinceStart)
+        },'escalated');
       }
     }
   }catch(e){
@@ -2009,12 +2020,10 @@ function renderExceptionQueue(){
     (j.status === 'in_transit' || j.status === 'customer_confirmed') &&
     j.exception_flag === true
   ).map(j => {
-    const lastSeen = driverLastSeen[j.driver_name]||j.started_at||j.created_at;
-    const minsAgo = Math.floor((Date.now() - new Date(lastSeen).getTime())/60000);
     return {
       id: j.id,
       title: 'SmartTrack: ' + (j.driver_name||'Unknown driver'),
-      description: 'No ping in ' + minsAgo + ' min · ' + (j.title || j.id.slice(0,8)),
+      description: 'Running behind delivery pace · ' + (j.stops_completed||0) + ' stops done · ' + (j.title || j.id.slice(0,8)),
       priority: 'high',
       source: 'smarttrack',
       confidence_score: 1
