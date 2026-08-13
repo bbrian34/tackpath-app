@@ -3300,10 +3300,30 @@ function handleFile(file){
   reader.readAsText(file);
 }
 
+function parseCSVLine(line){
+  // Properly splits a CSV line respecting quoted fields that may contain commas
+  const result=[];
+  let cur='';
+  let inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      inQuotes=!inQuotes;
+    } else if(ch===','&&!inQuotes){
+      result.push(cur.trim());
+      cur='';
+    } else {
+      cur+=ch;
+    }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
 function parseCSV(text){
   const lines=text.trim().split('\n');
   if(lines.length<2){toast('CSV needs a header and at least one row','warn');return;}
-  const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
+  const headers=parseCSVLine(lines[0]).map(h=>h.trim().toLowerCase().replace(/"/g,''));
   const idx={
     order_id:headers.indexOf('order_id'),
     recipient:headers.indexOf('recipient'),
@@ -3315,7 +3335,7 @@ function parseCSV(text){
   }
   packages=[];
   for(let i=1;i<lines.length;i++){
-    const c=lines[i].split(',').map(v=>v.trim().replace(/"/g,''));
+    const c=parseCSVLine(lines[i]);
     if(!c[idx.address])continue;
     packages.push({
       order_id:c[idx.order_id]||('TP'+String(65780000+i)),
