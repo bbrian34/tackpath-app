@@ -3630,10 +3630,18 @@ async function buildRoutes(){
 
   const geocoded=[];
   const failedAddresses=[];
-  for(const pkg of packages){
-    const coords=await geocodeAddress(pkg.address);
-    if(coords) geocoded.push({...pkg,coords});
-    else failedAddresses.push(pkg);
+  const BATCH_SIZE=10;
+  for(let i=0;i<packages.length;i+=BATCH_SIZE){
+    const batch=packages.slice(i,i+BATCH_SIZE);
+    const done=Math.min(i+BATCH_SIZE,packages.length);
+    const pct=Math.round((done/packages.length)*60)+10; // 10-70% range for geocoding
+    if(btn){btn.innerHTML='&#9650; Geocoding '+done+' of '+packages.length+'... <span class="build-badge">SmartSort running</span>';}
+    updateSmartSortStatus('&#9650; Geocoding '+done+' of '+packages.length+' addresses...', pct);
+    const results=await Promise.all(batch.map(pkg=>geocodeAddress(pkg.address).then(coords=>({pkg,coords}))));
+    for(const {pkg,coords} of results){
+      if(coords) geocoded.push({...pkg,coords});
+      else failedAddresses.push(pkg);
+    }
   }
 
   if(btn){btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';}
