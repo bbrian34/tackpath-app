@@ -3696,6 +3696,24 @@ async function buildRoutes(){
   }
 }
 
+function viewRouteOnMap(routeId){
+  const route=ssRoutes.find(r=>r.id===routeId);
+  if(!route||!route.stops.length){toast('Route not found','warn');return;}
+
+  // Build Google Maps directions URL with all stops as waypoints in sequence order
+  const addresses=route.stops.map(s=>encodeURIComponent(s.address));
+  const origin=addresses[0];
+  const destination=addresses[addresses.length-1];
+  const waypoints=addresses.slice(1,-1).join('|');
+
+  let url='https://www.google.com/maps/dir/?api=1&origin='+origin+'&destination='+destination;
+  if(waypoints) url+='&waypoints='+waypoints;
+  url+='&travelmode=driving';
+
+  window.open(url,'_blank');
+  toast('Opening '+route.stops.length+' stops on Google Maps in sequence order','ok');
+}
+
 function renderSSRoutes(){
   const grid=document.getElementById('routeGrid');
   const empty=document.getElementById('ssEmptyState');
@@ -3741,6 +3759,7 @@ function renderSSRoutes(){
         <div class="mc-code">${r.master_code}</div>
         <div class="mc-hint">1 scan &rarr; ${r.stops.length} stops &rarr; ${r.total_packages} packages loaded on driver app</div>
       </div>
+      <button onclick="viewRouteOnMap('${r.id}')" style="width:100%;padding:10px;margin-top:8px;border-radius:10px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-family:var(--sans);font-weight:700;font-size:0.846rem;cursor:pointer;">&#128506; View Route on Map</button>
       <div class="rc-footer">
         <div class="rc-dist">&#9654; ${r.est_miles} miles estimated</div>
         <button class="btn-assign" onclick="assignSSRoute('${r.id}')">Assign Driver &rarr;</button>
