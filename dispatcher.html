@@ -1800,6 +1800,7 @@ async function runSmartTrack(){
     for(const job of activeJobs){
       if(!job.driver_name)continue;
       if(SMARTTRACK_ALERTED.has(job.id))continue;
+      if(!job.estimated_delivery_at)continue;
 
       let stops=job.surge_stops;
       if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
@@ -1807,30 +1808,24 @@ async function runSmartTrack(){
       const doneStops=job.stops_completed||0;
       if(doneStops>=totalStops)continue;
 
-      const startedAt=job.started_at||job.created_at;
-      if(!startedAt)continue;
-      const minsSinceStart=(now-new Date(startedAt).getTime())/60000;
-
-      const expectedStopsByNow=minsSinceStart/SMARTTRACK_MINUTES_PER_STOP;
-      const stopsBehind=expectedStopsByNow-doneStops;
-      const minsLate=Math.round(stopsBehind*SMARTTRACK_MINUTES_PER_STOP);
+      const minsLate=Math.round((now-new Date(job.estimated_delivery_at).getTime())/60000);
 
       if(minsLate>=SMARTTRACK_LATE_TOLERANCE_MIN){
         SMARTTRACK_ALERTED.add(job.id);
         await sbPatch('jobs?id=eq.'+job.id,{exception_flag:true});
-        const alertMsg='SMARTTRACK:: '+job.driver_name+' is running approximately '+minsLate+' min behind expected pace. Stop '+(doneStops+1)+' of '+totalStops+'. Auto-flagged as exception.';
+        const alertMsg='SMARTTRACK:: '+job.driver_name+' is '+minsLate+' min past traffic-aware ETA. Stop '+(doneStops+1)+' of '+totalStops+'. Auto-flagged as exception.';
         await sbPostMsg(job.id,alertMsg,'dispatcher');
         const driverMsg='Hey '+job.driver_name.split(' ')[0]+', you are running a bit behind on your route. Everything ok? Let us know if you need anything.';
         await sbPostMsg(job.id,driverMsg,'dispatcher');
-        addIntelEvent('&#127947; SmartTrack flagged <strong>'+job.driver_name+'</strong> — running '+minsLate+' min behind pace','var(--orange)');
+        addIntelEvent('&#127947; SmartTrack flagged <strong>'+job.driver_name+'</strong> — '+minsLate+' min past ETA','var(--orange)');
         const fab=document.getElementById('chatFab');
         if(fab)fab.classList.add('has-unread');
-        toast('SmartTrack: '+job.driver_name.split(' ')[0]+' running '+minsLate+' min behind pace','warn');
-        logAgentMemory('SmartTrack','delivery_behind_pace',job.id,job.driver_name,{
+        toast('SmartTrack: '+job.driver_name.split(' ')[0]+' '+minsLate+' min past ETA','warn');
+        logAgentMemory('SmartTrack','delivery_past_eta',job.id,job.driver_name,{
           minutes_late:minsLate,
           stops_completed:doneStops,
           total_stops:totalStops,
-          minutes_since_start:Math.round(minsSinceStart)
+          estimated_delivery_at:job.estimated_delivery_at
         },'escalated');
       }
     }
@@ -2023,7 +2018,7 @@ function renderExceptionQueue(){
     return {
       id: j.id,
       title: 'SmartTrack: ' + (j.driver_name||'Unknown driver'),
-      description: 'Running behind delivery pace · ' + (j.stops_completed||0) + ' stops done · ' + (j.title || j.id.slice(0,8)),
+      description: (j.estimated_delivery_at ? Math.floor((Date.now()-new Date(j.estimated_delivery_at).getTime())/60000)+' min past ETA · ' : '') + (j.stops_completed||0) + ' stops done · ' + (j.title || j.id.slice(0,8)),
       priority: 'high',
       source: 'smarttrack',
       confidence_score: 1
