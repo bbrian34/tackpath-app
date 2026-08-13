@@ -1537,7 +1537,7 @@ async function getMessages(jobId){
 let jobs=[], currentJobId=null, pollInterval=null, dispatchPollId=null;
 
 // ── SMARTTRACK AGENT ──
-const SMARTTRACK_DARK_MINUTES=3; // driver dark threshold
+const SMARTTRACK_DARK_MINUTES=10; // driver dark threshold
 const SMARTTRACK_ALERTED=new Set(); // track which jobs already alerted this session
 let smartTrackEnabled=true;
 let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
