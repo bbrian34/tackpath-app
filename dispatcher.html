@@ -1543,6 +1543,7 @@ const SMARTTRACK_ALERTED=new Set(); // track which jobs already alerted this ses
 let smartTrackEnabled=true;
 let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
 let driverLastSeen={};
+let driverLastLocation={};
 let lastDropoffByJobId={};
 
 // ── LOGIN ──
@@ -1860,11 +1861,16 @@ async function loadJobs(){
     try{
       const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
       driverLastSeen={};
+      driverLastLocation={};
       (locs||[]).forEach(function(l){
-        if(!driverLastSeen[l.driver_name]||new Date(l.updated_at)>new Date(driverLastSeen[l.driver_name]))
+        if(!driverLastSeen[l.driver_name]||new Date(l.updated_at)>new Date(driverLastSeen[l.driver_name])){
           driverLastSeen[l.driver_name]=l.updated_at;
+          driverLastLocation[l.driver_name]={lat:parseFloat(l.lat),lng:parseFloat(l.lng)};
+        }
       });
     }catch(e){}
+    // Refresh live ETAs based on actual driver position before SmartTrack checks them
+    refreshAllLiveETAs().catch(function(){});
     // Run SmartTrack agent after driver locations are updated
     runSmartTrack().catch(function(){});
     // Fetch individual stop delivery records from messages table
@@ -3470,6 +3476,46 @@ async function geocodeAddress(address){
 // Real traffic-aware leg duration via Google's modern Routes API (not the legacy Directions API,
 // per house policy: TackPath should not run on the same legacy infrastructure we're helping
 // couriers move away from). Each leg of a multi-stop route needs its own call, same as before.
+// ── LIVE ETA: recalculates using driver's actual current GPS position ──
+const ETA_REFRESH_MINUTES=2;
+const lastEtaRefresh={};
+
+async function refreshLiveETA(job){
+  try{
+    if(!job.driver_name)return;
+    const loc=driverLastLocation[job.driver_name];
+    if(!loc)return;
+
+    let stops=job.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    if(!stops||!Array.isArray(stops))return;
+
+    const doneCount=job.stops_completed||0;
+    const currentStop=stops[Math.min(doneCount,stops.length-1)];
+    if(!currentStop||!currentStop.coords)return;
+
+    const legSeconds=await getTrafficAwareLegSeconds(loc,currentStop.coords);
+    if(legSeconds===null)return;
+
+    const newEta=new Date(Date.now()+legSeconds*1000).toISOString();
+    await sbPatch('jobs?id=eq.'+job.id,{estimated_delivery_at:newEta});
+    job.estimated_delivery_at=newEta;
+  }catch(e){
+    console.error('Live ETA refresh error:',e);
+  }
+}
+
+async function refreshAllLiveETAs(){
+  const now=Date.now();
+  const activeJobs=jobs.filter(j=>(j.status==='in_transit'||j.status==='customer_confirmed')&&j.driver_name);
+  for(const job of activeJobs){
+    const last=lastEtaRefresh[job.id]||0;
+    if(now-last<ETA_REFRESH_MINUTES*60000)continue;
+    lastEtaRefresh[job.id]=now;
+    await refreshLiveETA(job);
+  }
+}
+
 async function getTrafficAwareLegSeconds(originCoords,destCoords){
   try{
     const resp=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
