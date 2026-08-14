@@ -412,6 +412,25 @@ function positionNodes(){
     commsLine.setAttribute('style','stroke:rgba(255,107,203,.4);stroke-width:2;');
     svg.appendChild(commsLine);
   }
+
+  // Swarm Coordinator connections -- Todd calls the Brain when he flags an exception,
+  // the Brain reads Sam's clustering history to build its recommendation
+  if(positions['node-todd']){
+    const toddBrainLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+    toddBrainLine.setAttribute('x1',positions['node-todd'].x);toddBrainLine.setAttribute('y1',positions['node-todd'].y);
+    toddBrainLine.setAttribute('x2',cx);toddBrainLine.setAttribute('y2',cy);
+    toddBrainLine.setAttribute('class','connector-line');
+    toddBrainLine.setAttribute('style','stroke:rgba(255,150,30,.5);stroke-width:2.5;stroke-dasharray:6 3;');
+    svg.appendChild(toddBrainLine);
+  }
+  if(positions['node-sam']){
+    const samBrainLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+    samBrainLine.setAttribute('x1',cx);samBrainLine.setAttribute('y1',cy);
+    samBrainLine.setAttribute('x2',positions['node-sam'].x);samBrainLine.setAttribute('y2',positions['node-sam'].y);
+    samBrainLine.setAttribute('class','connector-line');
+    samBrainLine.setAttribute('style','stroke:rgba(255,150,30,.5);stroke-width:2.5;stroke-dasharray:6 3;');
+    svg.appendChild(samBrainLine);
+  }
 }
 
 async function loadFeed(){
