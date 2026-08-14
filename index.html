@@ -592,11 +592,20 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40
 
     </div>
 
-    <div style="text-align:center;margin-top:40px;">
-      <a href="portal.html" style="display:inline-block;padding:15px 34px;border-radius:12px;background:rgba(149,191,71,.1);border:1px solid rgba(149,191,71,.35);color:#95bf47;font-weight:700;font-size:0.95rem;text-decoration:none;">ShopifyConnect</a>
+    <div style="text-align:center;margin-top:48px;">
+      <a href="portal.html" class="shopify-cta" style="display:inline-flex;align-items:center;gap:12px;padding:17px 38px;border-radius:14px;background:linear-gradient(135deg,#95bf47,#7ba838);color:#010e21;font-weight:800;font-size:1rem;text-decoration:none;box-shadow:0 8px 28px rgba(149,191,71,.25);transition:all .2s;">
+        <span style="width:26px;height:26px;border-radius:8px;background:rgba(1,14,33,.15);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.95rem;">S</span>
+        ShopifyConnect
+        <span style="opacity:.7;">&rarr;</span>
+      </a>
+      <div style="margin-top:14px;font-family:var(--mono);font-size:0.75rem;color:var(--muted);">Sign in as a dispatcher to link a store</div>
     </div>
   </div>
 </section>
+
+<style>
+.shopify-cta:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(149,191,71,.35)!important;}
+</style>
 
 <!-- AI AGENTS -->
 <section id="agents" style="background:var(--card,#071828);padding:100px 0;">
