@@ -1827,7 +1827,7 @@ async function brainQueryHistory(){
 function brainAnalyzeDriverPattern(driverName,historicalJobs){
   // Looks for recurring exception patterns for a specific driver across history
   const driverJobs=historicalJobs.filter(j=>j.driver_name===driverName);
-  const driverExceptions=driverJobs.filter(j=>j.exception_flag===true);
+  const driverExceptions=driverJobs.filter(j=>j.exception_flag===true||j.exception_flag==='true');
   if(driverJobs.length<3)return null; // not enough history to say anything meaningful
   const exceptionRate=Math.round((driverExceptions.length/driverJobs.length)*100);
   if(exceptionRate>=30){
@@ -2204,7 +2204,7 @@ function renderExceptionQueue(){
 
   const stalledJobs = jobs.filter(j =>
     (j.status === 'in_transit' || j.status === 'customer_confirmed') &&
-    j.exception_flag === true
+    (j.exception_flag === true || j.exception_flag === 'true')
   ).map(j => {
     return {
       id: j.id,
