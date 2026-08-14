@@ -437,7 +437,7 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
   <div style="margin-top:16px;">
     <div class="card">
       <div class="card-hdr">
-        <div class="card-title">&#128200; RIA &mdash; Revenue Intelligence Agent <span class="card-badge cb-gold">LIVE</span></div>
+        <div class="card-title">&#128200; RIA &mdash; Today's Performance <span class="card-badge cb-gold">LIVE</span></div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="font-family:var(--mono);font-size:9px;color:var(--muted);" id="riaLastRun">Not yet run</div>
           <button class="ria-run-btn" onclick="runRIA()">&#9654; Run RIA</button>
@@ -481,7 +481,21 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
             </div>
           </div>
           <div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Driver Performance</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Driver Performance — Today</div>
+            <div id="riaTeamSummary" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+              <div class="card" style="padding:10px;text-align:center;">
+                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--blue);" id="riaTeamDrivers">—</div>
+                <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;">Active Drivers</div>
+              </div>
+              <div class="card" style="padding:10px;text-align:center;">
+                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--green);" id="riaTeamOnTime">—</div>
+                <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;">Team On-Time Rate</div>
+              </div>
+              <div class="card" style="padding:10px;text-align:center;">
+                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--orange);" id="riaTeamExceptions">—</div>
+                <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;">Exceptions Today</div>
+              </div>
+            </div>
             <div class="card" style="overflow:hidden;">
               <table class="ria-table">
                 <thead><tr><th>Driver</th><th>Deliveries</th><th>Revenue</th><th>Avg/Job</th><th>Rating</th></tr></thead>
@@ -816,7 +830,8 @@ async function runRIA(){
 
   try{
     // Pull all jobs
-    const allJobs = await sbGet('jobs?select=*&order=created_at.desc&limit=500');
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const allJobs = (await sbGet('jobs?select=*&order=created_at.desc&limit=500')).filter(j=>new Date(j.updated_at||j.created_at)>=todayStart);
     const delivered = allJobs.filter(j=>j.status==='delivered');
 
     if(!delivered.length){
@@ -887,6 +902,18 @@ async function runRIA(){
       }
     });
     const drivers = Object.values(driverMap).filter(d=>d.name!=='Unassigned').sort((a,b)=>b.revenue-a.revenue);
+
+    // ── TEAM SUMMARY ──
+    const uniqueDriversToday=new Set(allJobs.filter(j=>j.driver_name).map(j=>j.driver_name));
+    const exceptionsToday=allJobs.filter(j=>j.exception_flag===true).length;
+    const totalJobsToday=allJobs.filter(j=>j.driver_name).length;
+    const onTimeRate=totalJobsToday>0?Math.round(((totalJobsToday-exceptionsToday)/totalJobsToday)*100):100;
+    const teamDriversEl=document.getElementById('riaTeamDrivers');
+    const teamOnTimeEl=document.getElementById('riaTeamOnTime');
+    const teamExcEl=document.getElementById('riaTeamExceptions');
+    if(teamDriversEl)teamDriversEl.textContent=uniqueDriversToday.size;
+    if(teamOnTimeEl)teamOnTimeEl.textContent=onTimeRate+'%';
+    if(teamExcEl)teamExcEl.textContent=exceptionsToday;
 
     const dbody = document.getElementById('riaDriverBody');
     if(!drivers.length){
