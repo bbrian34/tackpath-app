@@ -156,11 +156,13 @@ body::before{
 .feed-item.smarttrack{border-left:3px solid #19b7ef;}
 .feed-item.swarm{border-left:3px solid #53ff88;}
 .feed-item.sponge{border-left:3px solid #ffc800;}
+.feed-item.comms{border-left:3px solid #ff6bcb;}
 .feed-agent{font-family:'DM Mono',monospace;font-size:.66rem;font-weight:700;margin-bottom:3px;}
 .feed-agent.smartsort{color:#8d5cff;}
 .feed-agent.smarttrack{color:#19b7ef;}
 .feed-agent.swarm{color:#53ff88;}
 .feed-agent.sponge{color:#ffc800;}
+.feed-agent.comms{color:#ff6bcb;}
 .feed-detail{color:rgba(255,255,255,.7);}
 .feed-time{font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:4px;}
 .feed-empty{padding:30px 10px;text-align:center;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;font-size:.72rem;}
@@ -213,7 +215,7 @@ body::before{
 
 <div class="stats-bar">
   <div class="stat-chip">
-    <div class="stat-val" id="statAgents">2</div>
+    <div class="stat-val" id="statAgents">3</div>
     <div class="stat-lbl">Active Agents</div>
   </div>
   <div class="stat-chip">
@@ -266,13 +268,13 @@ body::before{
   </div>
 
   <div class="agent-node" id="node-comms" onclick="openModal('comms')">
-    <div class="agent-orb dormant">
-      <div class="agent-status-dot dormant"></div>
+    <div class="agent-orb active">
+      <div class="agent-status-dot active"></div>
       &#128172;
     </div>
-    <div class="agent-name">SmartComms</div>
-    <div class="agent-role">Communication</div>
-    <div class="agent-offline">&#9679; OFFLINE</div>
+    <div class="agent-name">Riley</div>
+    <div class="agent-role">SmartComms</div>
+    <div class="agent-online">&#9679; ONLINE</div>
   </div>
 
   <div class="agent-node" id="node-match" onclick="openModal('match')">
@@ -323,7 +325,7 @@ const agentInfo={
   sam:{title:"Sam — SmartSort",role:"Route Clustering Agent · Active",desc:"Geocodes manifests, clusters stops into driver-sized geographic zones using k-means++, creates and broadcasts jobs. Logs every clustering run to shared memory."},
   path:{title:"Piper — SmartPath",role:"Route Sequencing Agent · Active",desc:"Works directly with Sam. Once SmartSort clusters stops into driver zones, Piper sequences each zone using nearest-neighbor optimization for minimum drive time, and calculates the traffic-aware ETA for the full route."},
   todd:{title:"Todd — SmartTrack",role:"Delivery Pace Agent · Active",desc:"Locks a live deadline for each driver current stop based on real traffic ETA. Watches for drivers falling behind that specific deadline, flags exceptions, messages drivers directly, and calls the Swarm Coordinator to pull in Sam route context when something goes wrong."},
-  comms:{title:"SmartComms",role:"Driver Communication Agent · Dormant",desc:"Not yet built. Will handle routine driver check-ins, auto-respond to common messages, and manage end-of-route confirmations autonomously."},
+  comms:{title:"Riley — SmartComms",role:"Driver Communication Agent · Active",desc:"Sends automated check-ins every 30 minutes during an active route asking how things are going and confirming stop progress. Sends end-of-route completion confirmations when all stops finish. Narrow, safe scope — no free-text message interpretation yet."},
   match:{title:"SmartMatch",role:"Reassignment Agent · Dormant",desc:"Not yet built. Will find the nearest available driver when a route needs reassignment and execute the handoff automatically."},
   owl:{title:"OWL",role:"Intelligence Agent · Dormant",desc:"Not yet built. Will analyze patterns across days and weeks — which zones run late, which drivers outperform, revenue trends — and surface strategic insights."}
 };
@@ -399,7 +401,7 @@ async function loadFeed(){
       return;
     }
     list.innerHTML=events.map(e=>{
-      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':e.agent_name==='Sponge'?'sponge':'swarm';
+      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':e.agent_name==='Sponge'?'sponge':e.agent_name==='SmartComms'?'comms':'swarm';
       let detail='';
       if(e.event_type==='cluster_created'){
         detail='Clustered '+(e.details.total_stops||'?')+' stops into '+(e.details.clusters_created||'?')+' routes ('+(e.details.total_packages||'?')+' packages)';
@@ -407,6 +409,10 @@ async function loadFeed(){
         detail=(e.driver_name||'Driver')+' is '+(e.details.minutes_late||'?')+' min late on stop '+(e.details.stop_number||'?');
       } else if(e.event_type==='joint_analysis'){
         detail=e.details.recommendation||'Joint analysis completed';
+      } else if(e.event_type==='routine_checkin'){
+        detail='Checked in with '+(e.driver_name||'driver')+' — stop '+(e.details.stop_at_checkin||'?')+' of '+(e.details.total_stops||'?');
+      } else if(e.event_type==='route_completed'){
+        detail='Sent completion confirmation to '+(e.driver_name||'driver')+' — '+(e.details.total_stops||'?')+' stops done';
       } else if(e.event_type==='knowledge_learned'){
         detail='Learned '+(e.details.label||e.details.file)+' — '+(e.details.summary||'').slice(0,120);
       } else {
