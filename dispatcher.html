@@ -4219,13 +4219,18 @@ async function rpApprove(actions){
 
 <script>
 // ── ASCEND SPLASH ──
-// Shows on dispatcher load, holds, then fades out revealing the dashboard.
-// Total visible time: ~2.8s. Fade-out: 1.2s. Gone from DOM: after fade completes.
+// Shows only once per session -- skips on navigation back from FleetView or other pages
 (function(){
   const splash = document.getElementById('ascendSplash');
   if(!splash) return;
 
-  // Hold for 2.8s then begin fade
+  const alreadyShown = sessionStorage.getItem('tackpath_splash_shown');
+  if(alreadyShown){
+    splash.remove();
+    return;
+  }
+  sessionStorage.setItem('tackpath_splash_shown', '1');
+
   setTimeout(function(){
     splash.classList.add('gone');
   }, 4800);
