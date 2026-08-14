@@ -468,6 +468,7 @@ button,a,input,textarea{font-family:var(--sans);}
         </span>
       </label>
       <button class="fb" onclick="requestCode()" id="loginPhoneBtn">Send Code</button>
+      <div class="fn" style="text-align:center;margin-top:14px;">New driver? <a href="#" onclick="showSignup();return false;" style="color:#19b7ef;font-weight:700;">Sign up here</a></div>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.08);"></div>
@@ -485,7 +486,41 @@ button,a,input,textarea{font-family:var(--sans);}
         </button>
       </div>
     </div>
+
+    <!-- SIGN UP -->
+    <div class="lbox-form" id="loginPhaseSignup" style="display:none;">
+      <label class="fl">Full Name</label>
+      <input class="fi" type="text" id="suName" placeholder="Jane Smith" autocomplete="name"/>
+
+      <label class="fl" style="margin-top:12px;">Mobile Number</label>
+      <input class="fi" type="tel" id="suPhone" placeholder="+1 (404) 555-0100" autocomplete="tel"/>
+
+      <label class="fl" style="margin-top:12px;">Date of Birth</label>
+      <input class="fi" type="date" id="suDob"/>
+
+      <label class="fl" style="margin-top:12px;">Vehicle Make / Model</label>
+      <input class="fi" type="text" id="suVehicle" placeholder="Honda Civic"/>
+
+      <label style="display:flex;align-items:flex-start;gap:10px;margin:14px 0 4px;cursor:pointer;">
+        <input type="checkbox" id="suInsuranceCheckbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0;cursor:pointer;"/>
+        <span style="font-size:0.72rem;line-height:1.5;color:#4a6e88;">
+          I confirm I am at least 18 years old, hold a valid driver's license, and carry current auto insurance that meets state minimum requirements for the vehicle listed above.
+        </span>
+      </label>
+
+      <label style="display:flex;align-items:flex-start;gap:10px;margin:10px 0 16px;cursor:pointer;">
+        <input type="checkbox" id="suConsentCheckbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0;cursor:pointer;"/>
+        <span style="font-size:0.72rem;line-height:1.5;color:#4a6e88;">
+          I agree to receive SMS messages from TackPath, Inc. regarding my delivery assignments, route updates, and dispatch notifications at the number provided. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. I also acknowledge I am applying as an independent contractor, not an employee of TackPath. See <a href="terms.html" target="_blank" style="color:#19b7ef;">Terms of Service</a> and <a href="privacy.html" target="_blank" style="color:#19b7ef;">Privacy Policy</a>.
+        </span>
+      </label>
+
+      <button class="fb" onclick="submitSignup()" id="signupBtn">Create Account</button>
+      <div class="fn" style="text-align:center;margin-top:14px;">Already a driver? <a href="#" onclick="showLogin();return false;" style="color:#19b7ef;font-weight:700;">Sign in here</a></div>
+    </div>
+
     <div class="lbox-form" id="loginPhaseCode" style="display:none;">
+
       <label class="fl">Verification Code</label>
       <div style="font-family:var(--mono);font-size:0.6875rem;color:#4a6e88;margin-bottom:12px;" id="loginCodeHint">Enter the 6-digit code</div>
       <input class="fi" type="number" id="loginCode" placeholder="000000" style="font-size:1.75rem;font-weight:900;letter-spacing:8px;text-align:center;"/>
@@ -1015,6 +1050,70 @@ function showDispatchNotif(text){
 
 // ── LOGIN ──
 let pendingPhone='',pendingCode='';
+function showSignup(){
+  document.getElementById('loginPhasePhone').style.display='none';
+  document.getElementById('loginPhaseSignup').style.display='block';
+}
+function showLogin(){
+  document.getElementById('loginPhaseSignup').style.display='none';
+  document.getElementById('loginPhasePhone').style.display='block';
+}
+async function submitSignup(){
+  const name=(document.getElementById('suName').value||'').trim();
+  const rawPhone=(document.getElementById('suPhone').value||'').trim();
+  const dob=(document.getElementById('suDob').value||'').trim();
+  const vehicle=(document.getElementById('suVehicle').value||'').trim();
+  const insuranceOk=document.getElementById('suInsuranceCheckbox').checked;
+  const consentOk=document.getElementById('suConsentCheckbox').checked;
+
+  if(!name){toast('Enter your full name','warn');return;}
+  if(!rawPhone){toast('Enter your mobile number','warn');return;}
+  if(!dob){toast('Enter your date of birth','warn');return;}
+
+  const age=Math.floor((Date.now()-new Date(dob).getTime())/(365.25*24*60*60*1000));
+  if(age<18){toast('You must be at least 18 to drive for TackPath','warn');return;}
+
+  if(!insuranceOk){toast('Please confirm your license and insurance to continue','warn');return;}
+  if(!consentOk){toast('Please agree to receive SMS messages to continue','warn');return;}
+
+  const phone=rawPhone.replace(/\D/g,'');
+  const btn=document.getElementById('signupBtn');
+  btn.disabled=true;btn.textContent='Creating account...';
+
+  try{
+    const existing=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&limit=1');
+    if(existing&&existing.length){
+      toast('An account with this number already exists — sign in instead','warn');
+      btn.disabled=false;btn.textContent='Create Account';
+      showLogin();
+      return;
+    }
+
+    await fetch(SB+'/rest/v1/drivers',{
+      method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({
+        name:name,
+        phone:phone,
+        date_of_birth:dob,
+        vehicle:vehicle||null,
+        sms_consent:true,
+        status:'pending_approval'
+      })
+    });
+
+    toast('Account created! A dispatcher will review and approve your account.','ok');
+    pendingPhone=phone;
+    showLogin();
+    document.getElementById('loginPhone').value=rawPhone;
+  }catch(e){
+    console.error('Signup error:',e);
+    toast('Something went wrong — please try again','warn');
+  }
+
+  btn.disabled=false;btn.textContent='Create Account';
+}
+
 function showPhoneInput(){
   document.getElementById('loginPhasePhone').style.display='block';
   document.getElementById('loginPhaseCode').style.display='none';
