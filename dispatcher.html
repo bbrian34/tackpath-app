@@ -1960,6 +1960,65 @@ async function runSwarmCoordinator(job, stops, currentStopIdx, minsLate){
   }
 }
 
+// ── SMARTCOMMS AGENT: automated driver check-ins and end-of-route confirmations ──
+const SMARTCOMMS_CHECKIN_MINUTES=30; // routine check-in interval during active delivery
+const SMARTCOMMS_CHECKED_IN=new Set(); // tracks which jobs already got a check-in this session
+const SMARTCOMMS_COMPLETED_MSG=new Set(); // tracks which jobs already got end-of-route message
+
+async function runSmartComms(){
+  try{
+    const now=Date.now();
+    const activeJobs=jobs.filter(j=>j.status==='in_transit'||j.status==='customer_confirmed');
+
+    for(const job of activeJobs){
+      if(!job.driver_name)continue;
+
+      let stops=job.surge_stops;
+      if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+      const totalStops=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
+      const doneStops=job.stops_completed||0;
+
+      // ── Routine check-in: every 30 min during an active route, once per interval ──
+      const startedAt=job.started_at||job.created_at;
+      if(startedAt){
+        const minsSinceStart=(now-new Date(startedAt).getTime())/60000;
+        const checkinWindow=Math.floor(minsSinceStart/SMARTCOMMS_CHECKIN_MINUTES);
+        const checkinKey=job.id+'-checkin-'+checkinWindow;
+        if(checkinWindow>=1&&doneStops<totalStops&&!SMARTCOMMS_CHECKED_IN.has(checkinKey)){
+          SMARTCOMMS_CHECKED_IN.add(checkinKey);
+          const firstName=job.driver_name.split(' ')[0];
+          const msg='Hey '+firstName+', quick check-in — how is the route going? You are on stop '+(doneStops+1)+' of '+totalStops+'. Let us know if you need anything.';
+          await sbPostMsg(job.id,msg,'dispatcher');
+          await logAgentMemory('SmartComms','routine_checkin',job.id,job.driver_name,{
+            stop_at_checkin:doneStops+1,
+            total_stops:totalStops,
+            minutes_since_start:Math.round(minsSinceStart)
+          },'sent');
+        }
+      }
+    }
+
+    // ── End-of-route confirmation: fires once when all stops complete ──
+    const completedJobs=jobs.filter(j=>j.status==='delivered'&&j.driver_name);
+    for(const job of completedJobs){
+      if(SMARTCOMMS_COMPLETED_MSG.has(job.id))continue;
+      SMARTCOMMS_COMPLETED_MSG.add(job.id);
+      let stops=job.surge_stops;
+      if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+      const totalStops=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
+      const firstName=job.driver_name.split(' ')[0];
+      const msg='Great work '+firstName+'! All '+totalStops+' stops complete on this route. Please confirm you are heading back or ready for your next assignment.';
+      await sbPostMsg(job.id,msg,'dispatcher');
+      await logAgentMemory('SmartComms','route_completed',job.id,job.driver_name,{
+        total_stops:totalStops
+      },'sent');
+    }
+
+  }catch(e){
+    console.error('SmartComms error:',e);
+  }
+}
+
 async function runSmartTrack(){
   if(!smartTrackEnabled)return;
   try{
@@ -2057,6 +2116,7 @@ async function loadJobs(){
     refreshAllLiveETAs().catch(function(){});
     // Run SmartTrack agent after driver locations are updated
     runSmartTrack().catch(function(){});
+    runSmartComms().catch(function(){});
     runProactiveCoordinator().catch(function(){});
     // Fetch individual stop delivery records from messages table
     try{
