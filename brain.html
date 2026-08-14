@@ -155,10 +155,12 @@ body::before{
 .feed-item.smartsort{border-left:3px solid #8d5cff;}
 .feed-item.smarttrack{border-left:3px solid #19b7ef;}
 .feed-item.swarm{border-left:3px solid #53ff88;}
+.feed-item.sponge{border-left:3px solid #ffc800;}
 .feed-agent{font-family:'DM Mono',monospace;font-size:.66rem;font-weight:700;margin-bottom:3px;}
 .feed-agent.smartsort{color:#8d5cff;}
 .feed-agent.smarttrack{color:#19b7ef;}
 .feed-agent.swarm{color:#53ff88;}
+.feed-agent.sponge{color:#ffc800;}
 .feed-detail{color:rgba(255,255,255,.7);}
 .feed-time{font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:4px;}
 .feed-empty{padding:30px 10px;text-align:center;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;font-size:.72rem;}
@@ -205,7 +207,8 @@ body::before{
   </svg>
   <span style="font-size:1rem;font-weight:800;letter-spacing:1px;"><span style="color:#fff;">TACK</span><span style="color:#19b7ef;">PATH</span></span>
   <div class="live-chip"><div class="live-dot"></div>SWARM ACTIVE</div>
-  <a href="dispatcher.html" class="back-btn">← Dispatcher</a>
+  <button onclick="feedBrain()" id="feedBtn" style="margin-left:auto;padding:6px 14px;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.3);color:#53ff88;">&#129502; Feed the Brain</button>
+  <a href="dispatcher.html" class="back-btn" style="margin-left:10px;">← Dispatcher</a>
 </div>
 
 <div class="stats-bar">
@@ -396,7 +399,7 @@ async function loadFeed(){
       return;
     }
     list.innerHTML=events.map(e=>{
-      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':'swarm';
+      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':e.agent_name==='Sponge'?'sponge':'swarm';
       let detail='';
       if(e.event_type==='cluster_created'){
         detail='Clustered '+(e.details.total_stops||'?')+' stops into '+(e.details.clusters_created||'?')+' routes ('+(e.details.total_packages||'?')+' packages)';
@@ -404,6 +407,8 @@ async function loadFeed(){
         detail=(e.driver_name||'Driver')+' is '+(e.details.minutes_late||'?')+' min late on stop '+(e.details.stop_number||'?');
       } else if(e.event_type==='joint_analysis'){
         detail=e.details.recommendation||'Joint analysis completed';
+      } else if(e.event_type==='knowledge_learned'){
+        detail='Learned '+(e.details.label||e.details.file)+' — '+(e.details.summary||'').slice(0,120);
       } else {
         detail=e.event_type;
       }
@@ -433,6 +438,39 @@ async function loadFeed(){
 
 window.addEventListener('resize',positionNodes);
 positionNodes();
+async function feedBrain(){
+  const btn=document.getElementById('feedBtn');
+  const originalText=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='&#9203; Sponge is reading...';
+  btn.style.opacity='0.6';
+
+  try{
+    const resp=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/sponge',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY}
+    });
+    const result=await resp.json();
+
+    if(result.success){
+      btn.innerHTML='&#9989; Learned '+result.files_processed+' files';
+      loadFeed(); // refresh the activity log to show what Sponge learned
+    } else {
+      btn.innerHTML='&#10060; Failed';
+      console.error('Sponge error:',result.error);
+    }
+  }catch(e){
+    btn.innerHTML='&#10060; Error';
+    console.error('Feed Brain error:',e);
+  }
+
+  setTimeout(()=>{
+    btn.disabled=false;
+    btn.innerHTML=originalText;
+    btn.style.opacity='1';
+  },4000);
+}
+
 loadFeed();
 setInterval(loadFeed,8000);
 </script>
