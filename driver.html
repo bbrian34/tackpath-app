@@ -461,6 +461,12 @@ button,a,input,textarea{font-family:var(--sans);}
     <div class="lbox-form" id="loginPhasePhone">
       <label class="fl">Mobile Number</label>
       <input class="fi" type="tel" id="loginPhone" placeholder="+1 (404) 555-0100" autocomplete="tel"/>
+      <label style="display:flex;align-items:flex-start;gap:10px;margin:16px 0;cursor:pointer;">
+        <input type="checkbox" id="smsConsentCheckbox" style="margin-top:3px;width:16px;height:16px;flex-shrink:0;cursor:pointer;"/>
+        <span style="font-size:0.72rem;line-height:1.5;color:#4a6e88;">
+          I agree to receive SMS messages from TackPath, Inc. regarding my delivery assignments, route updates, and dispatch notifications at the number provided. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. See <a href="terms.html" target="_blank" style="color:#19b7ef;">Terms of Service</a> and <a href="privacy.html" target="_blank" style="color:#19b7ef;">Privacy Policy</a>.
+        </span>
+      </label>
       <button class="fb" onclick="requestCode()" id="loginPhoneBtn">Send Code</button>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
@@ -1016,6 +1022,8 @@ function showPhoneInput(){
 async function requestCode(){
   const raw=document.getElementById('loginPhone').value.trim();
   if(!raw){toast('Enter your mobile number','warn');return;}
+  const consentBox=document.getElementById('smsConsentCheckbox');
+  if(consentBox&&!consentBox.checked){toast('Please agree to receive SMS messages to continue','warn');return;}
   const phone=raw.replace(/\D/g,'');
   pendingPhone=phone;
   pendingCode='000000';
