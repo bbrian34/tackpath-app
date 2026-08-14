@@ -54,7 +54,7 @@ serve(async (req) => {
         const summary = summarizeFile(file, content);
 
         // Log to agent_memory as foundational Sponge knowledge
-        await supabase.from("agent_memory").insert({
+        const { error: insertErr } = await supabase.from("agent_memory").insert({
           agent_name: "Sponge",
           event_type: "knowledge_learned",
           details: {
@@ -67,6 +67,11 @@ serve(async (req) => {
           },
           outcome: "learned",
         });
+
+        if (insertErr) {
+          results.push({ file: file.path, status: "insert_failed", error: insertErr.message });
+          continue;
+        }
 
         results.push({ file: file.path, status: "learned", size: content.length });
       } catch (e: any) {
