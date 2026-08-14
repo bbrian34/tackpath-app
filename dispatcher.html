@@ -1965,6 +1965,71 @@ const SMARTCOMMS_CHECKIN_MINUTES=30; // routine check-in interval during active 
 const SMARTCOMMS_CHECKED_IN=new Set(); // tracks which jobs already got a check-in this session
 const SMARTCOMMS_COMPLETED_MSG=new Set(); // tracks which jobs already got end-of-route message
 
+// ── RUBY: comms pattern agent, works with Mario, learns what drivers actually say ──
+const RUBY_CHECK_INTERVAL_MIN=10;
+let lastRubyCheck=0;
+const RUBY_CATEGORIZED=new Set(); // message IDs already categorized this session
+
+const RUBY_PATTERNS=[
+  {category:'traffic',keywords:['traffic','jam','stuck','backed up','accident on']},
+  {category:'customer_issue',keywords:['not home','no answer','refused','wrong address','can\'t find','couldn\'t find']},
+  {category:'vehicle_issue',keywords:['flat tire','breakdown','broke down','car trouble','engine']},
+  {category:'weather',keywords:['rain','storm','flooding','ice','snow']},
+  {category:'acknowledgment',keywords:['ok','okay','yes','got it','on it','sure','k','yep','yeah']},
+  {category:'need_help',keywords:['help','stuck','confused','lost','don\'t know','not sure']},
+];
+
+function rubyCategorize(body){
+  const lower=body.toLowerCase();
+  for(const pattern of RUBY_PATTERNS){
+    if(pattern.keywords.some(kw=>lower.includes(kw))){
+      return pattern.category;
+    }
+  }
+  return 'other';
+}
+
+async function runRuby(){
+  const now=Date.now();
+  if(now-lastRubyCheck<RUBY_CHECK_INTERVAL_MIN*60000)return;
+  lastRubyCheck=now;
+
+  try{
+    const todayStart=new Date();todayStart.setHours(0,0,0,0);
+    const driverMsgs=await sbGet('messages?sender_role=eq.driver&created_at=gte.'+todayStart.toISOString()+'&order=created_at.desc&limit=100');
+
+    const newMsgs=(driverMsgs||[]).filter(m=>!m.body.startsWith('STOP_DELIVERED::')&&!RUBY_CATEGORIZED.has(m.id));
+    if(!newMsgs.length)return;
+
+    const categoryCounts={};
+    newMsgs.forEach(m=>{
+      RUBY_CATEGORIZED.add(m.id);
+      const cat=rubyCategorize(m.body);
+      categoryCounts[cat]=(categoryCounts[cat]||0)+1;
+    });
+
+    const totalCategorized=newMsgs.length;
+    const breakdown=Object.entries(categoryCounts).map(([cat,count])=>cat+': '+count).join(', ');
+
+    await logAgentMemory('Ruby','pattern_analysis',null,null,{
+      messages_analyzed:totalCategorized,
+      category_breakdown:categoryCounts,
+      summary:breakdown
+    },'analyzed');
+
+    // Flag if a concerning pattern shows up -- multiple vehicle issues or customer issues today
+    if((categoryCounts['vehicle_issue']||0)>=2){
+      addIntelEvent('&#128172; Ruby noticed '+categoryCounts['vehicle_issue']+' vehicle issue reports today — may be worth checking in with affected drivers.','var(--purple)');
+    }
+    if((categoryCounts['customer_issue']||0)>=3){
+      addIntelEvent('&#128172; Ruby noticed '+categoryCounts['customer_issue']+' customer issue reports today (not home, wrong address, etc).','var(--purple)');
+    }
+
+  }catch(e){
+    console.error('Ruby error:',e);
+  }
+}
+
 async function runSmartComms(){
   try{
     const now=Date.now();
@@ -2117,6 +2182,7 @@ async function loadJobs(){
     // Run SmartTrack agent after driver locations are updated
     runSmartTrack().catch(function(){});
     runSmartComms().catch(function(){});
+    runRuby().catch(function(){});
     runProactiveCoordinator().catch(function(){});
     // Fetch individual stop delivery records from messages table
     try{
