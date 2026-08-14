@@ -2052,7 +2052,8 @@ async function runSmartComms(){
         if(checkinWindow>=1&&doneStops<totalStops&&!SMARTCOMMS_CHECKED_IN.has(checkinKey)){
           SMARTCOMMS_CHECKED_IN.add(checkinKey);
           const firstName=job.driver_name.split(' ')[0];
-          const msg='Hey '+firstName+', quick check-in — how is the route going? You are on stop '+(doneStops+1)+' of '+totalStops+'. Let us know if you need anything.';
+          const rushHourContext=await sharedKnowledgeIsRushHour();
+          const msg='Hey '+firstName+', quick check-in — how is the route going? You are on stop '+(doneStops+1)+' of '+totalStops+'.'+(rushHourContext?' No worries if traffic is heavy right now.':' Let us know if you need anything.');
           await sbPostMsg(job.id,msg,'dispatcher');
           await logAgentMemory('SmartComms','routine_checkin',job.id,job.driver_name,{
             stop_at_checkin:doneStops+1,
@@ -2084,38 +2085,42 @@ async function runSmartComms(){
   }
 }
 
-// ── SPONGE KNOWLEDGE LOOKUP: lets other agents check what Sponge has learned before acting ──
-let SPONGE_KNOWLEDGE_CACHE=null;
-let spongeKnowledgeCachedAt=0;
-const SPONGE_CACHE_TTL_MIN=10;
+// ── SHARED KNOWLEDGE LAYER: every agent reads from this, not point-to-point connections.
+// Architecture note: production multi-agent systems fail when agents pass messages
+// hop-to-hop (Agent A tells Agent B tells Agent C) because context drifts and each
+// agent ends up reasoning from a different version of reality. The fix is shared
+// state -- every agent asks "what does the knowledge layer contain right now?"
+// instead of "what did the previous agent tell me?" This function is that shared layer.
+let SHARED_KNOWLEDGE_CACHE=null;
+let sharedKnowledgeCachedAt=0;
+const SHARED_KNOWLEDGE_TTL_MIN=10;
 
-async function getSpongeKnowledge(){
+async function getSharedKnowledge(){
   const now=Date.now();
-  if(SPONGE_KNOWLEDGE_CACHE&&(now-spongeKnowledgeCachedAt)<SPONGE_CACHE_TTL_MIN*60000){
-    return SPONGE_KNOWLEDGE_CACHE;
+  if(SHARED_KNOWLEDGE_CACHE&&(now-sharedKnowledgeCachedAt)<SHARED_KNOWLEDGE_TTL_MIN*60000){
+    return SHARED_KNOWLEDGE_CACHE;
   }
   try{
     const entries=await sbGet('agent_memory?agent_name=eq.Sponge&event_type=eq.knowledge_learned&order=created_at.desc&limit=20');
-    SPONGE_KNOWLEDGE_CACHE=entries||[];
-    spongeKnowledgeCachedAt=now;
-    return SPONGE_KNOWLEDGE_CACHE;
+    SHARED_KNOWLEDGE_CACHE=entries||[];
+    sharedKnowledgeCachedAt=now;
+    return SHARED_KNOWLEDGE_CACHE;
   }catch(e){
-    console.error('Sponge knowledge lookup error:',e);
-    return SPONGE_KNOWLEDGE_CACHE||[];
+    console.error('Shared knowledge lookup error:',e);
+    return SHARED_KNOWLEDGE_CACHE||[];
   }
 }
 
-// Checks Sponge's absorbed knowledge for anything relevant to a driver running late
-// right now, based on current time of day -- e.g. documented rush-hour guidance
-async function toddConsultSponge(){
-  const knowledge=await getSpongeKnowledge();
+// Single reusable check: is right now within a documented industry rush-hour window?
+// Any agent can call this -- Todd uses it to contextualize exceptions, Mario could use it
+// to soften a check-in message, Sam/Piper could use it to pad ETA estimates. One function,
+// one source of truth, no per-agent custom wiring.
+async function sharedKnowledgeIsRushHour(){
+  const knowledge=await getSharedKnowledge();
   const industryDoc=knowledge.find(k=>k.details&&k.details.file==='knowledge/industry_2026.md');
   if(!industryDoc)return null;
-
   const hour=new Date().getHours();
-  const isRushHour=(hour>=16&&hour<19); // 4pm-7pm commute window, per documented industry pattern
-
-  if(isRushHour){
+  if(hour>=16&&hour<19){
     return 'Currently in the 4-7pm commute window. Sponge notes this is a documented high-traffic period industry-wide -- some delay may be expected rather than driver-specific.';
   }
   return null;
@@ -2160,7 +2165,7 @@ async function runSmartTrack(){
         const swarmInsight=await runSwarmCoordinator(job,stops,currentStopIdx,minsLate);
 
         // Consult Sponge's absorbed knowledge for relevant context before alerting
-        const spongeContext=await toddConsultSponge();
+        const spongeContext=await sharedKnowledgeIsRushHour();
 
         const alertMsg='SMARTTRACK:: '+job.driver_name+' is '+minsLate+' min past expected arrival at stop '+(currentStopIdx+1)+' of '+totalStops+'. Auto-flagged as exception.'+(swarmInsight?' &#129504; '+swarmInsight:'')+(spongeContext?' &#128218; '+spongeContext:'');
         await sbPostMsg(job.id,alertMsg,'dispatcher');
