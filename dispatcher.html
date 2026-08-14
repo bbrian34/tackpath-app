@@ -856,6 +856,7 @@ body::after{content:'';position:fixed;inset:0;
       <button class="tbtab" onclick="setTab('smartpath',this)">SmartPath</button>
       <button class="tbtab" onclick="setTab('smarttrack',this)">SmartTrack</button>
       <button class="tbtab" onclick="setTab('command',this)">Command</button>
+      <button class="tbtab" onclick="setTab('shopify',this)" style="color:#95bf47;">Shopify</button>
       <button class="tbtab" onclick="setTab('analytics',this)">Analytics</button>
       <button class="tbtab" id="tab-sprint-btn" onclick="setTab('sprint',this)" style="color:var(--blue);">Sprint</button>
       <button class="tbtab" onclick="setTab('surge',this)" style="color:var(--purple);">Surge</button>
@@ -1107,18 +1108,6 @@ body::after{content:'';position:fixed;inset:0;
               <div class="loc-panel"><div class="loc-name"><div class="loc-dot" style="background:var(--green);box-shadow:0 0 6px rgba(83,255,136,.6);"></div>Client A</div><div class="loc-stat" style="color:var(--green);" id="loc-atl">Active</div></div>
               <div class="loc-panel"><div class="loc-name"><div class="loc-dot" style="background:var(--orange);box-shadow:0 0 5px rgba(255,150,30,.5);"></div>Client B</div><div class="loc-stat" style="color:var(--orange);">1 EXCEPTION</div></div>
             </div>
-            <div class="panel" style="border-color:rgba(25,183,239,.15);">
-              <div class="panel-hdr"><div><div class="panel-ttl">Integrations</div><div class="panel-sub">ORDER SOURCES</div></div></div>
-              <div id="shopifyPanel">
-                <div style="padding:14px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-                  <div>
-                    <div style="font-weight:700;font-size:0.923rem;">Shopify</div>
-                    <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);" id="shopifyStatus">Checking connection...</div>
-                  </div>
-                  <button id="shopifyConnectBtn" onclick="connectShopify()" style="padding:8px 16px;border-radius:8px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);color:var(--blue);font-family:var(--sans);font-weight:700;font-size:0.769rem;cursor:pointer;">Connect</button>
-                </div>
-              </div>
-            </div>
           </div>
           <div>
             <div class="panel">
@@ -1134,6 +1123,65 @@ body::after{content:'';position:fixed;inset:0;
               <div class="panel-hdr"><div><div class="panel-ttl">Live Database</div><div class="panel-sub">SUPABASE · TACKPATH PROD</div></div></div>
               <div style="display:flex;flex-direction:column;gap:6px;" id="dbStats">
                 <div style="padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);font-family:var(--mono);font-size:0.769rem;color:var(--muted);">Connecting to database...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHOPIFY TAB -->
+      <div class="tab" id="tab-shopify">
+        <div style="margin-bottom:16px;">
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">Order Source</div>
+          <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Shopify</div>
+        </div>
+
+        <div class="panel" style="border-color:rgba(149,191,71,.2);">
+          <div class="panel-hdr">
+            <div>
+              <div class="panel-ttl">Connection</div>
+              <div class="panel-sub">STORE STATUS</div>
+            </div>
+          </div>
+          <div id="shopifyPanel">
+            <div style="padding:16px;border-radius:10px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="#95bf47"><path d="M15.337 3.108c-.148-.005-.303-.005-.457-.005-1.42 0-2.626.582-3.554 1.503-1.14-.44-2.464-.44-3.7-.02-.03.01-.06.02-.09.03-.31-.66-.87-1.14-1.55-1.29-.07-.02-.15-.03-.22-.03-.34-.005-.67.1-.94.3-.03-.05-.06-.1-.1-.14-.42-.53-1.08-.83-1.78-.78-1.1.08-1.95 1.05-1.9 2.15.03.6.29 1.14.7 1.53-1.32.68-2.25 2.07-2.25 3.66 0 .3.03.6.1.89-.6.35-1.03.98-1.09 1.72-.09 1.14.76 2.15 1.9 2.25.6.05 1.17-.15 1.61-.5.3.4.7.72 1.16.94-.15.35-.24.73-.24 1.14 0 1.6 1.3 2.9 2.9 2.9.55 0 1.06-.15 1.5-.42.5.72 1.3 1.2 2.23 1.2.9 0 1.7-.44 2.2-1.1.44.24.94.38 1.48.38 1.66 0 3-1.34 3-3 0-.35-.06-.68-.17-.99.42-.42.7-.99.78-1.63.03-.25.03-.5-.01-.75.85-.5 1.42-1.42 1.42-2.48 0-.75-.3-1.43-.77-1.93.3-.5.47-1.08.47-1.71 0-1.86-1.5-3.36-3.35-3.36-.14 0-.28.01-.42.03-.1-.03-.2-.06-.31-.08z"/></svg>
+                <div>
+                  <div style="font-weight:700;font-size:1.05rem;">Shopify</div>
+                  <div style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);" id="shopifyStatusMain">Checking connection...</div>
+                </div>
+              </div>
+              <button id="shopifyConnectBtnMain" onclick="connectShopify()" style="padding:10px 20px;border-radius:10px;background:rgba(149,191,71,.1);border:1px solid rgba(149,191,71,.35);color:#95bf47;font-family:var(--sans);font-weight:700;font-size:0.846rem;cursor:pointer;">Connect Store</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cmd-grid" style="margin-top:16px;">
+          <div>
+            <div class="panel">
+              <div class="panel-hdr"><div><div class="panel-ttl">How It Works</div><div class="panel-sub">SETUP FLOW</div></div></div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--card2);">
+                  <div style="font-family:var(--mono);color:#95bf47;font-weight:800;flex-shrink:0;">1</div>
+                  <div style="font-size:0.846rem;color:var(--muted);">Click Connect Store and enter your Shopify domain</div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--card2);">
+                  <div style="font-family:var(--mono);color:#95bf47;font-weight:800;flex-shrink:0;">2</div>
+                  <div style="font-size:0.846rem;color:var(--muted);">Authorize TackPath on Shopify's screen</div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--card2);">
+                  <div style="font-family:var(--mono);color:#95bf47;font-weight:800;flex-shrink:0;">3</div>
+                  <div style="font-size:0.846rem;color:var(--muted);">Every eligible order flows into your Signal Pipeline automatically</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="panel">
+              <div class="panel-hdr"><div><div class="panel-ttl">Orders From Shopify</div><div class="panel-sub">TODAY</div></div></div>
+              <div style="display:flex;flex-direction:column;gap:6px;" id="shopifyOrderStats">
+                <div style="padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);font-family:var(--mono);font-size:0.769rem;color:var(--muted);">Connect a store to see order activity</div>
               </div>
             </div>
           </div>
@@ -1643,6 +1691,7 @@ function setTab(id,btn){
   if(id==='smarttrack') renderSmartTrack();
   if(id==='analytics') renderAnalytics();
   if(id==='command') renderCommand();
+  if(id==='shopify') checkShopifyConnection();
   if(id==='sprint') renderSprint();
   if(id==='surge') renderSurge();
   if(id==='drivers') renderDriverRoster();
@@ -2214,8 +2263,8 @@ async function runSmartTrack(){
 
 // ── SHOPIFY INTEGRATION ──
 async function checkShopifyConnection(){
-  const statusEl=document.getElementById('shopifyStatus');
-  const btnEl=document.getElementById('shopifyConnectBtn');
+  const statusEl=document.getElementById('shopifyStatusMain');
+  const btnEl=document.getElementById('shopifyConnectBtnMain');
   if(!statusEl||!btnEl)return;
   try{
     const filter=currentOrgId?'org_id=eq.'+currentOrgId+'&':'';
@@ -2223,14 +2272,28 @@ async function checkShopifyConnection(){
     if(connections&&connections.length){
       statusEl.textContent='Connected · '+connections[0].shop_domain;
       statusEl.style.color='var(--green)';
-      btnEl.textContent='Manage';
+      btnEl.textContent='Manage Connection';
       btnEl.style.color='var(--green)';
       btnEl.style.borderColor='rgba(83,255,136,.3)';
       btnEl.style.background='rgba(83,255,136,.1)';
+
+      const todayStart=new Date();todayStart.setHours(0,0,0,0);
+      const shopifyJobs=await sbGet('jobs?source=eq.shopify&created_at=gte.'+todayStart.toISOString()+'&order=created_at.desc&limit=50');
+      const statsEl=document.getElementById('shopifyOrderStats');
+      if(statsEl){
+        if(shopifyJobs&&shopifyJobs.length){
+          const delivered=shopifyJobs.filter(j=>j.status==='delivered').length;
+          statsEl.innerHTML=
+            '<div style="padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">Orders received</span><span style="font-family:var(--mono);font-weight:700;">'+shopifyJobs.length+'</span></div>'+
+            '<div style="padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">Delivered</span><span style="font-family:var(--mono);font-weight:700;color:var(--green);">'+delivered+'</span></div>';
+        } else {
+          statsEl.innerHTML='<div style="padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);font-family:var(--mono);font-size:0.769rem;color:var(--muted);">No orders received yet today</div>';
+        }
+      }
     } else {
       statusEl.textContent='Not connected';
       statusEl.style.color='var(--muted)';
-      btnEl.textContent='Connect';
+      btnEl.textContent='Connect Store';
     }
   }catch(e){
     statusEl.textContent='Not connected';
