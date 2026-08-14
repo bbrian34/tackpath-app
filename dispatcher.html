@@ -1008,6 +1008,7 @@ body::after{content:'';position:fixed;inset:0;
                 <th>Signal / Job</th>
                 <th>Title</th>
                 <th>Dropoff</th>
+                <th>Pace</th>
                 <th>Progress</th>
                 <th>Status</th>
                 <th>Created</th>
@@ -2298,7 +2299,7 @@ function renderTable(){
   });
   const tbody=document.getElementById('sigBody');
   if(!filtered.length){
-    tbody.innerHTML=`<tr><td colspan="7"><div class="tbl-empty"><div class="ei">&#9783;</div><div class="et">${jobs.length?'No jobs match your filter':'No jobs in database yet'}</div><div class="es">${jobs.length?'Try clearing the search or filter':'Create a job from the customer portal'}</div></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8"><div class="tbl-empty"><div class="ei">&#9783;</div><div class="et">${jobs.length?'No jobs match your filter':'No jobs in database yet'}</div><div class="es">${jobs.length?'Try clearing the search or filter':'Create a job from the customer portal'}</div></div></td></tr>`;
     return;
   }
   tbody.innerHTML=filtered.map(j=>{
@@ -2327,6 +2328,17 @@ function renderTable(){
       <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
+      <td>${(()=>{
+        if(s==='delivered')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
+        if(s!=='in_transit'&&s!=='customer_confirmed')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
+        if(j.exception_flag)return '<span style="color:var(--red);font-weight:700;font-size:0.769rem;">&#128308; Late</span>';
+        const tracked=SMARTTRACK_STOP_DEADLINE[j.id];
+        if(!tracked||!tracked.deadline)return '<span style="color:var(--muted);font-size:0.769rem;">&#8212;</span>';
+        const minsToDeadline=Math.round((new Date(tracked.deadline).getTime()-Date.now())/60000);
+        if(minsToDeadline<=0)return '<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
+        if(minsToDeadline<=10)return '<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
+        return '<span style="color:var(--green);font-weight:700;font-size:0.769rem;">&#128994; On Time</span>';
+      })()}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px;min-width:100px;">
           <div style="flex:1;height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden;">
