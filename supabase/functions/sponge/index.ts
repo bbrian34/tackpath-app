@@ -17,6 +17,7 @@ const corsHeaders = {
 
 // Files Sponge reads and what it should learn from each
 const TARGET_FILES = [
+  { path: "knowledge/industry_2026.md", label: "Industry Knowledge Base", focus: "last-mile delivery market benchmarks, competitor landscape, technology trends, operational standards" },
   { path: "guide.html", label: "Operator Guide", focus: "business rules, workflows, feature purpose" },
   { path: "dispatcher.html", label: "Dispatcher App", focus: "core dispatch logic, SmartSort clustering, SmartTrack exception detection, database schema fields used" },
   { path: "driver.html", label: "Driver App", focus: "driver workflow, scan flow, stop confirmation, GPS tracking" },
@@ -94,6 +95,14 @@ serve(async (req) => {
 // Extracts structured facts from each file type rather than storing raw code
 function summarizeFile(file: any, content: string): string {
   const facts: string[] = [];
+
+  if (file.path === "knowledge/industry_2026.md") {
+    // Pull out section headers as a table of contents, plus key benchmark numbers
+    const headers = [...content.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
+    facts.push(`Sections covered: ${headers.join(", ")}`);
+    const boldFacts = [...content.matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1].trim()).slice(0, 15);
+    if (boldFacts.length) facts.push(`Key benchmarks: ${boldFacts.join(" | ")}`);
+  }
 
   if (file.path === "guide.html") {
     // Pull out section headers as a table of contents of documented features
