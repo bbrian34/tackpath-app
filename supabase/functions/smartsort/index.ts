@@ -71,6 +71,10 @@ serve(async (req) => {
       const pickup = stops[0]?.address || "Warehouse";
       const dropoff = stops[stops.length - 1]?.address || "";
 
+      // Calculate real traffic-aware route duration plus per-stop handling time
+      const routeSeconds = await getTrafficAwareRouteSeconds(stopsWithId);
+      const etaTimestamp = new Date(Date.now() + routeSeconds * 1000).toISOString();
+
       const { data: job, error } = await supabase
         .from("jobs")
         .insert({
@@ -85,6 +89,8 @@ serve(async (req) => {
           org_id: org_id || null,
           priority: "normal",
           exception_flag: false,
+          estimated_delivery_at: etaTimestamp,
+          original_eta_at: etaTimestamp,
         })
         .select()
         .single();
@@ -116,6 +122,54 @@ serve(async (req) => {
 });
 
 // ── GEOSPATIAL CLUSTERING ──
+
+// ── LIVE TRAFFIC ETA (matches browser dispatcher fix) ──
+async function getTrafficAwareLegSeconds(originCoords: any, destCoords: any): Promise<number | null> {
+  try {
+    const resp = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GKEY,
+        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: originCoords.lat, longitude: originCoords.lng } } },
+        destination: { location: { latLng: { latitude: destCoords.lat, longitude: destCoords.lng } } },
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_AWARE",
+        departureTime: new Date().toISOString(),
+      }),
+    });
+    const data = await resp.json();
+    if (data.routes && data.routes[0] && data.routes[0].duration) {
+      const seconds = parseInt(data.routes[0].duration.replace("s", ""));
+      if (!isNaN(seconds)) return seconds;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function getTrafficAwareRouteSeconds(stops: any[]): Promise<number> {
+  const MINUTES_PER_STOP_HANDLING = 4;
+  let totalSeconds = 0;
+
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (stops[i].coords && stops[i + 1].coords) {
+      const legSeconds = await getTrafficAwareLegSeconds(stops[i].coords, stops[i + 1].coords);
+      if (legSeconds !== null) {
+        totalSeconds += legSeconds;
+        continue;
+      }
+    }
+    totalSeconds += 6 * 60; // fallback drive time for missing coords or failed API call
+  }
+
+  totalSeconds += stops.length * MINUTES_PER_STOP_HANDLING * 60;
+  return totalSeconds;
+}
 
 function haversine(a: any, b: any): number {
   const R = 3958.8;
