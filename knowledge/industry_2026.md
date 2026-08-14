@@ -97,3 +97,44 @@ When evaluating whether a TackPath customer's operation is healthy, use these an
 - Cost per delivery outside $8–$20 range (depending on delivery type) = worth flagging for review
 
 The industry-wide shift toward agentic, autonomous dispatch systems validates TackPath's core architecture choice. This is not a speculative bet — it is the direction every major platform in this space is already moving toward as of 2026.
+
+---
+
+## Agentic AI Adoption — Direct Industry Validation (2026)
+
+Multiple 2026 industry sources independently confirm the exact architectural direction TackPath is building toward. This is not a niche bet — every major platform commentator in this space is describing the same shift.
+
+**Dispatch (enterprise delivery platform), December 2025:** "In 2026, AI will shift from supporting decision-making to actively owning it across planning, execution, and continuous improvement." Their stated 2026 forecast: "enterprises will demand a single layer of intelligence to manage owned fleets, third-party carriers, and national driver networks together, optimizing across the entire ecosystem rather than in silos." This describes a coordinator/brain layer sitting above individual fleet operations — precisely TackPath's Brain concept.
+
+**Locus, on "agentic driver management" (June 2026):** Describes the shift as moving "from workforce-scheduling software to agentic driver management: a multi-agent AI orchestration architecture where dispatch agents, capacity agents, hub agents, customer agents, and in-field driver co-pilots collaborate to coordinate the full operational surface of last-mile delivery." This is a near-exact description of TackPath's Sam/Piper/Todd/Brain swarm architecture, independently arrived at by an enterprise competitor.
+
+**NextBillion.ai, on AI agents for last-mile (May 2026):** "Last-mile delivery doesn't fail because the morning plan was bad. It fails because conditions change after the plan is made, and most tools have no mechanism to respond." Their framing of true AI agents: "Autonomous software systems that continuously perceive delivery conditions, reason across competing constraints, and take corrective action — without waiting for a dispatcher to notice the problem first." This is exactly the value proposition of Todd (SmartTrack) + the Brain's proactive pattern detection, versus a dispatcher manually watching a dashboard.
+
+**Locus, on AI-native vs AI-bolted-on (2026):** Critical distinction — "Most 'AI-enabled' last-mile platforms in the market are still legacy systems with AI modules layered on top." True AI-native platforms "embed machine learning into planning, dispatch, routing, exception handling, and decisioning — not just as an add-on feature." TackPath is architecturally AI-native from the ground up (the swarm agents ARE the dispatch logic, not a bolt-on analytics layer), which puts it ahead of the majority of the current market on this specific dimension even at TackPath's smaller scale.
+
+**Key governance point from Locus:** Agentic orchestration "requires clear governance over what AI can decide" and "needs human-in-the-loop controls for high-risk customer, SLA, or compliance decisions." This validates TackPath's own design principle — the Brain should recommend and escalate high-risk decisions to Bryan/the dispatcher, not silently auto-execute everything. Full autonomy is not the 2026 industry consensus target; supervised autonomy is.
+
+## Driver Economics — What TackPath's Drivers Actually Face
+
+This matters directly for TackPath because driver retention and satisfaction determines whether a courier company using TackPath can actually staff its routes.
+
+- **Gig driver net pay in 2026: $8–$14/hour** after gas, vehicle wear, and platform fees — despite advertised gross earnings of $18–$22/hour. Expenses consume 35–45% of gross in markets with elevated gas prices.
+- Experienced drivers now apply hard acceptance rules: **$6–$8 minimum base pay per order, or $1.50/mile — whichever is higher.** Anything below that, they decline.
+- **Amazon's own leaked data: driver churn hits nearly half of new hires within the first 90 days.** The industry consensus is this is a retention crisis, not a labor shortage — drivers exist, but platforms are failing to keep them.
+- Drivers explicitly value **route consistency** — "knowing they'll be in the same area/route (not all over the place like gig apps take you)" is cited as a top retention factor, ahead of pure pay in some cases.
+- **B2B final-mile delivery is actively pulling drivers away from consumer gig apps** — drivers report wanting "more structure, more consistency, and more support" than DoorDash/Uber Eats provide. This is TackPath's exact target market (3PLs/couriers running B2B contract delivery, not consumer on-demand).
+- Roadie (UPS-owned last-mile gig platform) drivers net **$10–$12/hour median** after expenses, at $1.58/mile median pay rate.
+
+**TackPath implication:** SmartSort's equal-package clustering (same pay across drivers, less driving) is a genuine differentiator against the "chase any order" gig economics described above. TackPath customers offering route consistency through SmartSort's geographic zone clustering directly addresses the #1 driver retention factor identified in 2026 research — not pay alone, but predictability.
+
+## Autonomous Delivery Vehicles — Current State (2026)
+
+For context on the edge of the industry, not directly relevant to TackPath's near-term roadmap but useful Brain context:
+
+- Zipline: 100M+ autonomous delivery miles, partnered with Walmart for Dallas-Fort Worth
+- Wing (Alphabet): one of the most advanced drone delivery operations globally
+- Serve Robotics: 2,000+ sidewalk robots, partnered with Uber Eats and DoorDash
+- Amazon Prime Air: 20,000+ drone deliveries in US suburbs
+- Matternet: healthcare-focused drone delivery for medical supplies
+
+These remain a small fraction of total last-mile volume in 2026 but signal where large platforms are investing capital. Not a near-term competitive concern for TackPath's target customer segment (3PLs running traditional vehicle fleets).
