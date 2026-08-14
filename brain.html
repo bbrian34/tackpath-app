@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TackPath · The Brain</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:radial-gradient(ellipse at center,#0a1628 0%,#02060e 70%);
+  color:#eef4ff;
+  height:100vh;
+  overflow:hidden;
+  position:relative;
+}
+
+/* Ambient particle grid */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(25,183,239,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(25,183,239,.03) 1px,transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+  animation:gridDrift 60s linear infinite;
+}
+@keyframes gridDrift{from{background-position:0 0;}to{background-position:48px 48px;}}
+
+.hdr{position:fixed;top:0;left:0;right:0;padding:16px 24px;display:flex;align-items:center;gap:14px;z-index:100;background:linear-gradient(180deg,rgba(2,6,14,.9),transparent);}
+.hdr-logo{font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:800;letter-spacing:1px;}
+.hdr-title{font-size:.95rem;font-weight:700;color:rgba(255,255,255,.6);}
+.live-chip{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:.68rem;color:#53ff88;letter-spacing:.1em;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#53ff88;box-shadow:0 0 8px #53ff88;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.back-btn{margin-left:auto;padding:6px 14px;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#fff;text-decoration:none;}
+
+/* Main stage */
+.stage{position:relative;width:100%;height:100vh;display:flex;align-items:center;justify-content:center;}
+
+/* Connector SVG layer */
+.connectors{position:absolute;inset:0;pointer-events:none;z-index:1;}
+.connector-line{stroke:rgba(25,183,239,.25);stroke-width:1.5;fill:none;stroke-dasharray:4 4;animation:dashFlow 3s linear infinite;}
+@keyframes dashFlow{to{stroke-dashoffset:-16;}}
+.pulse-dot{fill:#19b7ef;filter:drop-shadow(0 0 4px #19b7ef);}
+
+/* Central brain */
+.brain-core{
+  position:relative;
+  width:180px;height:180px;
+  border-radius:50%;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(circle at 35% 30%,rgba(25,183,239,.25),rgba(10,20,40,.9) 70%);
+  border:2px solid rgba(25,183,239,.4);
+  box-shadow:0 0 60px rgba(25,183,239,.3),inset 0 0 40px rgba(25,183,239,.15);
+  animation:brainPulse 4s ease-in-out infinite;
+  cursor:default;
+}
+@keyframes brainPulse{
+  0%,100%{box-shadow:0 0 60px rgba(25,183,239,.3),inset 0 0 40px rgba(25,183,239,.15);}
+  50%{box-shadow:0 0 90px rgba(25,183,239,.5),inset 0 0 60px rgba(25,183,239,.25);}
+}
+.brain-core::before{
+  content:'';
+  position:absolute;inset:-2px;
+  border-radius:50%;
+  border:2px solid transparent;
+  border-top-color:rgba(25,183,239,.6);
+  border-right-color:rgba(141,92,255,.4);
+  animation:brainSpin 8s linear infinite;
+}
+@keyframes brainSpin{to{transform:rotate(360deg);}}
+.brain-icon{font-size:3.2rem;filter:drop-shadow(0 0 12px rgba(25,183,239,.6));}
+.brain-label{
+  position:absolute;bottom:-38px;left:50%;transform:translateX(-50%);
+  font-family:'DM Mono',monospace;font-size:.72rem;color:#19b7ef;
+  letter-spacing:.15em;text-transform:uppercase;white-space:nowrap;
+  text-shadow:0 0 10px rgba(25,183,239,.5);
+}
+.brain-status{
+  position:absolute;bottom:-58px;left:50%;transform:translateX(-50%);
+  font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.4);
+  white-space:nowrap;
+}
+
+/* Agent nodes orbiting */
+.agent-node{
+  position:absolute;
+  width:104px;height:104px;
+  border-radius:50%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index:5;
+  transition:transform .2s;
+}
+.agent-node:hover{transform:scale(1.08);}
+.agent-orb{
+  width:88px;height:88px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;
+  position:relative;
+  transition:all .3s;
+}
+.agent-orb.active{
+  background:radial-gradient(circle at 35% 30%,rgba(83,255,136,.2),rgba(10,20,40,.9) 70%);
+  border:2px solid rgba(83,255,136,.5);
+  box-shadow:0 0 30px rgba(83,255,136,.25);
+}
+.agent-orb.dormant{
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.06),rgba(10,20,40,.8) 70%);
+  border:2px solid rgba(255,255,255,.1);
+  opacity:.4;
+}
+.agent-status-dot{
+  position:absolute;top:4px;right:4px;
+  width:10px;height:10px;border-radius:50%;
+  border:2px solid #02060e;
+}
+.agent-status-dot.active{background:#53ff88;box-shadow:0 0 8px #53ff88;animation:pulse 2s infinite;}
+.agent-status-dot.dormant{background:rgba(255,255,255,.2);}
+.agent-name{margin-top:8px;font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:#fff;}
+.agent-role{font-family:'DM Mono',monospace;font-size:.6rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;}
+.agent-online{font-family:'DM Mono',monospace;font-size:.58rem;color:#53ff88;letter-spacing:.06em;margin-top:3px;}
+.agent-offline{font-family:'DM Mono',monospace;font-size:.58rem;color:rgba(255,255,255,.3);letter-spacing:.06em;margin-top:3px;}
+
+/* Feed panel */
+.feed-panel{
+  position:fixed;right:24px;top:80px;bottom:24px;width:340px;
+  background:rgba(7,16,30,.85);backdrop-filter:blur(12px);
+  border:1px solid rgba(25,183,239,.15);border-radius:16px;
+  padding:18px;
+  z-index:50;
+  display:flex;flex-direction:column;
+  box-shadow:0 8px 40px rgba(0,0,0,.4);
+}
+.feed-title{font-family:'DM Mono',monospace;font-size:.72rem;color:#19b7ef;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.feed-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.feed-list::-webkit-scrollbar{width:5px;}
+.feed-list::-webkit-scrollbar-thumb{background:rgba(25,183,239,.25);border-radius:3px;}
+.feed-item{
+  padding:10px 12px;border-radius:10px;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);
+  font-size:.78rem;line-height:1.4;
+}
+.feed-item.smartsort{border-left:3px solid #8d5cff;}
+.feed-item.smarttrack{border-left:3px solid #19b7ef;}
+.feed-item.swarm{border-left:3px solid #53ff88;}
+.feed-agent{font-family:'DM Mono',monospace;font-size:.66rem;font-weight:700;margin-bottom:3px;}
+.feed-agent.smartsort{color:#8d5cff;}
+.feed-agent.smarttrack{color:#19b7ef;}
+.feed-agent.swarm{color:#53ff88;}
+.feed-detail{color:rgba(255,255,255,.7);}
+.feed-time{font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:4px;}
+.feed-empty{padding:30px 10px;text-align:center;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;font-size:.72rem;}
+
+/* Stats bar */
+.stats-bar{
+  position:fixed;left:24px;top:80px;
+  display:flex;flex-direction:column;gap:10px;
+  z-index:50;
+}
+.stat-chip{
+  background:rgba(7,16,30,.85);backdrop-filter:blur(12px);
+  border:1px solid rgba(25,183,239,.15);border-radius:12px;
+  padding:10px 16px;min-width:140px;
+}
+.stat-val{font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:800;color:#fff;}
+.stat-lbl{font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+
+/* Detail modal */
+.agent-modal{
+  position:fixed;inset:0;background:rgba(2,6,14,.85);backdrop-filter:blur(6px);
+  z-index:200;display:none;align-items:center;justify-content:center;
+}
+.agent-modal.open{display:flex;}
+.agent-modal-box{
+  background:#07101e;border:1px solid rgba(25,183,239,.25);border-radius:20px;
+  padding:28px;max-width:420px;width:90%;
+  box-shadow:0 0 60px rgba(25,183,239,.2);
+}
+.amb-close{float:right;cursor:pointer;color:rgba(255,255,255,.4);font-size:1.2rem;}
+.amb-title{font-family:'DM Mono',monospace;font-size:1.1rem;font-weight:800;margin-bottom:4px;}
+.amb-role{font-family:'DM Mono',monospace;font-size:.72rem;color:rgba(255,255,255,.4);margin-bottom:16px;}
+.amb-desc{font-size:.88rem;line-height:1.6;color:rgba(255,255,255,.75);}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <svg width="15" height="27" viewBox="0 0 38 70" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
+    <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+    <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+    <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+  </svg>
+  <span style="font-size:1rem;font-weight:800;letter-spacing:1px;"><span style="color:#fff;">TACK</span><span style="color:#19b7ef;">PATH</span></span>
+  <div class="live-chip"><div class="live-dot"></div>SWARM ACTIVE</div>
+  <a href="dispatcher.html" class="back-btn">← Dispatcher</a>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-chip">
+    <div class="stat-val" id="statAgents">2</div>
+    <div class="stat-lbl">Active Agents</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-val" id="statEvents">—</div>
+    <div class="stat-lbl">Events Today</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-val" id="statJoint">—</div>
+    <div class="stat-lbl">Joint Analyses</div>
+  </div>
+</div>
+
+<div class="stage">
+  <svg class="connectors" id="connectorSvg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet"></svg>
+
+  <div class="brain-core" onclick="openModal('brain')">
+    <div class="brain-icon">&#129504;</div>
+    <div class="brain-label">Swarm Coordinator</div>
+    <div class="brain-status" id="brainStatus">Monitoring 2 agents</div>
+  </div>
+
+  <div class="agent-node" id="node-sam" onclick="openModal('sam')">
+    <div class="agent-orb active">
+      <div class="agent-status-dot active"></div>
+      &#128506;
+    </div>
+    <div class="agent-name">Sam</div>
+    <div class="agent-role">SmartSort</div>
+    <div class="agent-online">&#9679; ONLINE</div>
+  </div>
+
+  <div class="agent-node" id="node-path" onclick="openModal('path')" style="width:80px;height:80px;">
+    <div class="agent-orb active" style="width:68px;height:68px;font-size:1.5rem;">
+      <div class="agent-status-dot active"></div>
+      &#128506;
+    </div>
+    <div class="agent-name" style="font-size:.7rem;">Piper</div>
+    <div class="agent-role" style="font-size:.54rem;">SmartPath</div>
+    <div class="agent-online" style="font-size:.52rem;">&#9679; ONLINE</div>
+  </div>
+
+  <div class="agent-node" id="node-todd" onclick="openModal('todd')">
+    <div class="agent-orb active">
+      <div class="agent-status-dot active"></div>
+      &#128225;
+    </div>
+    <div class="agent-name">Todd</div>
+    <div class="agent-role">SmartTrack</div>
+    <div class="agent-online">&#9679; ONLINE</div>
+  </div>
+
+  <div class="agent-node" id="node-comms" onclick="openModal('comms')">
+    <div class="agent-orb dormant">
+      <div class="agent-status-dot dormant"></div>
+      &#128172;
+    </div>
+    <div class="agent-name">SmartComms</div>
+    <div class="agent-role">Communication</div>
+    <div class="agent-offline">&#9679; OFFLINE</div>
+  </div>
+
+  <div class="agent-node" id="node-match" onclick="openModal('match')">
+    <div class="agent-orb dormant">
+      <div class="agent-status-dot dormant"></div>
+      &#128260;
+    </div>
+    <div class="agent-name">SmartMatch</div>
+    <div class="agent-role">Reassignment</div>
+    <div class="agent-offline">&#9679; OFFLINE</div>
+  </div>
+
+  <div class="agent-node" id="node-owl" onclick="openModal('owl')">
+    <div class="agent-orb dormant">
+      <div class="agent-status-dot dormant"></div>
+      &#129418;
+    </div>
+    <div class="agent-name">OWL</div>
+    <div class="agent-role">Intelligence</div>
+    <div class="agent-offline">&#9679; OFFLINE</div>
+  </div>
+</div>
+
+<div class="feed-panel">
+  <div class="feed-title">&#9889; Swarm Activity Log</div>
+  <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.35);margin-bottom:12px;margin-top:-8px;">Real events from agent_memory — not a chat</div>
+  <div class="feed-list" id="feedList">
+    <div class="feed-empty">Loading agent memory...</div>
+  </div>
+</div>
+
+<div class="agent-modal" id="agentModal">
+  <div class="agent-modal-box">
+    <span class="amb-close" onclick="closeModal()">✕</span>
+    <div class="amb-title" id="ambTitle"></div>
+    <div class="amb-role" id="ambRole"></div>
+    <div class="amb-desc" id="ambDesc"></div>
+  </div>
+</div>
+
+<script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
+
+const agentInfo={
+  brain:{title:"Swarm Coordinator",role:"The Brain",desc:"Sits above all specialized agents. Reads what each agent detects and remembers, joins their findings together, and produces recommendations neither agent could reach alone. Currently connects SmartSort route intelligence with SmartTrack exception detection."},
+  sam:{title:"Sam — SmartSort",role:"Route Clustering Agent · Active",desc:"Geocodes manifests, clusters stops into driver-sized geographic zones using k-means++, creates and broadcasts jobs. Logs every clustering run to shared memory."},
+  path:{title:"Piper — SmartPath",role:"Route Sequencing Agent · Active",desc:"Works directly with Sam. Once SmartSort clusters stops into driver zones, Piper sequences each zone using nearest-neighbor optimization for minimum drive time, and calculates the traffic-aware ETA for the full route."},
+  todd:{title:"Todd — SmartTrack",role:"Delivery Pace Agent · Active",desc:"Locks a live deadline for each driver current stop based on real traffic ETA. Watches for drivers falling behind that specific deadline, flags exceptions, messages drivers directly, and calls the Swarm Coordinator to pull in Sam route context when something goes wrong."},
+  comms:{title:"SmartComms",role:"Driver Communication Agent · Dormant",desc:"Not yet built. Will handle routine driver check-ins, auto-respond to common messages, and manage end-of-route confirmations autonomously."},
+  match:{title:"SmartMatch",role:"Reassignment Agent · Dormant",desc:"Not yet built. Will find the nearest available driver when a route needs reassignment and execute the handoff automatically."},
+  owl:{title:"OWL",role:"Intelligence Agent · Dormant",desc:"Not yet built. Will analyze patterns across days and weeks — which zones run late, which drivers outperform, revenue trends — and surface strategic insights."}
+};
+
+function openModal(id){
+  const info=agentInfo[id];
+  document.getElementById('ambTitle').textContent=info.title;
+  document.getElementById('ambRole').textContent=info.role;
+  document.getElementById('ambDesc').textContent=info.desc;
+  document.getElementById('agentModal').classList.add('open');
+}
+function closeModal(){document.getElementById('agentModal').classList.remove('open');}
+
+async function sbGet(path){
+  const r=await fetch(SB+'/rest/v1/'+path,{headers:H});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+
+function positionNodes(){
+  const stage=document.querySelector('.stage');
+  const cx=stage.clientWidth/2, cy=stage.clientHeight/2;
+  const radius=Math.min(stage.clientWidth,stage.clientHeight)*0.32;
+  // 6 o'clock = 90deg (bottom), sweeping counter-clockwise through 9 (180deg) to 12 o'clock = 270deg (top) -- left side
+  const nodes=[
+    {id:'node-sam',angle:90},
+    {id:'node-path',angle:126},
+    {id:'node-todd',angle:162},
+    {id:'node-comms',angle:198},
+    {id:'node-match',angle:234},
+    {id:'node-owl',angle:270}
+  ];
+  const svg=document.getElementById('connectorSvg');
+  svg.innerHTML='';
+  svg.setAttribute('viewBox','0 0 '+stage.clientWidth+' '+stage.clientHeight);
+
+  const positions={};
+
+  nodes.forEach(n=>{
+    const rad=n.angle*Math.PI/180;
+    const x=cx+radius*Math.cos(rad);
+    const y=cy+radius*Math.sin(rad);
+    positions[n.id]={x,y};
+    const el=document.getElementById(n.id);
+    el.style.left=(x-52)+'px';
+    el.style.top=(y-52)+'px';
+
+    // Draw connector line from brain center to this node
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',cx);line.setAttribute('y1',cy);
+    line.setAttribute('x2',x);line.setAttribute('y2',y);
+    line.setAttribute('class','connector-line');
+    svg.appendChild(line);
+  });
+
+  // Direct connector: SmartPath to Sam -- Piper sequences what Sam clusters
+  if(positions['node-sam']&&positions['node-path']){
+    const directLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+    directLine.setAttribute('x1',positions['node-sam'].x);directLine.setAttribute('y1',positions['node-sam'].y);
+    directLine.setAttribute('x2',positions['node-path'].x);directLine.setAttribute('y2',positions['node-path'].y);
+    directLine.setAttribute('class','connector-line');
+    directLine.setAttribute('style','stroke:rgba(83,255,136,.4);stroke-width:2;');
+    svg.appendChild(directLine);
+  }
+}
+
+async function loadFeed(){
+  try{
+    const events=await sbGet('agent_memory?order=created_at.desc&limit=25');
+    const list=document.getElementById('feedList');
+    if(!events.length){
+      list.innerHTML='<div class="feed-empty">No agent activity yet — upload a manifest to see Sam and Todd in action</div>';
+      return;
+    }
+    list.innerHTML=events.map(e=>{
+      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':'swarm';
+      let detail='';
+      if(e.event_type==='cluster_created'){
+        detail='Clustered '+(e.details.total_stops||'?')+' stops into '+(e.details.clusters_created||'?')+' routes ('+(e.details.total_packages||'?')+' packages)';
+      } else if(e.event_type==='stop_past_eta'){
+        detail=(e.driver_name||'Driver')+' is '+(e.details.minutes_late||'?')+' min late on stop '+(e.details.stop_number||'?');
+      } else if(e.event_type==='joint_analysis'){
+        detail=e.details.recommendation||'Joint analysis completed';
+      } else {
+        detail=e.event_type;
+      }
+      const timeAgo=(()=>{
+        const s=Math.floor((Date.now()-new Date(e.created_at))/1000);
+        if(s<60)return s+'s ago';
+        if(s<3600)return Math.floor(s/60)+'m ago';
+        return Math.floor(s/3600)+'h ago';
+      })();
+      return `<div class="feed-item ${cls}">
+        <div class="feed-agent ${cls}">${e.agent_name}</div>
+        <div class="feed-detail">${detail}</div>
+        <div class="feed-time">${timeAgo}</div>
+      </div>`;
+    }).join('');
+
+    // Update stats
+    const today=new Date();today.setHours(0,0,0,0);
+    const todayEvents=events.filter(e=>new Date(e.created_at)>=today);
+    document.getElementById('statEvents').textContent=todayEvents.length;
+    document.getElementById('statJoint').textContent=todayEvents.filter(e=>e.event_type==='joint_analysis').length;
+
+  }catch(e){
+    console.error('Feed load error:',e);
+  }
+}
+
+window.addEventListener('resize',positionNodes);
+positionNodes();
+loadFeed();
+setInterval(loadFeed,8000);
+</script>
+</body>
+</html>
