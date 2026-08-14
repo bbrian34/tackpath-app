@@ -3800,18 +3800,58 @@ function renderPackageTable(){
     </div>`).join('');
 }
 
+// ── MARCO: geocoding agent, serves both Sam and Todd ──
+const MARCO_CACHE={}; // address -> {lat,lng} -- avoids re-geocoding the same address
+let MARCO_SUCCESS_COUNT=0;
+let MARCO_FAIL_COUNT=0;
+let lastMarcoReport=0;
+const MARCO_REPORT_INTERVAL_MIN=15;
+
 async function geocodeAddress(address){
+  const cacheKey=address.trim().toLowerCase();
+  if(MARCO_CACHE[cacheKey]) return MARCO_CACHE[cacheKey];
+
   try{
     const resp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(address)+'&key='+GKEY);
     const data=await resp.json();
     if(data.status==='OK'&&data.results&&data.results[0]){
       const loc=data.results[0].geometry.location;
-      return {lat:loc.lat,lng:loc.lng};
+      const coords={lat:loc.lat,lng:loc.lng};
+      MARCO_CACHE[cacheKey]=coords;
+      MARCO_SUCCESS_COUNT++;
+      maybeReportMarcoStatus();
+      return coords;
     }
+    MARCO_FAIL_COUNT++;
+    maybeReportMarcoStatus();
     return null;
   }catch(e){
+    MARCO_FAIL_COUNT++;
+    maybeReportMarcoStatus();
     return null;
   }
+}
+
+function maybeReportMarcoStatus(){
+  const now=Date.now();
+  if(now-lastMarcoReport<MARCO_REPORT_INTERVAL_MIN*60000)return;
+  lastMarcoReport=now;
+  const total=MARCO_SUCCESS_COUNT+MARCO_FAIL_COUNT;
+  if(total===0)return;
+  const failRate=Math.round((MARCO_FAIL_COUNT/total)*100);
+  logAgentMemory('Marco','geocoding_report',null,null,{
+    total_requests:total,
+    successful:MARCO_SUCCESS_COUNT,
+    failed:MARCO_FAIL_COUNT,
+    fail_rate_pct:failRate,
+    cache_size:Object.keys(MARCO_CACHE).length
+  },failRate>15?'flagged':'healthy').catch(()=>{});
+  if(failRate>15){
+    addIntelEvent('&#128506; Marco flagged elevated geocoding failure rate: '+failRate+'% of addresses failing to resolve.','var(--orange)');
+  }
+  // Reset counters for the next reporting window
+  MARCO_SUCCESS_COUNT=0;
+  MARCO_FAIL_COUNT=0;
 }
 
 // Real traffic-aware leg duration via Google's modern Routes API (not the legacy Directions API,
