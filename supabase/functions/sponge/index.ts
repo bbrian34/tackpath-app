@@ -17,6 +17,7 @@ const corsHeaders = {
 
 // Files Sponge reads and what it should learn from each
 const TARGET_FILES = [
+  { path: "knowledge/shopify_integration_guide.md", label: "Shopify Integration Guide", focus: "how merchants connect their store, technical permissions, common questions and answers" },
   { path: "knowledge/industry_2026.md", label: "Industry Knowledge Base", focus: "last-mile delivery market benchmarks, competitor landscape, technology trends, operational standards" },
   { path: "guide.html", label: "Operator Guide", focus: "business rules, workflows, feature purpose" },
   { path: "dispatcher.html", label: "Dispatcher App", focus: "core dispatch logic, SmartSort clustering, SmartTrack exception detection, database schema fields used" },
@@ -102,6 +103,13 @@ function summarizeFile(file: any, content: string): string {
     facts.push(`Sections covered: ${headers.join(", ")}`);
     const boldFacts = [...content.matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1].trim()).slice(0, 15);
     if (boldFacts.length) facts.push(`Key benchmarks: ${boldFacts.join(" | ")}`);
+  }
+
+  if (file.path === "knowledge/shopify_integration_guide.md") {
+    const headers = [...content.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
+    facts.push(`Sections covered: ${headers.join(", ")}`);
+    const questions = [...content.matchAll(/\*\*"([^"]+)"\*\*/g)].map((m) => m[1].trim());
+    if (questions.length) facts.push(`FAQ topics: ${questions.join(" | ")}`);
   }
 
   if (file.path === "guide.html") {
