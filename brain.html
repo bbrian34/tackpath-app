@@ -373,72 +373,76 @@ function positionNodes(){
   const stage=document.querySelector('.stage');
   const cx=stage.clientWidth/2, cy=stage.clientHeight/2;
   const radius=Math.min(stage.clientWidth,stage.clientHeight)*0.32;
-  const assistantRadius=radius*0.72; // Piper, Marco, Ruby sit closer to the Brain -- assistants, not leads
-  const assistantNodes=new Set(['node-path','node-marco','node-ruby']);
-  // 6 o'clock = 90deg (bottom), sweeping counter-clockwise through 9 (180deg) to 12 o'clock = 270deg (top) -- left side
-  const nodes=[
+  const satelliteOffset=58; // how far a satellite sits from its lead node
+
+  // 5 lead agents evenly spaced across the 6-to-12 o'clock arc
+  const leads=[
     {id:'node-sam',angle:90},
-    {id:'node-path',angle:115.7},
-    {id:'node-marco',angle:141.4},
-    {id:'node-todd',angle:167.1},
-    {id:'node-comms',angle:192.9},
-    {id:'node-ruby',angle:218.6},
-    {id:'node-match',angle:244.3},
+    {id:'node-todd',angle:135},
+    {id:'node-comms',angle:180},
+    {id:'node-match',angle:225},
     {id:'node-owl',angle:270}
   ];
+
   const svg=document.getElementById('connectorSvg');
   svg.innerHTML='';
   svg.setAttribute('viewBox','0 0 '+stage.clientWidth+' '+stage.clientHeight);
 
   const positions={};
 
-  nodes.forEach(n=>{
+  // Place lead nodes and draw their Brain connector
+  leads.forEach(n=>{
     const rad=n.angle*Math.PI/180;
-    const r=assistantNodes.has(n.id)?assistantRadius:radius;
-    const x=cx+r*Math.cos(rad);
-    const y=cy+r*Math.sin(rad);
-    positions[n.id]={x,y};
+    const x=cx+radius*Math.cos(rad);
+    const y=cy+radius*Math.sin(rad);
+    positions[n.id]={x,y,angle:n.angle};
     const el=document.getElementById(n.id);
     el.style.left=(x-52)+'px';
     el.style.top=(y-52)+'px';
 
-    // Every node connects to the Brain -- same blue dashed line for all, since
-    // it represents the same relationship: "the Brain is aware this agent exists"
     const line=document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1',cx);line.setAttribute('y1',cy);
     line.setAttribute('x2',x);line.setAttribute('y2',y);
     line.setAttribute('class','connector-line');
-    line.setAttribute('style','stroke:rgba(25,183,239,.3);stroke-width:1.5;stroke-dasharray:4 4;');
+    line.setAttribute('style','stroke:rgba(25,183,239,.28);stroke-width:1.5;stroke-dasharray:4 4;');
     svg.appendChild(line);
   });
 
-  // Assistant pairs -- same green color for both, since Piper/Sam and Ruby/Mario
-  // are the same relationship type: an assistant agent working directly with its lead
-  function drawAssistantLine(leadId,assistantId){
+  // Satellites orbit just outside their lead, along the same radial direction --
+  // pushes them further from center on the SAME angle as their lead, so they read
+  // as "attached to" that agent rather than floating independently on the arc
+  function placeSatellite(satId,leadId,sideOffsetDeg){
+    if(!positions[leadId])return;
+    const leadAngle=positions[leadId].angle;
+    const satAngle=leadAngle+sideOffsetDeg;
+    const satRadius=radius+satelliteOffset;
+    const rad=satAngle*Math.PI/180;
+    const x=cx+satRadius*Math.cos(rad);
+    const y=cy+satRadius*Math.sin(rad);
+    positions[satId]={x,y};
+    const el=document.getElementById(satId);
+    el.style.left=(x-40)+'px';
+    el.style.top=(y-40)+'px';
+  }
+
+  placeSatellite('node-path','node-sam',-16);   // Piper -- just outside and slightly counter-clockwise of Sam
+  placeSatellite('node-marco','node-sam',16);   // Marco -- just outside and slightly clockwise of Sam (also serves Todd)
+  placeSatellite('node-ruby','node-comms',18);  // Ruby -- just outside and slightly clockwise of Mario
+
+  // Assistant lines -- short, direct, same green for both lead/assistant pairs
+  function drawAssistantLine(leadId,assistantId,color){
     if(!positions[leadId]||!positions[assistantId])return;
     const l=document.createElementNS('http://www.w3.org/2000/svg','line');
     l.setAttribute('x1',positions[leadId].x);l.setAttribute('y1',positions[leadId].y);
     l.setAttribute('x2',positions[assistantId].x);l.setAttribute('y2',positions[assistantId].y);
     l.setAttribute('class','connector-line');
-    l.setAttribute('style','stroke:rgba(83,255,136,.5);stroke-width:2.5;');
+    l.setAttribute('style','stroke:'+color+';stroke-width:2.5;');
     svg.appendChild(l);
   }
-  drawAssistantLine('node-sam','node-path');   // Piper assists Sam
-  drawAssistantLine('node-comms','node-ruby'); // Ruby assists Mario
-
-  // Marco serves both Sam and Todd directly -- purple, since it's a distinct
-  // relationship type (shared infrastructure, not an assistant or a coordinator link)
-  function drawMarcoLine(otherId){
-    if(!positions['node-marco']||!positions[otherId])return;
-    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
-    l.setAttribute('x1',positions['node-marco'].x);l.setAttribute('y1',positions['node-marco'].y);
-    l.setAttribute('x2',positions[otherId].x);l.setAttribute('y2',positions[otherId].y);
-    l.setAttribute('class','connector-line');
-    l.setAttribute('style','stroke:rgba(141,92,255,.5);stroke-width:2;stroke-dasharray:3 3;');
-    svg.appendChild(l);
-  }
-  drawMarcoLine('node-sam');
-  drawMarcoLine('node-todd');
+  drawAssistantLine('node-sam','node-path','rgba(83,255,136,.55)');    // Piper assists Sam -- green
+  drawAssistantLine('node-comms','node-ruby','rgba(83,255,136,.55)'); // Ruby assists Mario -- green
+  drawAssistantLine('node-sam','node-marco','rgba(141,92,255,.5)');   // Marco -- purple, shared infra
+  drawAssistantLine('node-todd','node-marco','rgba(141,92,255,.5)');  // Marco also serves Todd
 }
 
 async function loadFeed(){
