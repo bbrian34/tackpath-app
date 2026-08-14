@@ -1802,6 +1802,62 @@ async function logAgentMemory(agentName, eventType, jobId, driverName, details, 
 // Tracks the locked deadline for each job's CURRENT stop -- resets every time the driver advances
 const SMARTTRACK_STOP_DEADLINE={}; // {jobId: {stopIndex, deadline}}
 
+// ── AI SWARM COORDINATOR: joins SmartSort (Sam) route intelligence with SmartTrack (Todd) exception detection ──
+async function runSwarmCoordinator(job, stops, currentStopIdx, minsLate){
+  try{
+    const totalStops=stops.filter(s=>!s.cancelled).length;
+    const strugglingStop=stops[currentStopIdx];
+    const remainingStops=stops.slice(currentStopIdx,totalStops);
+
+    // Pull Sam's original clustering data for this job from agent_memory
+    const smartSortHistory=await sbGet('agent_memory?agent_name=eq.SmartSort&event_type=eq.cluster_created&order=created_at.desc&limit=5');
+
+    // Analyze remaining stops geographically -- are they tightly clustered or scattered?
+    const remainingWithCoords=remainingStops.filter(s=>s.coords);
+    let clusterTightness='unknown';
+    let avgSpreadMiles=null;
+    if(remainingWithCoords.length>=2){
+      let totalDist=0,pairs=0;
+      for(let i=0;i<remainingWithCoords.length-1;i++){
+        totalDist+=haversineDistance(remainingWithCoords[i].coords,remainingWithCoords[i+1].coords);
+        pairs++;
+      }
+      avgSpreadMiles=pairs>0?(totalDist/pairs).toFixed(1):null;
+      clusterTightness=avgSpreadMiles<2?'tight':avgSpreadMiles<5?'moderate':'scattered';
+    }
+
+    const remainingPkgs=remainingStops.reduce((s,st)=>s+(parseInt(st.packages)||1),0);
+
+    // Build the joint recommendation
+    let recommendation;
+    if(clusterTightness==='tight'){
+      recommendation='Remaining '+remainingStops.length+' stops ('+remainingPkgs+' packages) are geographically tight (avg '+avgSpreadMiles+' mi apart). If reassignment is needed, a nearby driver could absorb this cleanly without disrupting their own route.';
+    } else if(clusterTightness==='scattered'){
+      recommendation='Remaining '+remainingStops.length+' stops ('+remainingPkgs+' packages) are spread out (avg '+avgSpreadMiles+' mi apart). Reassignment would be less efficient -- consider whether the current driver can recover instead of transferring the route.';
+    } else {
+      recommendation='Remaining '+remainingStops.length+' stops ('+remainingPkgs+' packages) on this route. Insufficient geographic data to assess reassignment efficiency.';
+    }
+
+    // Log the joint swarm insight
+    await logAgentMemory('SwarmCoordinator','joint_analysis',job.id,job.driver_name,{
+      minutes_late:minsLate,
+      current_stop:currentStopIdx+1,
+      total_stops:totalStops,
+      remaining_stops:remainingStops.length,
+      remaining_packages:remainingPkgs,
+      cluster_tightness:clusterTightness,
+      avg_spread_miles:avgSpreadMiles,
+      recommendation:recommendation,
+      smartsort_runs_referenced:smartSortHistory.length
+    },'analyzed');
+
+    return recommendation;
+  }catch(e){
+    console.error('Swarm Coordinator error:',e);
+    return null;
+  }
+}
+
 async function runSmartTrack(){
   if(!smartTrackEnabled)return;
   try{
@@ -1836,7 +1892,11 @@ async function runSmartTrack(){
       if(minsLate>=SMARTTRACK_LATE_TOLERANCE_MIN&&!SMARTTRACK_ALERTED.has(job.id+'-'+currentStopIdx)){
         SMARTTRACK_ALERTED.add(job.id+'-'+currentStopIdx);
         await sbPatch('jobs?id=eq.'+job.id,{exception_flag:true});
-        const alertMsg='SMARTTRACK:: '+job.driver_name+' is '+minsLate+' min past expected arrival at stop '+(currentStopIdx+1)+' of '+totalStops+'. Auto-flagged as exception.';
+
+        // Call the Swarm Coordinator to join SmartSort's route intelligence with this exception
+        const swarmInsight=await runSwarmCoordinator(job,stops,currentStopIdx,minsLate);
+
+        const alertMsg='SMARTTRACK:: '+job.driver_name+' is '+minsLate+' min past expected arrival at stop '+(currentStopIdx+1)+' of '+totalStops+'. Auto-flagged as exception.'+(swarmInsight?' &#129504; '+swarmInsight:'');
         await sbPostMsg(job.id,alertMsg,'dispatcher');
         const driverMsg='Hey '+job.driver_name.split(' ')[0]+', you are running behind on stop '+(currentStopIdx+1)+'. Everything ok? Let us know if you need anything.';
         await sbPostMsg(job.id,driverMsg,'dispatcher');
