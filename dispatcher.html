@@ -2010,11 +2010,13 @@ async function runRuby(){
 
     const totalCategorized=newMsgs.length;
     const breakdown=Object.entries(categoryCounts).map(([cat,count])=>cat+': '+count).join(', ');
+    const rushHourNow=await sharedKnowledgeIsRushHour();
 
     await logAgentMemory('Ruby','pattern_analysis',null,null,{
       messages_analyzed:totalCategorized,
       category_breakdown:categoryCounts,
-      summary:breakdown
+      summary:breakdown,
+      rush_hour_context:!!rushHourNow
     },'analyzed');
 
     // Flag if a concerning pattern shows up -- multiple vehicle issues or customer issues today
@@ -2023,6 +2025,15 @@ async function runRuby(){
     }
     if((categoryCounts['customer_issue']||0)>=3){
       addIntelEvent('&#128172; Ruby noticed '+categoryCounts['customer_issue']+' customer issue reports today (not home, wrong address, etc).','var(--purple)');
+    }
+
+    // Traffic reports: check shared knowledge before flagging -- a spike during
+    // documented rush hour is expected, not a pattern worth escalating
+    if((categoryCounts['traffic']||0)>=3){
+      if(!rushHourNow){
+        addIntelEvent('&#128172; Ruby noticed '+categoryCounts['traffic']+' traffic reports today outside typical rush hour — worth a closer look.','var(--purple)');
+      }
+      // If it IS rush hour, Ruby stays quiet -- expected pattern, not a real signal
     }
 
   }catch(e){
