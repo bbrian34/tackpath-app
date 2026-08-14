@@ -373,6 +373,8 @@ function positionNodes(){
   const stage=document.querySelector('.stage');
   const cx=stage.clientWidth/2, cy=stage.clientHeight/2;
   const radius=Math.min(stage.clientWidth,stage.clientHeight)*0.32;
+  const assistantRadius=radius*0.72; // Piper, Marco, Ruby sit closer to the Brain -- assistants, not leads
+  const assistantNodes=new Set(['node-path','node-marco','node-ruby']);
   // 6 o'clock = 90deg (bottom), sweeping counter-clockwise through 9 (180deg) to 12 o'clock = 270deg (top) -- left side
   const nodes=[
     {id:'node-sam',angle:90},
@@ -392,8 +394,9 @@ function positionNodes(){
 
   nodes.forEach(n=>{
     const rad=n.angle*Math.PI/180;
-    const x=cx+radius*Math.cos(rad);
-    const y=cy+radius*Math.sin(rad);
+    const r=assistantNodes.has(n.id)?assistantRadius:radius;
+    const x=cx+r*Math.cos(rad);
+    const y=cy+r*Math.sin(rad);
     positions[n.id]={x,y};
     const el=document.getElementById(n.id);
     el.style.left=(x-52)+'px';
