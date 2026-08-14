@@ -1007,7 +1007,7 @@ body::after{content:'';position:fixed;inset:0;
               <thead><tr>
                 <th>Signal / Job</th>
                 <th>Title</th>
-                <th>Pickup</th>
+                <th>Progress</th>
                 <th>Dropoff</th>
                 <th>Status</th>
                 <th>Created</th>
@@ -2305,34 +2305,35 @@ function renderTable(){
     const s=j.status||'pending';
     const shortId=j.id?j.id.slice(0,8):'—';
     const created=j.created_at?new Date(j.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
-    let pickupDisplay=j.pickup_address||'—';
     let dropoffDisplay=j.dropoff_address||'—';
     let stops=j.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
-    let pickupChanged=false;
+    let totalStops=1,doneCount=0;
     if(stops&&stops.length>0){
-      const doneCount=j.stops_completed||0;
+      totalStops=stops.filter(st=>!st.cancelled).length||1;
+      doneCount=j.stops_completed||0;
       const currentIdx=Math.min(doneCount,stops.length-1);
       const currentStop=stops[currentIdx];
       if(currentStop&&currentStop.address){
         dropoffDisplay=currentStop.address+' (stop '+(currentIdx+1)+' of '+stops.length+')';
       }
-      if(doneCount>0){
-        const prevStop=stops[doneCount-1];
-        if(prevStop&&prevStop.address){
-          pickupDisplay=prevStop.address+(prevStop.cancelled?' (cancelled)':'');
-          if(prevStop.cancelled)pickupChanged=true;
-        }
-      }
     }
     const dropoffChanged=lastDropoffByJobId[j.id]!==undefined&&lastDropoffByJobId[j.id]!==dropoffDisplay;
     lastDropoffByJobId[j.id]=dropoffDisplay;
     const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
-    const pickupColor=pickupChanged?'color:#ff6363;font-weight:700;':'';
+    const progressPct=s==='delivered'?100:Math.round((doneCount/totalStops)*100);
+    const progressColor=s==='delivered'?'var(--green)':progressPct>=70?'var(--green)':progressPct>=30?'var(--blue)':'var(--orange)';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
       <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
-      <td><div class="tbl-route" style="${pickupColor}">${pickupDisplay}</div></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;min-width:100px;">
+          <div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${progressPct}%;background:${progressColor};border-radius:3px;transition:width .3s;"></div>
+          </div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);white-space:nowrap;">${doneCount}/${totalStops}</div>
+        </div>
+      </td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
