@@ -89,7 +89,36 @@ col.c1{width:20%;}col.c2{width:12%;}col.c3{width:14%;}col.c4{width:7%;}col.c5{wi
     <option value="pending">⏳ Pending Only</option>
   </select>
   <input id="search" placeholder="🔍 Search driver..." oninput="render()"/>
+  <button onclick="toggleEndOfDay()" id="eodBtn" style="padding:5px 12px;border-radius:6px;font-size:0.8rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;background:rgba(83,255,136,.1);border:1px solid rgba(83,255,136,.3);color:#53ff88;">&#128202; End of Day Summary</button>
   <div class="drv-count" id="dCount"></div>
+</div>
+<div id="eodPanel" style="display:none;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);background:#07101e;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;text-align:center;">
+      <div style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:800;color:#19b7ef;" id="eodDrivers">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">Drivers Worked Today</div>
+    </div>
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;text-align:center;">
+      <div style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:800;color:#53ff88;" id="eodOnTime">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">Team On-Time Rate</div>
+    </div>
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;text-align:center;">
+      <div style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:800;color:#ff961e;" id="eodExceptions">—</div>
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">Exceptions Today</div>
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
+        <th style="text-align:left;padding:6px 10px;font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">Driver</th>
+        <th style="text-align:left;padding:6px 10px;font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">Stops Completed</th>
+        <th style="text-align:left;padding:6px 10px;font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">Packages Delivered</th>
+        <th style="text-align:left;padding:6px 10px;font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">Exceptions</th>
+        <th style="text-align:left;padding:6px 10px;font-family:'DM Mono',monospace;font-size:9px;color:#fff;text-transform:uppercase;">On-Time Rate</th>
+      </tr>
+    </thead>
+    <tbody id="eodTbody"></tbody>
+  </table>
 </div>
 <div class="tbl-wrap">
   <table>
@@ -104,6 +133,63 @@ const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const SBH={'apikey':KEY,'Authorization':'Bearer '+KEY};
 
 let data=[], seen={};
+let allJobsRaw=[];
+let eodOpen=false;
+
+function toggleEndOfDay(){
+  eodOpen=!eodOpen;
+  const panel=document.getElementById('eodPanel');
+  panel.style.display=eodOpen?'block':'none';
+  if(eodOpen)renderEndOfDay();
+}
+
+function renderEndOfDay(){
+  const todayStart=new Date(); todayStart.setHours(0,0,0,0);
+  const todayJobs=allJobsRaw.filter(j=>new Date(j.created_at)>=todayStart&&j.driver_name);
+
+  const driverStats={};
+  todayJobs.forEach(j=>{
+    if(!driverStats[j.driver_name]){
+      driverStats[j.driver_name]={stops:0,packages:0,exceptions:0,jobs:0};
+    }
+    const s=driverStats[j.driver_name];
+    s.jobs++;
+    if(j.exception_flag)s.exceptions++;
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    const doneStops=j.stops_completed||0;
+    s.stops+=doneStops;
+    if(stops&&Array.isArray(stops)){
+      const totalPkgs=stops.slice(0,doneStops).reduce((sum,st)=>sum+(parseInt(st.packages)||1),0);
+      s.packages+=totalPkgs;
+    }
+  });
+
+  const driverNames=Object.keys(driverStats);
+  const totalExceptions=todayJobs.filter(j=>j.exception_flag).length;
+  const onTimeRate=todayJobs.length>0?Math.round(((todayJobs.length-totalExceptions)/todayJobs.length)*100):100;
+
+  document.getElementById('eodDrivers').textContent=driverNames.length;
+  document.getElementById('eodOnTime').textContent=onTimeRate+'%';
+  document.getElementById('eodExceptions').textContent=totalExceptions;
+
+  const rows=driverNames.sort((a,b)=>driverStats[b].stops-driverStats[a].stops).map(name=>{
+    const s=driverStats[name];
+    const driverOnTime=s.jobs>0?Math.round(((s.jobs-s.exceptions)/s.jobs)*100):100;
+    const rateColor=driverOnTime>=90?'#53ff88':driverOnTime>=70?'#ff961e':'#ff3b30';
+    return `<tr style="border-bottom:1px solid rgba(255,255,255,.03);">
+      <td style="padding:8px 10px;font-weight:700;color:#fff;font-size:0.85rem;">${name}</td>
+      <td style="padding:8px 10px;font-family:'DM Mono',monospace;color:#fff;">${s.stops}</td>
+      <td style="padding:8px 10px;font-family:'DM Mono',monospace;color:#fff;">${s.packages}</td>
+      <td style="padding:8px 10px;font-family:'DM Mono',monospace;color:${s.exceptions>0?'#ff961e':'#fff'};">${s.exceptions}</td>
+      <td style="padding:8px 10px;font-family:'DM Mono',monospace;font-weight:700;color:${rateColor};">${driverOnTime}%</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('eodTbody').innerHTML=rows||'<tr><td colspan="5" style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-family:\'DM Mono\',monospace;">No driver activity today</td></tr>';
+}
+
+
 
 async function sbGet(path){
   const r=await fetch(SB+'/rest/v1/'+path,{headers:SBH});
@@ -130,6 +216,7 @@ async function loadFleet(){
       sbGet('jobs?select=*&status=not.eq.cancelled&order=created_at.desc&limit=500'),
       sbGet('driver_locations?order=updated_at.desc&limit=200')
     ]);
+    allJobsRaw=jobs||[]; // keep raw jobs for end-of-day summary
 
     seen={};
     (locs||[]).forEach(l=>{
@@ -191,6 +278,7 @@ async function loadFleet(){
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
 
     render();
+    if(eodOpen)renderEndOfDay();
   }catch(e){
     console.error('FleetView error:',e);
     document.getElementById('tbody').innerHTML='<tr><td colspan="7" class="empty">Error loading data — '+e.message+'</td></tr>';
