@@ -1803,6 +1803,61 @@ async function logAgentMemory(agentName, eventType, jobId, driverName, details, 
 const SMARTTRACK_STOP_DEADLINE={}; // {jobId: {stopIndex, deadline}}
 
 // ── AI SWARM COORDINATOR: joins SmartSort (Sam) route intelligence with SmartTrack (Todd) exception detection ──
+// ── PROACTIVE SWARM COORDINATOR: runs independently, watches for patterns across all agent activity ──
+let lastProactiveCheck=0;
+const PROACTIVE_CHECK_INTERVAL_MIN=5;
+const PROACTIVE_ALERTED=new Set();
+
+async function runProactiveCoordinator(){
+  const now=Date.now();
+  if(now-lastProactiveCheck<PROACTIVE_CHECK_INTERVAL_MIN*60000)return;
+  lastProactiveCheck=now;
+
+  try{
+    const todayStart=new Date();todayStart.setHours(0,0,0,0);
+    const recentEvents=await sbGet('agent_memory?created_at=gte.'+todayStart.toISOString()+'&order=created_at.desc&limit=100');
+
+    // Pattern 1: Multiple exceptions in the same geographic zone today
+    const trackEvents=recentEvents.filter(e=>e.agent_name==='SmartTrack'&&e.event_type==='stop_past_eta');
+    if(trackEvents.length>=3){
+      const patternKey='multi_exception_'+todayStart.toISOString().slice(0,10);
+      if(!PROACTIVE_ALERTED.has(patternKey)){
+        PROACTIVE_ALERTED.add(patternKey);
+        const driverNames=[...new Set(trackEvents.map(e=>e.driver_name))];
+        const insight=trackEvents.length+' delivery exceptions flagged today across '+driverNames.length+' driver(s). Worth reviewing whether SmartSort route estimates need adjustment for current conditions.';
+        await logAgentMemory('SwarmCoordinator','pattern_detected',null,null,{
+          pattern:'repeated_exceptions',
+          exception_count:trackEvents.length,
+          affected_drivers:driverNames,
+          insight:insight
+        },'flagged');
+        addIntelEvent('&#129504; Swarm Coordinator detected a pattern: '+insight,'var(--purple)');
+      }
+    }
+
+    // Pattern 2: SmartSort clustering runs today with unusually high failed geocodes
+    const sortEvents=recentEvents.filter(e=>e.agent_name==='SmartSort'&&e.event_type==='cluster_created');
+    sortEvents.forEach(e=>{
+      const failedPct=e.details.total_stops>0?(e.details.failed_geocodes/e.details.total_stops)*100:0;
+      const patternKey='geocode_issue_'+e.id;
+      if(failedPct>15&&!PROACTIVE_ALERTED.has(patternKey)){
+        PROACTIVE_ALERTED.add(patternKey);
+        const insight=Math.round(failedPct)+'% of addresses in a recent manifest failed to geocode ('+e.details.failed_geocodes+' of '+e.details.total_stops+'). May indicate address formatting issues in the source CSV.';
+        logAgentMemory('SwarmCoordinator','pattern_detected',null,null,{
+          pattern:'high_geocode_failure',
+          failed_count:e.details.failed_geocodes,
+          total_stops:e.details.total_stops,
+          insight:insight
+        },'flagged');
+        addIntelEvent('&#129504; Swarm Coordinator detected a pattern: '+insight,'var(--purple)');
+      }
+    });
+
+  }catch(e){
+    console.error('Proactive Coordinator error:',e);
+  }
+}
+
 async function runSwarmCoordinator(job, stops, currentStopIdx, minsLate){
   try{
     const totalStops=stops.filter(s=>!s.cancelled).length;
@@ -1955,6 +2010,7 @@ async function loadJobs(){
     refreshAllLiveETAs().catch(function(){});
     // Run SmartTrack agent after driver locations are updated
     runSmartTrack().catch(function(){});
+    runProactiveCoordinator().catch(function(){});
     // Fetch individual stop delivery records from messages table
     try{
       const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||j.status==='delivered').map(j=>j.id);
