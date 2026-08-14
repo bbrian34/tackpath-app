@@ -157,12 +157,14 @@ body::before{
 .feed-item.swarm{border-left:3px solid #53ff88;}
 .feed-item.sponge{border-left:3px solid #ffc800;}
 .feed-item.comms{border-left:3px solid #ff6bcb;}
+.feed-item.marco{border-left:3px solid #8d5cff;}
 .feed-agent{font-family:'DM Mono',monospace;font-size:.66rem;font-weight:700;margin-bottom:3px;}
 .feed-agent.smartsort{color:#8d5cff;}
 .feed-agent.smarttrack{color:#19b7ef;}
 .feed-agent.swarm{color:#53ff88;}
 .feed-agent.sponge{color:#ffc800;}
 .feed-agent.comms{color:#ff6bcb;}
+.feed-agent.marco{color:#8d5cff;}
 .feed-detail{color:rgba(255,255,255,.7);}
 .feed-time{font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:4px;}
 .feed-empty{padding:30px 10px;text-align:center;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;font-size:.72rem;}
@@ -215,7 +217,7 @@ body::before{
 
 <div class="stats-bar">
   <div class="stat-chip">
-    <div class="stat-val" id="statAgents">4</div>
+    <div class="stat-val" id="statAgents">6</div>
     <div class="stat-lbl">Active Agents</div>
   </div>
   <div class="stat-chip">
@@ -254,6 +256,16 @@ body::before{
     </div>
     <div class="agent-name" style="font-size:.7rem;">Piper</div>
     <div class="agent-role" style="font-size:.54rem;">SmartPath</div>
+    <div class="agent-online" style="font-size:.52rem;">&#9679; ONLINE</div>
+  </div>
+
+  <div class="agent-node" id="node-marco" onclick="openModal('marco')" style="width:80px;height:80px;">
+    <div class="agent-orb active" style="width:68px;height:68px;font-size:1.5rem;">
+      <div class="agent-status-dot active"></div>
+      &#128506;
+    </div>
+    <div class="agent-name" style="font-size:.7rem;">Marco</div>
+    <div class="agent-role" style="font-size:.54rem;">Geocoding</div>
     <div class="agent-online" style="font-size:.52rem;">&#9679; ONLINE</div>
   </div>
 
@@ -337,6 +349,7 @@ const agentInfo={
   todd:{title:"Todd — SmartTrack",role:"Delivery Pace Agent · Active",desc:"Locks a live deadline for each driver current stop based on real traffic ETA. Watches for drivers falling behind that specific deadline, flags exceptions, messages drivers directly, and calls the Swarm Coordinator to pull in Sam route context when something goes wrong."},
   comms:{title:"Mario — SmartComms",role:"Driver Communication Agent · Active",desc:"Sends automated check-ins every 30 minutes during an active route asking how things are going and confirming stop progress. Sends end-of-route completion confirmations when all stops finish. Narrow, safe scope — no free-text message interpretation yet."},
   ruby:{title:"Ruby — Comms Pattern Agent",role:"Communication Intelligence · Active",desc:"Works directly with Mario. Reads through every driver message logged in the system, categorizes them by type — traffic delays, customer issues, simple acknowledgments — and identifies patterns over time. Builds the foundation for smarter, more responsive driver communication as more data accumulates."},
+  marco:{title:"Marco — Geocoding Agent",role:"Shared Infrastructure · Active",desc:"Serves both Sam and Todd. Converts addresses into coordinates, caches every result so the same address is never geocoded twice, and tracks success/failure rate. Reports geocoding health every 15 minutes and flags the dispatcher if failure rate climbs above 15% — often a sign of address formatting issues in a manifest."},
   match:{title:"SmartMatch",role:"Reassignment Agent · Dormant",desc:"Not yet built. Will find the nearest available driver when a route needs reassignment and execute the handoff automatically."},
   owl:{title:"OWL",role:"Intelligence Agent · Dormant",desc:"Not yet built. Will analyze patterns across days and weeks — which zones run late, which drivers outperform, revenue trends — and surface strategic insights."}
 };
@@ -363,11 +376,12 @@ function positionNodes(){
   // 6 o'clock = 90deg (bottom), sweeping counter-clockwise through 9 (180deg) to 12 o'clock = 270deg (top) -- left side
   const nodes=[
     {id:'node-sam',angle:90},
-    {id:'node-path',angle:120},
-    {id:'node-todd',angle:150},
-    {id:'node-comms',angle:180},
-    {id:'node-ruby',angle:210},
-    {id:'node-match',angle:240},
+    {id:'node-path',angle:115.7},
+    {id:'node-marco',angle:141.4},
+    {id:'node-todd',angle:167.1},
+    {id:'node-comms',angle:192.9},
+    {id:'node-ruby',angle:218.6},
+    {id:'node-match',angle:244.3},
     {id:'node-owl',angle:270}
   ];
   const svg=document.getElementById('connectorSvg');
@@ -385,52 +399,43 @@ function positionNodes(){
     el.style.left=(x-52)+'px';
     el.style.top=(y-52)+'px';
 
-    // Draw connector line from brain center to this node
+    // Every node connects to the Brain -- same blue dashed line for all, since
+    // it represents the same relationship: "the Brain is aware this agent exists"
     const line=document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1',cx);line.setAttribute('y1',cy);
     line.setAttribute('x2',x);line.setAttribute('y2',y);
     line.setAttribute('class','connector-line');
+    line.setAttribute('style','stroke:rgba(25,183,239,.3);stroke-width:1.5;stroke-dasharray:4 4;');
     svg.appendChild(line);
   });
 
-  // Direct connector: SmartPath to Sam -- Piper sequences what Sam clusters
-  if(positions['node-sam']&&positions['node-path']){
-    const directLine=document.createElementNS('http://www.w3.org/2000/svg','line');
-    directLine.setAttribute('x1',positions['node-sam'].x);directLine.setAttribute('y1',positions['node-sam'].y);
-    directLine.setAttribute('x2',positions['node-path'].x);directLine.setAttribute('y2',positions['node-path'].y);
-    directLine.setAttribute('class','connector-line');
-    directLine.setAttribute('style','stroke:rgba(83,255,136,.4);stroke-width:2;');
-    svg.appendChild(directLine);
+  // Assistant pairs -- same green color for both, since Piper/Sam and Ruby/Mario
+  // are the same relationship type: an assistant agent working directly with its lead
+  function drawAssistantLine(leadId,assistantId){
+    if(!positions[leadId]||!positions[assistantId])return;
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',positions[leadId].x);l.setAttribute('y1',positions[leadId].y);
+    l.setAttribute('x2',positions[assistantId].x);l.setAttribute('y2',positions[assistantId].y);
+    l.setAttribute('class','connector-line');
+    l.setAttribute('style','stroke:rgba(83,255,136,.5);stroke-width:2.5;');
+    svg.appendChild(l);
   }
+  drawAssistantLine('node-sam','node-path');   // Piper assists Sam
+  drawAssistantLine('node-comms','node-ruby'); // Ruby assists Mario
 
-  // Direct connector: Mario to Ruby -- Ruby learns patterns from what Mario sends and receives
-  if(positions['node-comms']&&positions['node-ruby']){
-    const commsLine=document.createElementNS('http://www.w3.org/2000/svg','line');
-    commsLine.setAttribute('x1',positions['node-comms'].x);commsLine.setAttribute('y1',positions['node-comms'].y);
-    commsLine.setAttribute('x2',positions['node-ruby'].x);commsLine.setAttribute('y2',positions['node-ruby'].y);
-    commsLine.setAttribute('class','connector-line');
-    commsLine.setAttribute('style','stroke:rgba(255,107,203,.4);stroke-width:2;');
-    svg.appendChild(commsLine);
+  // Marco serves both Sam and Todd directly -- purple, since it's a distinct
+  // relationship type (shared infrastructure, not an assistant or a coordinator link)
+  function drawMarcoLine(otherId){
+    if(!positions['node-marco']||!positions[otherId])return;
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',positions['node-marco'].x);l.setAttribute('y1',positions['node-marco'].y);
+    l.setAttribute('x2',positions[otherId].x);l.setAttribute('y2',positions[otherId].y);
+    l.setAttribute('class','connector-line');
+    l.setAttribute('style','stroke:rgba(141,92,255,.5);stroke-width:2;stroke-dasharray:3 3;');
+    svg.appendChild(l);
   }
-
-  // Swarm Coordinator connections -- Todd calls the Brain when he flags an exception,
-  // the Brain reads Sam's clustering history to build its recommendation
-  if(positions['node-todd']){
-    const toddBrainLine=document.createElementNS('http://www.w3.org/2000/svg','line');
-    toddBrainLine.setAttribute('x1',positions['node-todd'].x);toddBrainLine.setAttribute('y1',positions['node-todd'].y);
-    toddBrainLine.setAttribute('x2',cx);toddBrainLine.setAttribute('y2',cy);
-    toddBrainLine.setAttribute('class','connector-line');
-    toddBrainLine.setAttribute('style','stroke:rgba(255,150,30,.5);stroke-width:2.5;stroke-dasharray:6 3;');
-    svg.appendChild(toddBrainLine);
-  }
-  if(positions['node-sam']){
-    const samBrainLine=document.createElementNS('http://www.w3.org/2000/svg','line');
-    samBrainLine.setAttribute('x1',cx);samBrainLine.setAttribute('y1',cy);
-    samBrainLine.setAttribute('x2',positions['node-sam'].x);samBrainLine.setAttribute('y2',positions['node-sam'].y);
-    samBrainLine.setAttribute('class','connector-line');
-    samBrainLine.setAttribute('style','stroke:rgba(255,150,30,.5);stroke-width:2.5;stroke-dasharray:6 3;');
-    svg.appendChild(samBrainLine);
-  }
+  drawMarcoLine('node-sam');
+  drawMarcoLine('node-todd');
 }
 
 async function loadFeed(){
@@ -442,7 +447,7 @@ async function loadFeed(){
       return;
     }
     list.innerHTML=events.map(e=>{
-      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':e.agent_name==='Sponge'?'sponge':e.agent_name==='SmartComms'?'comms':'swarm';
+      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':e.agent_name==='Sponge'?'sponge':e.agent_name==='SmartComms'?'comms':e.agent_name==='Marco'?'marco':e.agent_name==='Ruby'?'comms':'swarm';
       let detail='';
       if(e.event_type==='cluster_created'){
         detail='Clustered '+(e.details.total_stops||'?')+' stops into '+(e.details.clusters_created||'?')+' routes ('+(e.details.total_packages||'?')+' packages)';
@@ -454,6 +459,12 @@ async function loadFeed(){
         detail='Checked in with '+(e.driver_name||'driver')+' — stop '+(e.details.stop_at_checkin||'?')+' of '+(e.details.total_stops||'?');
       } else if(e.event_type==='route_completed'){
         detail='Sent completion confirmation to '+(e.driver_name||'driver')+' — '+(e.details.total_stops||'?')+' stops done';
+      } else if(e.event_type==='geocoding_report'){
+        detail=(e.details.total_requests||'?')+' addresses processed, '+(e.details.fail_rate_pct||0)+'% fail rate, '+(e.details.cache_size||'?')+' cached';
+      } else if(e.event_type==='pattern_analysis'){
+        detail='Analyzed '+(e.details.messages_analyzed||'?')+' driver messages — '+(e.details.summary||'');
+      } else if(e.event_type==='pattern_detected'){
+        detail=e.details.insight||'Pattern detected';
       } else if(e.event_type==='knowledge_learned'){
         detail='Learned '+(e.details.label||e.details.file)+' — '+(e.details.summary||'').slice(0,120);
       } else {
