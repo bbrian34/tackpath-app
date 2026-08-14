@@ -1107,6 +1107,18 @@ body::after{content:'';position:fixed;inset:0;
               <div class="loc-panel"><div class="loc-name"><div class="loc-dot" style="background:var(--green);box-shadow:0 0 6px rgba(83,255,136,.6);"></div>Client A</div><div class="loc-stat" style="color:var(--green);" id="loc-atl">Active</div></div>
               <div class="loc-panel"><div class="loc-name"><div class="loc-dot" style="background:var(--orange);box-shadow:0 0 5px rgba(255,150,30,.5);"></div>Client B</div><div class="loc-stat" style="color:var(--orange);">1 EXCEPTION</div></div>
             </div>
+            <div class="panel" style="border-color:rgba(25,183,239,.15);">
+              <div class="panel-hdr"><div><div class="panel-ttl">Integrations</div><div class="panel-sub">ORDER SOURCES</div></div></div>
+              <div id="shopifyPanel">
+                <div style="padding:14px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+                  <div>
+                    <div style="font-weight:700;font-size:0.923rem;">Shopify</div>
+                    <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);" id="shopifyStatus">Checking connection...</div>
+                  </div>
+                  <button id="shopifyConnectBtn" onclick="connectShopify()" style="padding:8px 16px;border-radius:8px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.3);color:var(--blue);font-family:var(--sans);font-weight:700;font-size:0.769rem;cursor:pointer;">Connect</button>
+                </div>
+              </div>
+            </div>
           </div>
           <div>
             <div class="panel">
@@ -1573,6 +1585,7 @@ async function doLogin(){
     startClock();loadJobs();if(typeof loadDrivers==='function')loadDrivers();
     if(dispatchPollId)clearInterval(dispatchPollId);
     dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},2000);
+    checkShopifyConnection().catch(function(){});
     setTimeout(refreshFleetMap,3000);
     if(window.location.hash==='#drivers'){
       const driversBtn=Array.from(document.querySelectorAll('.tbtab')).find(function(b){return b.textContent.trim()==='Drivers';});
@@ -2197,6 +2210,39 @@ async function runSmartTrack(){
   }catch(e){
     console.error('SmartTrack error:',e);
   }
+}
+
+// ── SHOPIFY INTEGRATION ──
+async function checkShopifyConnection(){
+  const statusEl=document.getElementById('shopifyStatus');
+  const btnEl=document.getElementById('shopifyConnectBtn');
+  if(!statusEl||!btnEl)return;
+  try{
+    const filter=currentOrgId?'org_id=eq.'+currentOrgId+'&':'';
+    const connections=await sbGet('shopify_connections?'+filter+'active=eq.true&limit=1');
+    if(connections&&connections.length){
+      statusEl.textContent='Connected · '+connections[0].shop_domain;
+      statusEl.style.color='var(--green)';
+      btnEl.textContent='Manage';
+      btnEl.style.color='var(--green)';
+      btnEl.style.borderColor='rgba(83,255,136,.3)';
+      btnEl.style.background='rgba(83,255,136,.1)';
+    } else {
+      statusEl.textContent='Not connected';
+      statusEl.style.color='var(--muted)';
+      btnEl.textContent='Connect';
+    }
+  }catch(e){
+    statusEl.textContent='Not connected';
+  }
+}
+
+function connectShopify(){
+  const shopDomain=prompt('Enter your Shopify store domain (e.g. yourstore.myshopify.com):');
+  if(!shopDomain)return;
+  const cleanDomain=shopDomain.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  const installUrl='https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/shopify-oauth?shop='+encodeURIComponent(cleanDomain)+'&org_id='+encodeURIComponent(currentOrgId||'');
+  window.open(installUrl,'_blank');
 }
 
 async function loadJobs(){
