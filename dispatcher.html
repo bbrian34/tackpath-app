@@ -1808,6 +1808,34 @@ let lastProactiveCheck=0;
 const PROACTIVE_CHECK_INTERVAL_MIN=5;
 const PROACTIVE_ALERTED=new Set();
 
+// ── BRAIN KNOWLEDGE LAYER: gives the Brain direct read access to all core TackPath data ──
+async function brainQueryHistory(){
+  try{
+    const thirtyDaysAgo=new Date(Date.now()-30*24*60*60*1000).toISOString();
+    const [historicalJobs, allDrivers, driverMessages]=await Promise.all([
+      sbGet('jobs?select=*&created_at=gte.'+thirtyDaysAgo+'&order=created_at.desc&limit=500').catch(()=>[]),
+      sbGet('drivers?select=*').catch(()=>[]),
+      sbGet('messages?sender_role=eq.driver&order=created_at.desc&limit=200').catch(()=>[])
+    ]);
+    return {historicalJobs,allDrivers,driverMessages};
+  }catch(e){
+    console.error('Brain knowledge query error:',e);
+    return {historicalJobs:[],allDrivers:[],driverMessages:[]};
+  }
+}
+
+function brainAnalyzeDriverPattern(driverName,historicalJobs){
+  // Looks for recurring exception patterns for a specific driver across history
+  const driverJobs=historicalJobs.filter(j=>j.driver_name===driverName);
+  const driverExceptions=driverJobs.filter(j=>j.exception_flag===true);
+  if(driverJobs.length<3)return null; // not enough history to say anything meaningful
+  const exceptionRate=Math.round((driverExceptions.length/driverJobs.length)*100);
+  if(exceptionRate>=30){
+    return driverName+' has an exception rate of '+exceptionRate+'% across '+driverJobs.length+' recent jobs — worth checking if this is route-related or driver-specific.';
+  }
+  return null;
+}
+
 async function runProactiveCoordinator(){
   const now=Date.now();
   if(now-lastProactiveCheck<PROACTIVE_CHECK_INTERVAL_MIN*60000)return;
@@ -1832,6 +1860,25 @@ async function runProactiveCoordinator(){
           insight:insight
         },'flagged');
         addIntelEvent('&#129504; Swarm Coordinator detected a pattern: '+insight,'var(--purple)');
+      }
+    }
+
+    // Pattern 3: Historical driver exception rates using full job history, not just today
+    if(trackEvents.length>0){
+      const {historicalJobs}=await brainQueryHistory();
+      const driversFlaggedToday=[...new Set(trackEvents.map(e=>e.driver_name))];
+      for(const driverName of driversFlaggedToday){
+        const patternKey='driver_history_'+driverName+'_'+todayStart.toISOString().slice(0,10);
+        if(PROACTIVE_ALERTED.has(patternKey))continue;
+        const insight=brainAnalyzeDriverPattern(driverName,historicalJobs);
+        if(insight){
+          PROACTIVE_ALERTED.add(patternKey);
+          await logAgentMemory('SwarmCoordinator','historical_pattern',null,driverName,{
+            pattern:'driver_exception_history',
+            insight:insight
+          },'flagged');
+          addIntelEvent('&#129504; Swarm Coordinator (memory): '+insight,'var(--purple)');
+        }
       }
     }
 
