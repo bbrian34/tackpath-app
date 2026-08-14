@@ -215,7 +215,7 @@ body::before{
 
 <div class="stats-bar">
   <div class="stat-chip">
-    <div class="stat-val" id="statAgents">3</div>
+    <div class="stat-val" id="statAgents">4</div>
     <div class="stat-lbl">Active Agents</div>
   </div>
   <div class="stat-chip">
@@ -272,9 +272,19 @@ body::before{
       <div class="agent-status-dot active"></div>
       &#128172;
     </div>
-    <div class="agent-name">Riley</div>
+    <div class="agent-name">Mario</div>
     <div class="agent-role">SmartComms</div>
     <div class="agent-online">&#9679; ONLINE</div>
+  </div>
+
+  <div class="agent-node" id="node-ruby" onclick="openModal('ruby')" style="width:80px;height:80px;">
+    <div class="agent-orb active" style="width:68px;height:68px;font-size:1.5rem;">
+      <div class="agent-status-dot active"></div>
+      &#128172;
+    </div>
+    <div class="agent-name" style="font-size:.7rem;">Ruby</div>
+    <div class="agent-role" style="font-size:.54rem;">Comms Pattern</div>
+    <div class="agent-online" style="font-size:.52rem;">&#9679; ONLINE</div>
   </div>
 
   <div class="agent-node" id="node-match" onclick="openModal('match')">
@@ -325,7 +335,8 @@ const agentInfo={
   sam:{title:"Sam — SmartSort",role:"Route Clustering Agent · Active",desc:"Geocodes manifests, clusters stops into driver-sized geographic zones using k-means++, creates and broadcasts jobs. Logs every clustering run to shared memory."},
   path:{title:"Piper — SmartPath",role:"Route Sequencing Agent · Active",desc:"Works directly with Sam. Once SmartSort clusters stops into driver zones, Piper sequences each zone using nearest-neighbor optimization for minimum drive time, and calculates the traffic-aware ETA for the full route."},
   todd:{title:"Todd — SmartTrack",role:"Delivery Pace Agent · Active",desc:"Locks a live deadline for each driver current stop based on real traffic ETA. Watches for drivers falling behind that specific deadline, flags exceptions, messages drivers directly, and calls the Swarm Coordinator to pull in Sam route context when something goes wrong."},
-  comms:{title:"Riley — SmartComms",role:"Driver Communication Agent · Active",desc:"Sends automated check-ins every 30 minutes during an active route asking how things are going and confirming stop progress. Sends end-of-route completion confirmations when all stops finish. Narrow, safe scope — no free-text message interpretation yet."},
+  comms:{title:"Mario — SmartComms",role:"Driver Communication Agent · Active",desc:"Sends automated check-ins every 30 minutes during an active route asking how things are going and confirming stop progress. Sends end-of-route completion confirmations when all stops finish. Narrow, safe scope — no free-text message interpretation yet."},
+  ruby:{title:"Ruby — Comms Pattern Agent",role:"Communication Intelligence · Active",desc:"Works directly with Mario. Reads through every driver message logged in the system, categorizes them by type — traffic delays, customer issues, simple acknowledgments — and identifies patterns over time. Builds the foundation for smarter, more responsive driver communication as more data accumulates."},
   match:{title:"SmartMatch",role:"Reassignment Agent · Dormant",desc:"Not yet built. Will find the nearest available driver when a route needs reassignment and execute the handoff automatically."},
   owl:{title:"OWL",role:"Intelligence Agent · Dormant",desc:"Not yet built. Will analyze patterns across days and weeks — which zones run late, which drivers outperform, revenue trends — and surface strategic insights."}
 };
@@ -352,10 +363,11 @@ function positionNodes(){
   // 6 o'clock = 90deg (bottom), sweeping counter-clockwise through 9 (180deg) to 12 o'clock = 270deg (top) -- left side
   const nodes=[
     {id:'node-sam',angle:90},
-    {id:'node-path',angle:126},
-    {id:'node-todd',angle:162},
-    {id:'node-comms',angle:198},
-    {id:'node-match',angle:234},
+    {id:'node-path',angle:120},
+    {id:'node-todd',angle:150},
+    {id:'node-comms',angle:180},
+    {id:'node-ruby',angle:210},
+    {id:'node-match',angle:240},
     {id:'node-owl',angle:270}
   ];
   const svg=document.getElementById('connectorSvg');
@@ -389,6 +401,16 @@ function positionNodes(){
     directLine.setAttribute('class','connector-line');
     directLine.setAttribute('style','stroke:rgba(83,255,136,.4);stroke-width:2;');
     svg.appendChild(directLine);
+  }
+
+  // Direct connector: Mario to Ruby -- Ruby learns patterns from what Mario sends and receives
+  if(positions['node-comms']&&positions['node-ruby']){
+    const commsLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+    commsLine.setAttribute('x1',positions['node-comms'].x);commsLine.setAttribute('y1',positions['node-comms'].y);
+    commsLine.setAttribute('x2',positions['node-ruby'].x);commsLine.setAttribute('y2',positions['node-ruby'].y);
+    commsLine.setAttribute('class','connector-line');
+    commsLine.setAttribute('style','stroke:rgba(255,107,203,.4);stroke-width:2;');
+    svg.appendChild(commsLine);
   }
 }
 
