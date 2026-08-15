@@ -17,7 +17,13 @@ a{color:inherit;text-decoration:none;}
 .wrap{max-width:960px;margin:0 auto;padding:0 24px;}
 
 /* NAV */
-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;max-width:960px;margin:0 auto;}
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;max-width:960px;margin:0 auto;gap:12px;}
+.nav-wordmark{white-space:nowrap;flex-shrink:0;}
+.nav-back{white-space:nowrap;flex-shrink:0;font-size:0.8rem;}
+@media(max-width:400px){
+  nav{padding:16px 16px;}
+  .nav-back{font-size:0.7rem;}
+}
 .nav-logo{display:flex;align-items:center;gap:10px;}
 .nav-wordmark{font-family:'Montserrat',sans-serif;font-size:1.05rem;font-weight:500;letter-spacing:1px;}
 .nav-back{font-size:0.8rem;color:var(--muted);font-weight:600;}
