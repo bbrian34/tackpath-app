@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Dispatcher — White Theme Preview</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+.banner{background:#fff3cd;border-bottom:1px solid #ffe69c;color:#664d03;font-size:12px;text-align:center;padding:8px;font-weight:600;}
+.topbar{background:#fff;border-bottom:1px solid #e2e5ea;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo-wordmark{font-family:'Montserrat',sans-serif;font-size:1.0625rem;font-weight:500;letter-spacing:1px;}
+.logo-wordmark span.t1{color:#0a1a2e;}
+.logo-wordmark span.t2{color:#0a7cba;}
+.topbar-right{font-size:12px;color:#6b7280;}
+.tabs{background:#fff;border-bottom:1px solid #e2e5ea;display:flex;gap:2px;padding:0 24px;overflow-x:auto;}
+.tab{padding:12px 16px;font-size:13px;color:#6b7280;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab.on{color:#0a7cba;border-bottom-color:#19b7ef;font-weight:600;}
+.body{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:20px 24px;max-width:1300px;margin:0 auto;}
+.card{background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:16px;margin-bottom:16px;}
+.card-title{font-size:13px;font-weight:600;color:#0a1a2e;margin-bottom:12px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.kpi{background:#f8fafc;border:1px solid #eef0f3;border-radius:8px;padding:12px;}
+.kpi-lbl{font-size:10px;color:#8b93a1;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;}
+.kpi-val{font-size:20px;font-weight:700;color:#0a1a2e;margin-top:4px;}
+.kpi-val.blue{color:#0a7cba;}
+.kpi-val.green{color:#129504;}
+.kpi-val.red{color:#d92d20;}
+.kpi-val.purple{color:#7c4fd8;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;color:#8b93a1;font-weight:600;font-size:10px;text-transform:uppercase;padding:8px 6px;border-bottom:1px solid #eef0f3;}
+td{padding:9px 6px;border-bottom:1px solid #f4f6f9;color:#2a3441;}
+.badge{display:inline-block;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;}
+.badge-green{background:#e6f7e6;color:#129504;}
+.badge-amber{background:#fff4e0;color:#a06000;}
+.badge-red{background:#fde8e8;color:#d92d20;}
+.badge-blue{background:#e6f4fb;color:#0a7cba;}
+.agent-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f4f6f9;}
+.agent-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.agent-name{font-size:12px;font-weight:600;color:#0a1a2e;}
+.agent-status{font-size:10px;color:#8b93a1;margin-left:auto;}
+.map-placeholder{height:220px;background:#eef2f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#9aa3b0;margin-bottom:16px;}
+.btn{background:#19b7ef;color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="banner">Preview only — this is a visual mockup, not connected to live code. Nothing has been changed or pushed.</div>
+
+<div class="topbar">
+  <div class="logo">
+    <svg width="20" height="34" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpg-white" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg-white)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg-white)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg-white)" opacity=".5"/></svg>
+    <div class="logo-wordmark"><span class="t1">T Ʌ C K </span><span class="t2">P Ʌ T H</span></div>
+  </div>
+  <div class="topbar-right">Zelurco · Snellville, GA</div>
+</div>
+
+<div class="tabs">
+  <div class="tab on">Dispatch</div>
+  <div class="tab">SmartPath</div>
+  <div class="tab">SmartTrack</div>
+  <div class="tab">Command</div>
+  <div class="tab">Shopify</div>
+  <div class="tab">Drivers</div>
+  <div class="tab">Analytics</div>
+  <div class="tab">History</div>
+  <div class="tab">Sprint</div>
+</div>
+
+<div class="body">
+  <div>
+    <div class="card">
+      <div class="card-title">Today's overview</div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-lbl">Active jobs</div><div class="kpi-val blue">12</div></div>
+        <div class="kpi"><div class="kpi-lbl">On-time rate</div><div class="kpi-val green">96%</div></div>
+        <div class="kpi"><div class="kpi-lbl">Exceptions</div><div class="kpi-val red">2</div></div>
+        <div class="kpi"><div class="kpi-lbl">Drivers on block</div><div class="kpi-val purple">5</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Fleet live map</div>
+      <div class="map-placeholder">Live map view</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Routes optimized</div>
+      <table>
+        <tr><th>Route</th><th>Driver</th><th>Stops</th><th>ETA</th><th>Status</th></tr>
+        <tr><td>Surge #4</td><td>M. Chen</td><td>6</td><td>2:45 PM</td><td><span class="badge badge-green">On track</span></td></tr>
+        <tr><td>Sling #12</td><td>J. Alvarez</td><td>1</td><td>1:10 PM</td><td><span class="badge badge-blue">En route</span></td></tr>
+        <tr><td>Surge #5</td><td>T. Owens</td><td>4</td><td>3:20 PM</td><td><span class="badge badge-amber">Behind</span></td></tr>
+        <tr><td>Sling #13</td><td>R. Patel</td><td>1</td><td>12:55 PM</td><td><span class="badge badge-red">Exception</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-title">Agent swarm</div>
+      <div class="agent-row"><div class="agent-dot" style="background:#19b7ef;"></div><div class="agent-name">Sam</div><div class="agent-status">Clustering</div></div>
+      <div class="agent-row"><div class="agent-dot" style="background:#129504;"></div><div class="agent-name">Piper</div><div class="agent-status">Idle</div></div>
+      <div class="agent-row"><div class="agent-dot" style="background:#8d5cff;"></div><div class="agent-name">Marco</div><div class="agent-status">Geocoding</div></div>
+      <div class="agent-row"><div class="agent-dot" style="background:#d92d20;"></div><div class="agent-name">Todd</div><div class="agent-status">2 flags</div></div>
+      <div class="agent-row"><div class="agent-dot" style="background:#ff961e;"></div><div class="agent-name">Mario</div><div class="agent-status">Sending</div></div>
+      <div class="agent-row"><div class="agent-dot" style="background:#0aa8ff;"></div><div class="agent-name">Ruby</div><div class="agent-status">Listening</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Exception queue</div>
+      <table>
+        <tr><th>Job</th><th>Driver</th><th>Delay</th></tr>
+        <tr><td>#4471</td><td>R. Patel</td><td style="color:#d92d20;font-weight:600;">27 min</td></tr>
+        <tr><td>#4483</td><td>T. Owens</td><td style="color:#a06000;font-weight:600;">14 min</td></tr>
+      </table>
+      <button class="btn" style="margin-top:10px;width:100%;">View all</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
