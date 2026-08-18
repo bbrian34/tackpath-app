@@ -940,6 +940,32 @@ body::after{content:'';position:fixed;inset:0;
           </div>
         </div>
 
+        <!-- FLEET PULSE -->
+        <div id="fleetPulseStrip" style="display:flex;align-items:center;gap:24px;padding:18px 28px;border-radius:14px;background:linear-gradient(90deg,rgba(13,122,3,.08),rgba(13,122,3,.02));border:2px solid rgba(13,122,3,.35);margin-bottom:18px;min-height:110px;">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-shrink:0;">
+            <div id="fpScore" style="font-family:var(--cond);font-size:3.2rem;font-weight:800;color:#0d7a03;line-height:1;transition:color .4s;">94</div>
+            <div id="fpTrendArrow" style="font-size:1.6rem;color:#0d7a03;">&#8599;</div>
+          </div>
+          <div style="flex-shrink:0;">
+            <div id="fpLabel" style="font-family:var(--mono);font-size:0.9rem;font-weight:700;letter-spacing:.08em;color:#0d7a03;text-transform:uppercase;">Healthy</div>
+            <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:.05em;margin-top:2px;">FLEET PULSE &middot; LIVE</div>
+          </div>
+          <div style="width:1px;align-self:stretch;background:var(--border2);flex-shrink:0;"></div>
+          <div style="flex-shrink:0;">
+            <div id="fpMinutes" style="font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--text);">+2.1 min</div>
+            <div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:.05em;margin-top:2px;">AVG PACE VS EXPECTED</div>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;justify-content:flex-end;">
+            <div id="fpOutlier" style="display:none;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;background:rgba(217,45,32,.12);border:1.5px solid rgba(217,45,32,.4);">
+              <div style="font-size:1.1rem;">&#9888;</div>
+              <div>
+                <div style="font-family:var(--mono);font-size:0.72rem;font-weight:700;color:var(--red);">1 CRITICAL OUTLIER</div>
+                <div style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);margin-top:1px;">Driver 14 &middot; 18 min behind pace</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- EXCEPTIONS DETAIL PANEL -->
         <div class="panel" id="excDetailPanel" style="display:none;margin-bottom:16px;">
           <div class="panel-hdr">
@@ -4728,6 +4754,54 @@ async function rpApprove(actions){
   setTimeout(function(){
     splash.classList.add('gone');
   }, 4800);
+})();
+</script>
+<script>
+// ── FLEET PULSE (mockup simulation — no real pace calculation wired yet) ──
+(function(){
+  let score = 94, history = [94];
+  const scoreEl = document.getElementById('fpScore');
+  const labelEl = document.getElementById('fpLabel');
+  const arrowEl = document.getElementById('fpTrendArrow');
+  const minutesEl = document.getElementById('fpMinutes');
+  const outlierEl = document.getElementById('fpOutlier');
+  const stripEl = document.getElementById('fleetPulseStrip');
+  if(!scoreEl) return;
+
+  function bandFor(s){
+    if(s>=90) return {label:'Healthy', color:'#0d7a03'};
+    if(s>=75) return {label:'Watch', color:'#a85a0f'};
+    if(s>=50) return {label:'At Risk', color:'#c85a00'};
+    return {label:'Critical', color:'#d92d20'};
+  }
+
+  function render(showOutlier){
+    const band = bandFor(score);
+    scoreEl.textContent = Math.round(score);
+    scoreEl.style.color = band.color;
+    labelEl.textContent = band.label;
+    labelEl.style.color = band.color;
+    stripEl.style.borderColor = band.color+'59';
+    stripEl.style.background = `linear-gradient(90deg,${band.color}14,${band.color}05)`;
+    const trend = history.length>1 ? score-history[history.length-2] : 0;
+    arrowEl.innerHTML = trend>0.3?'&#8599;':trend<-0.3?'&#8600;':'&#8594;';
+    arrowEl.style.color = band.color;
+    const mins = (2.1 + (94-score)*0.4).toFixed(1);
+    minutesEl.textContent = (mins>=0?'+':'')+mins+' min';
+    outlierEl.style.display = showOutlier ? 'flex' : 'none';
+  }
+
+  // Simulate gentle live drift, occasionally dipping for an outlier event
+  setInterval(function(){
+    const drift = (Math.random()-0.5)*2.2;
+    score = Math.max(55, Math.min(97, score+drift));
+    history.push(score);
+    if(history.length>20) history.shift();
+    const showOutlier = score < 80;
+    render(showOutlier);
+  }, 2500);
+
+  render(false);
 })();
 </script>
 </body>
