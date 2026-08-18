@@ -928,7 +928,7 @@ body::after{content:'';position:fixed;inset:0;
       <div class="tab on" id="tab-dispatch">
         <!-- KPI ROW -->
         <div class="kpi-row" style="display:flex;gap:14px;flex-wrap:wrap;">
-          <div class="kpi-total-banner" style="flex:0 0 auto;min-width:280px;padding:14px 20px;">
+          <div class="kpi-total-banner" style="flex:0 0 auto;min-width:280px;padding:14px 20px;height:66px;">
             <div class="kpi-total-icon" style="width:36px;height:36px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7"/></svg>
             </div>
@@ -940,7 +940,7 @@ body::after{content:'';position:fixed;inset:0;
           </div>
 
           <!-- FLEET PULSE -->
-          <div id="fleetPulseStrip" style="flex:0 0 auto;min-width:280px;display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:14px;background:linear-gradient(90deg,rgba(13,122,3,.08),rgba(13,122,3,.02));border:2px solid rgba(13,122,3,.35);">
+          <div id="fleetPulseStrip" style="flex:0 0 auto;min-width:280px;height:66px;box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:14px;background:linear-gradient(90deg,rgba(13,122,3,.08),rgba(13,122,3,.02));border:2px solid rgba(13,122,3,.35);overflow:hidden;">
             <div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0;">
               <div id="fpScore" style="font-family:var(--cond);font-size:1.6rem;font-weight:800;color:#0d7a03;line-height:1;transition:color .4s;">94</div>
               <div id="fpTrendArrow" style="font-size:1rem;color:#0d7a03;">&#8599;</div>
