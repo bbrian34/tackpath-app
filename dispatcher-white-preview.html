@@ -2775,7 +2775,7 @@ function renderTable(){
     }
     const dropoffChanged=lastDropoffByJobId[j.id]!==undefined&&lastDropoffByJobId[j.id]!==dropoffDisplay;
     lastDropoffByJobId[j.id]=dropoffDisplay;
-    const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
+    const dropoffColor=(dropoffChanged||s==='delivered')?'color:var(--green);font-weight:700;':'';
     const progressPct=s==='delivered'?100:Math.round((doneCount/totalStops)*100);
     const progressColor=s==='delivered'?'var(--green)':progressPct>=70?'var(--green)':progressPct>=30?'var(--blue)':'var(--orange)';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
