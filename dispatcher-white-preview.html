@@ -8,8 +8,8 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --blue:#0a7cba;--green:#129504;--orange:#c96a12;--red:#d92d20;
-  --purple:#6d3fd6;--yellow:#a3790a;
+  --blue:#0a7cba;--green:#0d7a03;--orange:#a85a0f;--red:#d92d20;
+  --purple:#6d3fd6;--yellow:#8a6600;
   --bg:#f4f6f9;--card:#ffffff;--card2:#f8fafc;--card3:#eef1f5;
   --border:rgba(10,124,186,.15);--border2:rgba(20,30,45,.08);
   --text:#141b28;--muted:rgba(20,30,45,.68);--faint:rgba(20,30,45,.45);
@@ -1059,7 +1059,7 @@ body::after{content:'';position:fixed;inset:0;
           <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">SmartTrack</div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.15);border-radius:8px;">
             <div style="width:8px;height:8px;border-radius:50%;background:#53ff88;animation:pulse 2s infinite;"></div>
-            <div style="font-family:var(--mono);font-size:0.692rem;color:#53ff88;">SmartTrack Agent Active · Monitoring every 2s · Dark threshold: 15 min</div>
+            <div style="font-family:var(--mono);font-size:0.692rem;color:#0d7a03;">SmartTrack Agent Active · Monitoring every 2s · Dark threshold: 15 min</div>
           </div>
           <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Fleet Live Map</div>
           <div style="margin-top:6px;font-size:0.923rem;color:var(--muted);">Real-time GPS telemetry · Atlanta Metro · ATL HUB 01</div>
@@ -1732,7 +1732,7 @@ async function renderDriverRoster(){
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
         <button onclick="startEditDriver('${d.id}')" id="drv-editbtn-${d.id}" style="padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:0.8rem;cursor:pointer;">Edit</button>
-        <button onclick="saveEditDriver('${d.id}')" id="drv-savebtn-${d.id}" style="display:none;padding:6px 12px;border-radius:7px;border:1px solid rgba(83,255,136,.3);background:rgba(83,255,136,.08);color:#53ff88;font-size:0.8rem;cursor:pointer;">Save</button>
+        <button onclick="saveEditDriver('${d.id}')" id="drv-savebtn-${d.id}" style="display:none;padding:6px 12px;border-radius:7px;border:1px solid rgba(13,122,3,.3);background:rgba(13,122,3,.08);color:#0d7a03;font-size:0.8rem;cursor:pointer;">Save</button>
         <button onclick="deleteDriver('${d.id}','${d.name}')" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.8rem;cursor:pointer;">Delete</button>
       </div>
     </div>
