@@ -927,40 +927,38 @@ body::after{content:'';position:fixed;inset:0;
       <!-- DISPATCH TAB -->
       <div class="tab on" id="tab-dispatch">
         <!-- KPI ROW -->
-        <div class="kpi-row">
-          <div class="kpi-total-banner">
-            <div class="kpi-total-icon">
+        <div class="kpi-row" style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div class="kpi-total-banner" style="flex:0 0 auto;min-width:280px;padding:14px 20px;">
+            <div class="kpi-total-icon" style="width:36px;height:36px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7"/></svg>
             </div>
             <div>
               <div class="kpi-total-lbl">Total Jobs</div>
               <div class="kpi-total-sub">All statuses</div>
             </div>
-            <div class="kpi-total-val" id="kpi-total">—</div>
+            <div class="kpi-total-val" style="font-size:1.6rem;" id="kpi-total">—</div>
           </div>
-        </div>
 
-        <!-- FLEET PULSE -->
-        <div id="fleetPulseStrip" style="display:flex;align-items:center;gap:24px;padding:18px 28px;border-radius:14px;background:linear-gradient(90deg,rgba(13,122,3,.08),rgba(13,122,3,.02));border:2px solid rgba(13,122,3,.35);margin-bottom:18px;min-height:110px;">
-          <div style="display:flex;align-items:baseline;gap:10px;flex-shrink:0;">
-            <div id="fpScore" style="font-family:var(--cond);font-size:3.2rem;font-weight:800;color:#0d7a03;line-height:1;transition:color .4s;">94</div>
-            <div id="fpTrendArrow" style="font-size:1.6rem;color:#0d7a03;">&#8599;</div>
-          </div>
-          <div style="flex-shrink:0;">
-            <div id="fpLabel" style="font-family:var(--mono);font-size:0.9rem;font-weight:700;letter-spacing:.08em;color:#0d7a03;text-transform:uppercase;">Healthy</div>
-            <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:.05em;margin-top:2px;">FLEET PULSE &middot; LIVE</div>
-          </div>
-          <div style="width:1px;align-self:stretch;background:var(--border2);flex-shrink:0;"></div>
-          <div style="flex-shrink:0;">
-            <div id="fpMinutes" style="font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--text);">+2.1 min</div>
-            <div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:.05em;margin-top:2px;">AVG PACE VS EXPECTED</div>
-          </div>
-          <div style="flex:1;min-width:0;display:flex;justify-content:flex-end;">
-            <div id="fpOutlier" style="display:none;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;background:rgba(217,45,32,.12);border:1.5px solid rgba(217,45,32,.4);">
-              <div style="font-size:1.1rem;">&#9888;</div>
+          <!-- FLEET PULSE -->
+          <div id="fleetPulseStrip" style="flex:0 0 auto;min-width:280px;display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:14px;background:linear-gradient(90deg,rgba(13,122,3,.08),rgba(13,122,3,.02));border:2px solid rgba(13,122,3,.35);">
+            <div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0;">
+              <div id="fpScore" style="font-family:var(--cond);font-size:1.6rem;font-weight:800;color:#0d7a03;line-height:1;transition:color .4s;">94</div>
+              <div id="fpTrendArrow" style="font-size:1rem;color:#0d7a03;">&#8599;</div>
+            </div>
+            <div style="flex-shrink:0;">
+              <div id="fpLabel" style="font-family:var(--mono);font-size:0.769rem;font-weight:700;letter-spacing:.04em;color:#0d7a03;text-transform:uppercase;">Healthy</div>
+              <div style="font-size:0.769rem;color:var(--faint);margin-top:2px;">Fleet Pulse &middot; Live</div>
+            </div>
+            <div style="width:1px;align-self:stretch;background:var(--border2);flex-shrink:0;"></div>
+            <div style="flex-shrink:0;">
+              <div id="fpMinutes" style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);">+2.1 min</div>
+              <div style="font-size:0.769rem;color:var(--faint);margin-top:2px;">Avg pace</div>
+            </div>
+            <div id="fpOutlier" style="display:none;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;background:rgba(217,45,32,.12);border:1.5px solid rgba(217,45,32,.4);margin-left:8px;">
+              <div style="font-size:0.85rem;">&#9888;</div>
               <div>
-                <div style="font-family:var(--mono);font-size:0.72rem;font-weight:700;color:var(--red);">1 CRITICAL OUTLIER</div>
-                <div style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);margin-top:1px;">Driver 14 &middot; 18 min behind pace</div>
+                <div style="font-family:var(--mono);font-size:0.6rem;font-weight:700;color:var(--red);">1 OUTLIER</div>
+                <div style="font-size:0.58rem;color:var(--muted);">Driver 14</div>
               </div>
             </div>
           </div>
