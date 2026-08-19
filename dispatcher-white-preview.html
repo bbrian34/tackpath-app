@@ -2840,13 +2840,29 @@ function renderTable(){
       <td>${(()=>{
         if(s==='delivered')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
         if(s!=='in_transit'&&s!=='customer_confirmed')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
-        if(j.exception_flag)return '<span style="color:var(--red);font-weight:700;font-size:0.769rem;">&#128308; Late</span>';
-        const tracked=SMARTTRACK_STOP_DEADLINE[j.id];
-        if(!tracked||!tracked.deadline)return '<span style="color:var(--muted);font-size:0.769rem;">&#8212;</span>';
-        const minsToDeadline=Math.round((new Date(tracked.deadline).getTime()-Date.now())/60000);
-        if(minsToDeadline<=0)return '<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
-        if(minsToDeadline<=10)return '<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
-        return '<span style="color:var(--green);font-weight:700;font-size:0.769rem;">&#128994; On Time</span>';
+        let statusLine;
+        if(j.exception_flag){
+          statusLine='<span style="color:var(--red);font-weight:700;font-size:0.769rem;">&#128308; Late</span>';
+        } else {
+          const tracked=SMARTTRACK_STOP_DEADLINE[j.id];
+          if(!tracked||!tracked.deadline){
+            statusLine='<span style="color:var(--muted);font-size:0.769rem;">&#8212;</span>';
+          } else {
+            const minsToDeadline=Math.round((new Date(tracked.deadline).getTime()-Date.now())/60000);
+            if(minsToDeadline<=10)statusLine='<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
+            else statusLine='<span style="color:var(--green);font-weight:700;font-size:0.769rem;">&#128994; On Time</span>';
+          }
+        }
+        // Real per-driver drift, same calculation as Fleet Pulse: live traffic ETA
+        // vs the fixed deadline locked at job creation
+        let driftLine='';
+        if(j.original_eta_at&&j.estimated_delivery_at){
+          const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(j.original_eta_at).getTime())/60000;
+          const dColor=driftMin>=12?'var(--red)':driftMin>=5?'var(--orange)':'var(--muted)';
+          const dSign=driftMin>=0?'+':'';
+          driftLine=`<div style="font-family:var(--mono);font-size:0.65rem;color:${dColor};margin-top:2px;">${dSign}${driftMin.toFixed(1)} min${j.driver_name?' · '+j.driver_name:''}</div>`;
+        }
+        return statusLine+driftLine;
       })()}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px;min-width:100px;">
