@@ -971,7 +971,7 @@ body::after{content:'';position:fixed;inset:0;
               <div id="fpMinutes" style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);">+2.1 min</div>
               <div style="font-size:0.769rem;color:var(--faint);margin-top:2px;">Avg pace</div>
             </div>
-            <div id="fpOutlier" style="display:none;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;background:rgba(217,45,32,.12);border:1.5px solid rgba(217,45,32,.4);margin-left:8px;">
+            <div id="fpOutlier" style="display:none;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;background:rgba(217,45,32,.12);border:1.5px solid rgba(217,45,32,.4);margin-left:8px;cursor:pointer;">
               <div style="font-size:0.85rem;">&#9888;</div>
               <div>
                 <div style="font-family:var(--mono);font-size:0.6rem;font-weight:700;color:var(--red);">OUTLIER</div>
@@ -4858,12 +4858,14 @@ function renderFleetPulse(){
   // and bad enough in absolute terms to be worth naming
   const outlierGap=worst.driftMin-avgDrift;
   if(worst.driftMin>=12&&outlierGap>=5){
-    const driverName=worst.job.driver_name||'Unassigned';
+    const driverName=worst.job.driver_name||'No driver assigned';
     outlierEl.style.display='flex';
     outlierEl.querySelector('[data-outlier-text]').textContent=
       driverName+' \u00b7 '+Math.round(worst.driftMin)+' min behind';
+    outlierEl.onclick=function(){ openDrawer(worst.job.id); };
   } else {
     outlierEl.style.display='none';
+    outlierEl.onclick=null;
   }
 }
 </script>
