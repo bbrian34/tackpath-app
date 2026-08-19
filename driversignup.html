@@ -168,13 +168,14 @@ footer a{color:var(--blue);margin:0 8px;}
 
     <label class="consent-row">
       <input type="checkbox" id="suInsuranceCheckbox"/>
-      <span>I confirm I am at least 18 years old, hold a valid driver's license, and carry current auto insurance meeting state minimum requirements for the vehicle listed above.</span>
+      <span>I confirm I am at least 18 years old, hold a valid driver's license, and carry current auto insurance meeting state minimum requirements for the vehicle listed above. I acknowledge I am applying as an independent contractor, not an employee of TackPath.</span>
     </label>
 
     <label class="consent-row">
       <input type="checkbox" id="suConsentCheckbox"/>
-      <span>I agree to receive SMS messages from TackPath, Inc. regarding my delivery assignments, route updates, and dispatch notifications at the number provided. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. I acknowledge I am applying as an independent contractor, not an employee of TackPath. See <a href="terms.html" target="_blank">Terms of Service</a> and <a href="privacy.html" target="_blank">Privacy Policy</a>.</span>
+      <span>(Optional) I agree to receive SMS messages from TackPath, Inc. regarding my delivery assignments, route updates, and dispatch notifications at the number provided. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. See <a href="terms.html" target="_blank">Terms of Service</a> and <a href="privacy.html" target="_blank">Privacy Policy</a>.</span>
     </label>
+    <div class="footnote" style="margin-top:-8px;margin-bottom:16px;">SMS updates are optional and not required to apply or drive with TackPath. You can check your status anytime in the driver app.</div>
 
     <button class="fb" onclick="submitApplication()" id="applyBtn">Submit Application</button>
     <div class="footnote">Already applied? <a href="driver.html">Sign in to your account</a></div>
@@ -224,7 +225,9 @@ async function submitApplication(){
   if(age<18){toast('You must be at least 18 to drive for TackPath','warn');return;}
 
   if(!insuranceOk){toast('Please confirm your license and insurance to continue','warn');return;}
-  if(!consentOk){toast('Please agree to receive SMS messages to continue','warn');return;}
+  // SMS consent (suConsentCheckbox) is intentionally NOT required here.
+  // Twilio A2P compliance requires opt-in to remain fully optional and never
+  // a condition of completing an application or using the service.
 
   const phone=rawPhone.replace(/\D/g,'');
   const btn=document.getElementById('applyBtn');
@@ -247,7 +250,7 @@ async function submitApplication(){
         phone:phone,
         date_of_birth:dob,
         vehicle:vehicle||null,
-        sms_consent:true,
+        sms_consent:consentOk,
         status:'pending_approval'
       })
     });
