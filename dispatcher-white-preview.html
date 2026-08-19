@@ -1631,6 +1631,7 @@ const orgReady=resolveOrgFromUrl();
 async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbDelete(p){const r=await fetch(sbUrl(p),{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());return true;}
+async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPostMsg(jobId,body,role){
   return sbPost('messages',{job_id:jobId,sender:'Dispatcher',sender_role:role||'dispatcher',body});
 }
@@ -1650,6 +1651,8 @@ const SMARTTRACK_FALLBACK_DEADLINE={}; // client-side locked deadline for jobs m
 let smartTrackEnabled=true;
 let stopDeliveries=[]; // Individual stop delivery records from STOP_DELIVERED:: messages
 let seenTransitKeys=new Set(), seenDeliveredKeys=new Set();
+let stopDriftRecords=[]; // Persisted per-stop drift snapshots, loaded from STOP_DRIFT:: messages
+let capturedDriftKeys=new Set(); // Prevents re-capturing the same stop's drift twice in one session
 let driverLastSeen={};
 let driverLastLocation={};
 let lastDropoffByJobId={};
@@ -2373,6 +2376,11 @@ async function loadJobs(){
     });
     jobs=newJobs;
     syncSurgeBlocksFromJobs();
+    // Snapshot the current per-stop deadlines BEFORE SmartTrack relocks them below --
+    // by the time this poll cycle sees a stop just got delivered, SmartTrack has already
+    // moved the deadline to the driver's NEXT stop. This snapshot is what actually lets
+    // us capture the correct deadline for the stop that just finished.
+    const preRelockDeadlines=JSON.parse(JSON.stringify(SMARTTRACK_STOP_DEADLINE));
     try{
       const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
       driverLastSeen={};
@@ -2408,6 +2416,25 @@ async function loadJobs(){
           .filter(Boolean);
       }
     }catch(e){stopDeliveries=[];}
+
+    // Fetch persisted per-stop drift snapshots (captured by this dispatcher the moment
+    // each stop was delivered -- see captureStopDrift()). Not schema-dependent: piggybacks
+    // on the existing messages table, same pattern as STOP_DELIVERED.
+    try{
+      const driftMsgs=await sbGet('messages?sender_role=eq.dispatcher&order=created_at.desc&limit=300');
+      const jobIdsForDrift=new Set(newJobs.map(j=>j.id));
+      stopDriftRecords=(driftMsgs||[])
+        .filter(m=>m.body&&m.body.startsWith('STOP_DRIFT::')&&jobIdsForDrift.has(m.job_id))
+        .map(m=>{
+          try{
+            const data=JSON.parse(m.body.replace('STOP_DRIFT::',''));
+            return{...data,job_id:m.job_id};
+          }catch(e){return null;}
+        })
+        .filter(Boolean);
+    }catch(e){stopDriftRecords=[];}
+
+    captureStopDrift(preRelockDeadlines);
 
     // Check for unread driver messages and pulse comms FAB
     try{
@@ -2736,6 +2763,29 @@ function renderPipeline(){
     }
   });
 
+  // Driver score summary: for every fully-delivered route with real captured drift
+  // data, show that driver's average performance across the whole route -- built
+  // only from real snapshots taken at the moment each stop was delivered, never
+  // estimated after the fact.
+  cols.delivered.forEach(j=>{
+    const records=stopDriftRecords.filter(r=>r.job_id===j.id);
+    if(!records.length)return;
+    const avgDrift=records.reduce((sum,r)=>sum+r.driftMin,0)/records.length;
+    const score=Math.max(0,Math.min(100,100-(avgDrift*3)));
+    const scoreColor=score>=90?'var(--green)':score>=75?'#a85a0f':score>=50?'#c85a00':'var(--red)';
+    const driverName=records[0].driver_name||j.driver_name||'Unknown driver';
+    deliveredEntries.unshift({
+      jobId:j.id,
+      title:j.title||'Untitled Job',
+      stopLabel:Math.round(score)+' score',
+      stopLabelColor:scoreColor,
+      detail:driverName+' · '+(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min avg over '+records.length+' stop'+(records.length===1?'':'s'),
+      age:records[records.length-1].delivered_at?timeAgo(records[records.length-1].delivered_at):'',
+      shortId:j.id?j.id.slice(0,8):'—',
+      isDriverSummary:true
+    });
+  });
+
   if(deliveredCnt) deliveredCnt.textContent=deliveredEntries.length;
   if(deliveredBody){
     if(!deliveredEntries.length){
@@ -2747,10 +2797,10 @@ function renderPipeline(){
         seenDeliveredKeys.add(key);
       });
       deliveredBody.innerHTML=deliveredEntries.slice(0,6).map(e=>`
-        <div class="pcard${e._streamNew?' stream-new-delivered':''}" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
+        <div class="pcard${e._streamNew?' stream-new-delivered':''}" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid ${e.isDriverSummary?'rgba(109,63,214,.5)':'rgba(83,255,136,.3)'};${e.isDriverSummary?'background:rgba(109,63,214,.05);':''}">
           <div class="pcard-sig" style="display:flex;justify-content:space-between;align-items:center;">
             <span>TP-${e.shortId}</span>
-            <span style="color:var(--green);font-size:0.615rem;font-family:var(--mono);">${e.stopLabel}</span>
+            <span style="color:${e.stopLabelColor||'var(--green)'};font-size:0.615rem;font-family:var(--mono);font-weight:${e.isDriverSummary?'700':'400'};">${e.stopLabel}</span>
           </div>
           <div class="pcard-name">${e.title}</div>
           <div class="pcard-route" style="font-size:0.769rem;">${e.detail}</div>
@@ -4132,6 +4182,33 @@ async function refreshLiveETA(job){
   }catch(e){
     console.error(tag,'Live ETA refresh error:',e);
   }
+}
+
+// Captures real per-stop drift the moment a stop is detected as delivered, using
+// the deadline snapshot taken BEFORE SmartTrack could relock it for the next stop.
+// Persists to the messages table (no schema changes) so it survives refreshes and
+// accumulates real history going forward. Silently skips any stop where the timing
+// doesn't line up cleanly -- an honest missed capture beats a wrong one.
+function captureStopDrift(preRelockDeadlines){
+  stopDeliveries.forEach(sd=>{
+    const key=sd.job_id+'-'+sd.stop_number;
+    if(capturedDriftKeys.has(key))return;
+    const job=jobs.find(j=>j.id===sd.job_id);
+    if(!job)return;
+    const tracked=preRelockDeadlines[sd.job_id];
+    if(!tracked||!tracked.deadline)return;
+    if(tracked.stopIndex!==sd.stop_number-1)return; // deadline doesn't correspond to this stop, skip rather than guess
+    if(!job.estimated_delivery_at)return;
+    const driftMin=(new Date(job.estimated_delivery_at).getTime()-new Date(tracked.deadline).getTime())/60000;
+    capturedDriftKeys.add(key);
+    sbPostMsg(sd.job_id,'STOP_DRIFT::'+JSON.stringify({
+      stop_number:sd.stop_number,
+      stop_total:sd.stop_total,
+      driver_name:job.driver_name||null,
+      driftMin:Math.round(driftMin*10)/10,
+      delivered_at:sd.delivered_at||sd.created_at
+    }),'dispatcher').catch(function(){});
+  });
 }
 
 async function refreshAllLiveETAs(){
