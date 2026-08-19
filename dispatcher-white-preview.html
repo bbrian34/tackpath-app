@@ -4082,35 +4082,37 @@ const ETA_REFRESH_MINUTES=2;
 const lastEtaRefresh={};
 
 async function refreshLiveETA(job){
+  const tag='[LiveETA '+(job.title||job.id.slice(0,8))+']';
   try{
-    if(!job.driver_name)return;
+    if(!job.driver_name){console.warn(tag,'skipped: no driver_name on job');return;}
     const loc=driverLastLocation[job.driver_name];
-    if(!loc)return;
+    if(!loc){console.warn(tag,'skipped: no recent GPS position for driver "'+job.driver_name+'" (name mismatch or no pings yet)');return;}
 
     let stops=job.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
-    if(!stops||!Array.isArray(stops))return;
+    if(!stops||!Array.isArray(stops)){console.warn(tag,'skipped: surge_stops missing or not an array');return;}
 
     const doneCount=job.stops_completed||0;
     const currentStop=stops[Math.min(doneCount,stops.length-1)];
-    if(!currentStop)return;
+    if(!currentStop){console.warn(tag,'skipped: no stop found at index',doneCount);return;}
 
     // Fallback: if this stop was saved before coords were stored, geocode it live now
     let destCoords=currentStop.coords;
     if(!destCoords&&currentStop.address){
       destCoords=await geocodeAddress(currentStop.address);
-      if(!destCoords)return;
+      if(!destCoords){console.warn(tag,'skipped: live geocode failed for',currentStop.address);return;}
     }
-    if(!destCoords)return;
+    if(!destCoords){console.warn(tag,'skipped: current stop has no coords and no address to geocode');return;}
 
     const legSeconds=await getTrafficAwareLegSeconds(loc,destCoords);
-    if(legSeconds===null)return;
+    if(legSeconds===null){console.warn(tag,'skipped: Routes API returned no result');return;}
 
     const newEta=new Date(Date.now()+legSeconds*1000).toISOString();
     await sbPatch('jobs?id=eq.'+job.id,{estimated_delivery_at:newEta});
     job.estimated_delivery_at=newEta;
+    job._etaLastRefreshedAt=Date.now();
   }catch(e){
-    console.error('Live ETA refresh error:',e);
+    console.error(tag,'Live ETA refresh error:',e);
   }
 }
 
