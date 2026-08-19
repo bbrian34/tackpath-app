@@ -974,8 +974,8 @@ body::after{content:'';position:fixed;inset:0;
             <div id="fpOutlier" style="display:none;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;background:rgba(217,45,32,.12);border:1.5px solid rgba(217,45,32,.4);margin-left:8px;">
               <div style="font-size:0.85rem;">&#9888;</div>
               <div>
-                <div style="font-family:var(--mono);font-size:0.6rem;font-weight:700;color:var(--red);">1 OUTLIER</div>
-                <div style="font-size:0.58rem;color:var(--muted);">Driver 14</div>
+                <div style="font-family:var(--mono);font-size:0.6rem;font-weight:700;color:var(--red);">OUTLIER</div>
+                <div data-outlier-text style="font-size:0.58rem;color:var(--muted);"></div>
               </div>
             </div>
           </div>
@@ -2595,7 +2595,7 @@ function triggerCSVUpload(){
 
 // ── RENDER ALL ──
 function renderAll(){
-  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();
+  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();renderFleetPulse();
 
   const sprintBtn=document.getElementById('tab-sprint-btn');
   const activeSurgeNow=jobs.some(j=>j.job_type==='surge'&&(j.status==='assigned'||j.status==='in_transit'));
@@ -4786,16 +4786,50 @@ async function rpApprove(actions){
 })();
 </script>
 <script>
-// ── FLEET PULSE (mockup simulation — no real pace calculation wired yet) ──
-(function(){
-  let score = 94, history = [94];
-  const scoreEl = document.getElementById('fpScore');
-  const labelEl = document.getElementById('fpLabel');
-  const arrowEl = document.getElementById('fpTrendArrow');
-  const minutesEl = document.getElementById('fpMinutes');
-  const outlierEl = document.getElementById('fpOutlier');
-  const stripEl = document.getElementById('fleetPulseStrip');
+// ── FLEET PULSE (real calculation) ──
+// Per-job drift = estimated_delivery_at (live traffic ETA) minus original_eta_at
+// (fixed deadline locked at job creation). Positive = running later than
+// originally expected. Averaged across all active jobs = fleet-wide pace.
+// Score mapping is a first honest heuristic -- not yet calibrated against
+// real operational days. Revisit once real Zelurco data exists.
+let fpHistory=[];
+
+function renderFleetPulse(){
+  const scoreEl=document.getElementById('fpScore');
+  const labelEl=document.getElementById('fpLabel');
+  const arrowEl=document.getElementById('fpTrendArrow');
+  const minutesEl=document.getElementById('fpMinutes');
+  const outlierEl=document.getElementById('fpOutlier');
+  const stripEl=document.getElementById('fleetPulseStrip');
   if(!scoreEl) return;
+
+  const active=jobs.filter(j=>(j.status==='assigned'||j.status==='in_transit')&&j.original_eta_at&&j.estimated_delivery_at);
+
+  if(!active.length){
+    scoreEl.textContent='--';
+    labelEl.textContent='No Active Jobs';
+    labelEl.style.color='var(--muted)';
+    scoreEl.style.color='var(--muted)';
+    arrowEl.innerHTML='';
+    minutesEl.textContent='--';
+    outlierEl.style.display='none';
+    stripEl.style.borderColor='var(--border)';
+    stripEl.style.background='var(--card)';
+    return;
+  }
+
+  const drifts=active.map(j=>({
+    job:j,
+    driftMin:(new Date(j.estimated_delivery_at).getTime()-new Date(j.original_eta_at).getTime())/60000
+  }));
+
+  const avgDrift=drifts.reduce((sum,d)=>sum+d.driftMin,0)/drifts.length;
+  const worst=drifts.reduce((a,b)=>b.driftMin>a.driftMin?b:a,drifts[0]);
+
+  // Score heuristic: 100 at zero drift, losing ~3 points per minute behind,
+  // gaining slightly for running ahead. Clamped 0-100.
+  let score=100-(avgDrift*3);
+  score=Math.max(0,Math.min(100,score));
 
   function bandFor(s){
     if(s>=90) return {label:'Healthy', color:'#0d7a03'};
@@ -4803,35 +4837,35 @@ async function rpApprove(actions){
     if(s>=50) return {label:'At Risk', color:'#c85a00'};
     return {label:'Critical', color:'#d92d20'};
   }
+  const band=bandFor(score);
 
-  function render(showOutlier){
-    const band = bandFor(score);
-    scoreEl.textContent = Math.round(score);
-    scoreEl.style.color = band.color;
-    labelEl.textContent = band.label;
-    labelEl.style.color = band.color;
-    stripEl.style.borderColor = band.color+'59';
-    stripEl.style.background = `linear-gradient(90deg,${band.color}14,${band.color}05)`;
-    const trend = history.length>1 ? score-history[history.length-2] : 0;
-    arrowEl.innerHTML = trend>0.3?'&#8599;':trend<-0.3?'&#8600;':'&#8594;';
-    arrowEl.style.color = band.color;
-    const mins = (2.1 + (94-score)*0.4).toFixed(1);
-    minutesEl.textContent = (mins>=0?'+':'')+mins+' min';
-    outlierEl.style.display = showOutlier ? 'flex' : 'none';
+  scoreEl.textContent=Math.round(score);
+  scoreEl.style.color=band.color;
+  labelEl.textContent=band.label;
+  labelEl.style.color=band.color;
+  stripEl.style.borderColor=band.color+'59';
+  stripEl.style.background=`linear-gradient(90deg,${band.color}14,${band.color}05)`;
+
+  fpHistory.push(score);
+  if(fpHistory.length>20) fpHistory.shift();
+  const trend=fpHistory.length>1?score-fpHistory[fpHistory.length-2]:0;
+  arrowEl.innerHTML=trend>0.3?'&#8599;':trend<-0.3?'&#8600;':'&#8594;';
+  arrowEl.style.color=band.color;
+
+  minutesEl.textContent=(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min';
+
+  // Outlier: worst driver's drift is meaningfully worse than the fleet average,
+  // and bad enough in absolute terms to be worth naming
+  const outlierGap=worst.driftMin-avgDrift;
+  if(worst.driftMin>=12&&outlierGap>=5){
+    const driverName=worst.job.driver_name||'Unassigned';
+    outlierEl.style.display='flex';
+    outlierEl.querySelector('[data-outlier-text]').textContent=
+      driverName+' \u00b7 '+Math.round(worst.driftMin)+' min behind';
+  } else {
+    outlierEl.style.display='none';
   }
-
-  // Simulate gentle live drift, occasionally dipping for an outlier event
-  setInterval(function(){
-    const drift = (Math.random()-0.5)*2.2;
-    score = Math.max(55, Math.min(97, score+drift));
-    history.push(score);
-    if(history.length>20) history.shift();
-    const showOutlier = score < 80;
-    render(showOutlier);
-  }, 2500);
-
-  render(false);
-})();
+}
 </script>
 <script>
 (function(){
