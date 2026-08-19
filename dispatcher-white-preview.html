@@ -2853,11 +2853,13 @@ function renderTable(){
             else statusLine='<span style="color:var(--green);font-weight:700;font-size:0.769rem;">&#128994; On Time</span>';
           }
         }
-        // Real per-driver drift, same calculation as Fleet Pulse: live traffic ETA
-        // vs the fixed deadline locked at job creation
+        // Real per-driver drift: live ETA to their CURRENT stop vs the deadline
+        // locked for that SAME stop (not the whole-route deadline -- comparing
+        // against the whole route would make early stops look falsely way-ahead)
         let driftLine='';
-        if(j.original_eta_at&&j.estimated_delivery_at){
-          const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(j.original_eta_at).getTime())/60000;
+        const stopDeadline=SMARTTRACK_STOP_DEADLINE[j.id];
+        if(stopDeadline&&stopDeadline.deadline&&j.estimated_delivery_at){
+          const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(stopDeadline.deadline).getTime())/60000;
           const dColor=driftMin>=12?'var(--red)':driftMin>=5?'var(--orange)':'var(--muted)';
           const dSign=driftMin>=0?'+':'';
           driftLine=`<div style="font-family:var(--mono);font-size:0.65rem;color:${dColor};margin-top:2px;">${dSign}${driftMin.toFixed(1)} min${j.driver_name?' · '+j.driver_name:''}</div>`;
@@ -4805,9 +4807,13 @@ async function rpApprove(actions){
 </script>
 <script>
 // ── FLEET PULSE (real calculation) ──
-// Per-job drift = estimated_delivery_at (live traffic ETA) minus original_eta_at
-// (fixed deadline locked at job creation). Positive = running later than
-// originally expected. Averaged across all active jobs = fleet-wide pace.
+// Per-job drift = estimated_delivery_at (live traffic ETA to the driver's
+// CURRENT stop) minus SMARTTRACK_STOP_DEADLINE (the deadline locked for that
+// SAME stop the moment the driver started heading to it). Comparing against
+// the whole-route deadline instead would make early stops on long routes
+// look falsely way-ahead of schedule, since reaching stop 2 of 13 is always
+// sooner than the deadline for finishing all 13. Positive = running later
+// than expected for this stop. Averaged across all active jobs = fleet pace.
 // Score mapping is a first honest heuristic -- not yet calibrated against
 // real operational days. Revisit once real Zelurco data exists.
 let fpHistory=[];
@@ -4821,7 +4827,10 @@ function renderFleetPulse(){
   const stripEl=document.getElementById('fleetPulseStrip');
   if(!scoreEl) return;
 
-  const active=jobs.filter(j=>(j.status==='assigned'||j.status==='in_transit')&&j.original_eta_at&&j.estimated_delivery_at);
+  // Only jobs with a locked per-stop deadline can be measured accurately --
+  // comparing against the whole-route deadline (original_eta_at) instead would
+  // make early stops on long routes look falsely way-ahead of schedule
+  const active=jobs.filter(j=>(j.status==='assigned'||j.status==='in_transit')&&SMARTTRACK_STOP_DEADLINE[j.id]&&SMARTTRACK_STOP_DEADLINE[j.id].deadline&&j.estimated_delivery_at);
 
   if(!active.length){
     scoreEl.textContent='--';
@@ -4838,7 +4847,7 @@ function renderFleetPulse(){
 
   const drifts=active.map(j=>({
     job:j,
-    driftMin:(new Date(j.estimated_delivery_at).getTime()-new Date(j.original_eta_at).getTime())/60000
+    driftMin:(new Date(j.estimated_delivery_at).getTime()-new Date(SMARTTRACK_STOP_DEADLINE[j.id].deadline).getTime())/60000
   }));
 
   const avgDrift=drifts.reduce((sum,d)=>sum+d.driftMin,0)/drifts.length;
