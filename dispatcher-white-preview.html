@@ -2737,7 +2737,33 @@ function renderPipeline(){
   const deliveredBody=document.getElementById('pp-delivered');
   const deliveredEntries=[];
 
+  // Build driver score summaries FIRST so we know which completed routes to
+  // collapse -- once a route has a summary card, its individual per-stop
+  // entries are just clutter and should drop off the list.
+  const summarizedJobIds=new Set();
+  const summaryEntries=[];
+  cols.delivered.forEach(j=>{
+    const records=stopDriftRecords.filter(r=>r.job_id===j.id);
+    if(!records.length)return;
+    const avgDrift=records.reduce((sum,r)=>sum+r.driftMin,0)/records.length;
+    const score=Math.max(0,Math.min(100,100-(avgDrift*3)));
+    const scoreColor=score>=90?'var(--green)':score>=75?'#a85a0f':score>=50?'#c85a00':'var(--red)';
+    const driverName=records[0].driver_name||j.driver_name||'Unknown driver';
+    summarizedJobIds.add(j.id);
+    summaryEntries.push({
+      jobId:j.id,
+      title:j.title||'Untitled Job',
+      stopLabel:Math.round(score)+' score',
+      stopLabelColor:scoreColor,
+      detail:driverName+' · '+(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min avg over '+records.length+' stop'+(records.length===1?'':'s'),
+      age:records[records.length-1].delivered_at?timeAgo(records[records.length-1].delivered_at):'',
+      shortId:j.id?j.id.slice(0,8):'—',
+      isDriverSummary:true
+    });
+  });
+
   stopDeliveries.forEach(sd=>{
+    if(summarizedJobIds.has(sd.job_id))return; // collapsed into the summary card above
     const job=jobs.find(j=>j.id===sd.job_id);
     const jobTitle=job?job.title||'Delivery':'Delivery';
     deliveredEntries.push({
@@ -2751,6 +2777,7 @@ function renderPipeline(){
   });
 
   cols.delivered.forEach(j=>{
+    if(summarizedJobIds.has(j.id))return;
     if(!stopDeliveries.some(sd=>sd.job_id===j.id)){
       deliveredEntries.push({
         jobId:j.id,
@@ -2763,28 +2790,7 @@ function renderPipeline(){
     }
   });
 
-  // Driver score summary: for every fully-delivered route with real captured drift
-  // data, show that driver's average performance across the whole route -- built
-  // only from real snapshots taken at the moment each stop was delivered, never
-  // estimated after the fact.
-  cols.delivered.forEach(j=>{
-    const records=stopDriftRecords.filter(r=>r.job_id===j.id);
-    if(!records.length)return;
-    const avgDrift=records.reduce((sum,r)=>sum+r.driftMin,0)/records.length;
-    const score=Math.max(0,Math.min(100,100-(avgDrift*3)));
-    const scoreColor=score>=90?'var(--green)':score>=75?'#a85a0f':score>=50?'#c85a00':'var(--red)';
-    const driverName=records[0].driver_name||j.driver_name||'Unknown driver';
-    deliveredEntries.unshift({
-      jobId:j.id,
-      title:j.title||'Untitled Job',
-      stopLabel:Math.round(score)+' score',
-      stopLabelColor:scoreColor,
-      detail:driverName+' · '+(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min avg over '+records.length+' stop'+(records.length===1?'':'s'),
-      age:records[records.length-1].delivered_at?timeAgo(records[records.length-1].delivered_at):'',
-      shortId:j.id?j.id.slice(0,8):'—',
-      isDriverSummary:true
-    });
-  });
+  deliveredEntries.unshift(...summaryEntries);
 
   if(deliveredCnt) deliveredCnt.textContent=deliveredEntries.length;
   if(deliveredBody){
