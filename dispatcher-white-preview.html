@@ -71,8 +71,8 @@ body::after{content:'';position:fixed;inset:0;
 .lbox-logo{font-family:var(--cond);font-weight:900;font-size:2.154rem;letter-spacing:2.5px;
   display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px;}
 .lbox-logo span{color:var(--blue);}
-.lbox-ver{font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.22em;text-transform:uppercase;}
-.lbox-desc{margin-top:10px;font-size:0.923rem;color:var(--muted);line-height:1.6;}
+.lbox-ver{font-family:var(--mono);font-size:0.692rem;color:rgba(255,255,255,.55);letter-spacing:.22em;text-transform:uppercase;}
+.lbox-desc{margin-top:10px;font-size:0.923rem;color:rgba(255,255,255,.55);line-height:1.6;}
 .lbox-form{padding:24px 36px 32px;}
 .lf-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;color:var(--muted);
   letter-spacing:.16em;text-transform:uppercase;margin-bottom:7px;display:block;}
@@ -640,11 +640,11 @@ body::after{content:'';position:fixed;inset:0;
 .oc-brand{display:flex;align-items:center;gap:8px;}
 .oc-brand-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px rgba(83,255,136,.8);animation:pulse 2s infinite;}
 .oc-ttl{font-size:1.077rem;font-weight:800;}
-.oc-sub{font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.08em;margin-top:1px;}
+.oc-sub{font-family:var(--mono);font-size:0.692rem;color:rgba(255,255,255,.55);letter-spacing:.08em;margin-top:1px;}
 .oc-tabs{display:flex;gap:2px;padding-bottom:0;}
 .oc-tab{padding:7px 13px;border-radius:8px 8px 0 0;font-size:0.846rem;font-weight:700;
   cursor:pointer;border:none;font-family:var(--sans);background:transparent;
-  color:var(--muted);transition:all .15s;position:relative;}
+  color:rgba(255,255,255,.55);transition:all .15s;position:relative;}
 .oc-tab.on{background:rgba(25,183,239,.1);color:var(--blue);}
 .oc-tab-badge{position:absolute;top:2px;right:3px;min-width:14px;height:14px;border-radius:7px;
   background:var(--red);color:#fff;font-size:0.538rem;font-weight:900;
@@ -653,20 +653,20 @@ body::after{content:'';position:fixed;inset:0;
 .oc-channel.on{display:flex;}
 .oc-msgs{height:240px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;background:#020a14;}
 .oc-msg-wrap{display:flex;flex-direction:column;gap:2px;}
-.oc-msg-meta{font-family:var(--mono);font-size:0.615rem;color:var(--faint);padding:0 2px;}
+.oc-msg-meta{font-family:var(--mono);font-size:0.615rem;color:rgba(255,255,255,.4);padding:0 2px;}
 .oc-msg-meta.right{text-align:right;color:#666;}
 .oc-msg{padding:9px 12px;border-radius:10px;line-height:1.6;max-width:88%;font-size:0.846rem;}
-.oc-inbound{background:#0c1a28;border:1px solid rgba(255,255,255,.06);color:var(--text);}
+.oc-inbound{background:#0c1a28;border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.92);}
 .oc-outbound{background:var(--blue);color:#fff;align-self:flex-end;}
-.oc-customer{background:rgba(141,92,255,.15);border:1px solid rgba(141,92,255,.2);color:var(--text);}
+.oc-customer{background:rgba(141,92,255,.15);border:1px solid rgba(141,92,255,.2);color:rgba(255,255,255,.92);}
 .oc-driver{background:#e5e5ea;border:none;color:#111;}
-.oc-system{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:var(--muted);font-style:italic;font-size:0.769rem;text-align:center;align-self:center;max-width:100%;}
+.oc-system{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.55);font-style:italic;font-size:0.769rem;text-align:center;align-self:center;max-width:100%;}
 .oc-inp-area{padding:10px;border-top:1px solid rgba(255,255,255,.06);background:#040c18;}
 .oc-inp-row{display:flex;gap:7px;align-items:flex-end;}
 .oc-recipient{width:100%;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.07);
-  background:#091422;color:var(--muted);font-size:0.769rem;font-family:var(--mono);
+  background:#091422;color:rgba(255,255,255,.75);font-size:0.769rem;font-family:var(--mono);
   outline:none;margin-bottom:6px;cursor:pointer;}
-.oc-recipient option{background:#091422;}
+.oc-recipient option{background:#091422;color:rgba(255,255,255,.92);}
 #ocInput{flex:1;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.07);
   background:#091422;color:#fff;font-size:0.846rem;outline:none;font-family:var(--sans);resize:none;height:38px;}
 #ocInput:focus{border-color:rgba(25,183,239,.35);}
