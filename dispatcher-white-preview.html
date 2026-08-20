@@ -358,7 +358,7 @@ body::after{content:'';position:fixed;inset:0;
 .s-assigned{background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.2);color:var(--blue);}
 .s-in_transit{background:rgba(83,255,136,.07);border:1px solid rgba(83,255,136,.2);color:var(--green);}
 .s-delivered{background:rgba(13,122,3,.08);border:1px solid rgba(13,122,3,.2);color:var(--green);}
-.s-cancelled{background:rgba(255,59,48,.07);border:1px solid rgba(255,59,48,.18);color:var(--red);}
+.s-cancelled{background:rgba(120,130,145,.08);border:1px solid rgba(120,130,145,.2);color:var(--muted);}
 .s-problem{background:rgba(255,59,48,.07);border:1px solid rgba(255,59,48,.18);color:var(--red);}
 .act-btn{padding:5px 10px;border-radius:6px;font-size:0.692rem;font-weight:700;cursor:pointer;
   font-family:var(--sans);background:rgba(25,183,239,.1);color:var(--blue);
@@ -2377,7 +2377,7 @@ async function loadJobs(){
     ring.style.display='none';ps.textContent='Live';
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
     // Detect status changes
-    const colors={routing:'var(--purple)',pending:'var(--orange)',assigned:'var(--blue)',customer_confirmed:'var(--yellow)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
+    const colors={routing:'var(--purple)',pending:'var(--orange)',assigned:'var(--blue)',customer_confirmed:'var(--yellow)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--muted)'};
     newJobs.forEach(j=>{
       const prev=prevStatuses[j.id];
       if(prev&&prev!==j.status){
@@ -2662,13 +2662,13 @@ function renderAll(){
 function renderKPIs(){
   const counts={pending:0,assigned:0,in_transit:0,delivered:0,cancelled:0};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(counts[s]!==undefined) counts[s]++; });
-  document.getElementById('kpi-total').textContent=jobs.length;
-  document.getElementById('sb-total').textContent=jobs.length;
-  document.getElementById('sb-exc').textContent=getRealExceptions().length;
-  document.getElementById('sb-active').textContent=counts.in_transit+counts.assigned;
-  document.getElementById('sf-active').textContent=counts.in_transit+counts.assigned;
-  document.getElementById('sf-pending').textContent=counts.pending;
-  document.getElementById('sf-delivered').textContent=counts.delivered;
+  animateNumber(document.getElementById('kpi-total'),jobs.length);
+  animateNumber(document.getElementById('sb-total'),jobs.length);
+  animateNumber(document.getElementById('sb-exc'),getRealExceptions().length);
+  animateNumber(document.getElementById('sb-active'),counts.in_transit+counts.assigned);
+  animateNumber(document.getElementById('sf-active'),counts.in_transit+counts.assigned);
+  animateNumber(document.getElementById('sf-pending'),counts.pending);
+  animateNumber(document.getElementById('sf-delivered'),counts.delivered);
   const util=jobs.length>0?Math.round((counts.in_transit+counts.assigned)/Math.max(jobs.length,1)*100):0;
   document.getElementById('sf-bar').style.width=util+'%';
   document.getElementById('sf-note').textContent=util+'% active utilization';
@@ -2690,7 +2690,7 @@ function renderPipeline(){
     const idSuffix=s==='in_transit'?'transit':s;
     const cnt=document.getElementById('pc-'+idSuffix);
     const body=document.getElementById('pp-'+idSuffix);
-    if(cnt) cnt.textContent=col.length;
+    if(cnt) animateNumber(cnt,col.length);
     if(!body) return;
     if(!col.length){body.innerHTML='<div class="pipe-empty">No '+s.replace('_',' ')+' jobs</div>';return;}
     if(s==='in_transit'){
@@ -2809,7 +2809,7 @@ function renderPipeline(){
   deliveredEntries.push(...summaryEntries);
   deliveredEntries.sort((a,b)=>b._ts-a._ts);
 
-  if(deliveredCnt) deliveredCnt.textContent=deliveredEntries.length;
+  if(deliveredCnt) animateNumber(deliveredCnt,deliveredEntries.length);
   if(deliveredBody){
     if(!deliveredEntries.length){
       deliveredBody.innerHTML='<div class="pipe-empty">No delivered stops yet</div>';
@@ -3164,7 +3164,7 @@ function renderAnalytics(){
   // Status breakdown
   const counts={pending:0,assigned:0,in_transit:0,delivered:0,cancelled:0};
   jobs.forEach(j=>{const s=j.status||'pending';if(counts[s]!==undefined)counts[s]++;});
-  const colors={pending:'var(--muted)',assigned:'var(--blue)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
+  const colors={pending:'var(--muted)',assigned:'var(--blue)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--muted)'};
   document.getElementById('statusBreakdown').innerHTML=Object.entries(counts).map(([s,c])=>`
     <div style="padding:14px;border-radius:10px;background:var(--card2);border:1px solid var(--border);text-align:center;">
       <div style="font-family:var(--mono);font-size:0.615rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">${s.replace('_',' ')}</div>
@@ -3237,7 +3237,7 @@ function renderSprint(){
   document.getElementById('sl-exc-badge').textContent = exceptions.length+' OPEN';
 
   const board = document.getElementById('sl-board');
-  const statusColor={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--green)',delivered:'var(--green)',cancelled:'var(--red)'};
+  const statusColor={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--green)',delivered:'var(--green)',cancelled:'var(--muted)'};
 
   if(!sprintJobs.length){
     board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:0.846rem;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>';
@@ -3890,6 +3890,24 @@ function idleState(label){
     </svg>
     <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);">${label}</div>
   </div>`;
+}
+// Reusable animated number transition -- counts smoothly between old and new
+// values instead of snapping, same treatment Fleet Pulse already uses.
+function animateNumber(el,newVal){
+  if(!el)return;
+  const oldVal=parseInt(String(el.textContent).replace(/[^0-9-]/g,''))||0;
+  newVal=parseInt(newVal)||0;
+  if(oldVal===newVal){el.textContent=newVal;return;}
+  const duration=400;
+  const start=performance.now();
+  function step(now){
+    const progress=Math.min((now-start)/duration,1);
+    const eased=1-Math.pow(1-progress,3);
+    el.textContent=Math.round(oldVal+(newVal-oldVal)*eased);
+    if(progress<1)requestAnimationFrame(step);
+    else el.textContent=newVal;
+  }
+  requestAnimationFrame(step);
 }
 function timeAgo(ts){
   const diff=Math.floor((Date.now()-new Date(ts).getTime())/1000);
