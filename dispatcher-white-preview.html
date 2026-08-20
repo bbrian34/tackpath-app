@@ -1060,7 +1060,6 @@ body::after{content:'';position:fixed;inset:0;
                 <th>Signal / Job</th>
                 <th>Title</th>
                 <th>Dropoff</th>
-                <th>Timing</th>
                 <th>Progress</th>
                 <th>Status</th>
                 <th>Created</th>
@@ -1077,7 +1076,7 @@ body::after{content:'';position:fixed;inset:0;
         <div style="margin-bottom:16px;">
           <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px;">SmartPath Engine</div>
           <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Route Intelligence</div>
-          <div style="margin-top:6px;font-size:1.05rem;color:var(--muted);max-width:560px;line-height:1.6;font-family:'Playfair Display',serif;font-style:italic;">AI-powered route optimization across every active signal, recalculating in real time as traffic, position, and SLA windows shift.</div>
+          <div style="margin-top:6px;font-size:0.923rem;color:var(--muted);max-width:560px;line-height:1.6;">AI-powered route optimization across all active signals. Routes recalculate in real time based on traffic, driver position, geofencing, and SLA windows.</div>
         </div>
         <div class="spark-row">
           <div class="spark-box"><div class="spark-lbl">Routes Optimized</div><div class="spark-val" style="color:var(--blue);" id="sp-routes">—</div><div class="bar-w"><div class="bar-f" id="sp-rbar" style="background:var(--blue);width:0%;"></div></div></div>
@@ -1113,7 +1112,7 @@ body::after{content:'';position:fixed;inset:0;
             <div style="font-family:var(--mono);font-size:0.692rem;color:#0d7a03;">SmartTrack Agent Active · Monitoring every 2s · Dark threshold: 15 min</div>
           </div>
           <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Fleet Live Map</div>
-          <div style="margin-top:6px;font-size:1.05rem;color:var(--muted);font-family:'Playfair Display',serif;font-style:italic;">Watching every driver, live, across the metro.</div>
+          <div style="margin-top:6px;font-size:0.923rem;color:var(--muted);">Real-time GPS telemetry · Atlanta Metro · ATL HUB 01</div>
         </div>
         <div class="panel">
           <div class="panel-hdr">
@@ -2905,7 +2904,6 @@ function renderTable(){
     lastDropoffByJobId[j.id]=dropoffDisplay;
     const dropoffColor=(dropoffChanged||s==='delivered')?'color:var(--green);font-weight:700;':'';
     const progressPct=s==='delivered'?100:Math.round((doneCount/totalStops)*100);
-    const progressColor=s==='delivered'?'var(--green)':progressPct>=70?'var(--green)':progressPct>=30?'var(--blue)':'var(--orange)';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
       <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
@@ -2913,51 +2911,32 @@ function renderTable(){
       <td>${(()=>{
         if(s==='delivered')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
         if(s!=='in_transit'&&s!=='customer_confirmed')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
-        function timingBar(pct,color,label){
-          return `<div style="display:flex;align-items:center;gap:6px;">
-            <div style="width:26px;height:5px;border-radius:3px;background:rgba(120,130,145,.18);overflow:hidden;flex-shrink:0;">
-              <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;"></div>
-            </div>
-            <span style="color:${color};font-weight:700;font-size:0.769rem;">${label}</span>
-          </div>`;
-        }
-        let statusLine;
+        let urgencyColor='var(--muted)';
+        let urgencyLabel='';
         if(j.exception_flag){
-          statusLine=timingBar(100,'var(--red)','Late');
+          urgencyColor='var(--red)';urgencyLabel='Late';
         } else {
           const tracked=SMARTTRACK_STOP_DEADLINE[j.id];
-          if(!tracked||!tracked.deadline){
-            statusLine='<span style="color:var(--muted);font-size:0.769rem;">&#8212;</span>';
-          } else {
+          if(tracked&&tracked.deadline){
             const minsToDeadline=Math.round((new Date(tracked.deadline).getTime()-Date.now())/60000);
-            // Fill grows as the deadline approaches -- a full bar means time is nearly up,
-            // same reference window (45 min) used consistently for a same-metro delivery
-            const fillPct=Math.max(0,Math.min(100,100-(minsToDeadline/45*100)));
-            if(minsToDeadline<=10)statusLine=timingBar(fillPct,'var(--orange)','Tight');
-            else statusLine=timingBar(fillPct,'var(--green)','On Time');
+            if(minsToDeadline<=10){urgencyColor='var(--orange)';urgencyLabel='Tight';}
+            else{urgencyColor='var(--green)';urgencyLabel='On Time';}
           }
         }
-        // Real per-driver drift: live ETA to their CURRENT stop vs the deadline
-        // locked for that SAME stop (not the whole-route deadline -- comparing
-        // against the whole route would make early stops look falsely way-ahead)
-        let driftLine='';
+        let driftText='';
         const stopDeadline=SMARTTRACK_STOP_DEADLINE[j.id];
         if(stopDeadline&&stopDeadline.deadline&&j.estimated_delivery_at){
           const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(stopDeadline.deadline).getTime())/60000;
-          const dColor=driftMin>=12?'var(--red)':driftMin>=5?'var(--orange)':'var(--muted)';
-          const dSign=driftMin>=0?'+':'';
-          driftLine=`<div style="font-family:var(--mono);font-size:0.65rem;color:${dColor};margin-top:2px;">${dSign}${driftMin.toFixed(1)} min${j.driver_name?' · '+j.driver_name:''}</div>`;
+          driftText=' · '+(driftMin>=0?'+':'')+driftMin.toFixed(1)+' min';
         }
-        return statusLine+driftLine;
-      })()}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px;min-width:100px;">
+        return `<div style="display:flex;align-items:center;gap:6px;min-width:100px;">
           <div style="flex:1;height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden;">
-            <div style="height:100%;width:${progressPct}%;background:${progressColor};border-radius:5px;transition:width .3s;"></div>
+            <div style="height:100%;width:${progressPct}%;background:${urgencyColor};border-radius:5px;transition:width .3s,background .3s;"></div>
           </div>
-          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);white-space:nowrap;">${doneCount}/${totalStops}</div>
+          <div style="font-family:var(--mono);font-size:0.692rem;color:${urgencyColor};white-space:nowrap;font-weight:700;">${doneCount}/${totalStops}${urgencyLabel?' · '+urgencyLabel:''}</div>
         </div>
-      </td>
+        ${driftText?`<div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);margin-top:2px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}`;
+      })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
       <td><button class="act-btn" onclick="event.stopPropagation();${s==='pending'||s==='assigned'?`quickDispatch('${j.id}','${s}')`:`openDrawer('${j.id}')`}">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
