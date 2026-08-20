@@ -2757,6 +2757,7 @@ function renderPipeline(){
       stopLabelColor:scoreColor,
       detail:driverName+' · '+(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min avg over '+records.length+' stop'+(records.length===1?'':'s'),
       age:records[records.length-1].delivered_at?timeAgo(records[records.length-1].delivered_at):'',
+      _ts:records[records.length-1].delivered_at?new Date(records[records.length-1].delivered_at).getTime():0,
       shortId:j.id?j.id.slice(0,8):'—',
       isDriverSummary:true
     });
@@ -2772,6 +2773,7 @@ function renderPipeline(){
       stopLabel:'Stop '+sd.stop_number+' of '+sd.stop_total,
       detail:(sd.recipient?sd.recipient+' · ':'')+sd.address,
       age:sd.delivered_at?timeAgo(sd.delivered_at):'',
+      _ts:sd.delivered_at?new Date(sd.delivered_at).getTime():0,
       shortId:sd.job_id?sd.job_id.slice(0,8):'—'
     });
   });
@@ -2785,12 +2787,17 @@ function renderPipeline(){
         stopLabel:'All stops complete',
         detail:j.pickup_address||'—',
         age:j.created_at?timeAgo(j.created_at):'',
+        _ts:j.created_at?new Date(j.created_at).getTime():0,
         shortId:j.id?j.id.slice(0,8):'—'
       });
     }
   });
 
-  deliveredEntries.unshift(...summaryEntries);
+  // Sort by actual recency, most recent first -- a completed route's summary
+  // card should not permanently block newer, currently-active deliveries just
+  // because it happened to be built first.
+  deliveredEntries.push(...summaryEntries);
+  deliveredEntries.sort((a,b)=>b._ts-a._ts);
 
   if(deliveredCnt) deliveredCnt.textContent=deliveredEntries.length;
   if(deliveredBody){
