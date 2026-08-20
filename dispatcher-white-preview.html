@@ -1099,7 +1099,7 @@ body::after{content:'';position:fixed;inset:0;
           </div>
           <div class="panel">
             <div class="panel-hdr"><div class="panel-ttl">Pending Queue</div></div>
-            <div id="spQueue"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs pending dispatch</div></div>
+            <div id="spQueue"><div style="padding:22px 16px;text-align:center;"><svg width="100%" height="28" viewBox="0 0 200 28" preserveAspectRatio="none" style="display:block;margin-bottom:10px;opacity:.5;"><line x1="0" y1="14" x2="200" y2="14" stroke="var(--border)" stroke-width="1.5"/><circle cx="196" cy="14" r="3" fill="var(--faint)"><animate attributeName="opacity" values="1;.3;1" dur="2s" repeatCount="indefinite"/></circle></svg><div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs pending dispatch</div></div></div>
           </div>
         </div>
       </div>
@@ -1135,7 +1135,7 @@ body::after{content:'';position:fixed;inset:0;
             <!-- Driver pins overlay -->
             <div id="driverPins" style="position:absolute;inset:0;pointer-events:none;"></div>
           </div>
-          <div class="drv-grid" id="drvGrid"><div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div></div>
+          <div class="drv-grid" id="drvGrid"><div style="padding:22px 16px;text-align:center;grid-column:1/-1;"><svg width="100%" height="28" viewBox="0 0 200 28" preserveAspectRatio="none" style="display:block;margin-bottom:10px;opacity:.5;max-width:200px;margin-left:auto;margin-right:auto;"><line x1="0" y1="14" x2="200" y2="14" stroke="var(--border)" stroke-width="1.5"/><circle cx="196" cy="14" r="3" fill="var(--faint)"><animate attributeName="opacity" values="1;.3;1" dur="2s" repeatCount="indefinite"/></circle></svg><div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No active jobs in transit</div></div></div>
         </div>
       </div>
 
@@ -3055,7 +3055,7 @@ function renderSmartPath(){
     `;
   } else {
     subtitle.textContent='No active transit';
-    steps.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs in transit</div>';
+    steps.innerHTML=idleState('No jobs in transit');
   }
   // Queue
   const queue=document.getElementById('spQueue');
@@ -3068,7 +3068,7 @@ function renderSmartPath(){
       </div>
     `).join('');
   } else {
-    queue.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs pending dispatch</div>';
+    queue.innerHTML=idleState('No jobs pending dispatch');
   }
 }
 
@@ -3099,7 +3099,7 @@ function renderSmartTrack(){
   const allActive = [...active, ...surgeActive];
 
   if(!allActive.length){
-    grid.innerHTML='<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);grid-column:1/-1;">No active jobs in transit</div>';
+    grid.innerHTML='<div style="grid-column:1/-1;">'+idleState('No active jobs in transit')+'</div>';
     return;
   }
 
@@ -3878,6 +3878,19 @@ function toggleChat(){
 function closeChat(){document.getElementById('opsChat').classList.remove('open');}
 
 // ── HELPERS ──
+// Reusable "idle" empty state -- a flat sparkline instead of blank space,
+// signaling the system is watching even when there's nothing to show yet.
+function idleState(label){
+  return `<div style="padding:22px 16px;text-align:center;">
+    <svg width="100%" height="28" viewBox="0 0 200 28" preserveAspectRatio="none" style="display:block;margin-bottom:10px;opacity:.5;">
+      <line x1="0" y1="14" x2="200" y2="14" stroke="var(--border)" stroke-width="1.5"/>
+      <circle cx="196" cy="14" r="3" fill="var(--faint)">
+        <animate attributeName="opacity" values="1;.3;1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+    </svg>
+    <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);">${label}</div>
+  </div>`;
+}
 function timeAgo(ts){
   const diff=Math.floor((Date.now()-new Date(ts).getTime())/1000);
   if(diff<60)return diff+'s ago';
