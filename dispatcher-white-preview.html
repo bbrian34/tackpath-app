@@ -598,8 +598,8 @@ body::after{content:'';position:fixed;inset:0;
 .btn-assign:hover{background:rgba(25,183,239,.16);}
 
 .dr-close{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:8px;
-  background:rgba(255,255,255,.06);border:1px solid var(--border);
-  color:var(--text);font-size:1.231rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  color:rgba(255,255,255,.92);font-size:1.231rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .dr-lbl{font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.2em;
   color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
 .dr-title{font-family:var(--sans);font-size:1.154rem;font-weight:500;letter-spacing:0;margin-bottom:18px;line-height:1.3;color:var(--muted);}
@@ -625,7 +625,7 @@ body::after{content:'';position:fixed;inset:0;
   cursor:pointer;border:none;font-family:var(--sans);transition:all .15s;text-align:center;}
 .dra-p{background:#0aa8ff;color:#fff;}
 .dra-g{background:rgba(83,255,136,.1);color:var(--green);border:1px solid rgba(83,255,136,.2);}
-.dra-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border);}
+.dra-ghost{background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.14);}
 .dra-d{background:rgba(255,59,48,.1);color:var(--red);border:1px solid rgba(255,59,48,.2);}
 
 /* ── COMMS HUB ── */
@@ -1456,9 +1456,9 @@ body::after{content:'';position:fixed;inset:0;
     <iframe id="drMap" src="about:blank" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
   </div>
   <div style="margin-bottom:12px;">
-    <div style="font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;">Current Status</div>
+    <div style="font-family:var(--mono);font-size:0.615rem;font-weight:600;letter-spacing:.14em;color:rgba(255,255,255,.55);text-transform:uppercase;margin-bottom:7px;">Current Status</div>
     <div id="drStatusDisplay" style="padding:11px 13px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:1rem;font-weight:600;color:var(--blue);">—</div>
-    <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);margin-top:6px;">Status updates automatically from driver app</div>
+    <div style="font-family:var(--mono);font-size:0.692rem;color:rgba(255,255,255,.55);margin-top:6px;">Status updates automatically from driver app</div>
   </div>
   <div class="dr-acts">
     <button class="dra dra-ghost" onclick="toast('Driver contacted via TackPath dispatch')">&#128222; Contact Driver</button>
