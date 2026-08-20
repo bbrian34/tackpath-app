@@ -1050,7 +1050,7 @@ body::after{content:'';position:fixed;inset:0;
                 <th>Signal / Job</th>
                 <th>Title</th>
                 <th>Dropoff</th>
-                <th>Pace</th>
+                <th>Timing</th>
                 <th>Progress</th>
                 <th>Status</th>
                 <th>Created</th>
@@ -2903,17 +2903,28 @@ function renderTable(){
       <td>${(()=>{
         if(s==='delivered')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
         if(s!=='in_transit'&&s!=='customer_confirmed')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
+        function timingBar(pct,color,label){
+          return `<div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:26px;height:5px;border-radius:3px;background:rgba(120,130,145,.18);overflow:hidden;flex-shrink:0;">
+              <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;"></div>
+            </div>
+            <span style="color:${color};font-weight:700;font-size:0.769rem;">${label}</span>
+          </div>`;
+        }
         let statusLine;
         if(j.exception_flag){
-          statusLine='<span style="color:var(--red);font-weight:700;font-size:0.769rem;">&#128308; Late</span>';
+          statusLine=timingBar(100,'var(--red)','Late');
         } else {
           const tracked=SMARTTRACK_STOP_DEADLINE[j.id];
           if(!tracked||!tracked.deadline){
             statusLine='<span style="color:var(--muted);font-size:0.769rem;">&#8212;</span>';
           } else {
             const minsToDeadline=Math.round((new Date(tracked.deadline).getTime()-Date.now())/60000);
-            if(minsToDeadline<=10)statusLine='<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
-            else statusLine='<span style="color:var(--green);font-weight:700;font-size:0.769rem;">&#128994; On Time</span>';
+            // Fill grows as the deadline approaches -- a full bar means time is nearly up,
+            // same reference window (45 min) used consistently for a same-metro delivery
+            const fillPct=Math.max(0,Math.min(100,100-(minsToDeadline/45*100)));
+            if(minsToDeadline<=10)statusLine=timingBar(fillPct,'var(--orange)','Tight');
+            else statusLine=timingBar(fillPct,'var(--green)','On Time');
           }
         }
         // Real per-driver drift: live ETA to their CURRENT stop vs the deadline
