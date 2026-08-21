@@ -50,6 +50,23 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);}
 .rc-addr{font-size:0.78rem;color:var(--faint);margin-bottom:4px;}
 .rc-age{font-family:var(--mono);font-size:0.68rem;color:var(--faint);}
 .empty-msg{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--faint);font-family:var(--mono);font-size:0.85rem;}
+.view-tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--border2);}
+.view-tab{padding:10px 18px;font-size:0.85rem;font-weight:600;color:var(--faint);cursor:pointer;
+  border:none;background:none;border-bottom:2px solid transparent;font-family:var(--sans);}
+.view-tab.on{color:var(--blue);border-bottom-color:var(--blue);}
+.view-panel{display:none;}
+.view-panel.on{display:block;}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;padding:20px 24px 0;}
+.stat-card{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:16px;}
+.stat-val{font-family:var(--cond);font-size:1.8rem;font-weight:700;}
+.stat-lbl{font-size:0.72rem;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+.driver-table{width:100%;border-collapse:collapse;margin:20px 24px;background:var(--card);
+  border:1px solid var(--border2);border-radius:12px;overflow:hidden;}
+.driver-table th{text-align:left;font-size:0.68rem;color:var(--faint);text-transform:uppercase;
+  letter-spacing:.03em;padding:12px 16px;border-bottom:1px solid var(--border2);}
+.driver-table td{padding:12px 16px;font-size:0.85rem;border-bottom:1px solid var(--border2);}
+.driver-table tr:last-child td{border-bottom:none;}
+.score-pill{font-family:var(--mono);font-weight:700;padding:3px 10px;border-radius:20px;font-size:0.78rem;}
 </style>
 </head>
 <body>
@@ -64,22 +81,37 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);}
 
 <div class="page-hdr">
   <div class="page-title">FleetView</div>
-  <div class="page-sub">Every active route, one card each</div>
+  <div class="page-sub">What's live, and how the fleet is actually performing</div>
 </div>
 
-<div class="controls">
-  <input type="text" id="search" placeholder="Search route, driver, address...">
-  <select id="filterSel">
-    <option value="all">All Routes</option>
-    <option value="transit">In Transit</option>
-    <option value="exception">Exceptions</option>
-    <option value="pending">Pending</option>
-    <option value="done">Completed</option>
-  </select>
+<div class="view-tabs">
+  <button class="view-tab on" onclick="setView('live',this)">Live</button>
+  <button class="view-tab" onclick="setView('performance',this)">Performance</button>
 </div>
 
-<div class="fleet-grid" id="fleetGrid">
-  <div class="empty-msg">Loading routes...</div>
+<div class="view-panel on" id="panel-live">
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search route, driver, address...">
+    <select id="filterSel">
+      <option value="all">All Routes</option>
+      <option value="transit">In Transit</option>
+      <option value="exception">Exceptions</option>
+      <option value="pending">Pending</option>
+      <option value="done">Completed</option>
+    </select>
+  </div>
+
+  <div class="fleet-grid" id="fleetGrid">
+    <div class="empty-msg">Loading routes...</div>
+  </div>
+</div>
+
+<div class="view-panel" id="panel-performance">
+  <div class="stat-row" id="perfStats"></div>
+  <table class="driver-table" id="driverTable">
+    <thead><tr><th>Driver</th><th>Stops Delivered</th><th>Avg Drift</th><th>Score</th></tr></thead>
+    <tbody id="driverTableBody"></tbody>
+  </table>
 </div>
 
 <script>
@@ -168,6 +200,74 @@ function render(){
       <div class="rc-addr">${addr}</div>
       <div class="rc-age">${timeAgo(j.created_at)}</div>
     </div>`;
+  }).join('');
+}
+
+function setView(view,btn){
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.view-panel').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('panel-'+view).classList.add('on');
+  if(view==='performance')loadPerformance();
+}
+
+async function loadPerformance(){
+  const statsEl=document.getElementById('perfStats');
+  const bodyEl=document.getElementById('driverTableBody');
+  statsEl.innerHTML='<div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Loading</div></div>';
+  bodyEl.innerHTML='';
+
+  let driftRecords=[];
+  try{
+    const r=await fetch(SB+'/rest/v1/messages?sender_role=eq.dispatcher&order=created_at.desc&limit=500&apikey='+KEY,{headers:H});
+    const msgs=await r.json();
+    driftRecords=(Array.isArray(msgs)?msgs:[])
+      .filter(m=>m.body&&m.body.startsWith('STOP_DRIFT::'))
+      .map(m=>{
+        try{return JSON.parse(m.body.replace('STOP_DRIFT::',''));}catch(e){return null;}
+      })
+      .filter(Boolean);
+  }catch(e){driftRecords=[];}
+
+  const deliveredToday=jobs.filter(j=>j.status==='delivered').length;
+  const onTimeStops=driftRecords.filter(r=>r.driftMin<12).length;
+  const onTimePct=driftRecords.length?Math.round((onTimeStops/driftRecords.length)*100):null;
+  const avgDrift=driftRecords.length?(driftRecords.reduce((s,r)=>s+r.driftMin,0)/driftRecords.length):null;
+
+  statsEl.innerHTML=`
+    <div class="stat-card"><div class="stat-val" style="color:var(--green);">${deliveredToday}</div><div class="stat-lbl">Routes Delivered</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--blue);">${onTimePct===null?'—':onTimePct+'%'}</div><div class="stat-lbl">On-Time Rate</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--purple);">${avgDrift===null?'—':(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min'}</div><div class="stat-lbl">Avg Drift</div></div>
+    <div class="stat-card"><div class="stat-val">${driftRecords.length}</div><div class="stat-lbl">Stops Tracked</div></div>
+  `;
+
+  if(!driftRecords.length){
+    bodyEl.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--faint);font-family:var(--mono);font-size:0.8rem;padding:24px;">Not enough data yet -- this builds up as real routes complete</td></tr>';
+    return;
+  }
+
+  const byDriver={};
+  driftRecords.forEach(r=>{
+    const name=r.driver_name||'Unknown';
+    if(!byDriver[name])byDriver[name]={stops:0,totalDrift:0};
+    byDriver[name].stops++;
+    byDriver[name].totalDrift+=r.driftMin;
+  });
+
+  const rows=Object.entries(byDriver).map(([name,d])=>{
+    const avg=d.totalDrift/d.stops;
+    const score=Math.max(0,Math.min(100,100-(avg*3)));
+    return{name,stops:d.stops,avg,score};
+  }).sort((a,b)=>b.score-a.score);
+
+  bodyEl.innerHTML=rows.map(r=>{
+    const scoreColor=r.score>=90?'var(--green)':r.score>=75?'var(--orange)':r.score>=50?'#c85a00':'var(--red)';
+    return `<tr>
+      <td style="font-weight:600;">${r.name}</td>
+      <td>${r.stops}</td>
+      <td style="font-family:var(--mono);">${(r.avg>=0?'+':'')+r.avg.toFixed(1)} min</td>
+      <td><span class="score-pill" style="background:${scoreColor}1a;color:${scoreColor};">${Math.round(r.score)}</span></td>
+    </tr>`;
   }).join('');
 }
 
