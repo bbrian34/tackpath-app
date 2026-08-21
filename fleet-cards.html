@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>TackPath · FleetView</title>
+<style>
+:root{
+  --blue:#0a7cba;--green:#0d7a03;--orange:#a85a0f;--red:#d92d20;
+  --purple:#6d3fd6;--yellow:#8a6600;
+  --bg:#f4f6f9;--card:#ffffff;--card2:#f8fafc;
+  --border:rgba(10,124,186,.15);--border2:rgba(20,30,45,.08);
+  --text:#000000;--muted:#000000;--faint:rgba(0,0,0,.45);
+  --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;--cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);}
+#topbar{height:56px;display:flex;align-items:center;padding:0 20px;background:var(--card);
+  border-bottom:1px solid var(--border);gap:16px;position:sticky;top:0;z-index:100;}
+.tb-logo{display:flex;align-items:center;gap:8px;}
+.tb-wordmark{font-family:'Montserrat',sans-serif;font-size:1rem;letter-spacing:1px;}
+.tb-back{margin-left:auto;font-family:var(--mono);font-size:0.8rem;color:var(--blue);
+  text-decoration:none;padding:6px 12px;border-radius:8px;border:1px solid var(--border);}
+.page-hdr{padding:24px 24px 0;}
+.page-title{font-family:var(--cond);font-size:1.8rem;font-weight:700;}
+.page-sub{color:var(--faint);font-size:0.85rem;margin-top:4px;}
+.controls{display:flex;gap:10px;padding:16px 24px;flex-wrap:wrap;}
+.controls input,.controls select{padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+  font-family:var(--sans);font-size:0.85rem;background:var(--card);}
+.controls input{flex:1;min-width:200px;}
+.fleet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:0 24px 32px;}
+.route-card{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:16px;
+  cursor:pointer;transition:box-shadow .15s,transform .15s;}
+.route-card:hover{box-shadow:0 8px 24px -8px rgba(0,0,0,.15);transform:translateY(-2px);}
+.rc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.rc-id{font-family:var(--mono);font-size:0.7rem;color:var(--blue);}
+.rc-status{font-family:var(--mono);font-size:0.65rem;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;}
+.rc-status.transit{background:rgba(109,63,214,.1);color:var(--purple);}
+.rc-status.exception{background:rgba(217,45,32,.1);color:var(--red);}
+.rc-status.done{background:rgba(13,122,3,.1);color:var(--green);}
+.rc-status.pending{background:rgba(120,130,145,.1);color:var(--faint);}
+.rc-title{font-size:1rem;font-weight:700;margin-bottom:2px;}
+.rc-driver{font-size:0.8rem;color:var(--faint);margin-bottom:14px;}
+.rc-progress-lbl{display:flex;justify-content:space-between;margin-bottom:6px;}
+.rc-stop-txt{font-size:0.78rem;font-weight:600;}
+.rc-timing{font-family:var(--mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;}
+.rc-track{position:relative;height:14px;display:flex;align-items:center;margin-bottom:10px;}
+.rc-track-bg{position:absolute;left:0;right:0;height:3px;background:rgba(120,130,145,.18);border-radius:2px;}
+.rc-track-fill{position:absolute;left:0;height:3px;border-radius:2px;transition:width .4s ease;}
+.rc-track-dot{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid var(--card);transition:left .4s ease;}
+.rc-addr{font-size:0.78rem;color:var(--faint);margin-bottom:4px;}
+.rc-age{font-family:var(--mono);font-size:0.68rem;color:var(--faint);}
+.empty-msg{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--faint);font-family:var(--mono);font-size:0.85rem;}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="tb-logo">
+    <svg width="15" height="24" viewBox="0 0 36 70"><defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/></svg>
+    <div class="tb-wordmark"><span style="color:var(--text);">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  </div>
+  <a class="tb-back" href="dispatcher-white-preview.html">&larr; Dispatcher</a>
+</div>
+
+<div class="page-hdr">
+  <div class="page-title">FleetView</div>
+  <div class="page-sub">Every active route, one card each</div>
+</div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search route, driver, address...">
+  <select id="filterSel">
+    <option value="all">All Routes</option>
+    <option value="transit">In Transit</option>
+    <option value="exception">Exceptions</option>
+    <option value="pending">Pending</option>
+    <option value="done">Completed</option>
+  </select>
+</div>
+
+<div class="fleet-grid" id="fleetGrid">
+  <div class="empty-msg">Loading routes...</div>
+</div>
+
+<script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
+let jobs=[];
+
+async function loadFleet(){
+  try{
+    const r=await fetch(SB+'/rest/v1/jobs?status=in.(pending,assigned,in_transit,delivered)&order=created_at.desc&limit=100&apikey='+KEY,{headers:H});
+    jobs=await r.json();
+    if(!Array.isArray(jobs))jobs=[];
+  }catch(e){jobs=[];}
+  render();
+}
+
+function timeAgo(ts){
+  if(!ts)return '';
+  const s=Math.floor((Date.now()-new Date(ts).getTime())/1000);
+  if(s<60)return s+'s ago';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+function render(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const filter=document.getElementById('filterSel').value;
+  let d=jobs.filter(j=>j.job_type==='surge'||j.surge_stops);
+
+  if(filter==='transit')d=d.filter(j=>j.status==='in_transit');
+  else if(filter==='exception')d=d.filter(j=>j.exception_flag);
+  else if(filter==='pending')d=d.filter(j=>j.status==='pending'||j.status==='assigned');
+  else if(filter==='done')d=d.filter(j=>j.status==='delivered');
+
+  if(q)d=d.filter(j=>
+    (j.title||'').toLowerCase().includes(q) ||
+    (j.driver_name||'').toLowerCase().includes(q) ||
+    (j.pickup_address||'').toLowerCase().includes(q)
+  );
+
+  const grid=document.getElementById('fleetGrid');
+  if(!d.length){
+    grid.innerHTML='<div class="empty-msg">No routes match this view</div>';
+    return;
+  }
+
+  grid.innerHTML=d.map(j=>{
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    const totalStops=stops&&Array.isArray(stops)?stops.length:1;
+    const doneCount=j.stops_completed||0;
+    const progressPct=j.status==='delivered'?100:Math.round((doneCount/totalStops)*100);
+
+    let statusClass='pending',statusLabel='Pending';
+    if(j.exception_flag){statusClass='exception';statusLabel='Exception';}
+    else if(j.status==='in_transit'){statusClass='transit';statusLabel='In Transit';}
+    else if(j.status==='delivered'){statusClass='done';statusLabel='Delivered';}
+
+    let urgencyColor='var(--faint)';
+    if(j.exception_flag)urgencyColor='var(--red)';
+    else if(j.status==='delivered')urgencyColor='var(--green)';
+    else if(j.status==='in_transit')urgencyColor='var(--purple)';
+
+    const currentStop=stops&&stops[Math.min(doneCount,totalStops-1)];
+    const addr=currentStop&&currentStop.address?currentStop.address:(j.pickup_address||'—');
+
+    return `<div class="route-card" onclick="window.open('dispatcher-white-preview.html','_blank')">
+      <div class="rc-top">
+        <div class="rc-id">TP-${j.id?j.id.slice(0,8):'—'}</div>
+        <div class="rc-status ${statusClass}">${statusLabel}</div>
+      </div>
+      <div class="rc-title">${j.title||'Untitled Route'}</div>
+      <div class="rc-driver">${j.driver_name?'Driver: '+j.driver_name:'No driver assigned'}</div>
+      <div class="rc-progress-lbl">
+        <div class="rc-stop-txt">Stop ${doneCount} of ${totalStops}</div>
+        ${j.exception_flag?'<div class="rc-timing" style="color:var(--red);">Late</div>':''}
+      </div>
+      <div class="rc-track">
+        <div class="rc-track-bg"></div>
+        <div class="rc-track-fill" style="width:${progressPct}%;background:${urgencyColor};"></div>
+        <div class="rc-track-dot" style="left:calc(${progressPct}% - 6px);background:${urgencyColor};"></div>
+      </div>
+      <div class="rc-addr">${addr}</div>
+      <div class="rc-age">${timeAgo(j.created_at)}</div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('search').addEventListener('input',render);
+document.getElementById('filterSel').addEventListener('change',render);
+
+loadFleet();
+setInterval(loadFleet,5000);
+</script>
+</body>
+</html>
