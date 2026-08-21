@@ -148,7 +148,8 @@ function render(){
     const currentStop=stops&&stops[Math.min(doneCount,totalStops-1)];
     const addr=currentStop&&currentStop.address?currentStop.address:(j.pickup_address||'—');
 
-    return `<div class="route-card" onclick="window.open('dispatcher-white-preview.html','_blank')">
+    const cardStyle=j.status==='delivered'?'background:rgba(13,122,3,.05);border-color:rgba(13,122,3,.35);':'';
+    return `<div class="route-card" style="${cardStyle}" onclick="window.open('dispatcher-white-preview.html','_blank')">
       <div class="rc-top">
         <div class="rc-id">TP-${j.id?j.id.slice(0,8):'—'}</div>
         <div class="rc-status ${statusClass}">${statusLabel}</div>
