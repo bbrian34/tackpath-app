@@ -2929,13 +2929,13 @@ function renderTable(){
           const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(stopDeadline.deadline).getTime())/60000;
           driftText=' · '+(driftMin>=0?'+':'')+driftMin.toFixed(1)+' min';
         }
-        return `<div style="display:flex;align-items:center;gap:6px;min-width:100px;">
-          <div style="flex:1;height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden;">
-            <div style="height:100%;width:${progressPct}%;background:${urgencyColor};border-radius:5px;transition:width .3s,background .3s;"></div>
+        return `<div style="display:flex;align-items:center;gap:10px;min-width:220px;max-width:320px;">
+          <div style="flex:1;height:14px;background:rgba(255,255,255,.08);border-radius:7px;overflow:hidden;">
+            <div style="height:100%;width:${progressPct}%;background:${urgencyColor};border-radius:7px;transition:width .3s,background .3s;"></div>
           </div>
-          <div style="font-family:var(--mono);font-size:0.692rem;color:${urgencyColor};white-space:nowrap;font-weight:700;">${doneCount}/${totalStops}${urgencyLabel?' · '+urgencyLabel:''}</div>
+          <div style="font-family:var(--mono);font-size:0.8rem;color:${urgencyColor};white-space:nowrap;font-weight:700;">${doneCount}/${totalStops}${urgencyLabel?' · '+urgencyLabel:''}</div>
         </div>
-        ${driftText?`<div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);margin-top:2px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}`;
+        ${driftText?`<div style="font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-top:3px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}`;
       })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
