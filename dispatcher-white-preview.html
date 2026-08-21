@@ -125,6 +125,7 @@ body::after{content:'';position:fixed;inset:0;
 .sys-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
   box-shadow:0 0 8px rgba(83,255,136,.9);animation:pulse 2s infinite;flex-shrink:0;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+@keyframes routePulse{0%{transform:scale(.6);opacity:.7;}100%{transform:scale(1.6);opacity:0;}}
 .tb-clock{font-family:var(--mono);font-size:0.769rem;color:var(--muted);white-space:nowrap;}
 .tb-poll{font-family:var(--mono);font-size:0.692rem;color:var(--faint);display:flex;align-items:center;gap:5px;white-space:nowrap;}
 .poll-ring{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(25,183,239,.3);
@@ -2929,15 +2930,19 @@ function renderTable(){
           const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(stopDeadline.deadline).getTime())/60000;
           driftText=' · '+(driftMin>=0?'+':'')+driftMin.toFixed(1)+' min';
         }
-        return `<div style="min-width:200px;max-width:280px;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
-            <span style="font-family:var(--mono);font-size:0.8rem;color:${urgencyColor};font-weight:700;">${doneCount}/${totalStops}</span>
-            ${urgencyLabel?`<span style="font-family:var(--mono);font-size:0.72rem;color:${urgencyColor};font-weight:700;">${urgencyLabel}</span>`:''}
+        return `<div style="min-width:210px;max-width:280px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <span style="font-size:0.8rem;color:var(--text);font-weight:600;">Stop ${doneCount} of ${totalStops}</span>
+            ${urgencyLabel?`<span style="font-family:var(--mono);font-size:0.68rem;color:${urgencyColor};font-weight:700;text-transform:uppercase;letter-spacing:.04em;">${urgencyLabel}</span>`:''}
           </div>
-          <div style="width:100%;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;">
-            <div style="height:100%;width:${progressPct}%;background:${urgencyColor};border-radius:4px;transition:width .3s,background .3s;"></div>
+          <div style="position:relative;height:16px;display:flex;align-items:center;">
+            <div style="position:absolute;left:0;right:0;height:3px;background:rgba(120,130,145,.18);border-radius:2px;"></div>
+            <div style="position:absolute;left:0;width:${progressPct}%;height:3px;background:${urgencyColor};border-radius:2px;transition:width .4s ease,background .3s;"></div>
+            <div style="position:absolute;left:calc(${progressPct}% - 6px);width:12px;height:12px;border-radius:50%;background:${urgencyColor};border:2px solid var(--card);box-shadow:0 0 0 2px ${urgencyColor}40;transition:left .4s ease,background .3s;">
+              <div style="position:absolute;inset:-4px;border-radius:50%;border:1.5px solid ${urgencyColor};opacity:.5;animation:routePulse 1.8s ease-out infinite;"></div>
+            </div>
           </div>
-          ${driftText?`<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:5px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}
+          ${driftText?`<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:6px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}
         </div>`;
       })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
