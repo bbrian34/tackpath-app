@@ -64,9 +64,31 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);}
   border:1px solid var(--border2);border-radius:12px;overflow:hidden;}
 .driver-table th{text-align:left;font-size:0.68rem;color:var(--faint);text-transform:uppercase;
   letter-spacing:.03em;padding:12px 16px;border-bottom:1px solid var(--border2);}
-.driver-table td{padding:12px 16px;font-size:0.85rem;border-bottom:1px solid var(--border2);}
+.driver-table td{padding:14px 16px;font-size:0.85rem;border-bottom:1px solid var(--border2);}
 .driver-table tr:last-child td{border-bottom:none;}
+.driver-table tr:hover td{background:var(--card2);}
 .score-pill{font-family:var(--mono);font-weight:700;padding:3px 10px;border-radius:20px;font-size:0.78rem;}
+.perf-hero{display:grid;grid-template-columns:220px 1fr;gap:24px;padding:24px;background:var(--card);
+  border:1px solid var(--border2);border-radius:16px;margin:20px 24px 0;align-items:center;}
+@media(max-width:700px){.perf-hero{grid-template-columns:1fr;}}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.donut-center{font-family:var(--cond);font-weight:700;}
+.perf-stats-inner{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;}
+.perf-stat-item{border-left:3px solid var(--border2);padding-left:14px;}
+.perf-stat-item.accent-green{border-left-color:var(--green);}
+.perf-stat-item.accent-blue{border-left-color:var(--blue);}
+.perf-stat-item.accent-purple{border-left-color:var(--purple);}
+.perf-stat-item.accent-orange{border-left-color:var(--orange);}
+.section-lbl{font-family:var(--mono);font-size:0.72rem;color:var(--faint);text-transform:uppercase;
+  letter-spacing:.06em;padding:28px 24px 10px;}
+.pattern-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:0 24px;}
+.pattern-card{background:var(--card);border:1px solid rgba(200,90,0,.25);border-left:3px solid var(--orange);
+  border-radius:12px;padding:16px;}
+.pattern-driver{font-weight:700;font-size:0.9rem;margin-bottom:4px;}
+.pattern-detail{font-size:0.8rem;color:var(--faint);line-height:1.5;}
+.pattern-empty{grid-column:1/-1;text-align:center;padding:32px 20px;color:var(--faint);
+  font-family:var(--mono);font-size:0.82rem;background:var(--card);border:1px solid var(--border2);
+  border-radius:12px;}
 </style>
 </head>
 <body>
@@ -107,7 +129,24 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);}
 </div>
 
 <div class="view-panel" id="panel-performance">
-  <div class="stat-row" id="perfStats"></div>
+  <div class="perf-hero">
+    <div class="donut-wrap">
+      <svg width="160" height="160" viewBox="0 0 160 160" id="donutSvg">
+        <circle cx="80" cy="80" r="66" fill="none" stroke="rgba(120,130,145,.15)" stroke-width="16"/>
+        <circle cx="80" cy="80" r="66" fill="none" stroke="var(--green)" stroke-width="16"
+          stroke-dasharray="0 1000" stroke-linecap="round" id="donutArc"
+          transform="rotate(-90 80 80)" style="transition:stroke-dasharray 1s ease;"/>
+        <text x="80" y="76" text-anchor="middle" class="donut-center" font-size="26" fill="var(--text)" id="donutPct">—</text>
+        <text x="80" y="96" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--faint)">ON TIME</text>
+      </svg>
+    </div>
+    <div class="perf-stats-inner" id="perfStats"></div>
+  </div>
+
+  <div class="section-lbl">Detected Patterns</div>
+  <div class="pattern-grid" id="patternGrid"></div>
+
+  <div class="section-lbl">Driver Breakdown</div>
   <table class="driver-table" id="driverTable">
     <thead><tr><th>Driver</th><th>Stops Delivered</th><th>Avg Drift</th><th>Score</th></tr></thead>
     <tbody id="driverTableBody"></tbody>
@@ -214,8 +253,10 @@ function setView(view,btn){
 async function loadPerformance(){
   const statsEl=document.getElementById('perfStats');
   const bodyEl=document.getElementById('driverTableBody');
-  statsEl.innerHTML='<div class="stat-card"><div class="stat-val">—</div><div class="stat-lbl">Loading</div></div>';
+  const patternEl=document.getElementById('patternGrid');
+  statsEl.innerHTML='<div class="perf-stat-item"><div class="stat-val">—</div><div class="stat-lbl">Loading</div></div>';
   bodyEl.innerHTML='';
+  patternEl.innerHTML='';
 
   let driftRecords=[];
   try{
@@ -234,15 +275,23 @@ async function loadPerformance(){
   const onTimePct=driftRecords.length?Math.round((onTimeStops/driftRecords.length)*100):null;
   const avgDrift=driftRecords.length?(driftRecords.reduce((s,r)=>s+r.driftMin,0)/driftRecords.length):null;
 
+  // Donut chart -- circumference for r=66 is 2*pi*66 ~= 414.7
+  const circumference=2*Math.PI*66;
+  const arcLen=onTimePct===null?0:(onTimePct/100)*circumference;
+  document.getElementById('donutArc').setAttribute('stroke-dasharray',arcLen.toFixed(1)+' '+circumference.toFixed(1));
+  document.getElementById('donutArc').style.stroke=onTimePct===null?'rgba(120,130,145,.3)':(onTimePct>=90?'var(--green)':onTimePct>=75?'var(--orange)':'var(--red)');
+  document.getElementById('donutPct').textContent=onTimePct===null?'—':onTimePct+'%';
+
   statsEl.innerHTML=`
-    <div class="stat-card"><div class="stat-val" style="color:var(--green);">${deliveredToday}</div><div class="stat-lbl">Routes Delivered</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--blue);">${onTimePct===null?'—':onTimePct+'%'}</div><div class="stat-lbl">On-Time Rate</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--purple);">${avgDrift===null?'—':(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min'}</div><div class="stat-lbl">Avg Drift</div></div>
-    <div class="stat-card"><div class="stat-val">${driftRecords.length}</div><div class="stat-lbl">Stops Tracked</div></div>
+    <div class="perf-stat-item accent-green"><div class="stat-val" style="color:var(--green);">${deliveredToday}</div><div class="stat-lbl">Routes Delivered</div></div>
+    <div class="perf-stat-item accent-blue"><div class="stat-val" style="color:var(--blue);">${onTimePct===null?'—':onTimePct+'%'}</div><div class="stat-lbl">On-Time Rate</div></div>
+    <div class="perf-stat-item accent-purple"><div class="stat-val" style="color:var(--purple);">${avgDrift===null?'—':(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min'}</div><div class="stat-lbl">Avg Drift</div></div>
+    <div class="perf-stat-item accent-orange"><div class="stat-val">${driftRecords.length}</div><div class="stat-lbl">Stops Tracked</div></div>
   `;
 
   if(!driftRecords.length){
     bodyEl.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--faint);font-family:var(--mono);font-size:0.8rem;padding:24px;">Not enough data yet -- this builds up as real routes complete</td></tr>';
+    patternEl.innerHTML='<div class="pattern-empty">Not enough data yet to detect patterns -- needs at least a few days of real routes</div>';
     return;
   }
 
@@ -269,6 +318,44 @@ async function loadPerformance(){
       <td><span class="score-pill" style="background:${scoreColor}1a;color:${scoreColor};">${Math.round(r.score)}</span></td>
     </tr>`;
   }).join('');
+
+  // Real pattern detection: group by driver + day-of-week, flag any bucket
+  // meaningfully worse than that driver's own overall average. Needs at least
+  // 2 data points in a bucket to avoid flagging single-event noise.
+  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const buckets={};
+  driftRecords.forEach(r=>{
+    if(!r.delivered_at)return;
+    const name=r.driver_name||'Unknown';
+    const day=dayNames[new Date(r.delivered_at).getDay()];
+    const key=name+'|'+day;
+    if(!buckets[key])buckets[key]={name,day,stops:0,totalDrift:0};
+    buckets[key].stops++;
+    buckets[key].totalDrift+=r.driftMin;
+  });
+
+  const patterns=[];
+  Object.values(buckets).forEach(b=>{
+    if(b.stops<2)return;
+    const bucketAvg=b.totalDrift/b.stops;
+    const driverOverall=byDriver[b.name];
+    if(!driverOverall)return;
+    const driverAvg=driverOverall.totalDrift/driverOverall.stops;
+    const gap=bucketAvg-driverAvg;
+    if(gap>=5&&bucketAvg>=8){
+      patterns.push({name:b.name,day:b.day,bucketAvg,driverAvg,stops:b.stops});
+    }
+  });
+
+  if(!patterns.length){
+    patternEl.innerHTML='<div class="pattern-empty">No recurring patterns detected yet -- performance looks consistent across days</div>';
+  }else{
+    patternEl.innerHTML=patterns.map(p=>`
+      <div class="pattern-card">
+        <div class="pattern-driver">${p.name} &middot; ${p.day}s</div>
+        <div class="pattern-detail">Averages ${(p.bucketAvg>=0?'+':'')+p.bucketAvg.toFixed(1)} min on ${p.day}s, vs ${(p.driverAvg>=0?'+':'')+p.driverAvg.toFixed(1)} min overall, across ${p.stops} stop${p.stops===1?'':'s'}. Worth checking if this is a route or traffic pattern rather than a performance issue.</div>
+      </div>`).join('');
+  }
 }
 
 document.getElementById('search').addEventListener('input',render);
