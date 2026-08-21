@@ -1006,23 +1006,23 @@ body::after{content:'';position:fixed;inset:0;
           <div class="pipeline-lbl">Signal Pipeline · Live</div>
           <div class="pipeline">
 
-            <div class="pipe-col" style="background:rgba(10,124,186,.22);border-color:#0a7cba;border-width:2px;">
+            <div class="pipe-col" style="background:var(--card);border-color:#0a7cba;border-width:2px;">
               <div class="pipe-hdr" style="background:#0a7cba;"><div class="pipe-title" style="color:#fff;font-weight:800;">Assigned</div><div class="pipe-cnt" style="background:rgba(255,255,255,.25);color:#fff;" id="pc-assigned">0</div></div>
               <div class="pipe-body" id="pp-assigned"><div class="pipe-empty">No assigned jobs</div></div>
             </div>
-            <div class="pipe-col" style="background:rgba(109,63,214,.22);border-color:#6d3fd6;border-width:2px;">
+            <div class="pipe-col" style="background:var(--card);border-color:#6d3fd6;border-width:2px;">
               <div class="pipe-hdr" style="background:#6d3fd6;"><div class="pipe-title" style="color:#fff;font-weight:800;">In Transit</div><div class="pipe-cnt" style="background:rgba(255,255,255,.25);color:#fff;" id="pc-transit">0</div></div>
               <div class="pipe-body" id="pp-transit"><div class="pipe-empty">No active transit</div></div>
             </div>
-            <div class="pipe-col" style="background:rgba(13,122,3,.22);border-color:#0d7a03;border-width:2px;">
+            <div class="pipe-col" style="background:var(--card);border-color:#0d7a03;border-width:2px;">
               <div class="pipe-hdr" style="background:#0d7a03;"><div class="pipe-title" style="color:#fff;font-weight:800;">Delivered</div><div class="pipe-cnt" style="background:rgba(255,255,255,.25);color:#fff;" id="pc-delivered">0</div></div>
               <div class="pipe-body" id="pp-delivered" style="opacity:.9;"><div class="pipe-empty">None yet today</div></div>
             </div>
-            <div class="pipe-col" style="background:rgba(217,45,32,.22);border-color:#d92d20;border-width:2px;">
+            <div class="pipe-col" id="pipeColCancelled" style="background:rgba(217,45,32,.22);border-color:#d92d20;border-width:2px;transition:background .3s;">
               <div class="pipe-hdr" style="background:#d92d20;"><div class="pipe-title" style="color:#fff;font-weight:800;">Cancelled</div><div class="pipe-cnt" style="background:rgba(255,255,255,.25);color:#fff;" id="pc-cancelled">0</div></div>
               <div class="pipe-body" id="pp-cancelled"><div class="pipe-empty">None</div></div>
             </div>
-            <div class="pipe-col" style="background:rgba(200,90,0,.24);border-color:#c85a00;border-width:2px;">
+            <div class="pipe-col" id="pipeColExceptions" style="background:rgba(200,90,0,.24);border-color:#c85a00;border-width:2px;transition:background .3s;">
               <div class="pipe-hdr" style="background:#c85a00;">
                 <div class="pipe-title" style="color:#fff;font-weight:800;">&#9888; Exceptions</div>
                 <div class="pipe-cnt" style="background:rgba(255,255,255,.28);color:#fff;" id="excBadge">0 OPEN</div>
@@ -2589,6 +2589,8 @@ function renderExceptionQueue(){
   const allExceptions = [...criticalJobs, ...stalledJobs];
 
   if(badge) badge.textContent = allExceptions.length + ' OPEN';
+  const excCol = document.getElementById('pipeColExceptions');
+  if(excCol) excCol.style.background = allExceptions.length ? 'var(--card)' : 'rgba(200,90,0,.24)';
 
   if(!allExceptions.length){
     list.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No exceptions · System healthy</div>';
@@ -2854,7 +2856,9 @@ function renderPipeline(){
 
   const cancelCnt=document.getElementById('pc-cancelled');
   const cancelBody=document.getElementById('pp-cancelled');
-  if(cancelCnt) cancelCnt.textContent=cancellationEntries.length;
+  const cancelCol=document.getElementById('pipeColCancelled');
+  if(cancelCnt) animateNumber(cancelCnt,cancellationEntries.length);
+  if(cancelCol) cancelCol.style.background=cancellationEntries.length?'var(--card)':'rgba(217,45,32,.22)';
   if(cancelBody){
     if(!cancellationEntries.length){
       cancelBody.innerHTML='<div class="pipe-empty">No cancelled jobs</div>';
