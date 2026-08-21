@@ -2929,13 +2929,16 @@ function renderTable(){
           const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(stopDeadline.deadline).getTime())/60000;
           driftText=' · '+(driftMin>=0?'+':'')+driftMin.toFixed(1)+' min';
         }
-        return `<div style="display:flex;align-items:center;gap:10px;min-width:220px;max-width:320px;">
-          <div style="flex:1;height:14px;background:rgba(255,255,255,.08);border-radius:7px;overflow:hidden;">
-            <div style="height:100%;width:${progressPct}%;background:${urgencyColor};border-radius:7px;transition:width .3s,background .3s;"></div>
+        return `<div style="min-width:200px;max-width:280px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+            <span style="font-family:var(--mono);font-size:0.8rem;color:${urgencyColor};font-weight:700;">${doneCount}/${totalStops}</span>
+            ${urgencyLabel?`<span style="font-family:var(--mono);font-size:0.72rem;color:${urgencyColor};font-weight:700;">${urgencyLabel}</span>`:''}
           </div>
-          <div style="font-family:var(--mono);font-size:0.8rem;color:${urgencyColor};white-space:nowrap;font-weight:700;">${doneCount}/${totalStops}${urgencyLabel?' · '+urgencyLabel:''}</div>
-        </div>
-        ${driftText?`<div style="font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-top:3px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}`;
+          <div style="width:100%;height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;">
+            <div style="height:100%;width:${progressPct}%;background:${urgencyColor};border-radius:4px;transition:width .3s,background .3s;"></div>
+          </div>
+          ${driftText?`<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:5px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}
+        </div>`;
       })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
