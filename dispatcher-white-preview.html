@@ -2819,7 +2819,7 @@ function renderPipeline(){
         e._streamNew=!seenDeliveredKeys.has(key);
         seenDeliveredKeys.add(key);
       });
-      deliveredBody.innerHTML=deliveredEntries.slice(0,6).map(e=>`
+      deliveredBody.innerHTML=deliveredEntries.slice(0,1).map(e=>`
         <div class="pcard${e._streamNew?' stream-new-delivered':''}" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid ${e.isDriverSummary?'rgba(109,63,214,.5)':'rgba(83,255,136,.3)'};${e.isDriverSummary?'background:rgba(109,63,214,.05);':''}">
           <div class="pcard-sig" style="display:flex;justify-content:space-between;align-items:center;">
             <span>TP-${e.shortId}</span>
@@ -2828,7 +2828,7 @@ function renderPipeline(){
           <div class="pcard-name">${e.title}</div>
           <div class="pcard-route" style="font-size:0.769rem;">${e.detail}</div>
           <div class="pcard-age">${e.age}</div>
-        </div>`).join('')+(deliveredEntries.length>6?`<div class="pipe-empty">+${deliveredEntries.length-6} more</div>`:'');
+        </div>`).join('');
     }
   }
 
