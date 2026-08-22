@@ -1637,8 +1637,9 @@ async function loadMessages(){
     const el=document.getElementById('commsBody');
     const atBottom=el.scrollHeight-el.scrollTop<=el.clientHeight+60;
     let html='<div class="c-sys">'+(currentJob.title||'Active Job')+'</div>';
-    if(msgs&&msgs.length){
-      html+=msgs.map(m=>{
+    const displayMsgs=(msgs||[]).filter(m=>m.body&&!m.body.startsWith('STOP_DELIVERED::')&&!m.body.startsWith('STOP_DRIFT::'));
+    if(displayMsgs.length){
+      html+=displayMsgs.map(m=>{
         const me=m.sender_role==='driver';
         const t=new Date(m.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
         return '<div class="c-wrap"><div class="c-meta'+(me?' r':'')+'">'+(me?'You':'Dispatch')+' · '+t+'</div><div class="c-bubble '+(me?'c-out':'c-in')+'">'+m.body+'</div></div>';
