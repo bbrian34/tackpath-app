@@ -1783,8 +1783,7 @@ Current job: ${JSON.stringify(jobCtx)}. Driver: ${driver?.name}.
       if(isVoice)speak('Got it, I let dispatch know nobody was home.');
     }
     else{
-      // No specific action matched -- treat it as a general message to dispatch rather than doing nothing
-      if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:transcript}).catch(()=>{});
+      // Already logged as "[Ruby] transcript" at the top of this function -- no need to send it again
       toast('Message sent to dispatch','ok');
     }
   }
