@@ -2710,7 +2710,7 @@ function renderPipeline(){
         seenDeliveredKeys.add(key);
       });
       deliveredBody.innerHTML=deliveredEntries.slice(0,1).map(e=>`
-        <div class="pcard${e._streamNew?' stream-new-delivered':''}" onclick="openDrawer('${e.jobId}')" style="border-left:2px solid rgba(83,255,136,.3);">
+        <div class="pcard${e._streamNew?' stream-new-delivered':''}" onclick="openDrawer('${e.jobId}')">
           <div class="pcard-sig" style="display:flex;justify-content:space-between;align-items:center;">
             <span>TP-${e.shortId}</span>
             <span style="color:var(--green);font-size:0.615rem;font-family:var(--mono);">${e.stopLabel}</span>
