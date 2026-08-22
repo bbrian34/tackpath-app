@@ -3759,25 +3759,16 @@ async function loadDriverMessages(){
     const container=document.getElementById('msgs-drivers');
     const atBottom=container.scrollHeight-container.scrollTop<=container.clientHeight+60;
     container.innerHTML='<div class="msg-bubble msg-system">'+activeJob.title+'</div>';
-    const displayMsgs=(msgs||[]).filter(m=>m.body&&!m.body.startsWith('STOP_DRIFT::'));
+    const displayMsgs=(msgs||[]).filter(m=>m.body&&!m.body.startsWith('STOP_DELIVERED::')&&!m.body.startsWith('STOP_DRIFT::'));
     if(displayMsgs.length){
       displayMsgs.forEach(m=>{
-        const isStopDelivered=m.body.startsWith('STOP_DELIVERED::');
-        let displayText=m.body;
-        if(isStopDelivered){
-          try{
-            const data=JSON.parse(m.body.replace('STOP_DELIVERED::',''));
-            displayText='\u2713 Delivered to '+(data.recipient||'customer')+(data.address?' \u2014 '+data.address:'');
-          }catch(e){displayText='\u2713 Stop delivered';}
-        }
         const isMe=m.sender_role==='dispatcher';
         const wrap=document.createElement('div');wrap.className='oc-msg-wrap';
         const meta=document.createElement('div');meta.className='oc-msg-meta'+(isMe?' right':'');
         meta.textContent=(isMe?'You':m.sender||'Driver')+' · '+new Date(m.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
-        const bubble=document.createElement('div');bubble.className='oc-msg '+(isMe?'oc-outbound':isStopDelivered?'oc-system':'oc-driver');
+        const bubble=document.createElement('div');bubble.className='oc-msg '+(isMe?'oc-outbound':'oc-driver');
         if(isMe) bubble.style.alignSelf='flex-end';
-        if(isStopDelivered) bubble.style.color='var(--green)';
-        bubble.textContent=displayText;
+        bubble.textContent=m.body;
         wrap.appendChild(meta);wrap.appendChild(bubble);
         container.appendChild(wrap);
       });
