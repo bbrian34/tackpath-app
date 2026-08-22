@@ -258,26 +258,19 @@ async function loadPerformance(){
   bodyEl.innerHTML='';
   patternEl.innerHTML='';
 
-  const drivers=['Brian T.','Keisha R.','Marcus A.','Tyler O.','Sandra C.'];
-  const driftRecords=[];
-  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const now=Date.now();
-  drivers.forEach((name,i)=>{
-    const baseline=[1.8,2.4,3.1,2.0,9.2][i];
-    const stopCount=[34,29,22,31,18][i];
-    for(let s=0;s<stopCount;s++){
-      const dayOffset=Math.floor(Math.random()*7);
-      const isTuesdaySpike=(name==='Marcus A.'&&dayOffset===2);
-      const drift=isTuesdaySpike?(14+Math.random()*8):(baseline+(Math.random()*4-1.5));
-      driftRecords.push({
-        driver_name:name,
-        driftMin:Math.round(drift*10)/10,
-        delivered_at:new Date(now-dayOffset*86400000-Math.random()*3600000).toISOString()
-      });
-    }
-  });
+  let driftRecords=[];
+  try{
+    const r=await fetch(SB+'/rest/v1/messages?sender_role=eq.dispatcher&order=created_at.desc&limit=500&apikey='+KEY,{headers:H});
+    const msgs=await r.json();
+    driftRecords=(Array.isArray(msgs)?msgs:[])
+      .filter(m=>m.body&&m.body.startsWith('STOP_DRIFT::'))
+      .map(m=>{
+        try{return JSON.parse(m.body.replace('STOP_DRIFT::',''));}catch(e){return null;}
+      })
+      .filter(Boolean);
+  }catch(e){driftRecords=[];}
 
-  const deliveredToday=jobs.filter(j=>j.status==='delivered').length+134;
+  const deliveredToday=jobs.filter(j=>j.status==='delivered').length;
   const onTimeStops=driftRecords.filter(r=>r.driftMin<12).length;
   const onTimePct=driftRecords.length?Math.round((onTimeStops/driftRecords.length)*100):null;
   const avgDrift=driftRecords.length?(driftRecords.reduce((s,r)=>s+r.driftMin,0)/driftRecords.length):null;
@@ -329,6 +322,7 @@ async function loadPerformance(){
   // Real pattern detection: group by driver + day-of-week, flag any bucket
   // meaningfully worse than that driver's own overall average. Needs at least
   // 2 data points in a bucket to avoid flagging single-event noise.
+  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const buckets={};
   driftRecords.forEach(r=>{
     if(!r.delivered_at)return;
