@@ -940,16 +940,40 @@ body::after{content:'';position:fixed;inset:0;
       <!-- DISPATCH TAB -->
       <div class="tab on" id="tab-dispatch">
         <!-- KPI ROW -->
-        <div class="kpi-row">
-          <div class="kpi-total-banner">
-            <div class="kpi-total-icon">
+        <div class="kpi-row" style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div class="kpi-total-banner" style="flex:0 0 auto;min-width:280px;padding:14px 20px;height:66px;">
+            <div class="kpi-total-icon" style="width:36px;height:36px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7"/></svg>
             </div>
             <div>
               <div class="kpi-total-lbl">Total Jobs</div>
               <div class="kpi-total-sub">All statuses</div>
             </div>
-            <div class="kpi-total-val" id="kpi-total">—</div>
+            <div class="kpi-total-val" style="font-size:1.6rem;" id="kpi-total">—</div>
+          </div>
+
+          <!-- FLEET PULSE -->
+          <div id="fleetPulseStrip" style="flex:0 0 auto;min-width:280px;height:66px;box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:14px;background:linear-gradient(90deg,rgba(13,122,3,.08),rgba(13,122,3,.02));border:2px solid rgba(13,122,3,.35);overflow:hidden;">
+            <div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0;">
+              <div id="fpScore" style="font-family:var(--cond);font-size:1.6rem;font-weight:800;color:#0d7a03;line-height:1;transition:color .4s;">94</div>
+              <div id="fpTrendArrow" style="font-size:1rem;color:#0d7a03;">&#8599;</div>
+            </div>
+            <div style="flex-shrink:0;">
+              <div id="fpLabel" style="font-family:var(--mono);font-size:0.769rem;font-weight:700;letter-spacing:.04em;color:#0d7a03;text-transform:uppercase;">Healthy</div>
+              <div style="font-size:0.769rem;color:var(--faint);margin-top:2px;">Fleet Pulse &middot; Live</div>
+            </div>
+            <div style="width:1px;align-self:stretch;background:var(--border2);flex-shrink:0;"></div>
+            <div style="flex-shrink:0;">
+              <div id="fpMinutes" style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:var(--text);">+2.1 min</div>
+              <div style="font-size:0.769rem;color:var(--faint);margin-top:2px;">Avg pace</div>
+            </div>
+            <div id="fpOutlier" style="display:none;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;background:rgba(217,45,32,.12);border:1.5px solid rgba(217,45,32,.4);margin-left:8px;cursor:pointer;">
+              <div style="font-size:0.85rem;">&#9888;</div>
+              <div>
+                <div style="font-family:var(--mono);font-size:0.6rem;font-weight:700;color:var(--red);">OUTLIER</div>
+                <div data-outlier-text style="font-size:0.58rem;color:var(--muted);"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2567,7 +2591,7 @@ function triggerCSVUpload(){
 
 // ── RENDER ALL ──
 function renderAll(){
-  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();
+  renderKPIs();renderPipeline();renderTable();renderSidebar();renderSmartPath();renderExceptionDetail();renderExceptionQueue();renderFleetPulse();
 
   const sprintBtn=document.getElementById('tab-sprint-btn');
   const activeSurgeNow=jobs.some(j=>j.job_type==='surge'&&(j.status==='assigned'||j.status==='in_transit'));
@@ -4757,6 +4781,90 @@ async function rpApprove(actions){
     splash.classList.add('gone');
   }, 4800);
 })();
+</script>
+<script>
+// ── FLEET PULSE (real calculation) ──
+// Per-job drift = estimated_delivery_at (live traffic ETA to the driver's
+// CURRENT stop) minus SMARTTRACK_STOP_DEADLINE (the deadline locked for that
+// SAME stop the moment the driver started heading to it). Comparing against
+// the whole-route deadline instead would make early stops on long routes
+// look falsely way-ahead of schedule, since reaching stop 2 of 13 is always
+// sooner than the deadline for finishing all 13. Positive = running later
+// than expected for this stop. Averaged across all active jobs = fleet pace.
+// Score mapping is a first honest heuristic -- not yet calibrated against
+// real operational days.
+let fpHistory=[];
+
+function renderFleetPulse(){
+  const scoreEl=document.getElementById('fpScore');
+  const labelEl=document.getElementById('fpLabel');
+  const arrowEl=document.getElementById('fpTrendArrow');
+  const minutesEl=document.getElementById('fpMinutes');
+  const outlierEl=document.getElementById('fpOutlier');
+  const stripEl=document.getElementById('fleetPulseStrip');
+  if(!scoreEl) return;
+
+  const active=jobs.filter(j=>(j.status==='assigned'||j.status==='in_transit')&&SMARTTRACK_STOP_DEADLINE[j.id]&&SMARTTRACK_STOP_DEADLINE[j.id].deadline&&j.estimated_delivery_at);
+
+  if(!active.length){
+    scoreEl.textContent='--';
+    labelEl.textContent='No Active Jobs';
+    labelEl.style.color='var(--muted)';
+    scoreEl.style.color='var(--muted)';
+    arrowEl.innerHTML='';
+    minutesEl.textContent='--';
+    outlierEl.style.display='none';
+    stripEl.style.borderColor='var(--border)';
+    stripEl.style.background='var(--card)';
+    return;
+  }
+
+  const drifts=active.map(j=>({
+    job:j,
+    driftMin:(new Date(j.estimated_delivery_at).getTime()-new Date(SMARTTRACK_STOP_DEADLINE[j.id].deadline).getTime())/60000
+  }));
+
+  const avgDrift=drifts.reduce((sum,d)=>sum+d.driftMin,0)/drifts.length;
+  const worst=drifts.reduce((a,b)=>b.driftMin>a.driftMin?b:a,drifts[0]);
+
+  let score=100-(avgDrift*3);
+  score=Math.max(0,Math.min(100,score));
+
+  function bandFor(s){
+    if(s>=90) return {label:'Healthy', color:'#0d7a03'};
+    if(s>=75) return {label:'Watch', color:'#a85a0f'};
+    if(s>=50) return {label:'At Risk', color:'#c85a00'};
+    return {label:'Critical', color:'#d92d20'};
+  }
+  const band=bandFor(score);
+
+  scoreEl.textContent=Math.round(score);
+  scoreEl.style.color=band.color;
+  labelEl.textContent=band.label;
+  labelEl.style.color=band.color;
+  stripEl.style.borderColor=band.color+'59';
+  stripEl.style.background=`linear-gradient(90deg,${band.color}14,${band.color}05)`;
+
+  fpHistory.push(score);
+  if(fpHistory.length>20) fpHistory.shift();
+  const trend=fpHistory.length>1?score-fpHistory[fpHistory.length-2]:0;
+  arrowEl.innerHTML=trend>0.3?'&#8599;':trend<-0.3?'&#8600;':'&#8594;';
+  arrowEl.style.color=band.color;
+
+  minutesEl.textContent=(avgDrift>=0?'+':'')+avgDrift.toFixed(1)+' min';
+
+  const outlierGap=worst.driftMin-avgDrift;
+  if(worst.driftMin>=12&&outlierGap>=5){
+    const driverName=worst.job.driver_name||'No driver assigned';
+    outlierEl.style.display='flex';
+    outlierEl.querySelector('[data-outlier-text]').textContent=
+      driverName+' \u00b7 '+Math.round(worst.driftMin)+' min behind';
+    outlierEl.onclick=function(){ openDrawer(worst.job.id); };
+  } else {
+    outlierEl.style.display='none';
+    outlierEl.onclick=null;
+  }
+}
 </script>
 </body>
 </html>
