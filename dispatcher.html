@@ -113,6 +113,7 @@ body::after{content:'';position:fixed;inset:0;
 .sys-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
   box-shadow:0 0 8px rgba(83,255,136,.9);animation:pulse 2s infinite;flex-shrink:0;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+@keyframes routePulse{0%{transform:scale(.6);opacity:.7;}100%{transform:scale(1.6);opacity:0;}}
 .tb-clock{font-family:var(--mono);font-size:0.769rem;color:var(--muted);white-space:nowrap;}
 .tb-poll{font-family:var(--mono);font-size:0.692rem;color:var(--faint);display:flex;align-items:center;gap:5px;white-space:nowrap;}
 .poll-ring{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(25,183,239,.3);
@@ -1046,7 +1047,6 @@ body::after{content:'';position:fixed;inset:0;
                 <th>Signal / Job</th>
                 <th>Title</th>
                 <th>Dropoff</th>
-                <th>Pace</th>
                 <th>Progress</th>
                 <th>Status</th>
                 <th>Created</th>
@@ -2828,7 +2828,6 @@ function renderTable(){
     lastDropoffByJobId[j.id]=dropoffDisplay;
     const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
     const progressPct=s==='delivered'?100:Math.round((doneCount/totalStops)*100);
-    const progressColor=s==='delivered'?'var(--green)':progressPct>=70?'var(--green)':progressPct>=30?'var(--blue)':'var(--orange)';
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
       <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
@@ -2836,22 +2835,39 @@ function renderTable(){
       <td>${(()=>{
         if(s==='delivered')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
         if(s!=='in_transit'&&s!=='customer_confirmed')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
-        if(j.exception_flag)return '<span style="color:var(--red);font-weight:700;font-size:0.769rem;">&#128308; Late</span>';
-        const tracked=SMARTTRACK_STOP_DEADLINE[j.id];
-        if(!tracked||!tracked.deadline)return '<span style="color:var(--muted);font-size:0.769rem;">&#8212;</span>';
-        const minsToDeadline=Math.round((new Date(tracked.deadline).getTime()-Date.now())/60000);
-        if(minsToDeadline<=0)return '<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
-        if(minsToDeadline<=10)return '<span style="color:var(--orange);font-weight:700;font-size:0.769rem;">&#128993; Tight</span>';
-        return '<span style="color:var(--green);font-weight:700;font-size:0.769rem;">&#128994; On Time</span>';
-      })()}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px;min-width:100px;">
-          <div style="flex:1;height:10px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden;">
-            <div style="height:100%;width:${progressPct}%;background:${progressColor};border-radius:5px;transition:width .3s;"></div>
+        let urgencyColor='var(--muted)';
+        let urgencyLabel='';
+        if(j.exception_flag){
+          urgencyColor='var(--red)';urgencyLabel='Late';
+        } else {
+          const tracked=SMARTTRACK_STOP_DEADLINE[j.id];
+          if(tracked&&tracked.deadline){
+            const minsToDeadline=Math.round((new Date(tracked.deadline).getTime()-Date.now())/60000);
+            if(minsToDeadline<=10){urgencyColor='var(--orange)';urgencyLabel='Tight';}
+            else{urgencyColor='var(--green)';urgencyLabel='On Time';}
+          }
+        }
+        let driftText='';
+        const stopDeadline=SMARTTRACK_STOP_DEADLINE[j.id];
+        if(stopDeadline&&stopDeadline.deadline&&j.estimated_delivery_at){
+          const driftMin=(new Date(j.estimated_delivery_at).getTime()-new Date(stopDeadline.deadline).getTime())/60000;
+          driftText=' · '+(driftMin>=0?'+':'')+driftMin.toFixed(1)+' min';
+        }
+        return `<div style="min-width:210px;max-width:280px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <span style="font-size:0.8rem;color:var(--text);font-weight:600;">Stop ${doneCount} of ${totalStops}</span>
+            ${urgencyLabel?`<span style="font-family:var(--mono);font-size:0.68rem;color:${urgencyColor};font-weight:700;text-transform:uppercase;letter-spacing:.04em;">${urgencyLabel}</span>`:''}
           </div>
-          <div style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);white-space:nowrap;">${doneCount}/${totalStops}</div>
-        </div>
-      </td>
+          <div style="position:relative;height:16px;display:flex;align-items:center;">
+            <div style="position:absolute;left:0;right:0;height:3px;background:rgba(120,130,145,.18);border-radius:2px;"></div>
+            <div style="position:absolute;left:0;width:${progressPct}%;height:3px;background:${urgencyColor};border-radius:2px;transition:width .4s ease,background .3s;"></div>
+            <div style="position:absolute;left:calc(${progressPct}% - 6px);width:12px;height:12px;border-radius:50%;background:${urgencyColor};border:2px solid var(--card);box-shadow:0 0 0 2px ${urgencyColor}40;transition:left .4s ease,background .3s;">
+              <div style="position:absolute;inset:-4px;border-radius:50%;border:1.5px solid ${urgencyColor};opacity:.5;animation:routePulse 1.8s ease-out infinite;"></div>
+            </div>
+          </div>
+          ${driftText?`<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:6px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}
+        </div>`;
+      })()}</td>
       <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
       <td><button class="act-btn" onclick="event.stopPropagation();${s==='pending'||s==='assigned'?`quickDispatch('${j.id}','${s}')`:`openDrawer('${j.id}')`}">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
