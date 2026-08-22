@@ -235,13 +235,13 @@ body::after{content:'';position:fixed;inset:0;
 .pipe-body::-webkit-scrollbar-track{background:rgba(255,255,255,.03);border-radius:5px;}
 .pipe-body::-webkit-scrollbar-thumb{background:rgba(25,183,239,.35);border-radius:5px;border:2px solid transparent;background-clip:padding-box;}
 .pipe-body::-webkit-scrollbar-thumb:hover{background:rgba(25,183,239,.55);background-clip:padding-box;}
-.pcard{padding:10px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--border2);
+.pcard{padding:9px 2px;border-radius:6px;background:transparent;border:none;
   cursor:pointer;transition:all .15s;position:relative;}
-.pcard:hover{border-color:rgba(25,183,239,.3);background:var(--card3);transform:translateY(-1px);}
+.pcard:hover{background:rgba(120,130,145,.05);}
 .pcard-sig{font-family:var(--mono);font-size:0.692rem;color:var(--blue);margin-bottom:3px;}
-.pcard.pipe-highlight{border-color:var(--blue) !important;box-shadow:0 0 0 2px rgba(25,183,239,.3);transition:border-color .15s,box-shadow .15s;}
-@keyframes streamInPurple{0%{opacity:0;transform:translateY(-10px);background:rgba(109,63,214,.28);}60%{background:rgba(109,63,214,.14);}100%{opacity:1;transform:translateY(0);background:var(--card2);}}
-@keyframes streamInGreen{0%{opacity:0;transform:translateY(-10px);background:rgba(13,122,3,.28);}60%{background:rgba(13,122,3,.14);}100%{opacity:1;transform:translateY(0);background:var(--card2);}}
+.pcard.pipe-highlight{box-shadow:none;background:rgba(25,183,239,.06);transition:background .15s;}
+@keyframes streamInPurple{0%{opacity:0;transform:translateY(-10px);background:rgba(109,63,214,.28);}60%{background:rgba(109,63,214,.14);}100%{opacity:1;transform:translateY(0);background:transparent;}}
+@keyframes streamInGreen{0%{opacity:0;transform:translateY(-10px);background:rgba(13,122,3,.28);}60%{background:rgba(13,122,3,.14);}100%{opacity:1;transform:translateY(0);background:transparent;}}
 .pcard.stream-new-transit{animation:streamInPurple 1.1s ease-out;}
 .pcard.stream-new-delivered{animation:streamInGreen 1.1s ease-out;}
 .pcard-name{font-size:0.846rem;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
