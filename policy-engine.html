@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>TackPath Policy Engine, Functional Prototype</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#070b13; --card:#0e1728; --card2:#111d33; --border:rgba(25,183,239,.14);
+  --text:#eef4ff; --muted:rgba(238,244,255,.62); --faint:rgba(238,244,255,.4);
+  --blue:#19b7ef; --purple:#8d5cff; --green:#0d7a03; --orange:#c96a12; --red:#d92d20;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+.banner{background:#fff3cd;color:#664d03;font-size:11px;text-align:center;padding:7px;font-family:'DM Mono',monospace;}
+nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px solid var(--border);}
+.wordmark{font-family:'Montserrat',sans-serif;font-size:1rem;letter-spacing:1.4px;}
+.tabs{display:flex;gap:2px;margin-left:24px;}
+.tab-btn{padding:9px 16px;border-radius:8px;font-size:.82rem;font-weight:600;color:var(--muted);
+  background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.tab-btn.on{background:rgba(25,183,239,.1);color:var(--blue);}
+.page-eyebrow{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);}
+.page-title{font-family:'Playfair Display',serif;font-weight:700;font-size:1.5rem;margin-top:6px;}
+.layout{display:grid;grid-template-columns:1fr 400px;gap:24px;max-width:1300px;margin:24px auto;padding:0 32px;}
+@media(max-width:1000px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;}
+.panel-lbl{font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:16px;}
+.view{display:none;}
+.view.on{display:block;}
+
+/* Conversation */
+.convo{display:flex;flex-direction:column;gap:14px;min-height:200px;margin-bottom:18px;max-height:520px;overflow-y:auto;padding-right:4px;}
+.msg{max-width:85%;padding:12px 15px;border-radius:12px;font-size:.86rem;line-height:1.5;}
+.msg-owner{align-self:flex-end;background:var(--blue);color:#fff;}
+.msg-tp{align-self:flex-start;background:var(--card2);border:1px solid var(--border);}
+.msg-tp .lbl{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+
+.rule-card{background:var(--card2);border:1px solid rgba(13,122,3,.3);border-radius:10px;padding:14px 16px;margin-top:8px;}
+.rule-card.blocked{border-color:rgba(217,45,32,.4);}
+.rule-row{display:flex;gap:8px;font-size:.79rem;padding:3px 0;}
+.rule-k{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--faint);text-transform:uppercase;width:78px;flex-shrink:0;padding-top:2px;}
+.rule-v{color:var(--text);}
+.tier-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:.58rem;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em;}
+.tier-low{background:rgba(13,122,3,.15);color:#4ade80;}
+.tier-medium{background:rgba(201,106,18,.18);color:var(--orange);}
+.tier-high{background:rgba(217,45,32,.15);color:var(--red);}
+
+.confirm-row{display:flex;gap:8px;margin-top:12px;}
+.confirm-row button{flex:1;padding:9px;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;border:none;}
+.btn-confirm{background:var(--blue);color:#fff;}
+.btn-cancel{background:var(--card);color:var(--muted);border:1px solid var(--border) !important;}
+
+.input-row{display:flex;gap:10px;}
+.input-row input{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:.86rem;font-family:'DM Sans',sans-serif;}
+.input-row button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:0 20px;font-weight:700;font-size:.85rem;cursor:pointer;}
+.hint{font-size:.72rem;color:var(--faint);margin-top:8px;}
+
+/* Existing rules sidebar */
+.existing-rule{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.existing-rule.conflict{border-color:rgba(217,45,32,.5);}
+.existing-rule.disabled{opacity:.45;}
+.rule-text{font-size:.82rem;line-height:1.5;margin-bottom:8px;}
+.rule-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+.priority-chip{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--faint);}
+.rule-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.rule-actions button{font-size:.68rem;padding:5px 9px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;}
+.rule-actions button:hover{color:var(--text);border-color:var(--blue);}
+.preset-btn{font-size:.72rem;padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;}
+.preset-btn:hover{color:var(--text);border-color:var(--blue);}
+.priority-input{width:38px;background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:.7rem;text-align:center;padding:2px;}
+
+.conflict-banner{background:rgba(217,45,32,.1);border:1px solid rgba(217,45,32,.4);border-radius:10px;padding:14px;margin-bottom:14px;}
+.conflict-banner .ct{color:var(--red);font-weight:700;font-size:.82rem;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.conflict-banner p{font-size:.77rem;color:var(--muted);line-height:1.5;margin-bottom:4px;}
+.resolve-btns{display:flex;gap:8px;margin-top:10px;}
+.resolve-btns button{flex:1;font-size:.73rem;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-weight:600;}
+
+.empty-note{font-size:.8rem;color:var(--faint);text-align:center;padding:24px 12px;}
+
+/* Test rule tab */
+.test-result{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px;}
+.trace-line{display:flex;justify-content:space-between;padding:5px 0;font-size:.83rem;}
+.trace-k{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;}
+.trace-v{color:var(--text);font-weight:600;text-align:right;}
+.test-fire{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.test-fire:last-child{border-bottom:none;}
+.test-fire-txt{font-size:.83rem;}
+.test-outcome{font-family:'DM Mono',monospace;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:10px;}
+.outcome-auto{background:rgba(13,122,3,.15);color:#4ade80;}
+.outcome-approval{background:rgba(201,106,18,.18);color:var(--orange);}
+</style>
+</head>
+<body>
+
+<div class="banner">Functional prototype, isolated front end. No live TackPath data, no backend, no API calls.</div>
+
+<nav>
+  <svg width="18" height="30" viewBox="0 0 36 70"><defs><linearGradient id="tpg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg1)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg1)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg1)" opacity=".5"/></svg>
+  <div class="wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:var(--blue);">P Ʌ T H</span></div>
+  <div class="tabs">
+    <button class="tab-btn on" onclick="switchView('create',this)">Create Rules</button>
+    <button class="tab-btn" onclick="switchView('test',this)">Test Rule</button>
+  </div>
+</nav>
+
+<div style="max-width:1300px;margin:24px auto 0;padding:0 32px;">
+  <div class="page-eyebrow">Policy Engine, v1</div>
+  <div class="page-title" id="pageTitle">Tell TackPath how your business operates.</div>
+</div>
+
+<!-- CREATE RULES VIEW -->
+<div class="layout view on" id="view-create">
+  <div class="panel">
+    <div class="panel-lbl">Create a Rule</div>
+    <div class="convo" id="convo"></div>
+    <div class="input-row">
+      <input type="text" id="ruleInput" placeholder="Tell TackPath a rule you want it to follow..." onkeydown="if(event.key==='Enter')handleRuleInput()"/>
+      <button onclick="handleRuleInput()">Send</button>
+    </div>
+    <div class="hint">Try: "If a driver is more than 20 minutes late, notify the dispatcher" or "Never notify customers about delays"</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-lbl">Active Rules</div>
+    <div id="conflictBanners"></div>
+    <div id="rulesList"></div>
+  </div>
+</div>
+
+<!-- TEST RULE VIEW -->
+<div class="layout view" id="view-test" style="grid-template-columns:1fr;">
+  <div class="panel">
+    <div class="panel-lbl">Test a Hypothetical Event</div>
+    <div class="input-row">
+      <input type="text" id="testInput" placeholder="e.g. Driver 12 is predicted 25 minutes late" onkeydown="if(event.key==='Enter')runTest()"/>
+      <button onclick="runTest()">Test</button>
+    </div>
+    <div class="hint">This simulates an event and shows which active rules would fire, and whether each action would run automatically or need approval.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+      <button class="preset-btn" onclick="runPreset('Driver is predicted 25 minutes late')">Driver 25 min late</button>
+      <button class="preset-btn" onclick="runPreset('Driver is predicted 10 minutes late')">Driver 10 min late</button>
+      <button class="preset-btn" onclick="runPreset('Driver has not moved in 15 minutes')">Driver stalled 15 min</button>
+      <button class="preset-btn" onclick="runPreset('A delivery fails')">Failed delivery</button>
+      <button class="preset-btn" onclick="runPreset('A new job arrives')">New job</button>
+      <button class="preset-btn" onclick="runPreset('Customer cancels the order')">Customer cancellation</button>
+      <button class="preset-btn" onclick="runPreset('Delivery is at risk of missing SLA')">SLA at risk</button>
+    </div>
+    <div id="testResult"></div>
+  </div>
+</div>
+
+<script>
+// ── V1 CLOSED VOCABULARY ──
+// Triggers describe WHAT kind of event happened. They no longer bake in a
+// comparison operator -- that is extracted separately by parseComparison so
+// "more than 20", "at least 20", and "exactly 20" are never confused.
+const TRIGGERS = [
+  {id:'driver_predicted_late', label:'Driver predicted late', field:'minutes',
+   patterns:[/late/i, /running late/i, /predicted late/i, /behind schedule/i, /delayed/i],
+   keywords:['late','running late','behind schedule','predicted late','delayed']},
+  {id:'driver_stalled', label:"Driver hasn't moved", field:'minutes',
+   patterns:[/hasn'?t moved/i, /stalled/i, /not moved/i, /stopped moving/i, /no movement/i],
+   keywords:['stalled','hasn\'t moved','not moved','stopped','no movement','parked']},
+  {id:'delivery_failed', label:'Delivery marked failed', field:null,
+   patterns:[/delivery\s*(?:is\s*)?(?:just\s*)?(?:marked\s*)?fail(?:s|ed)?/i, /failed delivery/i, /couldn'?t (?:complete|deliver)/i],
+   keywords:['failed','failure','undeliverable','couldn\'t deliver','unsuccessful']},
+  {id:'driver_arrives', label:'Driver arrives at a stop', field:null,
+   patterns:[/driver arrives/i, /arrives at/i, /reaches the stop/i],
+   keywords:['arrives','arrival','reaches','pulls up']},
+  {id:'driver_completes_stop', label:'Driver completes a stop', field:null,
+   patterns:[/completes? a stop/i, /finishes? a stop/i, /stop (?:is )?complete/i],
+   keywords:['completes','finishes','done with the stop']},
+  {id:'new_job_arrives', label:'New order arrives', field:null,
+   patterns:[/new (?:order|job) arrives/i, /new (?:order|job)/i, /order (?:comes|is placed)/i],
+   keywords:['new order','new job','order placed','incoming order']},
+  {id:'driver_unavailable', label:'Driver becomes unavailable', field:null,
+   patterns:[/driver becomes unavailable/i, /driver (?:is )?unavailable/i, /driver rejects/i, /driver declines/i, /driver drops (?:off|out)/i],
+   keywords:['unavailable','rejects','declines','can\'t make it','drops off']},
+  {id:'customer_cancels', label:'Customer cancels', field:null,
+   patterns:[/customer cancels/i, /order (?:is )?cancell?ed/i, /cancels? the order/i],
+   keywords:['cancels','cancellation','called off']},
+  {id:'route_reassigned', label:'Route or stop reassigned', field:null,
+   patterns:[/route (?:is )?reassigned/i, /stop (?:is )?reassigned/i, /route changes/i],
+   keywords:['reassigned','route changes','reroute']},
+  {id:'delivery_at_risk', label:'Delivery at risk of missing SLA', field:null,
+   patterns:[/delivery at risk/i, /sla at risk/i, /at risk of missing/i, /might miss (?:the )?sla/i],
+   keywords:['at risk','sla at risk','might miss','risk of missing']}
+];
+
+const ACTIONS = [
+  {id:'notify_dispatcher', label:'Notify dispatcher', tier:'low',
+   patterns:[/notify (?:the )?dispatch(?:er)?/i, /alert dispatch(?:er)?/i, /tell dispatch(?:er)?/i],
+   keywords:['notify dispatcher','alert dispatch','tell dispatch','let dispatch know']},
+  {id:'notify_driver', label:'Notify driver', tier:'low',
+   patterns:[/notify (?:the )?driver/i, /tell (?:the )?driver/i, /alert (?:the )?driver/i],
+   keywords:['notify driver','tell the driver','alert the driver']},
+  {id:'notify_customer', label:'Notify customer', tier:'low',
+   patterns:[/notify (?:the )?customer/i, /tell (?:the )?customer/i, /text (?:the )?customer/i, /send (?:an? )?sms/i],
+   keywords:['notify customer','tell the customer','text the customer','let the customer know']},
+  {id:'log_event', label:'Log the event', tier:'low',
+   patterns:[/log (?:the )?event/i, /record (?:the )?event/i, /create an? alert/i],
+   keywords:['log the event','record it','create an alert']},
+  {id:'reassign_stop', label:'Reassign the stop', tier:'medium',
+   patterns:[/reassign/i, /move\b[^.]*stop/i, /give it to another driver/i],
+   keywords:['reassign','move the stop','give it to another driver']},
+  {id:'change_route', label:'Change the route', tier:'medium',
+   patterns:[/change\b[^.]*route/i], keywords:['change the route']},
+  {id:'change_window', label:'Change the delivery window', tier:'medium',
+   patterns:[/change\b[^.]*window/i], keywords:['change the window','delivery window']},
+  {id:'escalate', label:'Escalate', tier:'medium',
+   patterns:[/escalate/i], keywords:['escalate','escalation','notify manager']},
+  {id:'require_approval', label:'Require approval', tier:'medium',
+   patterns:[/require approval/i], keywords:['require approval','needs approval']},
+  {id:'cancel_job', label:'Cancel the delivery', tier:'high',
+   patterns:[/cancel\b[^.]*(?:delivery|job|order)/i], keywords:['cancel the delivery','cancel the job','cancel the order']},
+  {id:'issue_refund', label:'Issue a refund', tier:'high',
+   patterns:[/(?:issue|give|send)\b[^.]*(?:refund|credit)/i], keywords:['issue a refund','give a credit']},
+  {id:'change_pricing', label:'Change pricing', tier:'high',
+   patterns:[/change\b[^.]*(?:pricing|rate|price)/i], keywords:['change pricing','change the rate']},
+  {id:'override_sla', label:'Override SLA', tier:'high',
+   patterns:[/override\b[^.]*sla/i], keywords:['override sla','override the sla']}
+];
+
+// A rule "suppresses" an action rather than allowing it. Detected the same
+// way as before (negation words), but now stored as an explicit effect
+// field on the rule itself instead of a boolean flag threaded everywhere.
+const NEGATIONS = [/never/i, /don'?t/i, /do not/i, /shouldn'?t/i, /should not/i];
+
+// ── COMPARISON OPERATORS ──
+// Real thresholds are not always ">" -- extracting the correct operator
+// from qualifying language, rather than assuming, is the difference between
+// a rule matching correctly and matching silently wrong.
+function parseComparison(text){
+  if(/at least|or more|minimum of|no less than/i.test(text)) return '>=';
+  if(/at most|or less|maximum of|no more than/i.test(text)) return '<=';
+  if(/exactly|precisely/i.test(text)) return '=';
+  if(/less than|under|fewer than/i.test(text)) return '<';
+  if(/more than|over|greater than|past|beyond/i.test(text)) return '>';
+  // No explicit qualifier ("driver is 20 minutes late") -- default to >=
+  // rather than silently coding it as ">", and always show the resolved
+  // operator back to the user so this default is never hidden.
+  return '>=';
+}
+
+let rules = [];
+let ruleIdCounter = 1;
+let pendingRule = null;
+let pendingClarify = null; // { stage: 'minutes'|'trigger', partial }
+
+function keywordScore(text, item){
+  const lower = text.toLowerCase();
+  let score = 0;
+  (item.keywords||[]).forEach(k=>{ if(lower.includes(k.toLowerCase())) score++; });
+  return score;
+}
+function bestKeywordMatch(text, list){
+  let best = null, bestScore = 0;
+  list.forEach(item=>{ const s = keywordScore(text, item); if(s > bestScore){ bestScore = s; best = item; } });
+  return bestScore > 0 ? best : null;
+}
+function matchTrigger(text){
+  for(const t of TRIGGERS){
+    for(const p of t.patterns){ if(p.test(text)) return t; }
+  }
+  return bestKeywordMatch(text, TRIGGERS);
+}
+function matchAction(text){
+  for(const a of ACTIONS){
+    for(const p of a.patterns){ if(p.test(text)) return a; }
+  }
+  return bestKeywordMatch(text, ACTIONS);
+}
+function extractNumber(text){
+  const m = text.match(/(\d+)\s*min/i) || text.match(/(\d+)/);
+  return m ? parseInt(m[1]) : null;
+}
+
+// ── parsePolicy(text) : NaturalLanguageRule -> StructuredRule ──
+// This is the ONLY function that understands full rule sentences (trigger +
+// condition + action + scope + effect). It is intentionally the single
+// integration point where a future LLM could replace deterministicParseRule,
+// as long as it returns the same shape.
+function parsePolicy(text, context){
+  return deterministicParseRule(text, context);
+}
+
+function deterministicParseRule(text, context){
+  let scope = 'All deliveries', scopeTag = 'all';
+  const criticalMatch = text.match(/critical/i);
+  const priorityMatch = text.match(/\bpriority\b(?! deliveries and)/i) && !text.match(/rule priority/i);
+  const standardMatch = text.match(/\bstandard\b/i);
+  const forClient = text.match(/for (?:customer |client )?([A-Z][a-zA-Z0-9]+)/);
+  if(criticalMatch){ scope = 'Critical priority deliveries'; scopeTag='critical'; }
+  else if(priorityMatch){ scope = 'Priority deliveries'; scopeTag='priority'; }
+  else if(standardMatch){ scope = 'Standard deliveries'; scopeTag='standard'; }
+  else if(forClient){ scope = 'Client: '+forClient[1]; scopeTag='client:'+forClient[1]; }
+
+  const effect = NEGATIONS.some(p=>p.test(text)) ? 'suppress' : 'allow';
+  const matchedTrigger = matchTrigger(text);
+  const matchedAction = matchAction(text);
+  let value = null, operator = null;
+  if(matchedTrigger && matchedTrigger.field){
+    value = extractNumber(text);
+    if(value!=null) operator = parseComparison(text);
+  }
+
+  return {matchedTrigger, matchedAction, value, operator, scope, scopeTag, effect, rawText:text};
+}
+
+// ── parseEvent(text) : real-event text -> StructuredEvent ──
+// Deliberately separate from parsePolicy. A real TackPath event does not
+// need to express an action, an effect, or a scope in natural language --
+// eventually this will be replaced entirely by structured data coming
+// directly from the dispatch system, not text at all. Keeping it separate
+// now means the policy evaluator never depends on rule-parsing behavior.
+function parseEvent(text){
+  const trigger = matchTrigger(text);
+  let value = null;
+  if(trigger && trigger.field) value = extractNumber(text);
+  const criticalMatch = text.match(/critical/i);
+  const standardMatch = text.match(/\bstandard\b/i);
+  let scopeTag = 'all';
+  if(criticalMatch) scopeTag = 'critical';
+  else if(standardMatch) scopeTag = 'standard';
+  return {
+    triggerId: trigger ? trigger.id : null,
+    triggerLabel: trigger ? trigger.label : null,
+    values: value!=null ? {[trigger.field]: value} : {},
+    scopeTag,
+    rawText: text
+  };
+}
+
+function addMsg(text, who){
+  const convo = document.getElementById('convo');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (who==='owner'?'msg-owner':'msg-tp');
+  if(who==='tp'){ div.innerHTML = '<div class="lbl">TackPath</div>' + text; }
+  else { div.textContent = text; }
+  convo.appendChild(div);
+  convo.scrollTop = convo.scrollHeight;
+  return div;
+}
+
+function handleRuleInput(){
+  const input = document.getElementById('ruleInput');
+  const text = input.value.trim();
+  if(!text) return;
+  addMsg(text, 'owner');
+  input.value = '';
+
+  if(pendingClarify && pendingClarify.stage==='minutes'){
+    const num = text.match(/(\d+)/);
+    if(num){
+      pendingClarify.partial.value = parseInt(num[1]);
+      pendingClarify.partial.operator = parseComparison(text) || '>=';
+      finishParse(pendingClarify.partial);
+      pendingClarify = null;
+    } else {
+      addMsg('I need a number of minutes to complete this rule.', 'tp');
+    }
+    return;
+  }
+  if(pendingClarify && pendingClarify.stage==='trigger'){
+    const trigger = matchTrigger(text);
+    if(trigger){
+      const p = pendingClarify.partial;
+      p.matchedTrigger = trigger;
+      if(trigger.field){
+        const num = extractNumber(text);
+        if(num!=null){ p.value = num; p.operator = parseComparison(text); }
+      }
+      pendingClarify = null;
+      finishParse(p);
+    } else {
+      addMsg("I still couldn't match that to a situation TackPath tracks (driver late, driver stalled, delivery failed, new order, driver unavailable, customer cancels, delivery at risk).", 'tp');
+    }
+    return;
+  }
+
+  const parsed = parsePolicy(text);
+  finishParse(parsed);
+}
+
+function finishParse(parsed){
+  // A suppression rule must name what kind of event it applies to. No more
+  // blanket "any" -- "never notify customers" without context is genuinely
+  // ambiguous and could wrongly suppress an unrelated notification.
+  if(parsed.effect==='suppress' && parsed.matchedAction && !parsed.matchedTrigger){
+    pendingClarify = {stage:'trigger', partial: parsed};
+    addMsg('Which situation should this rule apply to? For example: driver late, driver stalled, delivery failed, new order, driver unavailable, customer cancels, or delivery at risk.', 'tp');
+    return;
+  }
+  if(!parsed.matchedTrigger){
+    addMsg("I couldn't match that to a trigger TackPath currently supports. Try phrasing it around a driver being late, stalled, a delivery failing, a new order arriving, or similar.", 'tp');
+    return;
+  }
+  if(parsed.effect==='allow' && parsed.matchedTrigger.field && parsed.value==null){
+    pendingClarify = {stage:'minutes', partial: parsed};
+    addMsg('How many minutes?', 'tp');
+    return;
+  }
+  if(!parsed.matchedAction){
+    addMsg("I understood the trigger, but I couldn't match an action TackPath currently supports (like notify dispatcher, notify customer, reassign, escalate).", 'tp');
+    return;
+  }
+
+  const tierLabel = parsed.matchedAction.tier;
+  const opSymbol = {'>':'&gt;','>=':'&ge;','<':'&lt;','<=':'&le;','=':'='}[parsed.operator] || '';
+  const condText = parsed.value!=null ? ' '+opSymbol+' '+parsed.value+' min' : '';
+
+  if(tierLabel==='high'){
+    addMsg('This action can materially affect delivery commitments or pricing. TackPath cannot enable this through the v1 rules engine, an administrator would need to configure it directly.'
+      + '<div class="rule-card blocked">'
+      + '<div class="rule-row"><div class="rule-k">Trigger</div><div class="rule-v">'+parsed.matchedTrigger.label+condText+'</div></div>'
+      + '<div class="rule-row"><div class="rule-k">Action</div><div class="rule-v">'+parsed.matchedAction.label+' <span class="tier-badge tier-high">High risk</span></div></div>'
+      + '<div class="rule-row"><div class="rule-k">Status</div><div class="rule-v" style="color:var(--red);">Blocked in v1</div></div>'
+      + '</div>', 'tp');
+    return;
+  }
+
+  pendingRule = parsed;
+  addMsg('Here is the rule I understood:'
+    + '<div class="rule-card">'
+    + '<div class="rule-row"><div class="rule-k">Trigger</div><div class="rule-v">'+parsed.matchedTrigger.label+condText+'</div></div>'
+    + '<div class="rule-row"><div class="rule-k">Effect</div><div class="rule-v">'+(parsed.effect==='suppress'?'Suppress':'Allow')+' '+parsed.matchedAction.label.toLowerCase()+' <span class="tier-badge tier-'+tierLabel+'">'+tierLabel+' risk</span></div></div>'
+    + '<div class="rule-row"><div class="rule-k">Scope</div><div class="rule-v">'+parsed.scope+'</div></div>'
+    + '<div class="rule-row"><div class="rule-k">Priority</div><div class="rule-v">Standard (5)</div></div>'
+    + '<div class="confirm-row"><button class="btn-confirm" onclick="confirmRule(this)">Confirm &amp; Add Rule</button><button class="btn-cancel" onclick="cancelRule(this)">Cancel</button></div></div>', 'tp');
+}
+
+function confirmRule(btn){
+  const p = pendingRule;
+  if(!p) return;
+  const rule = {
+    id: ruleIdCounter++,
+    rawText: p.rawText,
+    trigger: { id: p.matchedTrigger.id, label: p.matchedTrigger.label },
+    conditions: p.value!=null ? [{field:p.matchedTrigger.field, operator:p.operator||'>=', value:p.value}] : [],
+    action: { id: p.matchedAction.id, label: p.matchedAction.label, tier: p.matchedAction.tier },
+    effect: p.effect,
+    scope: { label: p.scope, tag: p.scopeTag },
+    priority: 5,
+    active: true,
+    requiresApproval: p.matchedAction.tier === 'medium'
+  };
+  rules.push(rule);
+  pendingRule = null;
+  btn.closest('.confirm-row').innerHTML = '<div style="color:#4ade80;font-size:.78rem;font-weight:600;">&#10003; Rule added</div>';
+  renderRules();
+}
+
+function cancelRule(btn){ pendingRule = null; btn.closest('.confirm-row').innerHTML = '<div style="color:var(--faint);font-size:.78rem;">Cancelled</div>'; }
+function deleteRule(id){ rules = rules.filter(r=>r.id!==id); renderRules(); }
+function toggleRule(id){ const r = rules.find(r=>r.id===id); if(r) r.active = !r.active; renderRules(); }
+function changePriority(id, val){ const r = rules.find(r=>r.id===id); if(r) r.priority = Math.max(1, Math.min(10, parseInt(val)||5)); renderRules(); }
+
+function opSymbolFor(op){ return {'>':'&gt;','>=':'&ge;','<':'&lt;','<=':'&le;','=':'='}[op] || ''; }
+function condText(rule){
+  const c = rule.conditions[0];
+  return c ? ' '+opSymbolFor(c.operator)+' '+c.value+' min' : '';
+}
+
+// ── RULE-VS-RULE OVERLAP LOGIC (conflict detection only) ──
+// These ask an abstract question: could two RULES ever both apply to some
+// hypothetical event? That's different from evaluatePolicy's job, which
+// asks whether one CONCRETE event satisfies one rule's conditions (see
+// ruleMatchesEvent/conditionSatisfied below). The two intentionally use
+// separate logic -- unifying them would mean wrapping a plain event value
+// in a fake interval or a fake rule shape just to share code, adding
+// indirection without adding correctness.
+function triggerOverlap(a, b){ return a.trigger.id===b.trigger.id; }
+function scopeOverlap(a, b){ return a.scope.tag==='all' || b.scope.tag==='all' || a.scope.tag===b.scope.tag; }
+
+// A condition like "> 20" describes a half-open interval of values that
+// satisfy it. Converting each condition to an interval lets us ask the real
+// question: does any value exist that satisfies both conditions at once?
+// "> 20" and "<= 10" describe disjoint ranges and can never both be true for
+// the same event, even though they share a trigger, action, and opposite effect.
+function conditionToInterval(cond){
+  switch(cond.operator){
+    case '>':  return {min:cond.value, minIncl:false, max:Infinity,  maxIncl:true};
+    case '>=': return {min:cond.value, minIncl:true,  max:Infinity,  maxIncl:true};
+    case '<':  return {min:-Infinity,  minIncl:true,  max:cond.value, maxIncl:false};
+    case '<=': return {min:-Infinity,  minIncl:true,  max:cond.value, maxIncl:true};
+    case '=':  return {min:cond.value, minIncl:true,  max:cond.value, maxIncl:true};
+    default:   return {min:-Infinity,  minIncl:true,  max:Infinity,  maxIncl:true};
+  }
+}
+function intervalsOverlap(ia, ib){
+  const belowGap = ia.max < ib.min || (ia.max === ib.min && !(ia.maxIncl && ib.minIncl));
+  const aboveGap = ib.max < ia.min || (ib.max === ia.min && !(ib.maxIncl && ia.minIncl));
+  return !belowGap && !aboveGap;
+}
+function conditionsOverlap(a, b){
+  // No conditions on either side means that rule applies to any severity
+  // of its trigger, so it necessarily overlaps whatever the other rule covers.
+  if(!a.conditions.length || !b.conditions.length) return true;
+  const ca = a.conditions[0], cb = b.conditions[0];
+  // Different fields can't be reasoned about in v1 -- assume overlap rather
+  // than risk silently dismissing a real conflict.
+  if(ca.field !== cb.field) return true;
+  return intervalsOverlap(conditionToInterval(ca), conditionToInterval(cb));
+}
+
+function rulesConflict(a, b){
+  if(a.action.id !== b.action.id) return false;
+  if(a.effect === b.effect) return false;
+  if(!triggerOverlap(a,b)) return false;
+  if(!scopeOverlap(a,b)) return false;
+  return conditionsOverlap(a,b);
+}
+
+function renderRules(){
+  const list = document.getElementById('rulesList');
+  if(!rules.length){
+    list.innerHTML = '<div class="empty-note">No rules yet. Describe one on the left to get started.</div>';
+    document.getElementById('conflictBanners').innerHTML = '';
+    return;
+  }
+  const conflictIds = getConflictRuleIds();
+  list.innerHTML = rules.map(r=>{
+    const desc = (r.effect==='suppress'?'Suppress ':'Allow ') + r.action.label.toLowerCase()
+      + ' when ' + r.trigger.label.toLowerCase() + condText(r)
+      + (r.scope.tag!=='all' ? ' ('+r.scope.label+')' : '');
+    return `<div class="existing-rule ${conflictIds.has(r.id)?'conflict':''} ${!r.active?'disabled':''}">
+      <div class="rule-text">${desc}</div>
+      <div class="rule-meta">
+        <span class="tier-badge tier-${r.action.tier}">${r.action.label}</span>
+        <span class="priority-chip">Priority <input type="number" class="priority-input" value="${r.priority}" min="1" max="10" onchange="changePriority(${r.id}, this.value)"></span>
+        <span class="priority-chip">${r.active?'Active':'Disabled'}</span>
+        ${r.requiresApproval?'<span class="priority-chip">Requires approval</span>':''}
+      </div>
+      <div class="rule-actions"><button onclick="toggleRule(${r.id})">${r.active?'Disable':'Enable'}</button><button onclick="deleteRule(${r.id})">Delete</button></div>
+    </div>`;
+  }).join('');
+  detectConflicts();
+}
+
+function getConflictRuleIds(){
+  const ids = new Set();
+  const active = rules.filter(r=>r.active);
+  for(let i=0;i<active.length;i++) for(let j=i+1;j<active.length;j++)
+    if(rulesConflict(active[i], active[j])){ ids.add(active[i].id); ids.add(active[j].id); }
+  return ids;
+}
+
+function detectConflicts(){
+  const banners = document.getElementById('conflictBanners');
+  const active = rules.filter(r=>r.active);
+  let html = '';
+  const seen = new Set();
+  for(let i=0;i<active.length;i++){
+    for(let j=i+1;j<active.length;j++){
+      const a = active[i], b = active[j];
+      const key = [a.id,b.id].sort().join('-');
+      if(seen.has(key) || !rulesConflict(a,b)) continue;
+      seen.add(key);
+      html += `<div class="conflict-banner">
+        <div class="ct">&#9888; These rules conflict</div>
+        <p><strong>Rule #${a.id}</strong> ${a.effect==='suppress'?'suppresses':'allows'} ${a.action.label.toLowerCase()} when ${a.trigger.label.toLowerCase()}${condText(a)}.</p>
+        <p><strong>Rule #${b.id}</strong> ${b.effect==='suppress'?'suppresses':'allows'} ${b.action.label.toLowerCase()} when ${b.trigger.label.toLowerCase()}${condText(b)}.</p>
+        <p style="margin-top:6px;">Priority: Rule #${a.id} = ${a.priority}, Rule #${b.id} = ${b.priority}. ${a.priority===b.priority?'Equal priority. Until resolved, TackPath defaults to the safer outcome (suppression wins).':'Higher priority rule will take precedence, but please confirm this is intended.'}</p>
+        <div class="resolve-btns"><button onclick="resolveConflict(${a.id},${b.id})">Keep Rule #${a.id}, disable #${b.id}</button><button onclick="resolveConflict(${b.id},${a.id})">Keep Rule #${b.id}, disable #${a.id}</button></div>
+      </div>`;
+    }
+  }
+  banners.innerHTML = html;
+}
+
+function resolveConflict(keepId, disableId){ const r = rules.find(r=>r.id===disableId); if(r) r.active=false; renderRules(); }
+
+function conditionSatisfied(cond, eventVal){
+  if(eventVal==null) return false;
+  switch(cond.operator){
+    case '>': return eventVal > cond.value;
+    case '>=': return eventVal >= cond.value;
+    case '<': return eventVal < cond.value;
+    case '<=': return eventVal <= cond.value;
+    case '=': return eventVal === cond.value;
+    default: return false;
+  }
+}
+
+function ruleMatchesEvent(rule, event){
+  if(!rule.active) return false;
+  if(rule.trigger.id !== event.triggerId) return false;
+  for(const cond of rule.conditions){
+    if(!conditionSatisfied(cond, event.values[cond.field])) return false;
+  }
+  if(rule.scope.tag!=='all' && event.scopeTag!=='all' && rule.scope.tag!==event.scopeTag) return false;
+  return true;
+}
+
+// evaluatePolicy(event, allRules) -> full decision trace
+// event -> matching policies -> allow/suppress grouped by action -> priority
+// resolution -> final decisions. A suppression rule genuinely blocks the
+// action it targets; it is never just listed alongside it.
+function evaluatePolicy(event, allRules){
+  const evaluated = allRules.filter(r=>r.active);
+  const matched = evaluated.filter(r=>ruleMatchesEvent(r, event));
+
+  const byAction = {};
+  matched.forEach(r=>{ (byAction[r.action.id] = byAction[r.action.id]||[]).push(r); });
+
+  const fired = [], suppressedActions = [], approvalNeeded = [], finalDecisions = [];
+
+  Object.keys(byAction).forEach(actionId=>{
+    const group = byAction[actionId];
+    const allow = group.filter(r=>r.effect==='allow').sort((a,b)=>b.priority-a.priority);
+    const suppress = group.filter(r=>r.effect==='suppress').sort((a,b)=>b.priority-a.priority);
+
+    if(allow.length && !suppress.length){
+      fired.push(allow[0]);
+      if(allow[0].requiresApproval) approvalNeeded.push(allow[0]);
+      finalDecisions.push({action:allow[0].action, outcome:'fires', via:allow[0]});
+    } else if(!allow.length && suppress.length){
+      finalDecisions.push({action:suppress[0].action, outcome:'no-op', via:suppress[0]});
+    } else if(allow.length && suppress.length){
+      const topAllow = allow[0], topSuppress = suppress[0];
+      if(topAllow.priority > topSuppress.priority){
+        fired.push(topAllow);
+        if(topAllow.requiresApproval) approvalNeeded.push(topAllow);
+        finalDecisions.push({action:topAllow.action, outcome:'fires', via:topAllow, note:'Overrode suppression rule #'+topSuppress.id+' by priority.'});
+      } else {
+        suppressedActions.push({rule:topAllow, suppressedBy:topSuppress});
+        finalDecisions.push({action:topAllow.action, outcome:'suppressed', via:topSuppress, suppressedRule:topAllow});
+      }
+    }
+  });
+
+  return {event, evaluated, matched, fired, suppressedActions, approvalNeeded, finalDecisions};
+}
+
+function runPreset(text){ document.getElementById('testInput').value = text; runTest(); }
+
+function runTest(){
+  const input = document.getElementById('testInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const event = parseEvent(text);
+  const resultEl = document.getElementById('testResult');
+
+  if(!event.triggerId){
+    resultEl.innerHTML = '<div class="test-result"><div class="empty-note">Could not match this event to a known trigger.</div></div>';
+    return;
+  }
+
+  const d = evaluatePolicy(event, rules);
+  let html = '<div class="test-result">';
+  html += '<div class="trace-line"><span class="trace-k">Event detected</span><span class="trace-v">'+event.triggerLabel+(event.values.minutes!=null?' ('+event.values.minutes+' min)':'')+'</span></div>';
+  html += '<div class="trace-line"><span class="trace-k">Rules evaluated</span><span class="trace-v">'+d.evaluated.length+'</span></div>';
+  html += '<div class="trace-line"><span class="trace-k">Rules matched</span><span class="trace-v">'+d.matched.length+'</span></div>';
+  html += '<div class="trace-line"><span class="trace-k">Rules fired</span><span class="trace-v">'+d.fired.length+'</span></div>';
+  html += '<div class="trace-line"><span class="trace-k">Approval required</span><span class="trace-v">'+(d.approvalNeeded.length?d.approvalNeeded.length+' action'+(d.approvalNeeded.length===1?'':'s'):'None')+'</span></div>';
+
+  if(!d.matched.length){ html += '<div class="empty-note">No active rules match this event.</div></div>'; resultEl.innerHTML = html; return; }
+
+  html += '<div style="height:1px;background:var(--border);margin:12px 0;"></div>';
+  d.finalDecisions.forEach(dec=>{
+    if(dec.outcome==='fires'){
+      const outcome = dec.via.requiresApproval ? '<span class="test-outcome outcome-approval">Needs approval</span>' : '<span class="test-outcome outcome-auto">Runs automatically</span>';
+      html += `<div class="test-fire"><div class="test-fire-txt">${dec.action.label} <span style="color:var(--faint);">(Rule #${dec.via.id}, priority ${dec.via.priority})</span>${dec.note?'<div style="color:var(--faint);font-size:.72rem;margin-top:3px;">'+dec.note+'</div>':''}</div>${outcome}</div>`;
+    } else if(dec.outcome==='suppressed'){
+      html += `<div class="test-fire"><div class="test-fire-txt">${dec.action.label} <span style="color:var(--faint);">(would have been Rule #${dec.suppressedRule.id})</span><div style="color:var(--red);font-size:.72rem;margin-top:3px;">Suppressed by Rule #${dec.via.id}: "${dec.via.rawText}"</div></div><span class="test-outcome" style="background:rgba(217,45,32,.15);color:var(--red);">Suppressed</span></div>`;
+    } else {
+      html += `<div class="test-fire"><div class="test-fire-txt">${dec.action.label} <span style="color:var(--faint);">(Rule #${dec.via.id} is a suppression rule with nothing active to suppress)</span></div><span class="test-outcome" style="background:rgba(120,130,145,.15);color:var(--faint);">No effect</span></div>`;
+    }
+  });
+
+  html += '<div style="height:1px;background:var(--border);margin:12px 0;"></div><div class="trace-line"><span class="trace-k">Final decision</span><span class="trace-v">';
+  const summary = d.finalDecisions.map(dec=>{
+    if(dec.outcome==='fires') return dec.action.label;
+    if(dec.outcome==='suppressed') return 'Do not '+dec.action.label.toLowerCase();
+    return null;
+  }).filter(Boolean);
+  html += summary.length ? summary.join(' &middot; ') : 'No action taken';
+  html += '</span></div></div>';
+  resultEl.innerHTML = html;
+}
+
+function switchView(view, btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('view-'+view).classList.add('on');
+  document.getElementById('pageTitle').textContent = view==='create' ? 'Tell TackPath how your business operates.' : 'Test what would happen.';
+}
+
+addMsg('Welcome. Describe a rule in plain language and I will show you what TackPath understood before adding it.', 'tp');
+renderRules();
+</script>
+</html>
