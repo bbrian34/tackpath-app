@@ -687,7 +687,44 @@ function switchView(view, btn){
   document.getElementById('pageTitle').textContent = view==='create' ? 'Tell TackPath how your business operates.' : 'Test what would happen.';
 }
 
-addMsg('Welcome. Describe a rule in plain language and I will show you what TackPath understood before adding it.', 'tp');
+// ── STARTER RULES ──
+// A realistic set covering most of the v1 vocabulary, so the engine
+// demonstrates real behavior immediately instead of starting blank.
+// Includes one deliberate conflict (rules #2 and #12) so the conflict
+// banner is visible on load, not something you have to construct by hand.
+function seedRules(){
+  const seed = [
+    {trigger:'driver_predicted_late', label:'Driver predicted late', field:'minutes', cond:{operator:'>',value:15}, action:'notify_dispatcher', actionLabel:'Notify dispatcher', tier:'low', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:5, text:'If a driver is more than 15 minutes late, notify the dispatcher.'},
+    {trigger:'driver_predicted_late', label:'Driver predicted late', field:'minutes', cond:{operator:'>',value:20}, action:'notify_customer', actionLabel:'Notify customer', tier:'low', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:5, text:'If a driver is more than 20 minutes late, notify the customer.'},
+    {trigger:'driver_predicted_late', label:'Driver predicted late', field:'minutes', cond:{operator:'<=',value:10}, action:'notify_customer', actionLabel:'Notify customer', tier:'low', effect:'suppress', scope:'all', scopeLabel:'All deliveries', priority:5, text:'If a driver is 10 minutes late or less, never notify the customer.'},
+    {trigger:'driver_stalled', label:"Driver hasn't moved", field:'minutes', cond:{operator:'>',value:10}, action:'notify_dispatcher', actionLabel:'Notify dispatcher', tier:'low', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:6, text:"If a driver hasn't moved in more than 10 minutes, notify the dispatcher."},
+    {trigger:'driver_unavailable', label:'Driver becomes unavailable', field:null, cond:null, action:'escalate', actionLabel:'Escalate', tier:'medium', effect:'allow', scope:'critical', scopeLabel:'Critical priority deliveries', priority:7, text:'For critical deliveries, escalate if a driver becomes unavailable.'},
+    {trigger:'driver_unavailable', label:'Driver becomes unavailable', field:null, cond:null, action:'reassign_stop', actionLabel:'Reassign the stop', tier:'medium', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:5, text:'Reassign the stop if a driver becomes unavailable.'},
+    {trigger:'delivery_failed', label:'Delivery marked failed', field:null, cond:null, action:'notify_customer', actionLabel:'Notify customer', tier:'low', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:5, text:'If a delivery fails, notify the customer.'},
+    {trigger:'new_job_arrives', label:'New order arrives', field:null, cond:null, action:'log_event', actionLabel:'Log the event', tier:'low', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:3, text:'If a new order arrives, log the event.'},
+    {trigger:'delivery_at_risk', label:'Delivery at risk of missing SLA', field:null, cond:null, action:'notify_dispatcher', actionLabel:'Notify dispatcher', tier:'low', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:8, text:'If a delivery is at risk of missing SLA, notify the dispatcher.'},
+    {trigger:'customer_cancels', label:'Customer cancels', field:null, cond:null, action:'notify_dispatcher', actionLabel:'Notify dispatcher', tier:'low', effect:'allow', scope:'all', scopeLabel:'All deliveries', priority:5, text:'If a customer cancels, notify the dispatcher.'},
+    {trigger:'customer_cancels', label:'Customer cancels', field:null, cond:null, action:'notify_customer', actionLabel:'Notify customer', tier:'low', effect:'suppress', scope:'all', scopeLabel:'All deliveries', priority:5, text:"If a customer cancels, don't notify the customer (they already know)."},
+    {trigger:'driver_predicted_late', label:'Driver predicted late', field:'minutes', cond:{operator:'>',value:15}, action:'notify_customer', actionLabel:'Notify customer', tier:'low', effect:'suppress', scope:'all', scopeLabel:'All deliveries', priority:5, text:'Never notify the customer when a driver is running late. (Deliberately conflicts with rule #2 above -- same equal priority, so suppression wins by default until resolved.)'}
+  ];
+  seed.forEach(s=>{
+    rules.push({
+      id: ruleIdCounter++,
+      rawText: s.text,
+      trigger: {id:s.trigger, label:s.label},
+      conditions: s.cond ? [{field:s.field, operator:s.cond.operator, value:s.cond.value}] : [],
+      action: {id:s.action, label:s.actionLabel, tier:s.tier},
+      effect: s.effect,
+      scope: {label:s.scopeLabel, tag:s.scope},
+      priority: s.priority,
+      active: true,
+      requiresApproval: s.tier === 'medium'
+    });
+  });
+}
+
+addMsg('Welcome. TackPath has been pre-loaded with a starter set of rules based on common courier operations. Describe a new rule in plain language, or review what is already active on the right.', 'tp');
+seedRules();
 renderRules();
 </script>
 </html>
