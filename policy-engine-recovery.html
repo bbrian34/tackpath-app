@@ -102,12 +102,26 @@ nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px
     <button class="tab-btn" onclick="switchView('test',this)">Test Rule</button>
     <button class="tab-btn" onclick="switchView('driver',this)">Driver Agent</button>
     <button class="tab-btn" onclick="switchView('command',this)">Command</button>
+    <button class="tab-btn" onclick="switchView('history',this)">History</button>
   </div>
 </nav>
 
 <div style="max-width:1300px;margin:24px auto 0;padding:0 32px;">
   <div class="page-eyebrow">Policy Engine, v1</div>
   <div class="page-title" id="pageTitle">Tell TackPath how your business operates.</div>
+</div>
+
+<!-- HISTORY / AUDIT VIEW -->
+<div class="layout view" id="view-history" style="grid-template-columns:1fr;">
+  <div class="panel">
+    <div class="panel-lbl">Awaiting Your Approval</div>
+    <div id="pendingApprovalsList"><div class="empty-note">No pending approvals right now.</div></div>
+  </div>
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-lbl">Full Decision History</div>
+    <div class="hint" style="margin-top:0;margin-bottom:14px;">Every decision the system has made, auto-executed, suppressed, approved, or rejected, in order, with the exact rule responsible for each one.</div>
+    <div id="fullHistoryList"><div class="empty-note">No decisions logged yet.</div></div>
+  </div>
 </div>
 
 <!-- COMMAND AGENT VIEW -->
@@ -140,10 +154,10 @@ nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px
       <button onclick="handleDriverInput()">Send</button>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
-      <button class="preset-btn" onclick="runDriverPreset('Customer isn\\'t home')">Customer isn't home</button>
-      <button class="preset-btn" onclick="runDriverPreset('I\\'m stuck in traffic, running about 25 minutes late')">Stuck in traffic</button>
+      <button class="preset-btn" onclick="runDriverPreset('Customer isn\'t home')">Customer isn't home</button>
+      <button class="preset-btn" onclick="runDriverPreset('I\'m stuck in traffic, running about 25 minutes late')">Stuck in traffic</button>
       <button class="preset-btn" onclick="runDriverPreset('My van just broke down')">Van broke down</button>
-      <button class="preset-btn" onclick="runDriverPreset('I can\\'t find this address')">Can't find address</button>
+      <button class="preset-btn" onclick="runDriverPreset('I can\'t find this address')">Can't find address</button>
     </div>
   </div>
   <div class="panel">
@@ -839,7 +853,61 @@ function switchView(view, btn){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('view-'+view).classList.add('on');
-  document.getElementById('pageTitle').textContent = view==='create' ? 'Tell TackPath how your business operates.' : view==='test' ? 'Test what would happen.' : 'The driver reports it. TackPath handles it.';
+  const titles = {create:'Tell TackPath how your business operates.', test:'Test what would happen.', driver:'The driver reports it. TackPath handles it.', command:'Ask TackPath about your operation.', history:'Every decision, and why.'};
+  document.getElementById('pageTitle').textContent = titles[view] || '';
+  if(view==='history'){ renderPendingApprovals(); renderFullHistory(); }
+}
+
+// ── AUDIT TRAIL ──
+// Real approve/reject controls acting on the actual decisionLog, plus a
+// complete, ordered record of every decision the system has ever made --
+// the concrete delivery of "auditable decision," not just a slogan.
+function renderPendingApprovals(){
+  const el = document.getElementById('pendingApprovalsList');
+  if(!el) return;
+  const pending = decisionLog.filter(d=>d.status==='pending');
+  if(!pending.length){
+    el.innerHTML = '<div class="empty-note">No pending approvals right now.</div>';
+    return;
+  }
+  el.innerHTML = pending.map(d=>`
+    <div class="rec-card">
+      <div class="rec-title">${d.actionLabel}</div>
+      <div class="rec-row"><span class="k">Triggered by</span><span>${d.eventLabel}</span></div>
+      <div class="rec-row"><span class="k">Rule</span><span>#${d.ruleId}</span></div>
+      <div class="rec-row"><span class="k">Logged</span><span>${d.time.toLocaleTimeString()}</span></div>
+      <div class="rec-approve-row">
+        <button class="btn-approve" onclick="decideLogEntry(${d.logId}, true)">Approve</button>
+        <button class="btn-reject" onclick="decideLogEntry(${d.logId}, false)">Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+function decideLogEntry(logId, approved){
+  const entry = decisionLog.find(d=>d.logId===logId);
+  if(entry) entry.status = approved ? 'approved' : 'rejected';
+  renderPendingApprovals();
+  renderFullHistory();
+}
+
+function renderFullHistory(){
+  const el = document.getElementById('fullHistoryList');
+  if(!el) return;
+  if(!decisionLog.length){
+    el.innerHTML = '<div class="empty-note">No decisions logged yet. Try a scenario in Driver Agent or Test Rule.</div>';
+    return;
+  }
+  const statusColor = {'auto-executed':'#4ade80','pending':'var(--orange)','approved':'#4ade80','rejected':'var(--faint)','suppressed':'var(--red)'};
+  const statusLabel = {'auto-executed':'Auto-executed','pending':'Pending approval','approved':'Approved','rejected':'Rejected','suppressed':'Suppressed'};
+  el.innerHTML = [...decisionLog].reverse().map(d=>`
+    <div class="existing-rule">
+      <div class="rule-text">${d.actionLabel} <span style="color:var(--faint);font-weight:400;">-- triggered by ${d.eventLabel}</span></div>
+      <div class="rule-meta">
+        <span class="tier-badge" style="background:${statusColor[d.status]}22;color:${statusColor[d.status]};">${statusLabel[d.status]}</span>
+        <span class="priority-chip">Rule #${d.ruleId}</span>
+        <span class="priority-chip">${d.time.toLocaleTimeString()}</span>
+      </div>
+    </div>`).join('');
 }
 
 // ── DRIVER AGENT ──
@@ -898,22 +966,39 @@ function handleDriverInput(){
   resolveDriverEvent(event);
 }
 
+let decisionLogIdCounter = 1;
+
 function resolveDriverEvent(event){
   const d = evaluatePolicy(event, rules);
   const firedLabels = d.finalDecisions.filter(dec=>dec.outcome==='fires').map(dec=>dec.action.label);
   driverAddMsg(firedLabels.length ? "Thanks, letting dispatch know now." : "Got it, noted.", 'tp');
 
   d.finalDecisions.forEach(dec=>{
-    if(dec.outcome==='fires' && dec.via.requiresApproval){
+    const eventLabel = event.triggerLabel + (event.values.minutes!=null?' ('+event.values.minutes+' min)':'');
+    if(dec.outcome==='fires'){
       decisionLog.push({
+        logId: decisionLogIdCounter++,
         time: new Date(),
-        eventLabel: event.triggerLabel + (event.values.minutes!=null?' ('+event.values.minutes+' min)':''),
+        eventLabel,
         actionLabel: dec.action.label,
         ruleId: dec.via.id,
-        resolved: false
+        needsApproval: !!dec.via.requiresApproval,
+        status: dec.via.requiresApproval ? 'pending' : 'auto-executed'
+      });
+    } else if(dec.outcome==='suppressed'){
+      decisionLog.push({
+        logId: decisionLogIdCounter++,
+        time: new Date(),
+        eventLabel,
+        actionLabel: dec.action.label,
+        ruleId: dec.via.id,
+        needsApproval: false,
+        status: 'suppressed',
+        suppressedBy: dec.via.id
       });
     }
   });
+  renderPendingApprovals();
 
   let html = '<div class="test-result">';
   html += '<div class="trace-line"><span class="trace-k">Event detected</span><span class="trace-v">'+event.triggerLabel+(event.values.minutes!=null?' ('+event.values.minutes+' min)':'')+'</span></div>';
@@ -984,7 +1069,7 @@ function handleCommandInput(){
 
   // Intent: pending approvals
   if(/pending|approval/i.test(lower)){
-    const pending = decisionLog.filter(d=>!d.resolved);
+    const pending = decisionLog.filter(d=>d.status==='pending');
     if(!pending.length){
       commandAddMsg('No pending approvals right now.', 'tp');
     } else {
