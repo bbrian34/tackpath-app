@@ -101,12 +101,33 @@ nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px
     <button class="tab-btn on" onclick="switchView('create',this)">Create Rules</button>
     <button class="tab-btn" onclick="switchView('test',this)">Test Rule</button>
     <button class="tab-btn" onclick="switchView('driver',this)">Driver Agent</button>
+    <button class="tab-btn" onclick="switchView('command',this)">Command</button>
   </div>
 </nav>
 
 <div style="max-width:1300px;margin:24px auto 0;padding:0 32px;">
   <div class="page-eyebrow">Policy Engine, v1</div>
   <div class="page-title" id="pageTitle">Tell TackPath how your business operates.</div>
+</div>
+
+<!-- COMMAND AGENT VIEW -->
+<div class="layout view" id="view-command" style="grid-template-columns:1fr;">
+  <div class="panel">
+    <div class="panel-lbl">Ask TackPath About Your Operation</div>
+    <div class="convo" id="commandConvo"></div>
+    <div class="input-row">
+      <input type="text" id="commandInput" placeholder="Ask about active rules, pending approvals, or what a situation would trigger..." onkeydown="if(event.key==='Enter')handleCommandInput()"/>
+      <button onclick="handleCommandInput()">Ask</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+      <button class="preset-btn" onclick="runCommandPreset('Any pending approvals?')">Pending approvals?</button>
+      <button class="preset-btn" onclick="runCommandPreset('How many rules are active?')">Active rule count</button>
+      <button class="preset-btn" onclick="runCommandPreset('What rules exist for driver late?')">Rules for driver late</button>
+      <button class="preset-btn" onclick="runCommandPreset('What would happen if a driver is 25 minutes late?')">Test a scenario</button>
+      <button class="preset-btn" onclick="runCommandPreset('Is anything at risk right now?')">Anything at risk?</button>
+    </div>
+    <div class="hint">Command Agent doesn't decide anything on its own -- it only reports on what the Policy Engine, Route Recovery, and Driver Agent have actually done or would do.</div>
+  </div>
 </div>
 
 <!-- DRIVER AGENT VIEW -->
@@ -353,6 +374,10 @@ function parseComparison(text){
 }
 
 let rules = [];
+// Real log of decisions that required approval, populated by the Driver
+// Agent and Test Rule as they actually run. Command Agent queries this
+// directly -- it never invents an answer about pending approvals.
+let decisionLog = [];
 let ruleIdCounter = 1;
 let pendingRule = null;
 let pendingClarify = null; // { stage: 'minutes'|'trigger', partial }
@@ -878,6 +903,18 @@ function resolveDriverEvent(event){
   const firedLabels = d.finalDecisions.filter(dec=>dec.outcome==='fires').map(dec=>dec.action.label);
   driverAddMsg(firedLabels.length ? "Thanks, letting dispatch know now." : "Got it, noted.", 'tp');
 
+  d.finalDecisions.forEach(dec=>{
+    if(dec.outcome==='fires' && dec.via.requiresApproval){
+      decisionLog.push({
+        time: new Date(),
+        eventLabel: event.triggerLabel + (event.values.minutes!=null?' ('+event.values.minutes+' min)':''),
+        actionLabel: dec.action.label,
+        ruleId: dec.via.id,
+        resolved: false
+      });
+    }
+  });
+
   let html = '<div class="test-result">';
   html += '<div class="trace-line"><span class="trace-k">Event detected</span><span class="trace-v">'+event.triggerLabel+(event.values.minutes!=null?' ('+event.values.minutes+' min)':'')+'</span></div>';
   html += '<div class="trace-line"><span class="trace-k">Rules matched</span><span class="trace-v">'+d.matched.length+'</span></div>';
@@ -914,6 +951,120 @@ function resolveDriverEvent(event){
 }
 
 driverAddMsg("Hi, I'm here if you need to report anything, a delay, a problem at a stop, anything at all.", 'tp');
+
+// ── COMMAND AGENT ──
+// Deliberately has no decision-making power of its own. Every answer here
+// is read directly from the rules array, the real decisionLog, or a direct
+// call into evaluatePolicy -- the same functions Test Rule and Driver Agent
+// already use. Command Agent's only job is recognizing what's being asked
+// and routing to the right existing system, then phrasing the real answer.
+function commandAddMsg(text, who){
+  const convo = document.getElementById('commandConvo');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (who==='dispatcher'?'msg-owner':'msg-tp');
+  if(who==='tp'){ div.innerHTML = '<div class="lbl">TackPath</div>' + text; }
+  else { div.textContent = text; }
+  convo.appendChild(div);
+  convo.scrollTop = convo.scrollHeight;
+}
+
+function runCommandPreset(text){
+  document.getElementById('commandInput').value = text;
+  handleCommandInput();
+}
+
+function handleCommandInput(){
+  const input = document.getElementById('commandInput');
+  const text = input.value.trim();
+  if(!text) return;
+  commandAddMsg(text, 'dispatcher');
+  input.value = '';
+
+  const lower = text.toLowerCase();
+
+  // Intent: pending approvals
+  if(/pending|approval/i.test(lower)){
+    const pending = decisionLog.filter(d=>!d.resolved);
+    if(!pending.length){
+      commandAddMsg('No pending approvals right now.', 'tp');
+    } else {
+      const list = pending.map(d=>'&middot; '+d.actionLabel+' (from: '+d.eventLabel+', Rule #'+d.ruleId+')').join('<br>');
+      commandAddMsg(pending.length+' action'+(pending.length===1?'':'s')+' waiting on approval:<br>'+list, 'tp');
+    }
+    return;
+  }
+
+  // Intent: rule count / how many rules
+  if(/how many rules|active rules?\s*(count)?$|number of rules/i.test(lower)){
+    const active = rules.filter(r=>r.active);
+    commandAddMsg(active.length+' active rules out of '+rules.length+' total. '+(rules.length-active.length)+' disabled.', 'tp');
+    return;
+  }
+
+  // Intent: rules about a specific trigger
+  const aboutMatch = lower.match(/rules? (?:exist )?(?:for|about|on) (.+?)\??$/);
+  if(aboutMatch){
+    const topic = matchTrigger(aboutMatch[1]);
+    if(!topic){
+      commandAddMsg("I couldn't match that to a situation TackPath tracks. Try driver late, driver stalled, delivery failed, or similar.", 'tp');
+      return;
+    }
+    const matching = rules.filter(r=>r.trigger.id===topic.id);
+    if(!matching.length){
+      commandAddMsg('No rules exist for "'+topic.label+'" yet.', 'tp');
+    } else {
+      const list = matching.map(r=>'&middot; Rule #'+r.id+': '+(r.active?'':'(disabled) ')+r.rawText).join('<br>');
+      commandAddMsg(matching.length+' rule'+(matching.length===1?'':'s')+' for "'+topic.label+'":<br>'+list, 'tp');
+    }
+    return;
+  }
+
+  // Intent: what's at risk right now (delegates directly to Route Recovery)
+  if(/at risk|risk right now|anything wrong/i.test(lower)){
+    const risk = identifyAtRiskStops(recoveryProblemRoute);
+    const atRisk = risk.filter(s=>s.atRisk);
+    if(!atRisk.length){
+      commandAddMsg('Nothing is currently at risk on the routes TackPath is tracking.', 'tp');
+    } else {
+      const recovery = evaluateRecovery(recoveryProblemRoute, recoveryCandidates);
+      let msg = atRisk.length+' stop(s) at risk on '+recoveryProblemRoute.driverName+"'s route.";
+      if(recovery.recommendation){
+        msg += ' Recommended: move stop '+recovery.recommendation.stop.id+' to '+recovery.recommendation.toDriver+' (+'+recovery.recommendation.extraMiles+' mi, SLA restored). Awaiting approval.';
+      } else {
+        msg += ' ' + recovery.note;
+      }
+      commandAddMsg(msg, 'tp');
+    }
+    return;
+  }
+
+  // Intent: "what would happen if..." -- delegates directly to evaluatePolicy,
+  // the exact same function Test Rule uses. Command Agent adds no new logic.
+  const scenarioMatch = lower.match(/what would happen if (.+?)\??$/) || lower.match(/what happens if (.+?)\??$/);
+  if(scenarioMatch){
+    const event = parseEvent(scenarioMatch[1]);
+    if(!event.triggerId){
+      commandAddMsg("I couldn't match that scenario to a situation TackPath tracks.", 'tp');
+      return;
+    }
+    const d = evaluatePolicy(event, rules);
+    if(!d.finalDecisions.length){
+      commandAddMsg('For "'+event.triggerLabel+'", no active rules would respond.', 'tp');
+      return;
+    }
+    const parts = d.finalDecisions.map(dec=>{
+      if(dec.outcome==='fires') return dec.action.label+(dec.via.requiresApproval?' (needs approval)':' (automatic)');
+      if(dec.outcome==='suppressed') return 'Do not '+dec.action.label.toLowerCase()+' (suppressed by Rule #'+dec.via.id+')';
+      return null;
+    }).filter(Boolean);
+    commandAddMsg('For "'+event.triggerLabel+'": '+parts.join(', ')+'.', 'tp');
+    return;
+  }
+
+  commandAddMsg("I can answer questions about pending approvals, how many rules are active, what rules exist for a specific situation, what's currently at risk, or what would happen for a hypothetical event. Try one of those.", 'tp');
+}
+
+commandAddMsg('Ask me about your operation, I only report on what the Policy Engine, Route Recovery, and Driver Agent have actually recorded, nothing here is guessed.', 'tp');
 
 // ── STARTER RULES ──
 // Comprehensive coverage: every one of the 10 v1 triggers and every one of
