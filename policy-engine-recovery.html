@@ -98,6 +98,7 @@ nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px
   <svg width="18" height="30" viewBox="0 0 36 70"><defs><linearGradient id="tpg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg1)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg1)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg1)" opacity=".5"/></svg>
   <div class="wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:var(--blue);">P Ʌ T H</span></div>
   <div class="tabs">
+    <button class="tab-btn" onclick="switchView('onboarding',this)">Onboarding</button>
     <button class="tab-btn on" onclick="switchView('create',this)">Create Rules</button>
     <button class="tab-btn" onclick="switchView('test',this)">Test Rule</button>
     <button class="tab-btn" onclick="switchView('driver',this)">Driver Agent</button>
@@ -109,6 +110,19 @@ nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px
 <div style="max-width:1300px;margin:24px auto 0;padding:0 32px;">
   <div class="page-eyebrow">Policy Engine, v1</div>
   <div class="page-title" id="pageTitle">Tell TackPath how your business operates.</div>
+</div>
+
+<!-- ONBOARDING AGENT VIEW -->
+<div class="layout view" id="view-onboarding" style="grid-template-columns:1fr;">
+  <div class="panel">
+    <div class="panel-lbl">Setting Up a New Courier Company</div>
+    <div class="convo" id="onboardConvo"></div>
+    <div class="input-row">
+      <input type="text" id="onboardInput" placeholder="Answer TackPath's question..." onkeydown="if(event.key==='Enter')handleOnboardInput()"/>
+      <button onclick="handleOnboardInput()">Send</button>
+    </div>
+    <div class="hint">TackPath asks a handful of real questions about how the business operates, then creates the actual policy rules from the answers, the same rules you'd see under Create Rules and History. Nothing here is separate or cosmetic.</div>
+  </div>
 </div>
 
 <!-- HISTORY / AUDIT VIEW -->
@@ -853,9 +867,10 @@ function switchView(view, btn){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('view-'+view).classList.add('on');
-  const titles = {create:'Tell TackPath how your business operates.', test:'Test what would happen.', driver:'The driver reports it. TackPath handles it.', command:'Ask TackPath about your operation.', history:'Every decision, and why.'};
+  const titles = {onboarding:'Tell TackPath about your operation, once.', create:'Tell TackPath how your business operates.', test:'Test what would happen.', driver:'The driver reports it. TackPath handles it.', command:'Ask TackPath about your operation.', history:'Every decision, and why.'};
   document.getElementById('pageTitle').textContent = titles[view] || '';
   if(view==='history'){ renderPendingApprovals(); renderFullHistory(); }
+  if(view==='onboarding'){ startOnboarding(); }
 }
 
 // ── AUDIT TRAIL ──
@@ -908,6 +923,119 @@ function renderFullHistory(){
         <span class="priority-chip">${d.time.toLocaleTimeString()}</span>
       </div>
     </div>`).join('');
+}
+
+// ── ONBOARDING AGENT ──
+// A bounded, closed-question flow -- not open-ended chat -- that ends by
+// creating real rule objects in the SAME shared `rules` array everything
+// else reads from. There is no separate "onboarding data" that then needs
+// to be reconciled with the real policy engine; the output of onboarding
+// IS the policy engine's own rule set, from the first question onward.
+const ONBOARD_QUESTIONS = [
+  {key:'driverCount', text:'How many drivers do you currently run?', parse:(t)=>{const n=t.match(/\d+/); return n?parseInt(n[0]):null;}, retry:"Just a number is fine, like 4 or 12."},
+  {key:'lateThreshold', text:'If a driver is running behind, how many minutes late before dispatch should be notified?', parse:(t)=>{const n=t.match(/\d+/); return n?parseInt(n[0]):null;}, retry:"How many minutes? For example, 15 or 20."},
+  {key:'notifyCustomerLate', text:'Should customers also be notified automatically when a driver is running that late, or would you rather TackPath stay quiet and just tell dispatch?', parse:(t)=>{ if(/yes|notify|tell them|sure/i.test(t)) return true; if(/no|quiet|don'?t|never/i.test(t)) return false; return null;}, retry:'Just yes or no is fine.'},
+  {key:'unavailableAction', text:"If a driver becomes unavailable mid-route, should TackPath try to reassign their remaining stops, or just escalate to a manager?", parse:(t)=>{ if(/reassign/i.test(t)) return 'reassign'; if(/escalate|manager/i.test(t)) return 'escalate'; return null;}, retry:'Reassign, or escalate, which would you prefer?'},
+  {key:'notifyOnFailure', text:"If a delivery fails, like nobody being home, should the customer be notified automatically?", parse:(t)=>{ if(/yes|notify|tell them/i.test(t)) return true; if(/no|don'?t|never/i.test(t)) return false; return null;}, retry:'Just yes or no is fine.'}
+];
+let onboardStep = 0;
+let onboardAnswers = {};
+
+function onboardAddMsg(text, who){
+  const convo = document.getElementById('onboardConvo');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (who==='owner'?'msg-owner':'msg-tp');
+  if(who==='tp'){ div.innerHTML = '<div class="lbl">TackPath</div>' + text; }
+  else { div.textContent = text; }
+  convo.appendChild(div);
+  convo.scrollTop = convo.scrollHeight;
+}
+
+function startOnboarding(){
+  if(document.getElementById('onboardConvo').children.length) return; // already started
+  onboardAddMsg("Let's get your operation set up. A few quick questions, then TackPath configures your real rules from the answers.", 'tp');
+  askOnboardQuestion();
+}
+
+function askOnboardQuestion(){
+  if(onboardStep >= ONBOARD_QUESTIONS.length){
+    finishOnboarding();
+    return;
+  }
+  onboardAddMsg(ONBOARD_QUESTIONS[onboardStep].text, 'tp');
+}
+
+function handleOnboardInput(){
+  const input = document.getElementById('onboardInput');
+  const text = input.value.trim();
+  if(!text) return;
+  onboardAddMsg(text, 'owner');
+  input.value = '';
+
+  if(onboardStep >= ONBOARD_QUESTIONS.length) return;
+  const q = ONBOARD_QUESTIONS[onboardStep];
+  const parsed = q.parse(text);
+  if(parsed===null){
+    onboardAddMsg(q.retry, 'tp');
+    return;
+  }
+  onboardAnswers[q.key] = parsed;
+  onboardStep++;
+  askOnboardQuestion();
+}
+
+function makeOnboardRule(triggerId, triggerLabel, field, cond, actionId, actionLabel, tier, effect, rawText){
+  return {
+    id: ruleIdCounter++,
+    rawText,
+    trigger: {id:triggerId, label:triggerLabel},
+    conditions: cond ? [{field, operator:cond.operator, value:cond.value}] : [],
+    action: {id:actionId, label:actionLabel, tier},
+    effect,
+    scope: {label:'All deliveries', tag:'all'},
+    priority: 5,
+    active: true,
+    requiresApproval: tier === 'medium'
+  };
+}
+
+function finishOnboarding(){
+  const a = onboardAnswers;
+  const created = [];
+
+  created.push(makeOnboardRule('driver_predicted_late','Driver predicted late','minutes',{operator:'>',value:a.lateThreshold},
+    'notify_dispatcher','Notify dispatcher','low','allow',
+    'If a driver is more than '+a.lateThreshold+' minutes late, notify the dispatcher.'));
+
+  if(a.notifyCustomerLate){
+    created.push(makeOnboardRule('driver_predicted_late','Driver predicted late','minutes',{operator:'>',value:a.lateThreshold},
+      'notify_customer','Notify customer','low','allow',
+      'If a driver is more than '+a.lateThreshold+' minutes late, notify the customer.'));
+  } else {
+    created.push(makeOnboardRule('driver_predicted_late','Driver predicted late',null,null,
+      'notify_customer','Notify customer','low','suppress',
+      'Never notify the customer when a driver is running late (per onboarding preference).'));
+  }
+
+  if(a.unavailableAction === 'reassign'){
+    created.push(makeOnboardRule('driver_unavailable','Driver becomes unavailable',null,null,
+      'reassign_stop','Reassign the stop','medium','allow',
+      'Reassign the stop if a driver becomes unavailable.'));
+  } else {
+    created.push(makeOnboardRule('driver_unavailable','Driver becomes unavailable',null,null,
+      'escalate','Escalate','medium','allow',
+      'Escalate if a driver becomes unavailable.'));
+  }
+
+  created.push(makeOnboardRule('delivery_failed','Delivery marked failed',null,null,
+    'notify_customer','Notify customer','low', a.notifyOnFailure ? 'allow' : 'suppress',
+    a.notifyOnFailure ? 'If a delivery fails, notify the customer.' : 'Never notify the customer automatically if a delivery fails (per onboarding preference).'));
+
+  created.forEach(r=>rules.push(r));
+  renderRules();
+
+  const summary = created.map(r=>'&middot; '+r.rawText).join('<br>');
+  onboardAddMsg('Your operation is configured. TackPath created '+created.length+' real rule'+(created.length===1?'':'s')+' from your answers, active right now under Create Rules:<br>'+summary+'<br><br>Driver count on file: '+(a.driverCount||'not specified')+'. You can edit, disable, or add to any of these at any time.', 'tp');
 }
 
 // ── DRIVER AGENT ──
