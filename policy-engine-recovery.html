@@ -100,12 +100,35 @@ nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px
   <div class="tabs">
     <button class="tab-btn on" onclick="switchView('create',this)">Create Rules</button>
     <button class="tab-btn" onclick="switchView('test',this)">Test Rule</button>
+    <button class="tab-btn" onclick="switchView('driver',this)">Driver Agent</button>
   </div>
 </nav>
 
 <div style="max-width:1300px;margin:24px auto 0;padding:0 32px;">
   <div class="page-eyebrow">Policy Engine, v1</div>
   <div class="page-title" id="pageTitle">Tell TackPath how your business operates.</div>
+</div>
+
+<!-- DRIVER AGENT VIEW -->
+<div class="layout view" id="view-driver">
+  <div class="panel">
+    <div class="panel-lbl">Driver, TackPath App</div>
+    <div class="convo" id="driverConvo"></div>
+    <div class="input-row">
+      <input type="text" id="driverInput" placeholder="Report something to dispatch..." onkeydown="if(event.key==='Enter')handleDriverInput()"/>
+      <button onclick="handleDriverInput()">Send</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+      <button class="preset-btn" onclick="runDriverPreset('Customer isn\\'t home')">Customer isn't home</button>
+      <button class="preset-btn" onclick="runDriverPreset('I\\'m stuck in traffic, running about 25 minutes late')">Stuck in traffic</button>
+      <button class="preset-btn" onclick="runDriverPreset('My van just broke down')">Van broke down</button>
+      <button class="preset-btn" onclick="runDriverPreset('I can\\'t find this address')">Can't find address</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-lbl">Dispatch View, What Actually Happened</div>
+    <div id="driverDecisionTrace"><div class="empty-note">Waiting for a driver report.</div></div>
+  </div>
 </div>
 
 <!-- CREATE RULES VIEW -->
@@ -249,8 +272,8 @@ const TRIGGERS = [
    patterns:[/hasn'?t moved/i, /stalled/i, /not moved/i, /stopped moving/i, /no movement/i],
    keywords:['stalled','hasn\'t moved','not moved','stopped','no movement','parked']},
   {id:'delivery_failed', label:'Delivery marked failed', field:null,
-   patterns:[/delivery\s*(?:is\s*)?(?:just\s*)?(?:marked\s*)?fail(?:s|ed)?/i, /failed delivery/i, /couldn'?t (?:complete|deliver)/i],
-   keywords:['failed','failure','undeliverable','couldn\'t deliver','unsuccessful']},
+   patterns:[/delivery\s*(?:is\s*)?(?:just\s*)?(?:marked\s*)?fail(?:s|ed)?/i, /failed delivery/i, /couldn'?t (?:complete|deliver)/i, /customer'?s? (?:not|isn'?t) home/i, /nobody'?s? home/i, /no answer/i, /not answering/i],
+   keywords:['failed','failure','undeliverable','couldn\'t deliver','unsuccessful','not home','nobody home','no answer','not answering the door']},
   {id:'driver_arrives', label:'Driver arrives at a stop', field:null,
    patterns:[/driver arrives/i, /arrives at/i, /reaches the stop/i],
    keywords:['arrives','arrival','reaches','pulls up']},
@@ -261,8 +284,8 @@ const TRIGGERS = [
    patterns:[/new (?:order|job) arrives/i, /new (?:order|job)/i, /order (?:comes|is placed)/i],
    keywords:['new order','new job','order placed','incoming order']},
   {id:'driver_unavailable', label:'Driver becomes unavailable', field:null,
-   patterns:[/driver becomes unavailable/i, /driver (?:is )?unavailable/i, /driver rejects/i, /driver declines/i, /driver drops (?:off|out)/i],
-   keywords:['unavailable','rejects','declines','can\'t make it','drops off']},
+   patterns:[/driver becomes unavailable/i, /driver (?:is )?unavailable/i, /driver rejects/i, /driver declines/i, /driver drops (?:off|out)/i, /(?:van|vehicle|truck) broke down/i, /broke down/i, /flat tire/i],
+   keywords:['unavailable','rejects','declines','can\'t make it','drops off','broke down','flat tire','vehicle issue']},
   {id:'customer_cancels', label:'Customer cancels', field:null,
    patterns:[/customer cancels/i, /order (?:is )?cancell?ed/i, /cancels? the order/i],
    keywords:['cancels','cancellation','called off']},
@@ -791,8 +814,106 @@ function switchView(view, btn){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('view-'+view).classList.add('on');
-  document.getElementById('pageTitle').textContent = view==='create' ? 'Tell TackPath how your business operates.' : 'Test what would happen.';
+  document.getElementById('pageTitle').textContent = view==='create' ? 'Tell TackPath how your business operates.' : view==='test' ? 'Test what would happen.' : 'The driver reports it. TackPath handles it.';
 }
+
+// ── DRIVER AGENT ──
+// A driver's plain-language report becomes a real event, evaluated against
+// the exact same rules and evaluator already built above -- no separate
+// decision logic. If the fired action is reassign_stop, the same Route
+// Recovery hand-off used in Test Rule applies automatically here too.
+let driverPendingClarify = null;
+
+function driverAddMsg(text, who){
+  const convo = document.getElementById('driverConvo');
+  const div = document.createElement('div');
+  div.className = 'msg ' + (who==='driver'?'msg-owner':'msg-tp');
+  if(who==='tp'){ div.innerHTML = '<div class="lbl">TackPath</div>' + text; }
+  else { div.textContent = text; }
+  convo.appendChild(div);
+  convo.scrollTop = convo.scrollHeight;
+}
+
+function runDriverPreset(text){
+  document.getElementById('driverInput').value = text;
+  handleDriverInput();
+}
+
+function handleDriverInput(){
+  const input = document.getElementById('driverInput');
+  const text = input.value.trim();
+  if(!text) return;
+  driverAddMsg(text, 'driver');
+  input.value = '';
+
+  if(driverPendingClarify){
+    const num = text.match(/(\d+)/);
+    if(num){
+      driverPendingClarify.values.minutes = parseInt(num[1]);
+      resolveDriverEvent(driverPendingClarify);
+      driverPendingClarify = null;
+    } else {
+      driverAddMsg("I need a number of minutes to pass this along accurately.", 'tp');
+    }
+    return;
+  }
+
+  const event = parseEvent(text);
+  if(!event.triggerId){
+    driverAddMsg("I've flagged this for dispatch directly since it's outside what TackPath automatically handles yet. Someone will reach out.", 'tp');
+    document.getElementById('driverDecisionTrace').innerHTML = '<div class="empty-note">No policy trigger matched. Escalated to dispatch as a plain message, not automated.</div>';
+    return;
+  }
+  const trigger = TRIGGERS.find(t=>t.id===event.triggerId);
+  if(trigger.field && event.values[trigger.field]==null){
+    driverPendingClarify = event;
+    driverAddMsg('Got it. About how many minutes?', 'tp');
+    return;
+  }
+  resolveDriverEvent(event);
+}
+
+function resolveDriverEvent(event){
+  const d = evaluatePolicy(event, rules);
+  const firedLabels = d.finalDecisions.filter(dec=>dec.outcome==='fires').map(dec=>dec.action.label);
+  driverAddMsg(firedLabels.length ? "Thanks, letting dispatch know now." : "Got it, noted.", 'tp');
+
+  let html = '<div class="test-result">';
+  html += '<div class="trace-line"><span class="trace-k">Event detected</span><span class="trace-v">'+event.triggerLabel+(event.values.minutes!=null?' ('+event.values.minutes+' min)':'')+'</span></div>';
+  html += '<div class="trace-line"><span class="trace-k">Rules matched</span><span class="trace-v">'+d.matched.length+'</span></div>';
+  html += '<div style="height:1px;background:var(--border);margin:10px 0;"></div>';
+
+  if(!d.finalDecisions.length){
+    html += '<div class="empty-note">No active rules respond to this event.</div></div>';
+    document.getElementById('driverDecisionTrace').innerHTML = html;
+    return;
+  }
+
+  d.finalDecisions.forEach(dec=>{
+    if(dec.outcome==='fires'){
+      const outcome = dec.via.requiresApproval ? '<span class="test-outcome outcome-approval">Needs approval</span>' : '<span class="test-outcome outcome-auto">Runs automatically</span>';
+      html += `<div class="test-fire"><div class="test-fire-txt">${dec.action.label} <span style="color:var(--faint);">(Rule #${dec.via.id})</span></div>${outcome}</div>`;
+      if(dec.action.id === 'reassign_stop'){
+        const recovery = evaluateRecovery(recoveryProblemRoute, recoveryCandidates);
+        if(recovery.recommendation){
+          const r = recovery.recommendation;
+          html += `<div class="rule-card" style="margin-left:16px;margin-top:-6px;margin-bottom:10px;border-color:rgba(25,183,239,.3);">
+            <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Route Recovery Evaluation</div>
+            <div class="rule-row"><div class="rule-k">Recommend</div><div class="rule-v">Move stop to ${r.toDriver}</div></div>
+            <div class="rule-row"><div class="rule-k">Impact</div><div class="rule-v">+${r.extraMiles} mi, +${r.extraMinutes} min</div></div>
+            <div class="rule-row"><div class="rule-k">SLA</div><div class="rule-v" style="color:#4ade80;">Restored</div></div>
+          </div>`;
+        }
+      }
+    } else if(dec.outcome==='suppressed'){
+      html += `<div class="test-fire"><div class="test-fire-txt">${dec.action.label} <span style="color:var(--red);font-size:.72rem;">Suppressed by Rule #${dec.via.id}</span></div><span class="test-outcome" style="background:rgba(217,45,32,.15);color:var(--red);">Suppressed</span></div>`;
+    }
+  });
+  html += '</div>';
+  document.getElementById('driverDecisionTrace').innerHTML = html;
+}
+
+driverAddMsg("Hi, I'm here if you need to report anything, a delay, a problem at a stop, anything at all.", 'tp');
 
 // ── STARTER RULES ──
 // Comprehensive coverage: every one of the 10 v1 triggers and every one of
