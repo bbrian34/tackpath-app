@@ -104,12 +104,30 @@ nav{display:flex;align-items:center;gap:12px;padding:18px 32px;border-bottom:1px
     <button class="tab-btn" onclick="switchView('driver',this)">Driver Agent</button>
     <button class="tab-btn" onclick="switchView('command',this)">Command</button>
     <button class="tab-btn" onclick="switchView('history',this)">History</button>
+    <button class="tab-btn" onclick="switchView('schema',this)">Event Schema</button>
   </div>
 </nav>
 
 <div style="max-width:1300px;margin:24px auto 0;padding:0 32px;">
   <div class="page-eyebrow">Policy Engine, v1</div>
   <div class="page-title" id="pageTitle">Tell TackPath how your business operates.</div>
+</div>
+
+<!-- EVENT SCHEMA VIEW -->
+<div class="layout view" id="view-schema">
+  <div class="panel">
+    <div class="panel-lbl">Canonical Event Shape</div>
+    <div class="hint" style="margin-top:0;">This is the structure a real TackPath event will eventually carry, from SmartTrack, the driver app, or dispatch, instead of typed text. Edit the JSON below and click Evaluate.</div>
+    <textarea id="schemaInput" style="width:100%;min-height:220px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.78rem;padding:12px;margin-top:10px;"></textarea>
+    <button class="btn-primary" style="margin-top:10px;" onclick="runSchemaTest()">Evaluate as Structured Event</button>
+    <div id="schemaResult"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-lbl">Equivalence Proof</div>
+    <div class="hint" style="margin-top:0;">The same real situation, entered as plain text vs. as a structured event. Both are run through the exact same evaluatePolicy() call. If the decisions don't match, the schema layer is broken.</div>
+    <button class="btn-primary" style="margin-top:10px;" onclick="runEquivalenceTest()">Run Equivalence Test</button>
+    <div id="equivalenceResult"></div>
+  </div>
 </div>
 
 <!-- ONBOARDING AGENT VIEW -->
@@ -494,6 +512,80 @@ function parseEvent(text){
   };
 }
 
+// ── CANONICAL EVENT SCHEMA ──
+// This is the real shape a structured event from an actual TackPath system
+// (SmartTrack, the driver app, the dispatcher board) would eventually carry.
+// event_type must be one of the 10 real triggers below -- nothing else is
+// a valid TackPath event. normalizeEvent() is the single door everything
+// must pass through before evaluatePolicy() ever sees it, regardless of
+// whether the event started as a driver's typed sentence or a real
+// structured payload. Text and structured input are proven equivalent by
+// both funneling into this same function and producing the same shape.
+const VALID_EVENT_TYPES = TRIGGERS.map(t=>t.id);
+
+function eventSchemaExample(){
+  return {
+    event_id: 'evt_' + Math.random().toString(36).slice(2,10),
+    event_type: 'driver_predicted_late',
+    job_id: 'job_8472',
+    driver_id: 'driver_12',
+    minutes_late: 25,
+    sla_deadline: new Date(Date.now()+5*60000).toISOString(),
+    predicted_arrival: new Date(Date.now()+30*60000).toISOString(),
+    scope: 'all',
+    timestamp: new Date().toISOString()
+  };
+}
+
+// normalizeEvent(input) -> {event, error}
+// input is EITHER a plain string (a driver's report, natural language) OR
+// a structured object shaped like eventSchemaExample() above. Either path
+// produces the exact same canonical shape consumed by evaluatePolicy.
+// Malformed structured input is rejected with a clear reason, never
+// silently guessed at.
+function normalizeEvent(input){
+  if(typeof input === 'string'){
+    const parsed = parseEvent(input);
+    if(!parsed.triggerId) return {event:null, error:'Could not match this text to a known event type.'};
+    return {event:{
+      triggerId: parsed.triggerId,
+      triggerLabel: parsed.triggerLabel,
+      values: parsed.values,
+      scopeTag: parsed.scopeTag,
+      source: 'text',
+      raw: input
+    }, error:null};
+  }
+
+  // Structured input -- validate against the real schema, reject if malformed.
+  if(!input || typeof input !== 'object'){
+    return {event:null, error:'Structured event must be an object.'};
+  }
+  if(!input.event_type){
+    return {event:null, error:'Missing required field: event_type.'};
+  }
+  if(!VALID_EVENT_TYPES.includes(input.event_type)){
+    return {event:null, error:'Unknown event_type "'+input.event_type+'". Must be one of: '+VALID_EVENT_TYPES.join(', ')+'.'};
+  }
+  const trigger = TRIGGERS.find(t=>t.id===input.event_type);
+  const values = {};
+  if(trigger.field){
+    const fieldKey = trigger.field==='minutes' ? (input.minutes_late!=null ? 'minutes_late' : 'minutes') : trigger.field;
+    const val = input[fieldKey] ?? input[trigger.field];
+    if(val==null) return {event:null, error:'Event type "'+input.event_type+'" requires a value for "'+trigger.field+'" but none was provided.'};
+    if(typeof val !== 'number') return {event:null, error:'Field "'+trigger.field+'" must be a number, got '+typeof val+'.'};
+    values[trigger.field] = val;
+  }
+  return {event:{
+    triggerId: input.event_type,
+    triggerLabel: trigger.label,
+    values,
+    scopeTag: input.scope || 'all',
+    source: 'structured',
+    raw: input
+  }, error:null};
+}
+
 function addMsg(text, who){
   const convo = document.getElementById('convo');
   const div = document.createElement('div');
@@ -801,11 +893,11 @@ function runTest(){
   const input = document.getElementById('testInput');
   const text = input.value.trim();
   if(!text) return;
-  const event = parseEvent(text);
+  const {event, error} = normalizeEvent(text);
   const resultEl = document.getElementById('testResult');
 
-  if(!event.triggerId){
-    resultEl.innerHTML = '<div class="test-result"><div class="empty-note">Could not match this event to a known trigger.</div></div>';
+  if(error || !event.triggerId){
+    resultEl.innerHTML = '<div class="test-result"><div class="empty-note">'+(error||'Could not match this event to a known trigger.')+'</div></div>';
     return;
   }
 
@@ -871,6 +963,81 @@ function switchView(view, btn){
   document.getElementById('pageTitle').textContent = titles[view] || '';
   if(view==='history'){ renderPendingApprovals(); renderFullHistory(); }
   if(view==='onboarding'){ startOnboarding(); }
+  if(view==='schema'){
+    const ta = document.getElementById('schemaInput');
+    if(!ta.value) ta.value = JSON.stringify(eventSchemaExample(), null, 2);
+  }
+}
+
+function runSchemaTest(){
+  const raw = document.getElementById('schemaInput').value;
+  const el = document.getElementById('schemaResult');
+  let parsed;
+  try{ parsed = JSON.parse(raw); }
+  catch(e){ el.innerHTML = '<div class="rule-card blocked" style="margin-top:14px;"><div class="rule-v">Invalid JSON: '+e.message+'</div></div>'; return; }
+
+  const {event, error} = normalizeEvent(parsed);
+  if(error){
+    el.innerHTML = '<div class="rule-card blocked" style="margin-top:14px;"><div class="rule-v">Rejected: '+error+'</div></div>';
+    return;
+  }
+  const d = evaluatePolicy(event, rules);
+  let html = '<div class="test-result" style="margin-top:14px;">';
+  html += '<div class="trace-line"><span class="trace-k">Normalized as</span><span class="trace-v">'+event.triggerLabel+(event.values[Object.keys(event.values)[0]]!=null?' ('+Object.values(event.values)[0]+')':'')+'</span></div>';
+  html += '<div class="trace-line"><span class="trace-k">Source</span><span class="trace-v">structured</span></div>';
+  html += '<div style="height:1px;background:var(--border);margin:10px 0;"></div>';
+  if(!d.finalDecisions.length){
+    html += '<div class="empty-note">No active rules respond to this event.</div>';
+  } else {
+    d.finalDecisions.forEach(dec=>{
+      const label = dec.outcome==='fires' ? dec.action.label+(dec.via.requiresApproval?' (needs approval)':' (automatic)') : 'Suppressed: '+dec.action.label;
+      html += '<div class="test-fire"><div class="test-fire-txt">'+label+'</div></div>';
+    });
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function runEquivalenceTest(){
+  const el = document.getElementById('equivalenceResult');
+
+  // Same real situation, two different input forms.
+  const textForm = "Driver hasn't moved in 15 minutes";
+  const structuredForm = {
+    event_id: 'evt_test',
+    event_type: 'driver_stalled',
+    job_id: 'job_1',
+    driver_id: 'driver_1',
+    minutes: 15,
+    scope: 'all',
+    timestamp: new Date().toISOString()
+  };
+
+  const textResult = normalizeEvent(textForm);
+  const structResult = normalizeEvent(structuredForm);
+
+  if(textResult.error || structResult.error){
+    el.innerHTML = '<div class="rule-card blocked" style="margin-top:14px;"><div class="rule-v">One or both inputs failed to normalize.</div></div>';
+    return;
+  }
+
+  const decisionsText = evaluatePolicy(textResult.event, rules);
+  const decisionsStruct = evaluatePolicy(structResult.event, rules);
+
+  const summarize = (d)=>d.finalDecisions.map(dec=>dec.outcome+':'+dec.action.id).sort().join('|');
+  const textSummary = summarize(decisionsText);
+  const structSummary = summarize(decisionsStruct);
+  const match = textSummary === structSummary;
+
+  el.innerHTML = `<div class="test-result" style="margin-top:14px;">
+    <div class="trace-line"><span class="trace-k">Text input</span><span class="trace-v">"${textForm}"</span></div>
+    <div class="trace-line"><span class="trace-k">Text decisions</span><span class="trace-v">${textSummary||'none'}</span></div>
+    <div style="height:1px;background:var(--border);margin:10px 0;"></div>
+    <div class="trace-line"><span class="trace-k">Structured input</span><span class="trace-v">event_type: driver_stalled, minutes: 15</span></div>
+    <div class="trace-line"><span class="trace-k">Structured decisions</span><span class="trace-v">${structSummary||'none'}</span></div>
+    <div style="height:1px;background:var(--border);margin:10px 0;"></div>
+    <div class="trace-line"><span class="trace-k">Result</span><span class="trace-v" style="color:${match?'#4ade80':'var(--red)'};">${match?'MATCH -- text and structured input produced identical decisions':'MISMATCH -- schema layer has a real bug'}</span></div>
+  </div>`;
 }
 
 // ── AUDIT TRAIL ──
@@ -1079,8 +1246,8 @@ function handleDriverInput(){
     return;
   }
 
-  const event = parseEvent(text);
-  if(!event.triggerId){
+  const {event, error} = normalizeEvent(text);
+  if(error || !event.triggerId){
     driverAddMsg("I've flagged this for dispatch directly since it's outside what TackPath automatically handles yet. Someone will reach out.", 'tp');
     document.getElementById('driverDecisionTrace').innerHTML = '<div class="empty-note">No policy trigger matched. Escalated to dispatch as a plain message, not automated.</div>';
     return;
@@ -1255,8 +1422,8 @@ function handleCommandInput(){
   // the exact same function Test Rule uses. Command Agent adds no new logic.
   const scenarioMatch = lower.match(/what would happen if (.+?)\??$/) || lower.match(/what happens if (.+?)\??$/);
   if(scenarioMatch){
-    const event = parseEvent(scenarioMatch[1]);
-    if(!event.triggerId){
+    const {event, error} = normalizeEvent(scenarioMatch[1]);
+    if(error || !event.triggerId){
       commandAddMsg("I couldn't match that scenario to a situation TackPath tracks.", 'tp');
       return;
     }
