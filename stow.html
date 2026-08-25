@@ -51,14 +51,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 </head>
 <body>
 
-<div class="top">
-  <div class="top-logo">
-    <svg width="10" height="16" viewBox="0 0 36 70"><defs><linearGradient id="tpgstow" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgstow)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgstow)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgstow)" opacity=".5"/></svg>
-    <div class="wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:var(--blue);">P Ʌ T H</span></div>
-  </div>
+<div class="top" style="justify-content:flex-end;">
   <div class="mode-toggle">
     <button class="mode-btn on" id="btnSort" onclick="setMode('sort')">Sort</button>
     <button class="mode-btn" id="btnVerify" onclick="setMode('verify')">Verify Bin</button>
+    <button class="mode-btn" id="btnDemo" onclick="setMode('demo')">Demo</button>
   </div>
 </div>
 
@@ -150,15 +147,29 @@ function setMode(m){
   mode=m;
   document.getElementById('btnSort').classList.toggle('on', m==='sort');
   document.getElementById('btnVerify').classList.toggle('on', m==='verify');
+  document.getElementById('btnDemo').classList.toggle('on', m==='demo');
   resetResult();
 }
 
 function resetResult(){
   const card=document.getElementById('resultCard');
   card.className='result-card';
-  card.innerHTML=mode==='sort'
-    ? '<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>'
-    : '<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a bin barcode to verify</div>';
+  if(mode==='sort') card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>';
+  else if(mode==='verify') card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a bin barcode to verify</div>';
+  else card.innerHTML='<div class="result-bin">Demo Mode</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan any barcode to see simulated location info</div>';
+}
+
+// Deterministic simulated result for Demo mode -- the same scanned code
+// always produces the same simulated stop/address, so a demo is repeatable,
+// but it never touches real route data or binMap at all.
+const DEMO_STREETS=['Old 41 Hwy NW','Cobb Pkwy N','Peachtree St NW','Marietta St NW','Bells Ferry Rd','Powers Ferry Rd'];
+function simulateLocation(code){
+  let hash=0;
+  for(let i=0;i<code.length;i++) hash=(hash*31+code.charCodeAt(i))>>>0;
+  const stopNum=(hash%12)+1;
+  const streetNum=(hash%9000)+100;
+  const street=DEMO_STREETS[hash%DEMO_STREETS.length];
+  return {stopNum, address:streetNum+' '+street+', Kennesaw, GA'};
 }
 
 // ── SHARED SCAN HANDLER ──
@@ -169,8 +180,16 @@ function resetResult(){
 function handleScan(code){
   const clean=code.trim().toUpperCase();
   if(!clean)return;
-  const match=binMap[clean];
   const card=document.getElementById('resultCard');
+
+  if(mode==='demo'){
+    const sim=simulateLocation(clean);
+    card.className='result-card success';
+    card.innerHTML='<div class="result-bin">Simulated &middot; Demo Only</div><div class="result-bin-num success" style="font-size:1.4rem;">Stop '+sim.stopNum+'</div><div class="result-detail">'+sim.address+'<br><span style="color:var(--faint);font-size:.72rem;">Code: '+clean+' &middot; not connected to real route data</span></div>';
+    return;
+  }
+
+  const match=binMap[clean];
 
   if(!match){
     card.className='result-card error';
