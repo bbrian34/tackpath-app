@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>TackPath Stow</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&display=swap');
+:root{
+  --bg:#050a12; --card:#0d1622; --card2:#111d2e; --border:rgba(25,183,239,.16);
+  --text:#eef4ff; --muted:rgba(238,244,255,.6); --faint:rgba(238,244,255,.38);
+  --blue:#19b7ef; --green:#0d7a03; --orange:#c96a12; --red:#d92d20;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
+.top{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.wordmark{font-weight:800;font-size:1.05rem;letter-spacing:.5px;}
+.mode-toggle{display:flex;gap:4px;background:var(--card2);border-radius:10px;padding:3px;}
+.mode-btn{padding:9px 16px;border-radius:8px;border:none;background:none;color:var(--faint);font-weight:700;font-size:.82rem;font-family:'DM Sans',sans-serif;}
+.mode-btn.on{background:var(--blue);color:#fff;}
+.wrap{padding:18px;max-width:520px;margin:0 auto;}
+
+.scan-box{position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:4/3;margin-bottom:16px;border:2px solid var(--border);}
+.scan-box video{width:100%;height:100%;object-fit:cover;}
+.scan-frame{position:absolute;inset:15%;border:3px solid var(--blue);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.35);}
+.scan-status{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-family:'DM Mono',monospace;font-size:.72rem;color:rgba(255,255,255,.85);}
+
+.hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
+.hw-input-row input{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--text);font-family:'DM Mono',monospace;font-size:1rem;text-align:center;}
+.hw-hint{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--faint);text-align:center;margin-bottom:16px;}
+
+.result-card{background:var(--card);border:2px solid var(--border);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.result-card.success{border-color:rgba(13,122,3,.5);background:rgba(13,122,3,.08);}
+.result-card.error{border-color:rgba(217,45,32,.5);background:rgba(217,45,32,.08);}
+.result-bin{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
+.result-bin-num{font-size:2.6rem;font-weight:800;color:var(--blue);line-height:1;margin-bottom:8px;}
+.result-bin-num.success{color:#4ade80;}
+.result-bin-num.error{color:var(--red);}
+.result-detail{font-size:.88rem;color:var(--muted);}
+
+.bins-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;}
+.bins-panel-lbl{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;}
+.bin-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.85rem;}
+.bin-row:last-child{border-bottom:none;}
+.bin-num-chip{font-family:'DM Mono',monospace;font-weight:700;background:var(--card2);padding:4px 10px;border-radius:8px;color:var(--blue);}
+.bin-progress{font-family:'DM Mono',monospace;font-size:.78rem;color:var(--faint);}
+.bin-progress.complete{color:#4ade80;}
+.empty-note{text-align:center;padding:30px 12px;color:var(--faint);font-size:.85rem;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wordmark"><span style="color:#fff;">TACK</span><span style="color:var(--blue);">STOW</span></div>
+  <div class="mode-toggle">
+    <button class="mode-btn on" id="btnSort" onclick="setMode('sort')">Sort</button>
+    <button class="mode-btn" id="btnVerify" onclick="setMode('verify')">Verify Bin</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="scan-box" id="scanBox">
+    <video id="scanVideo" autoplay playsinline muted></video>
+    <div class="scan-frame"></div>
+    <div class="scan-status" id="scanStatus">Point camera at barcode</div>
+  </div>
+
+  <div class="hw-input-row">
+    <input type="text" id="hwInput" placeholder="Or scan with wireless scanner / type manually" autofocus/>
+  </div>
+  <div class="hw-hint">Wireless barcode scanners work here automatically -- just scan, no tapping needed</div>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-bin">Ready</div>
+    <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>
+  </div>
+
+  <div class="bins-panel" id="binsPanel"></div>
+
+</div>
+
+<script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
+
+let mode='sort';
+let jobs=[];
+let binMap={};        // orderId -> {binNum, jobId, jobTitle}
+let binProgress={};   // binNum -> {total, sorted}
+let sortedIds=new Set();
+let scanStream=null;
+
+// ── LOAD REAL ACTIVE ROUTES, ASSIGN BIN NUMBERS ──
+// Bin numbers are assigned deterministically each time this loads, in the
+// order jobs were created, so "Bin 1" always means the same route for
+// everyone looking at this screen during the same sort session.
+async function loadRoutes(){
+  try{
+    const r=await fetch(SB+'/rest/v1/jobs?status=in.(pending,assigned,in_transit)&order=created_at.asc&limit=50&apikey='+KEY,{headers:H});
+    jobs=await r.json();
+    if(!Array.isArray(jobs))jobs=[];
+  }catch(e){jobs=[];}
+
+  binMap={};
+  binProgress={};
+  jobs.forEach((j,idx)=>{
+    const binNum=idx+1;
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    const stopList=Array.isArray(stops)?stops:[];
+    binProgress[binNum]={total:stopList.length||1, sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
+    stopList.forEach(s=>{
+      const orderId=s.order_id||s.orderId||s.id;
+      if(orderId) binMap[String(orderId).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+    });
+    // A route with no per-stop order IDs can still be verified as a whole via its own short job ID
+    if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
+  });
+  renderBinsPanel();
+}
+
+function renderBinsPanel(){
+  const el=document.getElementById('binsPanel');
+  const nums=Object.keys(binProgress);
+  if(!nums.length){
+    el.innerHTML='<div class="bins-panel-lbl">Active Routes</div><div class="empty-note">No active routes right now. Run SmartSort first.</div>';
+    return;
+  }
+  el.innerHTML='<div class="bins-panel-lbl">Active Routes &middot; '+nums.length+' bins</div>' + nums.map(n=>{
+    const p=binProgress[n];
+    const complete=p.sorted>=p.total;
+    return `<div class="bin-row">
+      <span><span class="bin-num-chip">Bin ${n}</span> ${p.jobTitle}</span>
+      <span class="bin-progress ${complete?'complete':''}">${p.sorted} of ${p.total} sorted${complete?' &#10003;':''}</span>
+    </div>`;
+  }).join('');
+}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('btnSort').classList.toggle('on', m==='sort');
+  document.getElementById('btnVerify').classList.toggle('on', m==='verify');
+  resetResult();
+}
+
+function resetResult(){
+  const card=document.getElementById('resultCard');
+  card.className='result-card';
+  card.innerHTML=mode==='sort'
+    ? '<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>'
+    : '<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a bin barcode to verify</div>';
+}
+
+// ── SHARED SCAN HANDLER ──
+// Called identically whether the code came from the camera or a wireless
+// hardware scanner -- both just produce a text string, so both funnel
+// through this one function. This is the whole reason a wireless scanner
+// needs no special integration: it just types into the same input.
+function handleScan(code){
+  const clean=code.trim().toUpperCase();
+  if(!clean)return;
+  const match=binMap[clean];
+  const card=document.getElementById('resultCard');
+
+  if(!match){
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">Not Found</div><div class="result-bin-num error" style="font-size:1.4rem;">Unrecognized code</div><div class="result-detail">"'+code+'" does not match any active route or package.</div>';
+    return;
+  }
+
+  if(mode==='sort'){
+    if(sortedIds.has(clean)){
+      card.className='result-card';
+      card.innerHTML='<div class="result-bin">Already Sorted</div><div class="result-bin-num" style="color:var(--orange);">Bin '+match.binNum+'</div><div class="result-detail">This package was already scanned.</div>';
+      return;
+    }
+    sortedIds.add(clean);
+    binProgress[match.binNum].sorted=Math.min(binProgress[match.binNum].total, binProgress[match.binNum].sorted+1);
+    card.className='result-card success';
+    card.innerHTML='<div class="result-bin">Place In</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+(match.address?' &middot; '+match.address:'')+'</div>';
+    renderBinsPanel();
+  } else {
+    // Verify mode: confirming a BIN's own barcode matches the assigned route
+    card.className='result-card success';
+    card.innerHTML='<div class="result-bin">Bin Verified</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+' &middot; confirmed match. Proceed to master scan.</div>';
+  }
+}
+
+// ── HARDWARE / MANUAL INPUT ──
+// Wireless keyboard-wedge scanners type into this field and send Enter
+// automatically. Typing manually and pressing Enter works identically.
+const hwInput=document.getElementById('hwInput');
+hwInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){
+    handleScan(hwInput.value);
+    hwInput.value='';
+  }
+});
+document.addEventListener('click', ()=>{ hwInput.focus(); });
+
+// ── CAMERA SCANNING (same proven approach as driver.html) ──
+async function startCamera(){
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    const video=document.getElementById('scanVideo');
+    video.srcObject=scanStream;
+    if('BarcodeDetector' in window){
+      const det=new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','upc_a','data_matrix']});
+      const loop=async()=>{
+        if(!scanStream)return;
+        try{
+          const codes=await det.detect(video);
+          if(codes.length){
+            document.getElementById('scanStatus').textContent=codes[0].rawValue+' scanned';
+            handleScan(codes[0].rawValue);
+            await new Promise(r=>setTimeout(r,1200));
+            document.getElementById('scanStatus').textContent='Point camera at barcode';
+          }
+        }catch(e){}
+        requestAnimationFrame(loop);
+      };
+      loop();
+    } else {
+      document.getElementById('scanStatus').textContent='Camera scanning needs a browser with BarcodeDetector support -- use the scanner/input field below instead';
+    }
+  }catch(e){
+    document.getElementById('scanStatus').textContent='Camera unavailable -- use the scanner/input field below';
+  }
+}
+
+loadRoutes();
+startCamera();
+setInterval(loadRoutes, 15000);
+</script>
+</body>
+</html>
