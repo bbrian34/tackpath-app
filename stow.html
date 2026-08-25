@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <title>TackPath Stow</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&display=swap');
 :root{
   --bg:#050a12; --card:#0d1622; --card2:#111d2e; --border:rgba(25,183,239,.16);
   --text:#eef4ff; --muted:rgba(238,244,255,.6); --faint:rgba(238,244,255,.38);
@@ -14,7 +14,8 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
 .top{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.wordmark{font-weight:800;font-size:1.05rem;letter-spacing:.5px;}
+.wordmark{font-family:'Montserrat',sans-serif;font-weight:600;font-size:1rem;letter-spacing:1.4px;}
+.top-logo{display:flex;align-items:center;gap:9px;}
 .mode-toggle{display:flex;gap:4px;background:var(--card2);border-radius:10px;padding:3px;}
 .mode-btn{padding:9px 16px;border-radius:8px;border:none;background:none;color:var(--faint);font-weight:700;font-size:.82rem;font-family:'DM Sans',sans-serif;}
 .mode-btn.on{background:var(--blue);color:#fff;}
@@ -51,7 +52,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 <body>
 
 <div class="top">
-  <div class="wordmark"><span style="color:#fff;">TACK</span><span style="color:var(--blue);">PATH</span></div>
+  <div class="top-logo">
+    <svg width="15" height="24" viewBox="0 0 36 70"><defs><linearGradient id="tpgstow" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgstow)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgstow)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgstow)" opacity=".5"/></svg>
+    <div class="wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:var(--blue);">P Ʌ T H</span></div>
+  </div>
   <div class="mode-toggle">
     <button class="mode-btn on" id="btnSort" onclick="setMode('sort')">Sort</button>
     <button class="mode-btn" id="btnVerify" onclick="setMode('verify')">Verify Bin</button>
