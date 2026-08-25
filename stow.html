@@ -51,7 +51,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 <body>
 
 <div class="top">
-  <div class="wordmark"><span style="color:#fff;">TACK</span><span style="color:var(--blue);">STOW</span></div>
+  <div class="wordmark"><span style="color:#fff;">TACK</span><span style="color:var(--blue);">PATH</span></div>
   <div class="mode-toggle">
     <button class="mode-btn on" id="btnSort" onclick="setMode('sort')">Sort</button>
     <button class="mode-btn" id="btnVerify" onclick="setMode('verify')">Verify Bin</button>
@@ -112,8 +112,12 @@ async function loadRoutes(){
     const stopList=Array.isArray(stops)?stops:[];
     binProgress[binNum]={total:stopList.length||1, sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
     stopList.forEach(s=>{
-      const orderId=s.order_id||s.orderId||s.id;
-      if(orderId) binMap[String(orderId).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+      // SmartSort's real output stores the scannable per-stop code as
+      // smart_id, formatted like "TP6100096-1" -- verified directly against
+      // supabase/functions/smartsort/index.ts. order_id/id are kept as a
+      // fallback only, in case a manifest was processed differently.
+      const code=s.smart_id||s.order_id||s.orderId||s.id;
+      if(code) binMap[String(code).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
     });
     // A route with no per-stop order IDs can still be verified as a whole via its own short job ID
     if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
