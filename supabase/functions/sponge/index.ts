@@ -19,9 +19,11 @@ const corsHeaders = {
 const TARGET_FILES = [
   { path: "knowledge/shopify_integration_guide.md", label: "Shopify Integration Guide", focus: "how merchants connect their store, technical permissions, common questions and answers" },
   { path: "knowledge/industry_2026.md", label: "Industry Knowledge Base", focus: "last-mile delivery market benchmarks, competitor landscape, technology trends, operational standards" },
+  { path: "knowledge/policy_engine_guide.md", label: "Policy Engine Guide", focus: "how the Policy Engine, Route Recovery, Driver Agent, Command Agent, History, Onboarding, and Event Schema work together, what each piece actually does, current limitations" },
   { path: "guide.html", label: "Operator Guide", focus: "business rules, workflows, feature purpose" },
   { path: "dispatcher.html", label: "Dispatcher App", focus: "core dispatch logic, SmartSort clustering, SmartTrack exception detection, database schema fields used" },
   { path: "driver.html", label: "Driver App", focus: "driver workflow, scan flow, stop confirmation, GPS tracking" },
+  { path: "policy-engine-recovery.html", label: "Policy Engine Prototype", focus: "deterministic rule evaluation, suppression logic, conflict detection, route recovery recommendation logic, event schema normalization -- functional prototype, not yet connected to live data" },
   { path: "supabase/functions/smartsort/index.ts", label: "Sam (SmartSort) Edge Function", focus: "server-side clustering algorithm, ETA calculation" },
   { path: "supabase/functions/swarm-watch/index.ts", label: "Todd + Brain Edge Function", focus: "exception detection thresholds, pattern detection logic" },
 ];
@@ -112,6 +114,12 @@ function summarizeFile(file: any, content: string): string {
     if (questions.length) facts.push(`FAQ topics: ${questions.join(" | ")}`);
   }
 
+  if (file.path === "knowledge/policy_engine_guide.md") {
+    const headers = [...content.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
+    facts.push(`Sections covered: ${headers.join(", ")}`);
+    facts.push("Six connected pieces: Policy Engine (deterministic rule parsing/evaluation), Route Recovery Agent (reassignment recommendations), Driver Agent (plain-language event reporting), Command Agent (read-only query layer, makes no decisions), History/Audit (full decision log with approve/reject), Onboarding Agent (guided setup that creates real rules). Isolated prototype -- no live TackPath data, no Supabase, no backend, no LLM. Deterministic pattern-matching only, by design, so an LLM can later translate language into this same structure without ever making the decision itself.");
+  }
+
   if (file.path === "guide.html") {
     // Pull out section headers as a table of contents of documented features
     const headers = [...content.matchAll(/<h[1-3][^>]*>([^<]+)<\/h[1-3]>/gi)]
@@ -132,6 +140,14 @@ function summarizeFile(file: any, content: string): string {
   if (file.path === "driver.html") {
     const screens = [...content.matchAll(/id="(sc\w+)"/g)].map((m) => m[1]);
     facts.push(`Driver app screens: ${[...new Set(screens)].slice(0, 20).join(", ")}`);
+  }
+
+  if (file.path === "policy-engine-recovery.html") {
+    const funcs = [...content.matchAll(/(?:async\s+)?function\s+(\w+)\s*\(/g)]
+      .map((m) => m[1])
+      .filter((n) => /^(parse|evaluate|normalize|render|handle|run|resolve|confirm|decide)/i.test(n));
+    facts.push(`Key functions: ${[...new Set(funcs)].slice(0, 40).join(", ")}`);
+    facts.push("Core entry points: parsePolicy(text) converts natural language to a structured rule. normalizeEvent(input) accepts either text or a structured object and produces one canonical event shape -- proven equivalent by test. evaluatePolicy(event, rules) resolves allow vs suppress by priority, defaults to suppression on a tie. evaluateRecovery() recommends stop reassignment using real distance/deadline math (straight-line distance, fixed average speed -- placeholder for real SmartTrack data).");
   }
 
   if (file.path.includes("smartsort")) {
