@@ -79,6 +79,7 @@ serve(async (req) => {
         .from("jobs")
         .insert({
           title: `Surge Route ${masterCode}`,
+          bin_label: `${i + 1}A`,
           job_type: "surge",
           status: "pending",
           driver_name: null,
