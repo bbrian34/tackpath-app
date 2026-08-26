@@ -109,8 +109,14 @@ async function loadRoutes(){
 
   binMap={};
   binProgress={};
-  jobs.forEach((j,idx)=>{
-    const binNum=idx+1;
+  jobs.forEach((j)=>{
+    // bin_label is assigned once, permanently, by SmartSort the moment the
+    // route is created (format "1A", "2A"...), matching the physical,
+    // pre-printed bin QR codes. A route created before this field existed
+    // has no bin_label -- it's skipped here rather than guessed at, since a
+    // wrong guess would send a real package to the wrong physical bin.
+    const binNum=j.bin_label;
+    if(!binNum) return;
     let stops=j.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const stopList=Array.isArray(stops)?stops:[];
@@ -140,7 +146,9 @@ function renderBinsPanel(){
     const aDone=binProgress[a].sorted>=binProgress[a].total;
     const bDone=binProgress[b].sorted>=binProgress[b].total;
     if(aDone!==bDone) return aDone?-1:1;
-    return a-b;
+    // Bin labels are "1A", "2A", "10A"... sort by the leading number, not
+    // alphabetically (which would wrongly put "10A" before "2A").
+    return parseInt(a) - parseInt(b);
   });
   el.innerHTML='<div class="bins-panel-lbl">Active Routes &middot; '+nums.length+' bins</div>' + sortedNums.map(n=>{
     const p=binProgress[n];
