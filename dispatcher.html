@@ -4519,6 +4519,7 @@ async function assignSSRoute(routeId){
 
   const job={
     title:'Surge Route '+route.id,
+    bin_label: (parseInt(route.id.split('-')[1])||0) + 'A',
     job_type:'surge',
     status:'pending',
     org_id: currentOrgId,
