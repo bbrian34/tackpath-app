@@ -122,11 +122,12 @@ async function loadRoutes(){
     const stopList=Array.isArray(stops)?stops:[];
     binProgress[binNum]={total:stopList.length||1, sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
     stopList.forEach(s=>{
-      // SmartSort's real output stores the scannable per-stop code as
-      // smart_id, formatted like "TP6100096-1" -- verified directly against
-      // supabase/functions/smartsort/index.ts. order_id/id are kept as a
-      // fallback only, in case a manifest was processed differently.
-      const code=s.smart_id||s.order_id||s.orderId||s.id;
+      // A real package may already carry its own carrier-assigned barcode
+      // (tracking_number), separate from anything TackPath computes. Check
+      // for that first, since it's what's actually printed on the package
+      // when one exists; fall back to TackPath's own generated smart_id
+      // otherwise.
+      const code=s.tracking_number||s.smart_id||s.order_id||s.orderId||s.id;
       if(code) binMap[String(code).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
     });
     // A route with no per-stop order IDs can still be verified as a whole via its own short job ID
