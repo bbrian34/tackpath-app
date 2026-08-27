@@ -3957,7 +3957,11 @@ function parseCSV(text){
     order_id:headers.indexOf('order_id'),
     recipient:headers.indexOf('recipient'),
     address:headers.indexOf('address'),
-    packages:headers.indexOf('packages')
+    packages:headers.indexOf('packages'),
+    // Standard column name for a real carrier's own pre-existing barcode.
+    // Optional -- not every manifest will have one yet, so its absence
+    // never blocks an upload the way the four required columns do.
+    tracking_number:headers.indexOf('tracking_number')
   };
   if(idx.order_id<0||idx.recipient<0||idx.address<0){
     toast('Missing required columns: order_id, recipient, address','warn');return;
@@ -3970,7 +3974,8 @@ function parseCSV(text){
       order_id:c[idx.order_id]||('TP'+String(65780000+i)),
       recipient:c[idx.recipient]||'Unknown',
       address:c[idx.address],
-      packages:parseInt(c[idx.packages])||1
+      packages:parseInt(c[idx.packages])||1,
+      tracking_number: idx.tracking_number>=0 ? (c[idx.tracking_number]||null) : null
     });
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
@@ -4529,6 +4534,7 @@ async function assignSSRoute(routeId){
     surge_stops: route.stops.map((s,i)=>({
       order_id: s.order_id,
       smart_id: s.smart_id,
+      tracking_number: s.tracking_number||null,
       recipient: s.recipient,
       address: s.address,
       packages: s.packages,
