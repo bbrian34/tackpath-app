@@ -13,14 +13,20 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
-.top{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.wordmark{font-family:'Montserrat',sans-serif;font-weight:600;font-size:1rem;letter-spacing:1.4px;}
-.top-logo{display:flex;align-items:center;gap:9px;}
-.mode-toggle{display:flex;gap:4px;background:var(--card2);border-radius:10px;padding:3px;}
-.mode-btn{padding:9px 16px;border-radius:8px;border:none;background:none;color:var(--faint);font-weight:700;font-size:.82rem;font-family:'DM Sans',sans-serif;}
-.mode-btn.on{background:var(--blue);color:#fff;}
+.top{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;min-height:24px;}
+.back-btn{background:none;border:none;color:var(--blue);font-family:'DM Sans',sans-serif;font-weight:700;font-size:.9rem;padding:4px 0;}
+.top-title{font-weight:800;font-size:1rem;}
 .wrap{padding:18px;max-width:520px;margin:0 auto;}
+.screen{display:none;}
+.screen.on{display:block;}
 
+.card-grid{display:flex;flex-direction:column;gap:14px;margin-top:20px;}
+.big-card{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:26px 22px;text-align:left;color:var(--text);font-family:'DM Sans',sans-serif;width:100%;}
+.big-card-title{font-size:1.3rem;font-weight:800;margin-bottom:6px;}
+.big-card-sub{font-size:.85rem;color:var(--muted);}
+.big-card.stow{border-color:rgba(25,183,239,.4);}
+.big-card.problem{border-color:rgba(217,45,32,.4);}
+.big-card.reset{border-color:rgba(201,106,18,.4);}
 
 .hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--text);font-family:'DM Mono',monospace;font-size:1rem;text-align:center;}
@@ -41,35 +47,90 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 .bins-panel-lbl{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;}
 .bin-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.85rem;}
 .bin-row:last-child{border-bottom:none;}
+.bin-row.tappable{cursor:pointer;}
+.bin-row.tappable:active{background:rgba(25,183,239,.08);}
 .bin-num-chip{font-family:'DM Mono',monospace;font-weight:700;background:var(--card2);padding:4px 10px;border-radius:8px;color:var(--blue);}
 .bin-progress{font-family:'DM Mono',monospace;font-size:.78rem;color:var(--faint);}
 .staged-row{background:rgba(74,222,128,.07);border-color:rgba(74,222,128,.35);}
 .staged-badge{font-family:'DM Mono',monospace;font-size:.68rem;font-weight:800;color:#4ade80;letter-spacing:.03em;white-space:nowrap;}
 .empty-note{text-align:center;padding:30px 12px;color:var(--faint);font-size:.85rem;}
+
+.confirm-box{background:var(--card);border:2px solid rgba(201,106,18,.4);border-radius:16px;padding:20px;text-align:center;}
+.confirm-title{font-weight:800;font-size:1.1rem;margin-bottom:8px;}
+.confirm-sub{font-size:.85rem;color:var(--muted);margin-bottom:18px;}
+.confirm-row{display:flex;gap:10px;}
+.confirm-btn{flex:1;padding:14px;border-radius:10px;font-weight:800;font-size:.9rem;border:none;font-family:'DM Sans',sans-serif;}
+.confirm-btn.yes{background:var(--orange);color:#fff;}
+.confirm-btn.no{background:var(--card2);color:var(--text);}
+
+.action-btn{width:100%;padding:16px;border-radius:12px;background:var(--blue);color:#fff;font-weight:800;font-size:1rem;border:none;font-family:'DM Sans',sans-serif;margin-top:6px;}
+.step-label{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;text-align:center;margin-bottom:12px;}
 </style>
 </head>
 <body>
 
-<div class="top" style="justify-content:flex-end;">
-  <div class="mode-toggle">
-    <button class="mode-btn on" id="btnSort" onclick="setMode('sort')">Sort</button>
-    <button class="mode-btn" id="btnVerify" onclick="setMode('verify')">Verify Bin</button>
-  </div>
+<div class="top" id="topBar">
+  <span id="topTitle" class="top-title"></span>
 </div>
 
 <div class="wrap">
 
-  <div class="hw-input-row">
-    <input type="text" id="hwInput" placeholder="Scan package" autofocus/>
+  <!-- HOME -->
+  <div class="screen on" id="scHome">
+    <div class="card-grid">
+      <button class="big-card stow" onclick="goTo('stow')">
+        <div class="big-card-title">Stow</div>
+        <div class="big-card-sub">Scan a package, place it in the bin shown</div>
+      </button>
+      <button class="big-card problem" onclick="goTo('receive')">
+        <div class="big-card-title">Problem</div>
+        <div class="big-card-sub">A package was missed before it got here</div>
+      </button>
+      <button class="big-card reset" onclick="goTo('reset')">
+        <div class="big-card-title">Reset Bin</div>
+        <div class="big-card-sub">Something went wrong, start a bin over</div>
+      </button>
+    </div>
   </div>
-  <div class="hw-hint">Farset F20X scans directly into this field, no tapping needed</div>
 
-  <div class="result-card" id="resultCard">
-    <div class="result-bin">Ready</div>
-    <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>
+  <!-- STOW -->
+  <div class="screen" id="scStow">
+    <div class="hw-input-row">
+      <input type="text" id="stowInput" placeholder="Scan package"/>
+    </div>
+    <div class="hw-hint">Farset F20X scans directly into this field, no tapping needed</div>
+    <div class="result-card" id="stowResult">
+      <div class="result-bin">Ready</div>
+      <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>
+    </div>
+    <div class="bins-panel" id="binsPanel"></div>
   </div>
 
-  <div class="bins-panel" id="binsPanel"></div>
+  <!-- PROBLEM: RECEIVE -->
+  <div class="screen" id="scReceive">
+    <div class="step-label">Step 1 of 2 &middot; Receive</div>
+    <div class="hw-input-row">
+      <input type="text" id="receiveInput" placeholder="Scan the missed package"/>
+    </div>
+    <div class="hw-hint">Scan the package that was missed before arriving here</div>
+    <div class="result-card" id="receiveResult">
+      <div class="result-bin">Ready</div>
+      <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan the package to receive it</div>
+    </div>
+  </div>
+
+  <!-- PROBLEM: INDUCT -->
+  <div class="screen" id="scInduct">
+    <div class="step-label">Step 2 of 2 &middot; Induct</div>
+    <div class="result-card success" id="inductSummary"></div>
+    <button class="action-btn" onclick="confirmInduct()">Confirm Induction</button>
+  </div>
+
+  <!-- RESET BIN -->
+  <div class="screen" id="scReset">
+    <div class="bins-panel" id="resetBinsPanel" style="margin-bottom:16px;"></div>
+    <div id="resetConfirmArea"></div>
+  </div>
 
 </div>
 
@@ -78,16 +139,33 @@ const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
 const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
 
-let mode='sort';
 let jobs=[];
-let binMap={};        // orderId -> {binNum, jobId, jobTitle}
-let binProgress={};   // binNum -> {total, sorted}
-let sortedIds=new Set();
+let binMap={};
+let binProgress={};
+let scannedByBin={};
+let exceptionLog=[];
+let pendingInduct=null;
 
-// ── LOAD REAL ACTIVE ROUTES, ASSIGN BIN NUMBERS ──
-// Bin numbers are assigned deterministically each time this loads, in the
-// order jobs were created, so "Bin 1" always means the same route for
-// everyone looking at this screen during the same sort session.
+const SCREENS=['scHome','scStow','scReceive','scInduct','scReset'];
+const TITLES={scHome:'', scStow:'Stow', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
+const BACK_TARGET={scStow:'home', scReceive:'home', scInduct:'receive', scReset:'home'};
+
+function goTo(screen){
+  const id='sc'+screen.charAt(0).toUpperCase()+screen.slice(1);
+  SCREENS.forEach(s=>document.getElementById(s).classList.toggle('on', s===id));
+  const topBar=document.getElementById('topBar');
+  if(id==='scHome'){
+    topBar.innerHTML='<span id="topTitle" class="top-title"></span>';
+  } else {
+    const backTo=BACK_TARGET[id];
+    topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
+  }
+  if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
+  if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
+  if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
+  if(id==='scInduct'){ renderInductSummary(); }
+}
+
 async function loadRoutes(){
   try{
     const r=await fetch(SB+'/rest/v1/jobs?status=in.(pending,assigned,in_transit)&order=created_at.asc&limit=50&apikey='+KEY,{headers:H});
@@ -96,32 +174,24 @@ async function loadRoutes(){
   }catch(e){jobs=[];}
 
   binMap={};
-  binProgress={};
+  const newProgress={};
   jobs.forEach((j)=>{
-    // bin_label is assigned once, permanently, by SmartSort the moment the
-    // route is created (format "1A", "2A"...), matching the physical,
-    // pre-printed bin QR codes. A route created before this field existed
-    // has no bin_label -- it's skipped here rather than guessed at, since a
-    // wrong guess would send a real package to the wrong physical bin.
     const binNum=j.bin_label;
     if(!binNum) return;
     let stops=j.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const stopList=Array.isArray(stops)?stops:[];
-    binProgress[binNum]={total:stopList.length||1, sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
+    const already=binProgress[binNum];
+    newProgress[binNum]={total:stopList.length||1, sorted:already?already.sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
     stopList.forEach(s=>{
-      // A real package may already carry its own carrier-assigned barcode
-      // (tracking_number), separate from anything TackPath computes. Check
-      // for that first, since it's what's actually printed on the package
-      // when one exists; fall back to TackPath's own generated smart_id
-      // otherwise.
       const code=s.tracking_number||s.smart_id||s.order_id||s.orderId||s.id;
       if(code) binMap[String(code).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
     });
-    // A route with no per-stop order IDs can still be verified as a whole via its own short job ID
     if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
   });
-  renderBinsPanel();
+  binProgress=newProgress;
+  if(document.getElementById('scStow').classList.contains('on')) renderBinsPanel();
+  if(document.getElementById('scReset').classList.contains('on')) renderResetBinsPanel();
 }
 
 function renderBinsPanel(){
@@ -135,46 +205,30 @@ function renderBinsPanel(){
     const aDone=binProgress[a].sorted>=binProgress[a].total;
     const bDone=binProgress[b].sorted>=binProgress[b].total;
     if(aDone!==bDone) return aDone?-1:1;
-    // Bin labels are "1A", "2A", "10A"... sort by the leading number, not
-    // alphabetically (which would wrongly put "10A" before "2A").
     return parseInt(a) - parseInt(b);
   });
   el.innerHTML='<div class="bins-panel-lbl">Active Routes &middot; '+nums.length+' bins</div>' + sortedNums.map(n=>{
     const p=binProgress[n];
     const complete=p.sorted>=p.total;
-    return `<div class="bin-row ${complete?'staged-row':''}">
-      <span><span class="bin-num-chip">Bin ${n}</span> ${p.jobTitle}</span>
-      ${complete
+    return '<div class="bin-row '+(complete?'staged-row':'')+'">'
+      +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
+      +(complete
         ? '<span class="staged-badge">&#10003; STAGED &middot; READY FOR PICKUP</span>'
-        : `<span class="bin-progress">${p.sorted} of ${p.total} sorted</span>`}
-    </div>`;
+        : '<span class="bin-progress">'+p.sorted+' of '+p.total+' sorted</span>')
+      +'</div>';
   }).join('');
 }
 
-function setMode(m){
-  mode=m;
-  document.getElementById('btnSort').classList.toggle('on', m==='sort');
-  document.getElementById('btnVerify').classList.toggle('on', m==='verify');
-  resetResult();
-}
-
-function resetResult(){
-  const card=document.getElementById('resultCard');
+function resetStowResult(){
+  const card=document.getElementById('stowResult');
   card.className='result-card';
-  if(mode==='sort') card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>';
-  else card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a bin barcode to verify</div>';
+  card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>';
 }
 
-// ── SHARED SCAN HANDLER ──
-// Called identically whether the code came from the camera or a wireless
-// hardware scanner -- both just produce a text string, so both funnel
-// through this one function. This is the whole reason a wireless scanner
-// needs no special integration: it just types into the same input.
-function handleScan(code){
+function handleStowScan(code){
   const clean=code.trim().toUpperCase();
   if(!clean)return;
-  const card=document.getElementById('resultCard');
-
+  const card=document.getElementById('stowResult');
   const match=binMap[clean];
 
   if(!match){
@@ -183,42 +237,112 @@ function handleScan(code){
     return;
   }
 
-  if(mode==='sort'){
-    if(sortedIds.has(clean)){
-      card.className='result-card';
-      card.innerHTML='<div class="result-bin">Already Sorted</div><div class="result-bin-num" style="color:var(--orange);">Bin '+match.binNum+'</div><div class="result-detail">This package was already scanned.</div>';
-      return;
-    }
-    sortedIds.add(clean);
-    binProgress[match.binNum].sorted=Math.min(binProgress[match.binNum].total, binProgress[match.binNum].sorted+1);
-    const justCompleted=binProgress[match.binNum].sorted>=binProgress[match.binNum].total;
-
-    if(justCompleted){
-      card.className='result-card staged';
-      card.innerHTML='<div class="result-bin" style="color:#4ade80;">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+match.binNum+'</div><div class="result-detail" style="color:#4ade80;font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+match.jobTitle+' &middot; all '+binProgress[match.binNum].total+' packages sorted</div>';
-    } else {
-      card.className='result-card success';
-      card.innerHTML='<div class="result-bin">Place In</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+(match.address?' &middot; '+match.address:'')+'</div>';
-    }
-    renderBinsPanel();
-  } else {
-    // Verify mode: confirming a BIN's own barcode matches the assigned route
-    card.className='result-card success';
-    card.innerHTML='<div class="result-bin">Bin Verified</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+' &middot; confirmed match. Proceed to master scan.</div>';
+  if(!scannedByBin[match.binNum]) scannedByBin[match.binNum]=new Set();
+  if(scannedByBin[match.binNum].has(clean)){
+    card.className='result-card';
+    card.innerHTML='<div class="result-bin">Already Sorted</div><div class="result-bin-num" style="color:var(--orange);">Bin '+match.binNum+'</div><div class="result-detail">This package was already scanned.</div>';
+    return;
   }
+  scannedByBin[match.binNum].add(clean);
+  binProgress[match.binNum].sorted=Math.min(binProgress[match.binNum].total, binProgress[match.binNum].sorted+1);
+  const justCompleted=binProgress[match.binNum].sorted>=binProgress[match.binNum].total;
+
+  if(justCompleted){
+    card.className='result-card staged';
+    card.innerHTML='<div class="result-bin" style="color:#4ade80;">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+match.binNum+'</div><div class="result-detail" style="color:#4ade80;font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+match.jobTitle+' &middot; all '+binProgress[match.binNum].total+' packages sorted</div>';
+  } else {
+    card.className='result-card success';
+    card.innerHTML='<div class="result-bin">Place In</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+(match.address?' &middot; '+match.address:'')+'</div>';
+  }
+  renderBinsPanel();
 }
 
-// ── HARDWARE / MANUAL INPUT ──
-// Wireless keyboard-wedge scanners type into this field and send Enter
-// automatically. Typing manually and pressing Enter works identically.
-const hwInput=document.getElementById('hwInput');
-hwInput.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter'){
-    handleScan(hwInput.value);
-    hwInput.value='';
+function resetReceiveResult(){
+  const card=document.getElementById('receiveResult');
+  card.className='result-card';
+  card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan the package to receive it</div>';
+}
+
+function handleReceiveScan(code){
+  const clean=code.trim().toUpperCase();
+  if(!clean)return;
+  const card=document.getElementById('receiveResult');
+  const match=binMap[clean];
+
+  if(!match){
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">Not Found</div><div class="result-bin-num error" style="font-size:1.4rem;">Not in manifest</div><div class="result-detail">"'+code+'" does not match anything SmartSort has assigned.</div>';
+    return;
   }
+
+  pendingInduct={code:clean, binNum:match.binNum, jobTitle:match.jobTitle, address:match.address};
+  card.className='result-card success';
+  card.innerHTML='<div class="result-bin">Received</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+'</div>';
+  setTimeout(function(){ goTo('induct'); }, 500);
+}
+
+function renderInductSummary(){
+  const el=document.getElementById('inductSummary');
+  if(!pendingInduct){ el.innerHTML='<div class="empty-note">No package pending induction.</div>'; return; }
+  el.innerHTML='<div class="result-bin">Pending Induction</div><div class="result-bin-num success">Bin '+pendingInduct.binNum+'</div><div class="result-detail">'+pendingInduct.jobTitle+(pendingInduct.address?' &middot; '+pendingInduct.address:'')+'</div><div class="result-detail" style="margin-top:6px;font-family:\'DM Mono\',monospace;font-size:.7rem;">'+pendingInduct.code+'</div>';
+}
+
+function confirmInduct(){
+  if(!pendingInduct)return;
+  const record=Object.assign({}, pendingInduct, {time:new Date()});
+  exceptionLog.push(record);
+  const doneCode=pendingInduct.code;
+  pendingInduct=null;
+  goTo('stow');
+  document.getElementById('stowResult').innerHTML='<div class="result-bin">Inducted</div><div class="result-bin-num" style="font-size:1.2rem;color:var(--faint);">Now scan '+doneCode+' to stow it</div>';
+}
+
+function renderResetBinsPanel(){
+  const el=document.getElementById('resetBinsPanel');
+  const nums=Object.keys(binProgress);
+  if(!nums.length){
+    el.innerHTML='<div class="bins-panel-lbl">Active Bins</div><div class="empty-note">No active bins right now.</div>';
+    return;
+  }
+  const sortedNums=[...nums].sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  el.innerHTML='<div class="bins-panel-lbl">Select a bin to reset</div>' + sortedNums.map(function(n){
+    const p=binProgress[n];
+    return '<div class="bin-row tappable" onclick="askResetConfirm(\''+n+'\')">'
+      +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
+      +'<span class="bin-progress">'+p.sorted+' of '+p.total+' sorted</span>'
+      +'</div>';
+  }).join('');
+}
+
+function askResetConfirm(binNum){
+  const p=binProgress[binNum];
+  document.getElementById('resetConfirmArea').innerHTML=
+    '<div class="confirm-box">'
+    +'<div class="confirm-title">Reset Bin '+binNum+'?</div>'
+    +'<div class="confirm-sub">'+p.sorted+' of '+p.total+' packages currently marked sorted. This clears its progress back to 0 so it can be sorted again from scratch.</div>'
+    +'<div class="confirm-row">'
+    +'<button class="confirm-btn no" onclick="document.getElementById(\'resetConfirmArea\').innerHTML=\'\'">Cancel</button>'
+    +'<button class="confirm-btn yes" onclick="doResetBin(\''+binNum+'\')">Reset it</button>'
+    +'</div></div>';
+}
+
+function doResetBin(binNum){
+  if(binProgress[binNum]) binProgress[binNum].sorted=0;
+  if(scannedByBin[binNum]) scannedByBin[binNum].clear();
+  document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
+  renderResetBinsPanel();
+}
+
+document.getElementById('stowInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ handleStowScan(e.target.value); e.target.value=''; }
 });
-document.addEventListener('click', ()=>{ hwInput.focus(); });
+document.getElementById('receiveInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ handleReceiveScan(e.target.value); e.target.value=''; }
+});
+document.addEventListener('click', function(){
+  if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
+  if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
+});
 
 loadRoutes();
 setInterval(loadRoutes, 15000);
