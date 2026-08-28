@@ -28,6 +28,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 .big-card.reset{border-color:var(--orange);border-width:3px;}
 
 .hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
+.code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
+.hidden-scan-input{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;border:none;padding:0;}
 .scan-icon-wrap{text-align:center;padding:20px 0 24px;}
 .scan-heading{font-size:1.3rem;font-weight:800;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
@@ -92,6 +94,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 
   <!-- STOW -->
   <div class="screen" id="scStow">
+    <div class="code-bar" id="codeBar" style="display:none;"></div>
     <div class="scan-icon-wrap">
       <div class="scan-heading">Scan package</div>
       <svg width="140" height="60" viewBox="0 0 140 60">
@@ -115,10 +118,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
         <rect x="132" y="0" width="6" height="60" fill="#111418"/>
       </svg>
     </div>
-    <div class="hw-input-row">
-      <input type="text" id="stowInput" placeholder="Scan package"/>
-    </div>
-    <div class="hw-hint">Farset F20X scans directly into this field, no tapping needed</div>
+    <input type="text" id="stowInput" class="hidden-scan-input"/>
     <div class="result-card" id="stowResult" style="display:none;"></div>
     <div class="bins-panel" id="binsPanel"></div>
   </div>
@@ -241,11 +241,17 @@ function resetStowResult(){
   card.style.display='none';
   card.className='result-card';
   card.innerHTML='';
+  const bar=document.getElementById('codeBar');
+  bar.style.display='none';
+  bar.textContent='';
 }
 
 function handleStowScan(code){
   const clean=code.trim().toUpperCase();
   if(!clean)return;
+  const bar=document.getElementById('codeBar');
+  bar.style.display='block';
+  bar.textContent=clean;
   const card=document.getElementById('stowResult');
   card.style.display='flex';
   const match=binMap[clean];
