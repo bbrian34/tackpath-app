@@ -58,7 +58,6 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
   <div class="mode-toggle">
     <button class="mode-btn on" id="btnSort" onclick="setMode('sort')">Sort</button>
     <button class="mode-btn" id="btnVerify" onclick="setMode('verify')">Verify Bin</button>
-    <button class="mode-btn" id="btnDemo" onclick="setMode('demo')">Demo</button>
   </div>
 </div>
 
@@ -167,7 +166,6 @@ function setMode(m){
   mode=m;
   document.getElementById('btnSort').classList.toggle('on', m==='sort');
   document.getElementById('btnVerify').classList.toggle('on', m==='verify');
-  document.getElementById('btnDemo').classList.toggle('on', m==='demo');
   resetResult();
 }
 
@@ -175,21 +173,7 @@ function resetResult(){
   const card=document.getElementById('resultCard');
   card.className='result-card';
   if(mode==='sort') card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>';
-  else if(mode==='verify') card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a bin barcode to verify</div>';
-  else card.innerHTML='<div class="result-bin">Demo Mode</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan any barcode to see simulated location info</div>';
-}
-
-// Deterministic simulated result for Demo mode -- the same scanned code
-// always produces the same simulated stop/address, so a demo is repeatable,
-// but it never touches real route data or binMap at all.
-const DEMO_STREETS=['Old 41 Hwy NW','Cobb Pkwy N','Peachtree St NW','Marietta St NW','Bells Ferry Rd','Powers Ferry Rd'];
-function simulateLocation(code){
-  let hash=0;
-  for(let i=0;i<code.length;i++) hash=(hash*31+code.charCodeAt(i))>>>0;
-  const stopNum=(hash%12)+1;
-  const streetNum=(hash%9000)+100;
-  const street=DEMO_STREETS[hash%DEMO_STREETS.length];
-  return {stopNum, address:streetNum+' '+street+', Kennesaw, GA'};
+  else card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a bin barcode to verify</div>';
 }
 
 // ── SHARED SCAN HANDLER ──
@@ -201,13 +185,6 @@ function handleScan(code){
   const clean=code.trim().toUpperCase();
   if(!clean)return;
   const card=document.getElementById('resultCard');
-
-  if(mode==='demo'){
-    const sim=simulateLocation(clean);
-    card.className='result-card success';
-    card.innerHTML='<div class="result-bin">Simulated &middot; Demo Only</div><div class="result-bin-num success" style="font-size:1.4rem;">Stop '+sim.stopNum+'</div><div class="result-detail">'+sim.address+'<br><span style="color:var(--faint);font-size:.72rem;">Code: '+clean+' &middot; not connected to real route data</span></div>';
-    return;
-  }
 
   const match=binMap[clean];
 
