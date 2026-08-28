@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>TackPath Stow</title>
+<title>PathIQ</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&display=swap');
 :root{
@@ -20,13 +20,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 .screen{display:none;}
 .screen.on{display:block;}
 
-.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px;}
-.big-card{background:var(--card);border:3px solid var(--border);border-radius:14px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--text);font-family:'DM Sans',sans-serif;}
+.app-title{text-align:center;font-size:1.5rem;font-weight:800;color:var(--text);padding:18px 0 4px;letter-spacing:.02em;}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+.big-card{background:#eceef0;border:2px solid var(--blue);border-radius:10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;color:#111418;font-family:'DM Sans',sans-serif;}
 .big-card-title{font-size:1.4rem;font-weight:800;}
-.big-card.stow{border-color:var(--blue);}
-.big-card.problem{border-color:var(--red);}
-.big-card.reset{border-color:var(--orange);}
-.big-card.smartstow{border-color:#5b3fa8;}
 
 .hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
 .code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
@@ -80,17 +77,18 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 
   <!-- HOME -->
   <div class="screen on" id="scHome">
+    <div class="app-title">PathIQ</div>
     <div class="card-grid">
-      <button class="big-card stow" onclick="goTo('stow')">
+      <button class="big-card" onclick="goTo('stow')">
         <div class="big-card-title">Stow</div>
       </button>
-      <button class="big-card problem" onclick="goTo('receive')">
+      <button class="big-card" onclick="goTo('receive')">
         <div class="big-card-title">Problem</div>
       </button>
-      <button class="big-card reset" onclick="goTo('reset')">
+      <button class="big-card" onclick="goTo('reset')">
         <div class="big-card-title">Reset Bin</div>
       </button>
-      <button class="big-card smartstow" onclick="alert('SmartStow: still deciding exactly what this does')">
+      <button class="big-card" onclick="alert('SmartStow: still deciding exactly what this does')">
         <div class="big-card-title">SmartStow</div>
       </button>
     </div>
