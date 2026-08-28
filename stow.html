@@ -119,10 +119,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
       <input type="text" id="stowInput" placeholder="Scan package"/>
     </div>
     <div class="hw-hint">Farset F20X scans directly into this field, no tapping needed</div>
-    <div class="result-card" id="stowResult">
-      <div class="result-bin">Ready</div>
-      <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>
-    </div>
+    <div class="result-card" id="stowResult" style="display:none;"></div>
     <div class="bins-panel" id="binsPanel"></div>
   </div>
 
@@ -241,14 +238,16 @@ function renderBinsPanel(){
 
 function resetStowResult(){
   const card=document.getElementById('stowResult');
+  card.style.display='none';
   card.className='result-card';
-  card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a package to begin</div>';
+  card.innerHTML='';
 }
 
 function handleStowScan(code){
   const clean=code.trim().toUpperCase();
   if(!clean)return;
   const card=document.getElementById('stowResult');
+  card.style.display='flex';
   const match=binMap[clean];
 
   if(!match){
