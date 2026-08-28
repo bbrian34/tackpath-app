@@ -45,7 +45,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 .result-bin-num.error{color:var(--red);}
 .result-detail{font-size:.9rem;color:var(--muted);font-weight:600;}
 
-.bins-panel{background:var(--card);border:2px solid var(--border);border-radius:10px;padding:16px;}
+.bins-panel{padding:0;}
 .bins-panel-lbl{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;font-weight:700;}
 .bin-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:2px solid var(--card2);font-size:.9rem;font-weight:600;}
 .bin-row:last-child{border-bottom:none;}
@@ -215,7 +215,7 @@ function renderBinsPanel(){
   const el=document.getElementById('binsPanel');
   const nums=Object.keys(binProgress);
   if(!nums.length){
-    el.innerHTML='<div class="bins-panel-lbl">Active Routes</div><div class="empty-note">No active routes right now. Run SmartSort first.</div>';
+    el.innerHTML='<div class="empty-note">No active routes right now. Run SmartSort first.</div>';
     return;
   }
   const sortedNums=[...nums].sort((a,b)=>{
@@ -224,7 +224,7 @@ function renderBinsPanel(){
     if(aDone!==bDone) return aDone?-1:1;
     return parseInt(a) - parseInt(b);
   });
-  el.innerHTML='<div class="bins-panel-lbl">Active Routes &middot; '+nums.length+' bins</div>' + sortedNums.map(n=>{
+  el.innerHTML=sortedNums.map(n=>{
     const p=binProgress[n];
     const complete=p.sorted>=p.total;
     return '<div class="bin-row '+(complete?'staged-row':'')+'">'
