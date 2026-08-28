@@ -20,13 +20,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 .screen{display:none;}
 .screen.on{display:block;}
 
-.card-grid{display:flex;flex-direction:column;gap:14px;margin-top:20px;}
-.big-card{background:var(--card);border:2px solid var(--border);border-radius:10px;padding:26px 22px;text-align:left;color:var(--text);font-family:'DM Sans',sans-serif;width:100%;}
-.big-card-title{font-size:1.35rem;font-weight:800;margin-bottom:6px;}
-.big-card-sub{font-size:.88rem;color:var(--muted);}
-.big-card.stow{border-left:8px solid var(--blue);}
-.big-card.problem{border-left:8px solid var(--red);}
-.big-card.reset{border-left:8px solid var(--orange);}
+.card-grid{display:flex;gap:14px;margin-top:20px;}
+.big-card{background:var(--card);border:2px solid var(--border);border-radius:10px;aspect-ratio:1;flex:1;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--text);font-family:'DM Sans',sans-serif;}
+.big-card-title{font-size:1.15rem;font-weight:800;}
+.big-card.stow{border-color:var(--blue);border-width:3px;}
+.big-card.problem{border-color:var(--red);border-width:3px;}
+.big-card.reset{border-color:var(--orange);border-width:3px;}
 
 .hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
@@ -79,15 +78,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
     <div class="card-grid">
       <button class="big-card stow" onclick="goTo('stow')">
         <div class="big-card-title">Stow</div>
-        <div class="big-card-sub">Scan a package, place it in the bin shown</div>
       </button>
       <button class="big-card problem" onclick="goTo('receive')">
         <div class="big-card-title">Problem</div>
-        <div class="big-card-sub">A package was missed before it got here</div>
       </button>
       <button class="big-card reset" onclick="goTo('reset')">
         <div class="big-card-title">Reset Bin</div>
-        <div class="big-card-sub">Something went wrong, start a bin over</div>
       </button>
     </div>
   </div>
