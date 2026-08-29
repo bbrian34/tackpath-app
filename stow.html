@@ -135,6 +135,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
     </div>
     <input type="text" id="stowInput" class="hidden-scan-input" placeholder="Scan here"/>
     <div class="result-card" id="stowResult" style="display:none;"></div>
+    <div id="debugPanel" style="background:#000;color:#0f0;font-family:monospace;font-size:0.7rem;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;"></div>
     <div class="bins-panel" id="binsPanel"></div>
   </div>
 
@@ -230,6 +231,18 @@ async function loadRoutes(){
     if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
   });
   binProgress=newProgress;
+
+  // ── DIAGNOSTIC: confirm binMap actually built correctly, and whether
+  // the specific real test package genuinely exists as a key ──
+  const debugMsg1 = 'BINMAP BUILT\ncount = '+Object.keys(binMap).length
+    +'\nhas TP6100001 = '+('TP6100001' in binMap)
+    +'\nTP6100001 -> '+JSON.stringify(binMap['TP6100001']||null)
+    +'\njobs fetched from Supabase = '+jobs.length
+    +'\nraw jobs contain TP6100001 = '+JSON.stringify(jobs).includes('TP6100001');
+  console.log(debugMsg1);
+  const dbgEl = document.getElementById('debugPanel');
+  if(dbgEl) dbgEl.textContent = debugMsg1;
+
   if(document.getElementById('scStow').classList.contains('on')) renderBinsPanel();
   if(document.getElementById('scReset').classList.contains('on')) renderResetBinsPanel();
 }
@@ -271,6 +284,27 @@ function resetStowResult(){
 
 function handleStowScan(code){
   const clean=code.trim().toUpperCase();
+
+  // ── DIAGNOSTIC: exact raw/normalized values, binMap state, and a
+  // sample of real keys if the lookup fails, so we can see precisely
+  // what the runtime actually has rather than guessing ──
+  const keys=Object.keys(binMap);
+  const debugLines=[
+    'RAW SCAN = '+JSON.stringify(code),
+    'NORMALIZED = '+JSON.stringify(clean),
+    'binMap.size = '+keys.length,
+    'binMap[NORMALIZED] exists = '+(clean in binMap),
+    'has TP6100001 = '+('TP6100001' in binMap),
+    'TP6100001 -> '+JSON.stringify(binMap['TP6100001']||null)
+  ];
+  if(!(clean in binMap)){
+    debugLines.push('SAMPLE KEYS (first 10): '+JSON.stringify(keys.slice(0,10)));
+  }
+  const debugMsg2=debugLines.join('\n');
+  console.log(debugMsg2);
+  const dbgEl2=document.getElementById('debugPanel');
+  if(dbgEl2) dbgEl2.textContent=debugMsg2;
+
   if(!clean)return;
   const bar=document.getElementById('codeBar');
   bar.style.display='block';
