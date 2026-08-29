@@ -20,15 +20,15 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 .screen{display:none;}
 .screen.on{display:block;}
 
-.app-title{text-align:center;font-size:1.8rem;font-weight:500;color:var(--text);padding:20px 0 2px;letter-spacing:1px;font-family:'Montserrat',sans-serif;}
-.app-title:after{content:'';display:block;width:60px;height:3px;background:var(--blue);margin:8px auto 0;}
-.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;}
-.big-card{position:relative;background:#f4f6f8;border:1px solid #c5ccd3;border-radius:2px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;text-align:center;color:#111418;font-family:'DM Mono',monospace;box-shadow:0 3px 0 #c5ccd3, 0 4px 8px rgba(0,0,0,.08);transition:all .08s ease-out;cursor:pointer;}
-.big-card:active{box-shadow:0 0 0 #c5ccd3;transform:translateY(3px);background:#e8edf2;}
-.big-card:before,.big-card:after,.big-card .corner-tl,.big-card .corner-br{position:absolute;width:16px;height:16px;border-color:var(--blue);}
-.big-card:before{content:'';top:-1px;left:-1px;border-top:3px solid var(--blue);border-left:3px solid var(--blue);}
-.big-card:after{content:'';bottom:-1px;right:-1px;border-bottom:3px solid var(--blue);border-right:3px solid var(--blue);}
-.big-card-title{font-size:1.05rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.app-header{text-align:center;padding:18px 0 4px;border-bottom:2px solid #111418;margin-bottom:18px;}
+.app-brand{font-family:'Montserrat',sans-serif;font-weight:500;font-size:.8rem;letter-spacing:1px;color:var(--faint);}
+.app-title{font-size:1.9rem;font-weight:500;color:var(--text);letter-spacing:1px;font-family:'Montserrat',sans-serif;line-height:1.15;}
+.app-subtitle{font-family:'DM Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-top:4px;}
+.app-tagline{font-family:'DM Sans',sans-serif;font-size:.85rem;color:#111418;margin-top:2px;}
+.card-grid{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+.big-card{position:relative;background:#fff;border:2px solid #111418;border-radius:6px;padding:20px;display:flex;align-items:center;justify-content:center;text-align:center;color:#111418;font-family:'DM Sans',sans-serif;box-shadow:0 3px 0 #111418;transition:all .08s ease-out;cursor:pointer;}
+.big-card:active{box-shadow:0 0 0 #111418;transform:translateY(3px);background:#f0f2f4;}
+.big-card-title{font-size:1.3rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
 
 .hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
 .code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
@@ -82,7 +82,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 
   <!-- HOME -->
   <div class="screen on" id="scHome">
-    <div class="app-title"><span style="color:#111418;">Path</span><span style="color:var(--blue);">IQ</span></div>
+    <div class="app-header">
+      <div class="app-brand">TackPath</div>
+      <div class="app-title"><span style="color:#111418;">Path</span><span style="color:var(--blue);">IQ</span></div>
+      <div class="app-subtitle">Warehouse Operations</div>
+      <div class="app-tagline">Scan. Stow. Move.</div>
+    </div>
     <div class="card-grid">
       <button class="big-card" onclick="goTo('stow')">
         <div class="big-card-title">Stow</div>
