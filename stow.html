@@ -200,11 +200,24 @@ function goTo(screen){
 }
 
 async function loadRoutes(){
+  let fetchErrorOccurred=false;
   try{
     const r=await fetch(SB+'/rest/v1/jobs?status=in.(pending,assigned,in_transit)&order=created_at.asc&limit=50&apikey='+KEY,{headers:H});
     jobs=await r.json();
-    if(!Array.isArray(jobs))jobs=[];
-  }catch(e){jobs=[];}
+    if(!Array.isArray(jobs)){
+      fetchErrorOccurred=true;
+      const dbgElBad=document.getElementById('debugPanel');
+      if(dbgElBad) dbgElBad.textContent='FETCH RETURNED NON-ARRAY (likely auth/permission error)\nhttp status = '+r.status+'\nresponse = '+JSON.stringify(jobs).slice(0,300);
+      console.log('FETCH RETURNED NON-ARRAY', r.status, jobs);
+      jobs=[];
+    }
+  }catch(e){
+    fetchErrorOccurred=true;
+    jobs=[];
+    const dbgEl0=document.getElementById('debugPanel');
+    if(dbgEl0) dbgEl0.textContent='FETCH FAILED\nerror = '+e.message+'\nname = '+e.name;
+    console.log('FETCH FAILED', e);
+  }
 
   binMap={};
   const newProgress={};
@@ -241,7 +254,7 @@ async function loadRoutes(){
     +'\nraw jobs contain TP6100001 = '+JSON.stringify(jobs).includes('TP6100001');
   console.log(debugMsg1);
   const dbgEl = document.getElementById('debugPanel');
-  if(dbgEl) dbgEl.textContent = debugMsg1;
+  if(dbgEl && !fetchErrorOccurred) dbgEl.textContent = debugMsg1;
 
   if(document.getElementById('scStow').classList.contains('on')) renderBinsPanel();
   if(document.getElementById('scReset').classList.contains('on')) renderResetBinsPanel();
