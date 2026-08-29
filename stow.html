@@ -216,7 +216,15 @@ async function loadRoutes(){
     const already=binProgress[binNum];
     newProgress[binNum]={total:stopList.length||1, sorted:already?already.sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
     stopList.forEach(s=>{
-      const code=s.tracking_number||s.smart_id||s.order_id||s.orderId||s.id;
+      // A physical package's real, pre-printed identifier (tracking_number
+      // or order_id) is permanent -- it's fixed before the package ever
+      // arrives. smart_id is computed internally from stop position within
+      // a route, which can change every time SmartSort re-clusters. A
+      // stable, real-world barcode can never chase a value that shifts on
+      // every run, so it must win the match, not lose to it.
+      const stableCode=s.tracking_number||s.order_id||s.orderId;
+      if(stableCode) binMap[String(stableCode).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+      const code=s.smart_id||s.id;
       if(code) binMap[String(code).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
     });
     if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
