@@ -32,7 +32,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 
 .hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
 .code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
-.hidden-scan-input{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;border:none;padding:0;}
+.hidden-scan-input{width:100%;max-width:200px;margin:8px auto 0;display:block;padding:8px;font-size:0.85rem;font-family:'DM Mono',monospace;text-align:center;border:1px solid #ccc;border-radius:6px;background:#fafafa;color:#333;}
 .scan-icon-wrap{text-align:center;padding:20px 0 24px;}
 .scan-heading{font-size:1.3rem;font-weight:800;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
         <rect x="132" y="0" width="6" height="60" fill="#111418"/>
       </svg>
     </div>
-    <input type="text" id="stowInput" class="hidden-scan-input"/>
+    <input type="text" id="stowInput" class="hidden-scan-input" placeholder="Scan here"/>
     <div class="result-card" id="stowResult" style="display:none;"></div>
     <div class="bins-panel" id="binsPanel"></div>
   </div>
