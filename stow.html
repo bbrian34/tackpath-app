@@ -298,25 +298,30 @@ function resetStowResult(){
 function handleStowScan(code){
   const clean=code.trim().toUpperCase();
 
-  // ── DIAGNOSTIC: exact raw/normalized values, binMap state, and a
-  // sample of real keys if the lookup fails, so we can see precisely
-  // what the runtime actually has rather than guessing ──
+  // ── DIAGNOSTIC: full chain from raw input through lookup result.
+  // Appends to whatever the native bridge already wrote, so a single
+  // screenshot shows every step together, not just the last one to run ──
   const keys=Object.keys(binMap);
+  const found=(clean in binMap);
   const debugLines=[
-    'RAW SCAN = '+JSON.stringify(code),
-    'NORMALIZED = '+JSON.stringify(clean),
-    'binMap.size = '+keys.length,
-    'binMap[NORMALIZED] exists = '+(clean in binMap),
-    'has TP6100001 = '+('TP6100001' in binMap),
-    'TP6100001 -> '+JSON.stringify(binMap['TP6100001']||null)
+    'RAW SCAN VALUE = '+JSON.stringify(code)+' (length '+code.length+')',
+    'NORMALIZED VALUE = '+JSON.stringify(clean)+' (length '+clean.length+')',
+    'EXACT LOOKUP: binMap has normalized value = '+found
   ];
-  if(!(clean in binMap)){
-    debugLines.push('SAMPLE KEYS (first 10): '+JSON.stringify(keys.slice(0,10)));
+  if(found){
+    debugLines.push('MATCHED BIN = '+JSON.stringify(binMap[clean]));
+  } else {
+    debugLines.push('binMap has "TP6100001" (known-good key) = '+('TP6100001' in binMap));
+    debugLines.push('keys starting with TP6100001 = '+JSON.stringify(keys.filter(k=>k.startsWith('TP6100001'))));
+    debugLines.push('JSON.stringify(normalized) = '+JSON.stringify(clean));
+    debugLines.push('JSON.stringify("TP6100001") = '+JSON.stringify('TP6100001'));
+    debugLines.push('SAMPLE KEYS (first 10) = '+JSON.stringify(keys.slice(0,10)));
   }
   const debugMsg2=debugLines.join('\n');
   console.log(debugMsg2);
   const dbgEl2=document.getElementById('debugPanel');
-  if(dbgEl2) dbgEl2.textContent=debugMsg2;
+  const existingDbg=dbgEl2 ? dbgEl2.textContent : '';
+  if(dbgEl2) dbgEl2.textContent=(existingDbg?existingDbg+'\n\n':'')+debugMsg2;
 
   if(!clean)return;
   const bar=document.getElementById('codeBar');
@@ -429,7 +434,11 @@ function doResetBin(binNum){
 }
 
 document.getElementById('stowInput').addEventListener('keydown', function(e){
-  if(e.key==='Enter'){ handleStowScan(e.target.value); e.target.value=''; }
+  if(e.key==='Enter'){
+    const dbgClear=document.getElementById('debugPanel');
+    if(dbgClear) dbgClear.textContent='';
+    handleStowScan(e.target.value); e.target.value='';
+  }
 });
 document.getElementById('receiveInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){ handleReceiveScan(e.target.value); e.target.value=''; }
@@ -452,6 +461,17 @@ setInterval(loadRoutes, 5000);
 // existing scan-handling logic itself changes.
 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner) {
   window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+    // ── DIAGNOSTIC: exact raw shape from the native plugin, before
+    // anything touches it ──
+    const bridgeDbg = 'NATIVE BRIDGE EVENT RECEIVED\n'
+      +'typeof data = '+typeof data+'\n'
+      +'raw data = '+JSON.stringify(data)+'\n'
+      +'data.value = '+JSON.stringify(data.value)+'\n'
+      +'typeof data.value = '+typeof data.value;
+    console.log(bridgeDbg);
+    const dbgElBridge=document.getElementById('debugPanel');
+    if(dbgElBridge) dbgElBridge.textContent=bridgeDbg;
+
     const value = data.value;
     if(!value) return;
     if(document.getElementById('scStow').classList.contains('on')){
