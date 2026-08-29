@@ -386,6 +386,27 @@ document.addEventListener('click', function(){
 
 loadRoutes();
 setInterval(loadRoutes, 5000);
+
+// ── NATIVE SCANNER BRIDGE ──
+// The FARSET/ARBOR G47 does not emulate a keyboard -- confirmed by two
+// direct tests, inside the packaged app and in plain Chrome, both
+// receiving nothing on scan. It only broadcasts. This listens for that
+// broadcast via the native FarsetScanner plugin and routes the decoded
+// value into the exact same functions a keyboard-wedge scan would have
+// called, based on whichever screen is actually open. Nothing about the
+// existing scan-handling logic itself changes.
+if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner) {
+  window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+    const value = data.value;
+    if(!value) return;
+    if(document.getElementById('scStow').classList.contains('on')){
+      handleStowScan(value);
+    } else if(document.getElementById('scReceive').classList.contains('on')){
+      handleReceiveScan(value);
+    }
+  });
+}
+
 </script>
 </body>
 </html>
