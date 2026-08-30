@@ -113,7 +113,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
   <!-- ASSIGN BINS -->
   <div class="screen" id="scAssignbins">
     <div class="hw-input-row">
-      <input type="text" id="assignBinInput" placeholder="Scan bin QR code"/>
+      <input type="text" id="assignBinInput" inputmode="none" placeholder="Scan bin QR code"/>
     </div>
     <div class="hw-hint">Scan a bin's permanent QR code to assign it a route</div>
     <div class="result-card" id="assignBinResult" style="display:none;"></div>
@@ -146,7 +146,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
         <rect x="132" y="0" width="6" height="60" fill="#111418"/>
       </svg>
     </div>
-    <input type="text" id="stowInput" class="hidden-scan-input" placeholder="Scan here"/>
+    <input type="text" id="stowInput" class="hidden-scan-input" inputmode="none" placeholder="Scan here"/>
     <div class="result-card" id="stowResult" style="display:none;"></div>
     <div id="debugPanel" style="background:#000;color:#0f0;font-family:monospace;font-size:0.7rem;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;"></div>
     <div class="bins-panel" id="binsPanel"></div>
@@ -156,7 +156,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
   <div class="screen" id="scReceive">
     <div class="step-label">Step 1 of 2 &middot; Receive</div>
     <div class="hw-input-row">
-      <input type="text" id="receiveInput" placeholder="Scan the missed package"/>
+      <input type="text" id="receiveInput" inputmode="none" placeholder="Scan the missed package"/>
     </div>
     <div class="hw-hint">Scan the package that was missed before arriving here</div>
     <div class="result-card" id="receiveResult">
