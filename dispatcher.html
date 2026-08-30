@@ -813,6 +813,8 @@ body::after{content:'';position:fixed;inset:0;
   100%{width:100%;}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -4353,6 +4355,59 @@ async function buildAndAutoDispatch(){
   for(const route of [...ssRoutes]){
     await assignSSRoute(route.id);
   }
+  generateLiveLabels(ssRoutes);
+}
+
+// Generates real, scannable barcodes and QR codes directly from whatever
+// routes SmartSort just actually created - the real order_id for every
+// package, the real bin_label for every route, computed the exact same
+// way assignSSRoute itself computes it. No separate, disconnected step,
+// no risk of a printed label ever drifting out of sync with real data.
+function generateLiveLabels(routes){
+  const win=window.open('', '_blank');
+  if(!win){toast('Please allow popups to view labels','warn');return;}
+
+  let bodyHtml='<button onclick="window.print()" style="display:block;margin:0 auto 20px;padding:10px 24px;font-size:0.9rem;font-weight:700;background:#19b7ef;color:#fff;border:none;border-radius:8px;cursor:pointer;">Print This Page</button>';
+  bodyHtml+='<h2 style="text-align:center;font-family:Arial;">Live Labels - Just Created</h2>';
+
+  bodyHtml+='<h3 style="font-family:Arial;padding:0 20px;">Bin QR Codes</h3><div style="display:flex;flex-wrap:wrap;gap:16px;padding:0 20px;">';
+  routes.forEach(function(route, i){
+    const binLabel=(parseInt(route.id.split('-')[1])||(i+1)) + 'A';
+    bodyHtml+='<div style="border:2px solid #222;border-radius:10px;padding:12px;text-align:center;"><div id="binqr-'+i+'"></div><div style="font-size:1.3rem;font-weight:800;margin-top:6px;font-family:Arial;">'+binLabel+'</div></div>';
+  });
+  bodyHtml+='</div>';
+
+  bodyHtml+='<h3 style="font-family:Arial;padding:20px 20px 0;">Package Barcodes</h3><div style="display:flex;flex-wrap:wrap;gap:14px;padding:0 20px 20px;">';
+  let pkgIndex=0;
+  routes.forEach(function(route){
+    (route.stops||[]).forEach(function(stop){
+      bodyHtml+='<div style="border:1.5px solid #333;border-radius:6px;padding:10px;text-align:center;"><svg id="pkgbc-'+pkgIndex+'"></svg><div style="font-family:monospace;font-size:0.85rem;font-weight:700;margin-top:4px;">'+stop.order_id+'</div></div>';
+      pkgIndex++;
+    });
+  });
+  bodyHtml+='</div>';
+
+  win.document.write('<!DOCTYPE html><html><head><title>Live Labels</title>'
+    +'<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"><\/script>'
+    +'<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>'
+    +'</head><body>'+bodyHtml+'</body></html>');
+  win.document.close();
+
+  // Real generation happens once the popup's own scripts have loaded,
+  // using the exact same real values just written into the page above.
+  win.onload=function(){
+    routes.forEach(function(route, i){
+      const binLabel=(parseInt(route.id.split('-')[1])||(i+1)) + 'A';
+      new win.QRCode(win.document.getElementById('binqr-'+i), {text:binLabel, width:110, height:110});
+    });
+    let idx=0;
+    routes.forEach(function(route){
+      (route.stops||[]).forEach(function(stop){
+        win.JsBarcode('#pkgbc-'+idx, stop.order_id, {format:'CODE128', displayValue:false, height:50, width:1.6});
+        idx++;
+      });
+    });
+  };
 }
 
 async function buildRoutes(){
