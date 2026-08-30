@@ -189,6 +189,7 @@ let jobs=[];
 let binMap={};
 let binProgress={};
 let scannedByBin={};
+let pendingPlacement=null;
 let exceptionLog=[];
 let pendingInduct=null;
 
@@ -373,6 +374,7 @@ async function confirmBinAssignment(jobId){
 }
 
 function resetStowResult(){
+  pendingPlacement=null;
   const card=document.getElementById('stowResult');
   card.style.display='none';
   card.className='result-card';
@@ -416,6 +418,40 @@ function handleStowScan(code){
   bar.textContent=clean;
   const card=document.getElementById('stowResult');
   card.style.display='flex';
+
+  // ── STEP 2: confirming placement, expecting the bin's own QR code ──
+  // A package was already scanned and is waiting on its bin confirmation.
+  // This scan is checked against THAT specific pending bin, not looked up
+  // as a package at all.
+  if(pendingPlacement){
+    if(clean===pendingPlacement.binNum){
+      const binNum=pendingPlacement.binNum;
+      if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
+      scannedByBin[binNum].add(pendingPlacement.code);
+      binProgress[binNum].sorted=Math.min(binProgress[binNum].total, binProgress[binNum].sorted+1);
+      const justCompleted=binProgress[binNum].sorted>=binProgress[binNum].total;
+      const jobTitle=pendingPlacement.jobTitle;
+      pendingPlacement=null;
+
+      if(justCompleted){
+        card.className='result-card staged';
+        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
+      } else {
+        card.className='result-card success';
+        card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>';
+      }
+      renderBinsPanel();
+    } else {
+      // Wrong bin scanned. Package stays pending - worker can try the
+      // correct bin without needing to re-scan the package.
+      card.className='result-card error';
+      card.innerHTML='<div class="result-bin">Wrong Bin</div><div class="result-bin-num error" style="font-size:1.4rem;">Expected Bin '+pendingPlacement.binNum+'</div><div class="result-detail">Scan Bin '+pendingPlacement.binNum+' to confirm, or scan the correct bin now.</div>';
+    }
+    return;
+  }
+
+  // ── STEP 1: scanning a package - shows the instruction only, does not
+  // count until the matching bin is actually scanned ──
   const match=binMap[clean];
 
   if(!match){
@@ -430,18 +466,10 @@ function handleStowScan(code){
     card.innerHTML='<div class="result-bin">Already Sorted</div><div class="result-bin-num" style="color:var(--orange);">Bin '+match.binNum+'</div><div class="result-detail">This package was already scanned.</div>';
     return;
   }
-  scannedByBin[match.binNum].add(clean);
-  binProgress[match.binNum].sorted=Math.min(binProgress[match.binNum].total, binProgress[match.binNum].sorted+1);
-  const justCompleted=binProgress[match.binNum].sorted>=binProgress[match.binNum].total;
 
-  if(justCompleted){
-    card.className='result-card staged';
-    card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+match.binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+match.jobTitle+' &middot; all '+binProgress[match.binNum].total+' packages sorted</div>';
-  } else {
-    card.className='result-card success';
-    card.innerHTML='<div class="result-bin">Place In</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+(match.address?' &middot; '+match.address:'')+'</div>';
-  }
-  renderBinsPanel();
+  pendingPlacement={binNum:match.binNum, code:clean, jobTitle:match.jobTitle};
+  card.className='result-card success';
+  card.innerHTML='<div class="result-bin">Place In</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+(match.address?' &middot; '+match.address:'')+'</div><div class="result-detail" style="margin-top:6px;font-weight:700;">Scan Bin '+match.binNum+' to confirm</div>';
 }
 
 function resetReceiveResult(){
