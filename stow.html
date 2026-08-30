@@ -261,9 +261,12 @@ async function loadRoutes(){
 
   binMap={};
   const newProgress={};
-  jobs.forEach((j)=>{
-    const binNum=j.bin_label;
-    if(!binNum) return;
+  jobs.forEach((j, idx)=>{
+    // A route should always have a real bin_label by the time it reaches
+    // here. If one is somehow missing, don't silently skip the whole
+    // route, assign a real, usable fallback bin right now based on its
+    // position among today's active jobs, so scanning still works.
+    const binNum=j.bin_label || ((idx+1)+'A');
     let stops=j.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const stopList=Array.isArray(stops)?stops:[];
