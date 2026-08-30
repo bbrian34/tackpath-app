@@ -26,7 +26,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 .app-subtitle{font-family:'DM Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-top:4px;}
 .app-tagline{font-family:'DM Sans',sans-serif;font-size:.85rem;color:#111418;margin-top:2px;}
 .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;padding:0 16px;}
-.big-card{position:relative;background:#fff;border:2px solid #111418;border-radius:8px;padding:10px 6px;aspect-ratio:2.1;display:flex;align-items:center;justify-content:center;text-align:center;color:#111418;font-family:'DM Sans',sans-serif;box-shadow:0 3px 0 #111418;transition:all .08s ease-out;cursor:pointer;}
+.big-card{position:relative;background:#fff;border:2px solid #111418;border-radius:8px;padding:14px 6px;aspect-ratio:1.35;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:#111418;font-family:'DM Sans',sans-serif;box-shadow:0 3px 0 #111418;transition:all .08s ease-out;cursor:pointer;}
+.big-card svg{width:34px;height:34px;stroke:#111418;fill:none;stroke-width:1.6;}
 .big-card:active{box-shadow:0 0 0 #111418;transform:translateY(3px);background:#f0f2f4;}
 .big-card-title{font-size:1.05rem;font-weight:700;text-transform:uppercase;letter-spacing:.02em;}
 
@@ -88,24 +89,31 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
     </div>
     <div class="card-grid">
       <button class="big-card" onclick="goTo('assignbins')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="10" width="7" height="10" rx="1"/><rect x="14" y="10" width="7" height="10" rx="1"/><path d="M12 3v5M9 5l3 3 3-3"/></svg>
         <div class="big-card-title">Assign Bins</div>
       </button>
       <button class="big-card" onclick="goTo('stow')">
+        <svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
         <div class="big-card-title">Stow</div>
       </button>
       <button class="big-card" onclick="goTo('receive')">
+        <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
         <div class="big-card-title">Problem</div>
       </button>
       <button class="big-card" onclick="goTo('reset')">
+        <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
         <div class="big-card-title">Reset Bin</div>
       </button>
       <button class="big-card" onclick="alert('SmartSort: still deciding exactly what this does')">
+        <svg viewBox="0 0 24 24"><path d="M3 6h6l3 12h9"/><path d="M3 18h6l1.5-6"/><path d="M17 3l4 3-4 3M17 15l4 3-4 3"/></svg>
         <div class="big-card-title">SmartSort</div>
       </button>
       <button class="big-card" onclick="alert('WMS: still deciding exactly what this does')">
+        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
         <div class="big-card-title">WMS</div>
       </button>
       <button class="big-card" onclick="alert('Connect: still deciding exactly what this does')">
+        <svg viewBox="0 0 24 24"><path d="M9 15l6-6"/><path d="M11 6l1-1a3.5 3.5 0 0 1 5 5l-1 1"/><path d="M13 18l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg>
         <div class="big-card-title">Connect</div>
       </button>
     </div>
