@@ -32,7 +32,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
 
 .hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
 .code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
-.hidden-scan-input{width:100%;max-width:200px;margin:8px auto 0;display:block;padding:8px;font-size:0.85rem;font-family:'DM Mono',monospace;text-align:center;border:1px solid #ccc;border-radius:6px;background:#fafafa;color:#333;}
+.hidden-scan-input{width:100%;max-width:200px;height:32px;margin:8px auto 0;display:block;padding:8px;font-size:0.85rem;font-family:'DM Mono',monospace;text-align:center;border:none;outline:none;box-shadow:none;border-radius:6px;background:#fff;color:#fff;caret-color:transparent;}
+.hidden-scan-input::placeholder{color:#fff;}
 .scan-icon-wrap{text-align:center;padding:20px 0 24px;}
 .scan-heading{font-size:1.3rem;font-weight:800;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
