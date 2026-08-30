@@ -86,6 +86,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
       <img src="pathiq-logo.png" alt="PathIQ" style="height:36px;display:block;margin:0 auto;"/>
     </div>
     <div class="card-grid">
+      <button class="big-card" onclick="goTo('assignbins')">
+        <div class="big-card-title">Assign Bins</div>
+      </button>
       <button class="big-card" onclick="goTo('stow')">
         <div class="big-card-title">Stow</div>
       </button>
@@ -105,6 +108,16 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;ove
         <div class="big-card-title">Connect</div>
       </button>
     </div>
+  </div>
+
+  <!-- ASSIGN BINS -->
+  <div class="screen" id="scAssignbins">
+    <div class="hw-input-row">
+      <input type="text" id="assignBinInput" placeholder="Scan bin QR code"/>
+    </div>
+    <div class="hw-hint">Scan a bin's permanent QR code to assign it a route</div>
+    <div class="result-card" id="assignBinResult" style="display:none;"></div>
+    <div id="assignRouteList"></div>
   </div>
 
   <!-- STOW -->
@@ -179,9 +192,9 @@ let scannedByBin={};
 let exceptionLog=[];
 let pendingInduct=null;
 
-const SCREENS=['scHome','scStow','scReceive','scInduct','scReset'];
-const TITLES={scHome:'', scStow:'Stow', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
-const BACK_TARGET={scStow:'home', scReceive:'home', scInduct:'receive', scReset:'home'};
+const SCREENS=['scHome','scAssignbins','scStow','scReceive','scInduct','scReset'];
+const TITLES={scHome:'', scAssignbins:'Assign bins', scStow:'Stow', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
+const BACK_TARGET={scAssignbins:'home', scStow:'home', scReceive:'home', scInduct:'receive', scReset:'home'};
 
 function goTo(screen){
   const id='sc'+screen.charAt(0).toUpperCase()+screen.slice(1);
@@ -193,6 +206,7 @@ function goTo(screen){
     const backTo=BACK_TARGET[id];
     topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
   }
+  if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
   if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
   if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
   if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
@@ -283,6 +297,79 @@ function renderBinsPanel(){
         : '<span class="bin-progress">'+p.sorted+' of '+p.total+' sorted</span>')
       +'</div>';
   }).join('');
+}
+
+// ── ASSIGN BINS ──
+// Bins are permanent physical objects with fixed QR codes. A route only
+// gets linked to one through this deliberate step, never guessed at by
+// creation order. Scan the bin, then pick which of today's unassigned
+// routes it carries.
+let unassignedRoutes=[];
+let pendingBinScan=null;
+
+async function loadUnassignedRoutes(){
+  try{
+    const r=await fetch(SB+'/rest/v1/jobs?bin_label=is.null&status=in.(pending,assigned,in_transit)&order=created_at.asc&apikey='+KEY,{headers:H});
+    unassignedRoutes=await r.json();
+    if(!Array.isArray(unassignedRoutes)) unassignedRoutes=[];
+  }catch(e){ unassignedRoutes=[]; }
+  renderAssignRouteList();
+}
+
+function renderAssignRouteList(){
+  const el=document.getElementById('assignRouteList');
+  if(!pendingBinScan){ el.innerHTML=''; return; }
+  if(!unassignedRoutes.length){
+    el.innerHTML='<div class="empty-note">No unassigned routes right now.</div>';
+    return;
+  }
+  el.innerHTML='<div class="bins-panel-lbl">Assign Bin '+pendingBinScan+' to:</div>'
+    + unassignedRoutes.map(function(j){
+      const stopCount=(j.surge_stops||[]).length || j.total_stops || 0;
+      return '<div class="bin-row tappable" onclick="confirmBinAssignment(\''+j.id+'\')">'
+        +'<span>'+(j.title||'Untitled Route')+'</span>'
+        +'<span class="bin-progress">'+stopCount+' stops</span>'
+        +'</div>';
+    }).join('');
+}
+
+function resetAssignBinResult(){
+  const card=document.getElementById('assignBinResult');
+  card.style.display='none';
+  card.innerHTML='';
+  pendingBinScan=null;
+  document.getElementById('assignRouteList').innerHTML='';
+}
+
+function handleAssignBinScan(code){
+  const clean=code.trim().toUpperCase();
+  if(!clean) return;
+  pendingBinScan=clean;
+  const card=document.getElementById('assignBinResult');
+  card.style.display='flex';
+  card.className='result-card';
+  card.innerHTML='<div class="result-bin">Bin Scanned</div><div class="result-bin-num" style="font-size:2rem;">'+clean+'</div><div class="result-detail">Select which route this bin carries today</div>';
+  renderAssignRouteList();
+}
+
+async function confirmBinAssignment(jobId){
+  try{
+    await fetch(SB+'/rest/v1/jobs?id=eq.'+jobId,{
+      method:'PATCH',
+      headers:Object.assign({},H,{'Content-Type':'application/json'}),
+      body:JSON.stringify({bin_label:pendingBinScan})
+    });
+    const card=document.getElementById('assignBinResult');
+    card.className='result-card success';
+    card.innerHTML='<div class="result-bin">Assigned</div><div class="result-bin-num success">Bin '+pendingBinScan+'</div><div class="result-detail">Ready to scan the next bin</div>';
+    pendingBinScan=null;
+    document.getElementById('assignRouteList').innerHTML='';
+    loadUnassignedRoutes();
+  }catch(e){
+    const card=document.getElementById('assignBinResult');
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">Assignment Failed</div><div class="result-detail">'+e.message+'</div>';
+  }
 }
 
 function resetStowResult(){
@@ -433,6 +520,9 @@ function doResetBin(binNum){
   renderResetBinsPanel();
 }
 
+document.getElementById('assignBinInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ handleAssignBinScan(e.target.value); e.target.value=''; }
+});
 document.getElementById('stowInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){
     const dbgClear=document.getElementById('debugPanel');
@@ -478,6 +568,8 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Far
       handleStowScan(value);
     } else if(document.getElementById('scReceive').classList.contains('on')){
       handleReceiveScan(value);
+    } else if(document.getElementById('scAssignbins').classList.contains('on')){
+      handleAssignBinScan(value);
     }
   });
 }
