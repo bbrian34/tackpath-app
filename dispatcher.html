@@ -4472,7 +4472,7 @@ function renderSSRoutes(){
       <div class="rc-top">
         <div class="rc-id-row">
           <div class="rc-id">${r.id}</div>
-          <div class="rc-badge" style="background:rgba(250,204,21,.12);color:#b8860b;border-color:rgba(250,204,21,.3);margin-right:6px;">Unassigned</div>
+          <div class="rc-badge" style="background:rgba(25,183,239,.12);color:var(--blue);border-color:rgba(25,183,239,.3);margin-right:6px;">Bin ${(parseInt(r.id.split('-')[1])||0)}A</div>
           <div class="rc-badge">SmartSort &#9650;</div>
         </div>
         <div class="rc-nums">
@@ -4525,10 +4525,7 @@ async function assignSSRoute(routeId){
 
   const job={
     title:'Surge Route '+route.id,
-    // bin_label is no longer auto-assigned here. Bins are permanent
-    // physical objects with fixed QR codes - a route gets linked to one
-    // deliberately, through the real Assign Bins step in PathIQ, not
-    // guessed at by creation order.
+    bin_label: (parseInt(route.id.split('-')[1])||0) + 'A',
     job_type:'surge',
     status:'pending',
     org_id: currentOrgId,
