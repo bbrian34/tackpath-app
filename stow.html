@@ -39,7 +39,9 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 .code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
 .hidden-scan-input{width:100%;max-width:200px;height:32px;margin:8px auto 0;display:block;padding:8px;font-size:0.85rem;font-family:'DM Mono',monospace;text-align:center;border:none;outline:none;box-shadow:none;border-radius:6px;background:#fff;color:#fff;caret-color:transparent;}
 .hidden-scan-input::placeholder{color:#fff;}
-.scan-icon-wrap{text-align:center;padding:20px 0 24px;}
+.scan-icon-wrap{text-align:center;padding:20px 0 24px;border-radius:10px;transition:background-color .3s ease;}
+.scan-icon-wrap.confirmed{background-color:#22a559;}
+.scan-icon-wrap.confirmed .scan-heading{color:#fff;}
 .scan-heading{font-size:1.3rem;font-weight:800;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
 .hw-hint{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--faint);text-align:center;margin-bottom:16px;}
@@ -145,9 +147,9 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
   <!-- STOW -->
   <div class="screen" id="scStow">
     <div class="code-bar" id="codeBar" style="display:none;"></div>
-    <div class="scan-icon-wrap">
+    <div class="scan-icon-wrap" id="scanIconWrap">
       <div class="scan-heading" id="scanHeading">Scan package</div>
-      <svg width="140" height="60" viewBox="0 0 140 60">
+      <svg id="barcodeIcon" width="140" height="60" viewBox="0 0 140 60">
         <rect x="0" y="0" width="4" height="60" fill="#111418"/>
         <rect x="8" y="0" width="2" height="60" fill="#111418"/>
         <rect x="14" y="0" width="6" height="60" fill="#111418"/>
@@ -399,6 +401,10 @@ function resetStowResult(){
   pendingPlacement=null;
   const heading=document.getElementById('scanHeading');
   if(heading) heading.textContent='Scan package';
+  const icon=document.getElementById('barcodeIcon');
+  if(icon) icon.style.display='block';
+  const iconWrap=document.getElementById('scanIconWrap');
+  if(iconWrap) iconWrap.classList.remove('confirmed');
   const card=document.getElementById('stowResult');
   card.style.display='none';
   card.className='result-card';
@@ -457,7 +463,19 @@ function handleStowScan(code){
       const jobTitle=pendingPlacement.jobTitle;
       pendingPlacement=null;
       const heading=document.getElementById('scanHeading');
-      if(heading) heading.textContent='Scan package';
+      const iconWrap=document.getElementById('scanIconWrap');
+      const icon=document.getElementById('barcodeIcon');
+
+      // Flash the whole scan area green as real, immediate confirmation
+      // that the bin was correct, then cleanly revert back to waiting
+      // for the next package - never both states shown at once.
+      if(iconWrap) iconWrap.classList.add('confirmed');
+      if(heading) heading.textContent='Confirmed';
+      setTimeout(function(){
+        if(iconWrap) iconWrap.classList.remove('confirmed');
+        if(heading) heading.textContent='Scan package';
+        if(icon) icon.style.display='block';
+      }, 700);
 
       if(justCompleted){
         card.className='result-card staged';
@@ -496,6 +514,8 @@ function handleStowScan(code){
   pendingPlacement={binNum:match.binNum, code:clean, jobTitle:match.jobTitle};
   const heading=document.getElementById('scanHeading');
   if(heading) heading.textContent='Scan Bin '+match.binNum;
+  const icon=document.getElementById('barcodeIcon');
+  if(icon) icon.style.display='none';
   card.className='result-card success';
   card.innerHTML='<div class="result-bin">Place In</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+(match.address?' &middot; '+match.address:'')+'</div><div class="result-detail" style="margin-top:6px;font-weight:700;">Scan Bin '+match.binNum+' to confirm</div>';
 }
