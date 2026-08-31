@@ -40,8 +40,9 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 .code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
 .hidden-scan-input{width:100%;max-width:200px;height:32px;margin:8px auto 0;display:block;padding:8px;font-size:0.85rem;font-family:'DM Mono',monospace;text-align:center;border:none;outline:none;box-shadow:none;border-radius:6px;background:#fff;color:#fff;caret-color:transparent;}
 .hidden-scan-input::placeholder{color:#fff;}
-.scan-icon-wrap{text-align:center;padding:20px 0 24px;border-radius:10px;transition:background-color .3s ease;}
-.scan-icon-wrap.confirmed{}
+.scan-icon-wrap{text-align:center;padding:20px 0 24px;border-radius:10px;border:3px solid #111418;transition:background-color .2s ease, border-color .2s ease;margin:0 16px 16px;}
+.scan-icon-wrap.confirmed{background-color:#22a559;border-color:#22a559;}
+.scan-icon-wrap.confirmed .scan-heading{color:#fff;font-size:2.2rem;}
 .scan-heading{font-size:1.3rem;font-weight:800;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
 .hw-hint{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--faint);text-align:center;margin-bottom:16px;}
@@ -469,16 +470,12 @@ function handleStowScan(code){
       const iconWrap=document.getElementById('scanIconWrap');
       const icon=document.getElementById('barcodeIcon');
 
-      // Flash the whole scan area green as real, immediate confirmation
-      // that the bin was correct, then cleanly revert back to waiting
-      // for the next package - never both states shown at once.
-      if(iconWrap) iconWrap.classList.add('confirmed');
-      if(heading) heading.textContent='Confirmed';
-      setTimeout(function(){
-        if(iconWrap) iconWrap.classList.remove('confirmed');
-        if(heading) heading.textContent='Scan package';
-        if(icon) icon.style.display='block';
-      }, 700);
+      // Flip directly back to the waiting-for-package state - box color,
+      // heading text, and barcode icon all revert together, no separate
+      // Confirmed step in between.
+      iconWrap.classList.remove('confirmed');
+      heading.textContent='Scan package';
+      icon.style.display='block';
 
       if(justCompleted){
         card.className='result-card staged';
@@ -516,10 +513,12 @@ function handleStowScan(code){
 
   pendingPlacement={binNum:match.binNum, code:clean, jobTitle:match.jobTitle};
   const heading=document.getElementById('scanHeading');
-  if(heading) heading.textContent='Scan Bin '+match.binNum;
   const icon=document.getElementById('barcodeIcon');
+  const iconWrap=document.getElementById('scanIconWrap');
   if(icon) icon.style.display='none';
-  // The heading above is the single shared space communicating this step -
+  if(heading) heading.textContent=match.binNum;
+  if(iconWrap) iconWrap.classList.add('confirmed');
+  // The box itself is the single shared space communicating this step -
   // this second card stays hidden here so nothing duplicates it.
   card.style.display='none';
 }
