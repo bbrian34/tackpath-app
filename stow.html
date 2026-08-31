@@ -147,7 +147,6 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 
   <!-- STOW -->
   <div class="screen" id="scStow">
-    <div class="code-bar" id="codeBar" style="display:none;"></div>
     <div class="scan-icon-wrap" id="scanIconWrap">
       <div class="scan-heading" id="scanHeading">Scan package</div>
       <svg id="barcodeIcon" width="140" height="60" viewBox="0 0 140 60">
@@ -413,9 +412,6 @@ function resetStowResult(){
   card.style.display='none';
   card.className='result-card';
   card.innerHTML='';
-  const bar=document.getElementById('codeBar');
-  bar.style.display='none';
-  bar.textContent='';
 }
 
 function handleStowScan(code){
@@ -447,9 +443,6 @@ function handleStowScan(code){
   if(dbgEl2) dbgEl2.textContent=(existingDbg?existingDbg+'\n\n':'')+debugMsg2;
 
   if(!clean)return;
-  const bar=document.getElementById('codeBar');
-  bar.style.display='block';
-  bar.textContent=clean;
   const card=document.getElementById('stowResult');
   card.style.display='flex';
 
