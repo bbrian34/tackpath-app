@@ -519,8 +519,9 @@ function handleStowScan(code){
   if(heading) heading.textContent='Scan Bin '+match.binNum;
   const icon=document.getElementById('barcodeIcon');
   if(icon) icon.style.display='none';
-  card.className='result-card success';
-  card.innerHTML='<div class="result-bin">Place In</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+(match.address?' &middot; '+match.address:'')+'</div><div class="result-detail" style="margin-top:6px;font-weight:700;">Scan Bin '+match.binNum+' to confirm</div>';
+  // The heading above is the single shared space communicating this step -
+  // this second card stays hidden here so nothing duplicates it.
+  card.style.display='none';
 }
 
 function resetReceiveResult(){
