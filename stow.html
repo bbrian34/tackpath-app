@@ -614,6 +614,17 @@ document.addEventListener('click', function(){
 loadRoutes();
 setInterval(loadRoutes, 5000);
 
+// ── RELIABILITY FIX ──
+// Both of these call the exact same, unmodified loadRoutes() above.
+// Neither changes the fetch, the query, or how routes are matched or
+// displayed - they only add two more real moments that trigger it,
+// on top of the existing 5-second interval, which still runs exactly
+// as before.
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible') loadRoutes();
+});
+window.addEventListener('online', loadRoutes);
+
 // ── NATIVE SCANNER BRIDGE ──
 // The FARSET/ARBOR G47 does not emulate a keyboard -- confirmed by two
 // direct tests, inside the packaged app and in plain Chrome, both
