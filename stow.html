@@ -41,9 +41,13 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 .hidden-scan-input{width:100%;max-width:200px;height:32px;margin:0 auto;display:block;padding:8px;font-size:0.85rem;font-family:'DM Mono',monospace;text-align:center;border:none;outline:none;box-shadow:none;border-radius:6px;background:#e9ecef;color:#e9ecef;caret-color:transparent;}
 .hidden-scan-input::placeholder{color:#e9ecef;opacity:1;}
 .hidden-scan-input::placeholder{color:#fff;}
-.scan-icon-wrap{text-align:center;padding:20px 0 24px;border-radius:10px;border:3px solid #111418;transition:background-color .2s ease, border-color .2s ease;margin:0 16px 16px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;}
-.scan-icon-wrap.confirmed{background-color:#22a559;border-color:#22a559;}
-.scan-icon-wrap.confirmed .scan-heading{color:#fff;font-size:2.2rem;}
+.flip-card-container{margin:0 16px 16px;height:150px;perspective:1000px;}
+.flip-card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d;}
+.flip-card-inner.flipped{transform:rotateY(180deg);}
+.flip-card-face{position:absolute;top:0;left:0;width:100%;height:100%;box-sizing:border-box;border-radius:10px;border:3px solid #111418;display:flex;flex-direction:column;align-items:center;justify-content:center;backface-visibility:hidden;background:#fff;}
+.flip-card-back{transform:rotateY(180deg);background-color:#22a559;border-color:#22a559;}
+.flip-bin-number{color:#fff;font-size:2.2rem;font-weight:800;}
+.flip-bin-instruction{color:#fff;font-size:1rem;font-weight:700;margin-top:8px;letter-spacing:.04em;}
 .scan-heading{font-size:1.3rem;font-weight:800;margin-bottom:16px;}
 .hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
 .hw-hint{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--faint);text-align:center;margin-bottom:16px;}
@@ -148,28 +152,36 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 
   <!-- STOW -->
   <div class="screen" id="scStow">
-    <div class="scan-icon-wrap" id="scanIconWrap">
-      <div class="scan-heading" id="scanHeading">Scan package</div>
-      <svg id="barcodeIcon" width="140" height="60" viewBox="0 0 140 60">
-        <rect x="0" y="0" width="4" height="60" fill="#111418"/>
-        <rect x="8" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="14" y="0" width="6" height="60" fill="#111418"/>
-        <rect x="24" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="30" y="0" width="4" height="60" fill="#111418"/>
-        <rect x="38" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="44" y="0" width="8" height="60" fill="#111418"/>
-        <rect x="56" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="62" y="0" width="4" height="60" fill="#111418"/>
-        <rect x="70" y="0" width="6" height="60" fill="#111418"/>
-        <rect x="80" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="86" y="0" width="4" height="60" fill="#111418"/>
-        <rect x="94" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="100" y="0" width="8" height="60" fill="#111418"/>
-        <rect x="112" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="118" y="0" width="4" height="60" fill="#111418"/>
-        <rect x="126" y="0" width="2" height="60" fill="#111418"/>
-        <rect x="132" y="0" width="6" height="60" fill="#111418"/>
-      </svg>
+    <div class="flip-card-container" id="scanFlipContainer">
+      <div class="flip-card-inner" id="scanFlipInner">
+        <div class="flip-card-face flip-card-front">
+          <div class="scan-heading" id="scanHeading">Scan package</div>
+          <svg id="barcodeIcon" width="140" height="60" viewBox="0 0 140 60">
+            <rect x="0" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="8" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="14" y="0" width="6" height="60" fill="#111418"/>
+            <rect x="24" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="30" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="38" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="44" y="0" width="8" height="60" fill="#111418"/>
+            <rect x="56" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="62" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="70" y="0" width="6" height="60" fill="#111418"/>
+            <rect x="80" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="86" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="94" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="100" y="0" width="8" height="60" fill="#111418"/>
+            <rect x="112" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="118" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="126" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="132" y="0" width="6" height="60" fill="#111418"/>
+          </svg>
+        </div>
+        <div class="flip-card-face flip-card-back">
+          <div class="flip-bin-number" id="flipBinNumber">14A</div>
+          <div class="flip-bin-instruction">SCAN BIN QR</div>
+        </div>
+      </div>
     </div>
     <input type="text" id="stowInput" class="hidden-scan-input" inputmode="none" placeholder="Scan here"/>
     <div class="result-card" id="stowResult" style="display:none;"></div>
@@ -407,8 +419,8 @@ function resetStowResult(){
   if(heading) heading.textContent='Scan package';
   const icon=document.getElementById('barcodeIcon');
   if(icon) icon.style.display='block';
-  const iconWrap=document.getElementById('scanIconWrap');
-  if(iconWrap) iconWrap.classList.remove('confirmed');
+  const flipInner=document.getElementById('scanFlipInner');
+  if(flipInner) flipInner.classList.remove('flipped');
   const card=document.getElementById('stowResult');
   card.style.display='none';
   card.className='result-card';
@@ -503,16 +515,11 @@ function handleStowScan(code){
       const justCompleted=binProgress[binNum].sorted>=binProgress[binNum].total;
       const jobTitle=pendingPlacement.jobTitle;
       pendingPlacement=null;
-      const heading=document.getElementById('scanHeading');
-      const iconWrap=document.getElementById('scanIconWrap');
-      const icon=document.getElementById('barcodeIcon');
+      const flipInner=document.getElementById('scanFlipInner');
 
-      // Flip directly back to the waiting-for-package state - box color,
-      // heading text, and barcode icon all revert together, no separate
-      // Confirmed step in between.
-      iconWrap.classList.remove('confirmed');
-      heading.textContent='Scan package';
-      icon.style.display='block';
+      // Flip directly back to the package-scanning side - the front
+      // face content never changed, so nothing else needs resetting.
+      if(flipInner) flipInner.classList.remove('flipped');
 
       if(justCompleted){
         card.className='result-card staged';
@@ -550,13 +557,11 @@ function handleStowScan(code){
   }
 
   pendingPlacement={binNum:match.binNum, code:clean, jobTitle:match.jobTitle};
-  const heading=document.getElementById('scanHeading');
-  const icon=document.getElementById('barcodeIcon');
-  const iconWrap=document.getElementById('scanIconWrap');
-  if(icon) icon.style.display='none';
-  if(heading) heading.textContent=match.binNum;
-  if(iconWrap) iconWrap.classList.add('confirmed');
-  // The box itself is the single shared space communicating this step -
+  const flipBinNumber=document.getElementById('flipBinNumber');
+  const flipInner=document.getElementById('scanFlipInner');
+  if(flipBinNumber) flipBinNumber.textContent=match.binNum;
+  if(flipInner) flipInner.classList.add('flipped');
+  // The card itself is the single shared space communicating this step -
   // this second card stays hidden here so nothing duplicates it.
   card.style.display='none';
 }
