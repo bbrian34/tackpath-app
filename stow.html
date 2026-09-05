@@ -524,6 +524,16 @@ function handleStowScan(code){
       if(justCompleted){
         card.className='result-card staged';
         card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
+        // The one real, authoritative record of staging completion -
+        // everything else about this message was already correct, it
+        // just never persisted anywhere before now.
+        const stagedJobId=binProgress[binNum].jobId;
+        if(stagedJobId){
+          fetch(SB+'/rest/v1/jobs?id=eq.'+stagedJobId,{
+            method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
+            body:JSON.stringify({staged_at:new Date().toISOString()})
+          }).catch(()=>{});
+        }
       } else {
         card.className='result-card success';
         card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>';
