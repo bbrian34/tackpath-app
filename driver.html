@@ -699,10 +699,11 @@ button,a,input,textarea{font-family:var(--sans);}
 </div>
 
 <div id="binScanOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
-  <div style="position:absolute;top:0;left:0;right:0;padding:20px 18px;background:rgba(0,0,0,.75);text-align:center;pointer-events:auto;">
-    <div id="binScanTitle" style="font-size:1.3rem;font-weight:900;color:#fff;">SCAN BIN</div>
-    <div id="binScanHeading" style="font-size:1.6rem;font-weight:900;color:#fff;margin-top:2px;">--</div>
-    <div id="binScanLastResult" style="margin-top:8px;min-height:44px;"></div>
+  <div style="position:absolute;top:0;left:0;right:0;padding:24px 18px;background:rgba(0,0,0,.82);text-align:center;pointer-events:auto;">
+    <div id="binScanTitle" style="font-size:1.1rem;font-weight:800;color:#fff;opacity:.85;letter-spacing:.04em;">SCAN BIN</div>
+    <div id="binScanHeading" style="font-size:2.6rem;font-weight:900;color:#fff;margin-top:4px;line-height:1;">--</div>
+    <div id="binScanInstruction" style="font-size:.95rem;font-weight:600;color:#fff;opacity:.85;margin-top:8px;">Scan the bin shown above</div>
+    <div id="binScanLastResult" style="margin-top:12px;min-height:60px;"></div>
   </div>
 </div>
 
@@ -718,12 +719,11 @@ button,a,input,textarea{font-family:var(--sans);}
 </div>
 
 <div id="loadPkgOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
-  <div style="position:absolute;top:0;left:0;right:0;padding:20px 18px;background:rgba(0,0,0,.75);text-align:center;pointer-events:auto;">
-    <div style="font-size:1.3rem;font-weight:900;color:#fff;">SORT ROUTE</div>
-    <div id="loadPkgTotal" style="font-size:0.9rem;font-weight:700;color:#fff;opacity:.85;margin-top:2px;">0 PACKAGES</div>
-    <div style="font-size:1.3rem;font-weight:900;color:#fff;margin-top:6px;" id="loadPkgCount">0 / 0 SCANNED</div>
-    <div style="font-size:.85rem;font-weight:700;color:#fff;opacity:.7;letter-spacing:.08em;margin-top:6px;">SCAN PACKAGE</div>
-    <div id="loadPkgLastScan" style="margin-top:8px;min-height:44px;"></div>
+  <div style="position:absolute;top:0;left:0;right:0;padding:22px 18px;background:rgba(0,0,0,.82);text-align:center;pointer-events:auto;">
+    <div id="loadPkgHeading" style="font-size:1.2rem;font-weight:900;color:#fff;">SCAN PACKAGES</div>
+    <div id="loadPkgInstruction" style="font-size:.9rem;font-weight:600;color:#fff;opacity:.85;margin-top:4px;">Scan each package in this bin</div>
+    <div id="loadPkgLastScan" style="margin-top:10px;min-height:64px;"></div>
+    <div id="loadPkgCount" style="font-size:1.1rem;font-weight:900;color:#fff;margin-top:8px;">0 of 0 packages scanned</div>
   </div>
 </div>
 
@@ -1364,9 +1364,10 @@ function showRouteAcceptedScreen(){
 // in processScan() are added, nothing about the camera itself changes.
 function startBinScan(){
   window._scanningBin=true;
+  window._binConfirmedHolding=false;
   const bin=currentJob.bin_label || '';
   document.getElementById('binScanTitle').textContent='SCAN BIN';
-  document.getElementById('binScanHeading').textContent = bin ? bin : '--';
+  document.getElementById('binScanHeading').textContent = bin ? ('BIN '+bin) : '--';
   document.getElementById('binScanLastResult').innerHTML='';
   document.getElementById('binScanOverlay').style.display='block';
   showScreen('scScan');
@@ -1374,6 +1375,7 @@ function startBinScan(){
 }
 
 function handleBinScan(code){
+  if(window._binConfirmedHolding)return; // ignore stray scans during the hold
   const clean=code.trim().toUpperCase();
   const resultEl=document.getElementById('binScanLastResult');
   const realBin=(currentJob.bin_label||'').toUpperCase();
@@ -1390,13 +1392,20 @@ function handleBinScan(code){
   }
 
   if(clean===realBin){
-    resultEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.3rem;">&#10003; BIN '+realBin+' CONFIRMED</div>';
-    window._scanningBin=false;
-    document.getElementById('binScanOverlay').style.display='none';
-    stopCamera();
-    startPackageLoadingVerification();
+    window._binConfirmedHolding=true;
+    resultEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.6rem;">&#10003; BIN '+realBin+' CONFIRMED</div><div style="color:#fff;font-size:.95rem;font-weight:600;margin-top:4px;">Bin pickup confirmed</div>';
+    // Hold this confirmation on screen before moving on, so the driver
+    // clearly sees the correct bin was accepted rather than an abrupt
+    // jump straight to the next screen.
+    setTimeout(function(){
+      window._binConfirmedHolding=false;
+      window._scanningBin=false;
+      document.getElementById('binScanOverlay').style.display='none';
+      stopCamera();
+      startPackageLoadingVerification();
+    }, 1300);
   } else {
-    resultEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.3rem;">WRONG BIN</div>';
+    resultEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.6rem;">&#10007; WRONG BIN</div>';
   }
 }
 
@@ -1445,16 +1454,19 @@ function handleLoadingScan(barcode){
   const stopNum=surgeStops.indexOf(match)+1;
   const totalScanned=Array.from(loadedCounts.values()).reduce((a,b)=>a+b,0);
   const totalCount=realPackageTotal();
-  const stopProgress=scannedForStop+1;
-  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.1rem;">&#10003; PACKAGE VERIFIED</div><div style="color:#fff;font-weight:900;font-size:1.4rem;margin-top:2px;">STOP '+stopNum+'</div><div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:2px;">Stop package '+stopProgress+' of '+expectedForStop+' &middot; Package '+totalScanned+' of '+totalCount+'</div>';
+  // Priority order per spec: current action, then stop number, then
+  // progress, then the instruction to keep going.
+  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.2rem;">&#10003; PACKAGE VERIFIED</div>'
+    +'<div style="color:#fff;font-weight:900;font-size:1.7rem;margin-top:4px;">STOP '+stopNum+'</div>'
+    +'<div style="color:#fff;opacity:.85;font-size:.9rem;margin-top:4px;">Package '+totalScanned+' of '+totalCount+'</div>'
+    +'<div style="color:#fff;opacity:.7;font-size:.8rem;font-weight:700;letter-spacing:.06em;margin-top:8px;">SCAN NEXT PACKAGE</div>';
   updateLoadingUI();
 }
 
 function updateLoadingUI(){
   const total=realPackageTotal();
   const loaded=Array.from(loadedCounts.values()).reduce((a,b)=>a+b,0);
-  document.getElementById('loadPkgTotal').textContent=total+' PACKAGES';
-  document.getElementById('loadPkgCount').textContent=loaded+' / '+total+' SCANNED';
+  document.getElementById('loadPkgCount').textContent=loaded+' of '+total+' packages scanned';
 
   if(loaded>=total && total>0){
     showPickupCompleteScreen();
