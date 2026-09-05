@@ -706,6 +706,17 @@ button,a,input,textarea{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- PICKUP COMPLETE -->
+<div class="screen" id="scPickupComplete">
+  <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <div style="color:#0a7a2f;font-weight:900;font-size:1.1rem;margin-bottom:8px;">&#10003; ALL PACKAGES VERIFIED</div>
+    <div style="font-size:1.4rem;font-weight:900;color:#0f172a;margin-bottom:32px;">PICKUP COMPLETE</div>
+    <button onclick="confirmPickup()" style="width:100%;max-width:320px;padding:22px;border-radius:16px;background:linear-gradient(135deg,#19b7ef,#0060cc);color:#fff;font-size:1.15rem;font-weight:900;border:none;cursor:pointer;">
+      CONFIRM PICKUP
+    </button>
+  </div>
+</div>
+
 <div id="loadPkgOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
   <div style="position:absolute;top:0;left:0;right:0;padding:20px 18px;background:rgba(0,0,0,.75);text-align:center;pointer-events:auto;">
     <div style="font-size:1.3rem;font-weight:900;color:#fff;">SORT ROUTE</div>
@@ -1164,6 +1175,12 @@ function initApp(){
       }else{
         showScreen('scSurgeMap');renderSurgeList();
       }
+    }else if(currentJob.status==='assigned'&&isSurgeJob&&surgeStops.length>0){
+      // Accepted but pickup was never confirmed before the app closed -
+      // resume at the start of pickup rather than a generic screen that
+      // isn't built to resume mid-scan. Simpler and safer than trying
+      // to reconstruct exactly which packages were already scanned.
+      showRouteAcceptedScreen();
     }else{
       showScreen('scJob');renderJobScreen();
     }
@@ -1298,7 +1315,7 @@ async function acceptOffer(){
     // either way, just against whatever data is actually available.
   }
 
-  currentJob.status='in_transit';
+  currentJob.status='assigned';
   scannedPackages=[];
   // Detect Surge job -- parse surge_stops if it came back as a string
   let surgeSt=currentJob.surge_stops;
@@ -1329,13 +1346,11 @@ async function acceptOffer(){
     });
     surgeStops=sprintStops;
   }
-  // All jobs now go into the At Pickup step first - the driver
-  // explicitly confirms they're there and sees the expected bin before
-  // the camera opens for the actual scan. Nothing about the real bin
-  // scan, loading verification, or navigation was changed.
-  currentJob.status='in_transit';
+  // All jobs now go into the At Pickup step first - accepting a job is
+  // not the same as picking it up, so status stays 'assigned' here.
+  // It only becomes 'in_transit' once pickup is actually confirmed,
+  // further down in confirmPickup().
   saveRouteState('list');
-  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   showRouteAcceptedScreen();
 }
 
@@ -1369,6 +1384,7 @@ function handleBinScan(code){
     resultEl.innerHTML='<div style="color:#fff;font-weight:900;">No bin assigned to this route - continuing.</div>';
     window._scanningBin=false;
     document.getElementById('binScanOverlay').style.display='none';
+    stopCamera();
     startPackageLoadingVerification();
     return;
   }
@@ -1377,6 +1393,7 @@ function handleBinScan(code){
     resultEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.3rem;">&#10003; BIN '+realBin+' CONFIRMED</div>';
     window._scanningBin=false;
     document.getElementById('binScanOverlay').style.display='none';
+    stopCamera();
     startPackageLoadingVerification();
   } else {
     resultEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.3rem;">WRONG BIN</div>';
@@ -1389,16 +1406,20 @@ function handleBinScan(code){
 // acceptOffer() - the total is surgeStops.length, never guessed.
 // Reuses the existing, unmodified scan screen and camera entirely -
 // only a visible overlay and the scan routing above are new.
-let loadedOrderIds=new Set();
+let loadedCounts=new Map();
 
 function startPackageLoadingVerification(){
-  loadedOrderIds=new Set();
+  loadedCounts=new Map();
   window._loadingPackages=true;
   document.getElementById('loadPkgLastScan').innerHTML='';
   document.getElementById('loadPkgOverlay').style.display='block';
   updateLoadingUI();
   showScreen('scScan');
   startCamera();
+}
+
+function realPackageTotal(){
+  return surgeStops.reduce((sum,s)=>sum+(parseInt(s.packages)||1),0);
 }
 
 function handleLoadingScan(barcode){
@@ -1410,41 +1431,50 @@ function handleLoadingScan(barcode){
     return;
   }
 
-  if(loadedOrderIds.has(match.order_id)){
-    // Already counted once - do not increment again, just acknowledge it.
+  const expectedForStop=parseInt(match.packages)||1;
+  const scannedForStop=loadedCounts.get(match.order_id)||0;
+
+  if(scannedForStop>=expectedForStop){
+    // Every physical package for this stop is already accounted for -
+    // do not count a repeat scan again, just acknowledge it.
     lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">Already Loaded</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">'+match.address+'</div>';
     return;
   }
 
-  loadedOrderIds.add(match.order_id);
+  loadedCounts.set(match.order_id, scannedForStop+1);
   const stopNum=surgeStops.indexOf(match)+1;
-  const currentCount=loadedOrderIds.size;
-  const totalCount=surgeStops.length;
-  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.1rem;">&#10003; PACKAGE VERIFIED</div><div style="color:#fff;font-weight:900;font-size:1.4rem;margin-top:2px;">STOP '+stopNum+'</div><div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:2px;">Package '+currentCount+' of '+totalCount+'</div>';
+  const totalScanned=Array.from(loadedCounts.values()).reduce((a,b)=>a+b,0);
+  const totalCount=realPackageTotal();
+  const stopProgress=scannedForStop+1;
+  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.1rem;">&#10003; PACKAGE VERIFIED</div><div style="color:#fff;font-weight:900;font-size:1.4rem;margin-top:2px;">STOP '+stopNum+'</div><div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:2px;">Stop package '+stopProgress+' of '+expectedForStop+' &middot; Package '+totalScanned+' of '+totalCount+'</div>';
   updateLoadingUI();
 }
 
 function updateLoadingUI(){
-  const total=surgeStops.length;
-  const loaded=loadedOrderIds.size;
+  const total=realPackageTotal();
+  const loaded=Array.from(loadedCounts.values()).reduce((a,b)=>a+b,0);
   document.getElementById('loadPkgTotal').textContent=total+' PACKAGES';
   document.getElementById('loadPkgCount').textContent=loaded+' / '+total+' SCANNED';
 
   if(loaded>=total && total>0){
-    // Real, brief completion confirmation, then auto-switch straight
-    // into the existing route map - no manual tap required.
-    document.getElementById('loadPkgLastScan').innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.2rem;">LOAD COMPLETE</div><div style="color:#fff;font-weight:700;font-size:.95rem;margin-top:2px;">'+total+' / '+total+' PACKAGES VERIFIED</div><div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:4px;">All packages loaded.</div>';
-    setTimeout(confirmPackageLoadingComplete, 900);
+    showPickupCompleteScreen();
   }
 }
 
-function confirmPackageLoadingComplete(){
-  // Defensive check - the button should already be disabled otherwise,
-  // but never proceed on an incomplete load regardless.
-  if(loadedOrderIds.size < surgeStops.length) return;
+function showPickupCompleteScreen(){
   window._loadingPackages=false;
   document.getElementById('loadPkgOverlay').style.display='none';
   stopCamera();
+  showScreen('scPickupComplete');
+}
+
+function confirmPickup(){
+  // This is the real, explicit moment pickup actually happened - status
+  // only becomes in_transit here, not at acceptance and not the instant
+  // scanning finishes.
+  currentJob.status='in_transit';
+  saveRouteState('list');
+  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   enterSurgeMapFlow();
 }
 
