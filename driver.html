@@ -1242,7 +1242,11 @@ async function pollJobs(){
   const scanEl=document.getElementById('scanTxt');
   try{
     const jobs=await sbGet('jobs?select=*&status=in.(routing,pending,assigned)&order=created_at.desc&limit=10');
-    const available=jobs.filter(j=>!rejectedIds.has(j.id));
+    // Real, authoritative staging check - only surge/route-type jobs
+    // ever go through PathIQ's bin-staging process at all, so only
+    // those are gated on it here. Other job types are unaffected.
+    const stagingReady=jobs.filter(j=>j.job_type!=='surge' || !!j.staged_at);
+    const available=stagingReady.filter(j=>!rejectedIds.has(j.id));
     if(scanEl)scanEl.textContent=available.length+' signal'+(available.length!==1?'s':'')+' available';
     const ws=document.getElementById('waitState');
     if(ws)ws.textContent=available.length?'Signal incoming!':'Waiting for assignment';
@@ -1313,6 +1317,16 @@ async function acceptOffer(){
     // If this fails, fall back to the offer snapshot rather than block
     // the driver entirely - bin validation below still runs correctly
     // either way, just against whatever data is actually available.
+  }
+
+  // Second, defensive check against the same real, authoritative fact -
+  // a surge job with no staged_at has not actually finished PathIQ
+  // processing, regardless of how it reached acceptance.
+  if(currentJob.job_type==='surge' && !currentJob.staged_at){
+    currentJob=null;
+    toast('This route is not yet staged for pickup', 'warn');
+    showHome();
+    return;
   }
 
   currentJob.status='assigned';
