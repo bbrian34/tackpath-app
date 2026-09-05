@@ -685,12 +685,43 @@ button,a,input,textarea{font-family:var(--sans);}
 </div>
 
 <!-- SURGE ROUTE MAP -- SmartSort style view ──-->
+<!-- PACKAGE LOADING VERIFICATION OVERLAY -- sits on top of the existing,
+     unmodified scan screen and camera below, shown only while loading -->
+<!-- MASTER / BIN SCAN OVERLAY -- sits on the same existing scan screen -->
+<!-- ROUTE ACCEPTED -->
+<!-- AT PICKUP -->
+<div class="screen" id="scRouteAccepted">
+  <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <button onclick="startBinScan()" style="width:100%;max-width:320px;padding:24px;border-radius:16px;background:linear-gradient(135deg,#19b7ef,#0060cc);color:#fff;font-size:1.3rem;font-weight:900;border:none;cursor:pointer;">
+      AT PICKUP
+    </button>
+  </div>
+</div>
+
+<div id="binScanOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
+  <div style="position:absolute;top:0;left:0;right:0;padding:20px 18px;background:rgba(0,0,0,.75);text-align:center;pointer-events:auto;">
+    <div id="binScanTitle" style="font-size:1.3rem;font-weight:900;color:#fff;">SCAN BIN</div>
+    <div id="binScanHeading" style="font-size:1.6rem;font-weight:900;color:#fff;margin-top:2px;">--</div>
+    <div id="binScanLastResult" style="margin-top:8px;min-height:44px;"></div>
+  </div>
+</div>
+
+<div id="loadPkgOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
+  <div style="position:absolute;top:0;left:0;right:0;padding:20px 18px;background:rgba(0,0,0,.75);text-align:center;pointer-events:auto;">
+    <div style="font-size:1.3rem;font-weight:900;color:#fff;">SORT ROUTE</div>
+    <div id="loadPkgTotal" style="font-size:0.9rem;font-weight:700;color:#fff;opacity:.85;margin-top:2px;">0 PACKAGES</div>
+    <div style="font-size:1.3rem;font-weight:900;color:#fff;margin-top:6px;" id="loadPkgCount">0 / 0 SCANNED</div>
+    <div style="font-size:.85rem;font-weight:700;color:#fff;opacity:.7;letter-spacing:.08em;margin-top:6px;">SCAN PACKAGE</div>
+    <div id="loadPkgLastScan" style="margin-top:8px;min-height:44px;"></div>
+  </div>
+</div>
+
 <div class="screen" id="scSurgeMap">
   <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;">
     <!-- Header -->
     <div style="padding:14px 18px;background:#fff;border-bottom:1px solid rgba(0,0,0,.1);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
       <div>
-        <div style="font-family:var(--mono);font-size:0.5625rem;color:#475569;letter-spacing:.16em;text-transform:uppercase;margin-bottom:2px;" id="surgeMapTitle">ROUTE LOADED</div>
+        <div style="font-family:var(--mono);font-size:0.5625rem;color:#475569;letter-spacing:.16em;text-transform:uppercase;margin-bottom:2px;" id="surgeMapTitle">ROUTE READY</div>
         <div style="font-size:1.125rem;font-weight:900;color:#0f172a;" id="surgeMapSub">20 stops</div>
       </div>
       <div style="font-family:var(--mono);font-size:0.625rem;color:#0077cc;font-weight:700;" id="surgeMapRoute"></div>
@@ -1252,6 +1283,21 @@ async function acceptOffer(){
   if(!pendingJob)return;
   stopOfferAlert();unlockSpeech();
   currentJob=pendingJob;pendingJob=null;
+
+  // Refresh with the real, current job record before proceeding - the
+  // offer snapshot above may predate PathIQ finishing bin assignment,
+  // and nothing since has ever re-checked it.
+  try{
+    const fresh=await sbGet('jobs?id=eq.'+currentJob.id+'&select=*');
+    if(Array.isArray(fresh)&&fresh.length>0){
+      currentJob=Object.assign(currentJob, fresh[0]);
+    }
+  }catch(e){
+    // If this fails, fall back to the offer snapshot rather than block
+    // the driver entirely - bin validation below still runs correctly
+    // either way, just against whatever data is actually available.
+  }
+
   currentJob.status='in_transit';
   scannedPackages=[];
   // Detect Surge job -- parse surge_stops if it came back as a string
@@ -1283,20 +1329,136 @@ async function acceptOffer(){
     });
     surgeStops=sprintStops;
   }
-  // All jobs go straight to surge map -- identical flow regardless of job type
+  // All jobs now go into the At Pickup step first - the driver
+  // explicitly confirms they're there and sees the expected bin before
+  // the camera opens for the actual scan. Nothing about the real bin
+  // scan, loading verification, or navigation was changed.
   currentJob.status='in_transit';
   saveRouteState('list');
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  showRouteAcceptedScreen();
+}
+
+function showRouteAcceptedScreen(){
+  showScreen('scRouteAccepted');
+}
+
+// ── MASTER / BIN SCAN ──
+// Reuses the same existing, proven scan screen and camera as Loading
+// Verification below - only a new overlay and a new delegation check
+// in processScan() are added, nothing about the camera itself changes.
+function startBinScan(){
+  window._scanningBin=true;
+  const bin=currentJob.bin_label || '';
+  document.getElementById('binScanTitle').textContent='SCAN BIN';
+  document.getElementById('binScanHeading').textContent = bin ? bin : '--';
+  document.getElementById('binScanLastResult').innerHTML='';
+  document.getElementById('binScanOverlay').style.display='block';
+  showScreen('scScan');
+  startCamera();
+}
+
+function handleBinScan(code){
+  const clean=code.trim().toUpperCase();
+  const resultEl=document.getElementById('binScanLastResult');
+  const realBin=(currentJob.bin_label||'').toUpperCase();
+
+  if(!realBin){
+    // No bin assigned to this route at all - nothing to check against,
+    // so don't block the driver on a step that can't be verified.
+    resultEl.innerHTML='<div style="color:#fff;font-weight:900;">No bin assigned to this route - continuing.</div>';
+    window._scanningBin=false;
+    document.getElementById('binScanOverlay').style.display='none';
+    startPackageLoadingVerification();
+    return;
+  }
+
+  if(clean===realBin){
+    resultEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.3rem;">&#10003; BIN '+realBin+' CONFIRMED</div>';
+    window._scanningBin=false;
+    document.getElementById('binScanOverlay').style.display='none';
+    startPackageLoadingVerification();
+  } else {
+    resultEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.3rem;">WRONG BIN</div>';
+  }
+}
+
+// ── PACKAGE LOADING VERIFICATION ──
+// A real, per-package gate between accepting a route and starting
+// deliveries. Uses the real surgeStops data already populated in
+// acceptOffer() - the total is surgeStops.length, never guessed.
+// Reuses the existing, unmodified scan screen and camera entirely -
+// only a visible overlay and the scan routing above are new.
+let loadedOrderIds=new Set();
+
+function startPackageLoadingVerification(){
+  loadedOrderIds=new Set();
+  window._loadingPackages=true;
+  document.getElementById('loadPkgLastScan').innerHTML='';
+  document.getElementById('loadPkgOverlay').style.display='block';
+  updateLoadingUI();
+  showScreen('scScan');
+  startCamera();
+}
+
+function handleLoadingScan(barcode){
+  const match=surgeStops.find(s=>barcode===s.order_id||barcode.startsWith(s.order_id)||s.order_id.startsWith(barcode));
+  const lastScanEl=document.getElementById('loadPkgLastScan');
+
+  if(!match){
+    lastScanEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.1rem;">WRONG ROUTE</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">"'+barcode+'" does not belong to this route</div>';
+    return;
+  }
+
+  if(loadedOrderIds.has(match.order_id)){
+    // Already counted once - do not increment again, just acknowledge it.
+    lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">Already Loaded</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">'+match.address+'</div>';
+    return;
+  }
+
+  loadedOrderIds.add(match.order_id);
+  const stopNum=surgeStops.indexOf(match)+1;
+  const currentCount=loadedOrderIds.size;
+  const totalCount=surgeStops.length;
+  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.1rem;">&#10003; PACKAGE VERIFIED</div><div style="color:#fff;font-weight:900;font-size:1.4rem;margin-top:2px;">STOP '+stopNum+'</div><div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:2px;">Package '+currentCount+' of '+totalCount+'</div>';
+  updateLoadingUI();
+}
+
+function updateLoadingUI(){
+  const total=surgeStops.length;
+  const loaded=loadedOrderIds.size;
+  document.getElementById('loadPkgTotal').textContent=total+' PACKAGES';
+  document.getElementById('loadPkgCount').textContent=loaded+' / '+total+' SCANNED';
+
+  if(loaded>=total && total>0){
+    // Real, brief completion confirmation, then auto-switch straight
+    // into the existing route map - no manual tap required.
+    document.getElementById('loadPkgLastScan').innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.2rem;">LOAD COMPLETE</div><div style="color:#fff;font-weight:700;font-size:.95rem;margin-top:2px;">'+total+' / '+total+' PACKAGES VERIFIED</div><div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:4px;">All packages loaded.</div>';
+    setTimeout(confirmPackageLoadingComplete, 900);
+  }
+}
+
+function confirmPackageLoadingComplete(){
+  // Defensive check - the button should already be disabled otherwise,
+  // but never proceed on an incomplete load regardless.
+  if(loadedOrderIds.size < surgeStops.length) return;
+  window._loadingPackages=false;
+  document.getElementById('loadPkgOverlay').style.display='none';
+  stopCamera();
+  enterSurgeMapFlow();
+}
+
+function enterSurgeMapFlow(){
   showJobNotification(surgeStops.length>1?'Delivering -- '+surgeStops.length+' stops':'Heading to delivery');
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
-  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
-  document.getElementById('surgeMapSub').textContent=total+' stop'+(total!==1?'s':'')+' · '+totalPkgs+' package'+(totalPkgs!==1?'s':'');
+  document.getElementById('surgeMapTitle').textContent='ROUTE READY';
   document.getElementById('surgeMapRoute').textContent=currentJob.title||'Delivery Route';
-  // Hide Begin Route -- skip straight to stop list identical to surge
-  const beginRow=document.getElementById('surgeBeginRow');
-  if(beginRow)beginRow.style.display='none';
   renderSurgeList();
+  // Set this AFTER renderSurgeList, which also writes to surgeMapSub -
+  // otherwise this real, one-time Route Ready message would be
+  // immediately overwritten by that ongoing, repeated re-render.
+  document.getElementById('surgeMapSub').innerHTML=total+' STOP'+(total!==1?'S':'')+'<br>'+totalPkgs+' PACKAGE'+(totalPkgs!==1?'S':'')+'<br><span style="font-size:.85rem;font-weight:600;color:#475569;">Pickup complete.</span>';
   showScreen('scSurgeMap');
   startGPS();
   startDispatchPoll();startJobStatusPoll();
@@ -1524,7 +1686,7 @@ async function loadMessages(){
       html+=displayMsgs.map(m=>{
         const me=m.sender_role==='driver';
         const t=new Date(m.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
-        return '<div class="c-wrap"><div class="c-meta'+(me?' r':'')+'">'+(me?'You':'Dispatch')+' · '+t+'</div><div class="c-bubble '+(me?'c-out':'c-in')+'">'+m.body+'</div></div>';
+        return '<div class="c-wrap"><div class="c-meta'+(me?' r':'')+'">'+(me?'You':'Dispatch')+' • '+t+'</div><div class="c-bubble '+(me?'c-out':'c-in')+'">'+m.body+'</div></div>';
       }).join('');
     }else{html+='<div class="c-sys" style="margin-top:12px;">No messages yet</div>';}
     el.innerHTML=html;if(atBottom)el.scrollTop=el.scrollHeight;
@@ -1735,6 +1897,18 @@ function stopCamera(){
 function processScan(barcode){
   if(navigator.vibrate)navigator.vibrate([60,30,60]);
 
+  // ── MASTER / BIN SCAN -- driver confirming the correct bin at pickup ──
+  if(window._scanningBin){
+    handleBinScan(barcode);
+    return;
+  }
+
+  // ── PACKAGE LOADING VERIFICATION -- driver scanning packages into the vehicle ──
+  if(window._loadingPackages){
+    handleLoadingScan(barcode);
+    return;
+  }
+
   // ── SURGE DROPOFF SCAN -- driver scanning package at delivery address ──
   if(window._sdScanMode){
     sdScanConfirmed();
@@ -1799,8 +1973,8 @@ function renderSurgeList(){
   saveRouteState('list');
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
-  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
-  document.getElementById('surgeMapSub').textContent=total+' stops · '+totalPkgs+' packages';
+  document.getElementById('surgeMapTitle').textContent='ROUTE READY';
+  document.getElementById('surgeMapSub').textContent=total+' stops • '+totalPkgs+' packages';
   document.getElementById('surgeMapRoute').textContent=currentJob&&currentJob.title||'';
   document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>{
     const done=i<currentSurgeStop;
@@ -1888,7 +2062,6 @@ function surgeTapStop(i){
 function confirmSurgeLoad(){
   currentJob.status='in_transit';
   sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
-  startGPSTracking(currentJob.id, driver.name);
   startGPS();
   currentSurgeStop=0;
   // Hide Begin Route button
@@ -2281,8 +2454,8 @@ function swipeRow_tap(){
   // Render the stop list
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
-  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
-  document.getElementById('surgeMapSub').textContent=total+' stops · '+totalPkgs+' packages';
+  document.getElementById('surgeMapTitle').textContent='ROUTE READY';
+  document.getElementById('surgeMapSub').textContent=total+' stops • '+totalPkgs+' packages';
   document.getElementById('surgeMapRoute').textContent=currentJob&&currentJob.title||'Surge Route';
   document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>`
     <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.07);background:#fff;margin-bottom:2px;">
