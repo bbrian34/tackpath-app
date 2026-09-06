@@ -700,6 +700,7 @@ button,a,input,textarea{font-family:var(--sans);}
 
 <div id="binScanOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
   <div style="position:absolute;top:0;left:0;right:0;padding:24px 18px;background:rgba(0,0,0,.82);text-align:center;pointer-events:auto;">
+    <button onclick="cancelBinScan()" style="position:absolute;top:16px;left:14px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:.85rem;font-weight:700;cursor:pointer;">&#8592; BACK</button>
     <div id="binScanTitle" style="font-size:1.1rem;font-weight:800;color:#fff;opacity:.85;letter-spacing:.04em;">SCAN BIN</div>
     <div id="binScanHeading" style="font-size:2.6rem;font-weight:900;color:#fff;margin-top:4px;line-height:1;">--</div>
     <div id="binScanInstruction" style="font-size:.95rem;font-weight:600;color:#fff;opacity:.85;margin-top:8px;">Scan the bin shown above</div>
@@ -720,6 +721,7 @@ button,a,input,textarea{font-family:var(--sans);}
 
 <div id="loadPkgOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
   <div style="position:absolute;top:0;left:0;right:0;padding:22px 18px;background:rgba(0,0,0,.82);text-align:center;pointer-events:auto;">
+    <button onclick="cancelPackageScan()" style="position:absolute;top:16px;left:14px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:.85rem;font-weight:700;cursor:pointer;">&#8592; BACK</button>
     <div id="loadPkgHeading" style="font-size:1.2rem;font-weight:900;color:#fff;">SCAN PACKAGES</div>
     <div id="loadPkgInstruction" style="font-size:.9rem;font-weight:600;color:#fff;opacity:.85;margin-top:4px;">Scan each package in this bin</div>
     <div id="loadPkgLastScan" style="margin-top:10px;min-height:64px;"></div>
@@ -1330,6 +1332,7 @@ async function acceptOffer(){
   }
 
   currentJob.status='assigned';
+  loadedCounts=new Map();
   scannedPackages=[];
   // Detect Surge job -- parse surge_stops if it came back as a string
   let surgeSt=currentJob.surge_stops;
@@ -1384,8 +1387,35 @@ function startBinScan(){
   document.getElementById('binScanHeading').textContent = bin ? ('BIN '+bin) : '--';
   document.getElementById('binScanLastResult').innerHTML='';
   document.getElementById('binScanOverlay').style.display='block';
+  hideLegacyScanControls();
   showScreen('scScan');
   startCamera();
+}
+
+function cancelBinScan(){
+  window._scanningBin=false;
+  window._binConfirmedHolding=false;
+  document.getElementById('binScanOverlay').style.display='none';
+  stopCamera();
+  restoreLegacyScanControls();
+  showRouteAcceptedScreen();
+}
+
+// Neither the old shared camera back button nor the unrelated Done
+// button belong to bin/package scanning - hiding them here stops a
+// driver from ever tapping into that separate, older logic by mistake
+// while either of these two new modes is active.
+function hideLegacyScanControls(){
+  const backBtn=document.querySelector('.scan-back');
+  if(backBtn)backBtn.style.display='none';
+  const doneBtn=document.getElementById('doneScanBtn');
+  if(doneBtn)doneBtn.style.display='none';
+}
+function restoreLegacyScanControls(){
+  const backBtn=document.querySelector('.scan-back');
+  if(backBtn)backBtn.style.display='';
+  const doneBtn=document.getElementById('doneScanBtn');
+  if(doneBtn)doneBtn.style.display='';
 }
 
 function handleBinScan(code){
@@ -1432,17 +1462,35 @@ function handleBinScan(code){
 let loadedCounts=new Map();
 
 function startPackageLoadingVerification(){
-  loadedCounts=new Map();
+  // Only reset progress on a genuinely fresh start - resuming after a
+  // driver backs out and re-confirms the bin must preserve whatever
+  // was already verified, not wipe it out.
+  if(!loadedCounts)loadedCounts=new Map();
   window._loadingPackages=true;
   document.getElementById('loadPkgLastScan').innerHTML='';
   document.getElementById('loadPkgOverlay').style.display='block';
+  hideLegacyScanControls();
   updateLoadingUI();
   showScreen('scScan');
   startCamera();
 }
 
+function cancelPackageScan(){
+  window._loadingPackages=false;
+  document.getElementById('loadPkgOverlay').style.display='none';
+  stopCamera();
+  restoreLegacyScanControls();
+  // Already verified packages stay exactly as they are in loadedCounts -
+  // resuming re-enters through the bin scan, which is quick since the
+  // correct bin never changes, and package progress is untouched.
+  showRouteAcceptedScreen();
+}
+
 function realPackageTotal(){
-  return surgeStops.reduce((sum,s)=>sum+(parseInt(s.packages)||1),0);
+  // One barcode identity exists per stop, confirmed against the real
+  // data model - this is the true, scannable package count, not a
+  // manifest quantity that has no corresponding physical barcode.
+  return surgeStops.length;
 }
 
 function handleLoadingScan(barcode){
@@ -1454,32 +1502,32 @@ function handleLoadingScan(barcode){
     return;
   }
 
-  const expectedForStop=parseInt(match.packages)||1;
-  const scannedForStop=loadedCounts.get(match.order_id)||0;
-
-  if(scannedForStop>=expectedForStop){
-    // Every physical package for this stop is already accounted for -
-    // do not count a repeat scan again, just acknowledge it.
+  if(loadedCounts.has(match.order_id)){
+    // This barcode's one real, physical identity is already accounted
+    // for - do not count a repeat scan again, just acknowledge it.
     lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">Already Loaded</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">'+match.address+'</div>';
     return;
   }
 
-  loadedCounts.set(match.order_id, scannedForStop+1);
+  loadedCounts.set(match.order_id, 1);
   const stopNum=surgeStops.indexOf(match)+1;
-  const totalScanned=Array.from(loadedCounts.values()).reduce((a,b)=>a+b,0);
+  const totalScanned=loadedCounts.size;
   const totalCount=realPackageTotal();
+  const infoQty=parseInt(match.packages)||1;
   // Priority order per spec: current action, then stop number, then
-  // progress, then the instruction to keep going.
+  // progress, then the instruction to keep going. The manifest's own
+  // package count is shown as information only, never as a scan
+  // requirement, since only one real barcode exists for this stop.
   lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.2rem;">&#10003; PACKAGE VERIFIED</div>'
     +'<div style="color:#fff;font-weight:900;font-size:1.7rem;margin-top:4px;">STOP '+stopNum+'</div>'
-    +'<div style="color:#fff;opacity:.85;font-size:.9rem;margin-top:4px;">Package '+totalScanned+' of '+totalCount+'</div>'
+    +'<div style="color:#fff;opacity:.85;font-size:.9rem;margin-top:4px;">Package '+totalScanned+' of '+totalCount+(infoQty>1?' &middot; '+infoQty+' items in this package':'')+'</div>'
     +'<div style="color:#fff;opacity:.7;font-size:.8rem;font-weight:700;letter-spacing:.06em;margin-top:8px;">SCAN NEXT PACKAGE</div>';
   updateLoadingUI();
 }
 
 function updateLoadingUI(){
   const total=realPackageTotal();
-  const loaded=Array.from(loadedCounts.values()).reduce((a,b)=>a+b,0);
+  const loaded=loadedCounts.size;
   document.getElementById('loadPkgCount').textContent=loaded+' of '+total+' packages scanned';
 
   if(loaded>=total && total>0){
