@@ -1498,41 +1498,45 @@ function handleLoadingScan(barcode){
   const lastScanEl=document.getElementById('loadPkgLastScan');
 
   if(!match){
-    lastScanEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.1rem;">WRONG ROUTE</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">"'+barcode+'" does not belong to this route</div>';
+    lastScanEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.1rem;">WRONG PACKAGE</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">NOT ON THIS ROUTE</div>';
     return;
   }
 
   if(loadedCounts.has(match.order_id)){
     // This barcode's one real, physical identity is already accounted
-    // for - do not count a repeat scan again, just acknowledge it.
-    lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">Already Loaded</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">'+match.address+'</div>';
+    // for - camera stays on, driver keeps scanning.
+    lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">PACKAGE ALREADY VERIFIED</div>';
     return;
   }
 
   loadedCounts.set(match.order_id, 1);
   const stopNum=surgeStops.indexOf(match)+1;
-  const totalScanned=loadedCounts.size;
-  const totalCount=realPackageTotal();
-  const infoQty=parseInt(match.packages)||1;
-  // Priority order per spec: current action, then stop number, then
-  // progress, then the instruction to keep going. The manifest's own
-  // package count is shown as information only, never as a scan
-  // requirement, since only one real barcode exists for this stop.
-  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.2rem;">&#10003; PACKAGE VERIFIED</div>'
-    +'<div style="color:#fff;font-weight:900;font-size:1.7rem;margin-top:4px;">STOP '+stopNum+'</div>'
-    +'<div style="color:#fff;opacity:.85;font-size:.9rem;margin-top:4px;">Package '+totalScanned+' of '+totalCount+(infoQty>1?' &middot; '+infoQty+' items in this package':'')+'</div>'
-    +'<div style="color:#fff;opacity:.7;font-size:.8rem;font-weight:700;letter-spacing:.06em;margin-top:8px;">SCAN NEXT PACKAGE</div>';
+  // Only a genuine, correct match reaches here - camera turns off and
+  // the driver must explicitly tap OK before it resumes.
+  stopCamera();
+  window._loadingPackages=false;
+  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.3rem;">&#10003; PACKAGE VERIFIED</div>'
+    +'<div style="color:#fff;font-weight:900;font-size:1.9rem;margin-top:6px;">STOP '+stopNum+'</div>'
+    +'<button onclick="resumePackageScanning()" style="margin-top:14px;padding:12px 32px;border-radius:12px;background:#fff;color:#111;font-weight:900;font-size:1rem;border:none;cursor:pointer;">OK</button>';
   updateLoadingUI();
+}
+
+function resumePackageScanning(){
+  const total=realPackageTotal();
+  const loaded=loadedCounts.size;
+  if(loaded>=total && total>0){
+    showPickupCompleteScreen();
+    return;
+  }
+  window._loadingPackages=true;
+  document.getElementById('loadPkgLastScan').innerHTML='';
+  startCamera();
 }
 
 function updateLoadingUI(){
   const total=realPackageTotal();
   const loaded=loadedCounts.size;
   document.getElementById('loadPkgCount').textContent=loaded+' of '+total+' packages scanned';
-
-  if(loaded>=total && total>0){
-    showPickupCompleteScreen();
-  }
 }
 
 function showPickupCompleteScreen(){
