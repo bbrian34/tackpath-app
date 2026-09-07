@@ -273,6 +273,21 @@ async function loadRoutes(){
 
   binMap={};
   const newProgress={};
+
+  // scannedByBin accumulates every package ever scanned this session and
+  // was previously never reset except by the manual Reset Bin tool. When a
+  // new manifest is loaded, binProgress correctly rebuilds from the
+  // database, but stale scan history survived - and package IDs repeat
+  // across manifests, so genuinely new packages were rejected as
+  // "already scanned". Detect a real change in the loaded job set and
+  // clear that history, so a new run starts genuinely clean while an
+  // ordinary refresh of the same routes keeps its progress intact.
+  const jobSignature = jobs.map(j=>j.id).sort().join(',');
+  if(window._lastJobSignature !== undefined && window._lastJobSignature !== jobSignature){
+    scannedByBin={};
+  }
+  window._lastJobSignature = jobSignature;
+
   jobs.forEach((j, idx)=>{
     // A route should always have a real bin_label by the time it reaches
     // here. If one is somehow missing, don't silently skip the whole
