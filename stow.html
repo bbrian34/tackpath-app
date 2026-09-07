@@ -524,16 +524,6 @@ function handleStowScan(code){
       if(justCompleted){
         card.className='result-card staged';
         card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
-        // The one real, authoritative record of staging completion -
-        // everything else about this message was already correct, it
-        // just never persisted anywhere before now.
-        const stagedJobId=binProgress[binNum].jobId;
-        if(stagedJobId){
-          fetch(SB+'/rest/v1/jobs?id=eq.'+stagedJobId,{
-            method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
-            body:JSON.stringify({staged_at:new Date().toISOString()})
-          }).catch(()=>{});
-        }
       } else {
         card.className='result-card success';
         card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>';
@@ -692,21 +682,31 @@ window.addEventListener('online', loadRoutes);
 // value into the exact same functions a keyboard-wedge scan would have
 // called, based on whichever screen is actually open. Nothing about the
 // existing scan-handling logic itself changes.
-if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner) {
-  window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
-    // ── DIAGNOSTIC: exact raw shape from the native plugin, before
-    // anything touches it ──
-    const bridgeDbg = 'NATIVE BRIDGE EVENT RECEIVED\n'
-      +'typeof data = '+typeof data+'\n'
-      +'raw data = '+JSON.stringify(data)+'\n'
-      +'data.value = '+JSON.stringify(data.value)+'\n'
-      +'typeof data.value = '+typeof data.value;
-    console.log(bridgeDbg);
-    const dbgElBridge=document.getElementById('debugPanel');
-    if(dbgElBridge) dbgElBridge.textContent=bridgeDbg;
+//
+// LIFECYCLE: the scanner service broadcasts the SAME decoded value
+// through several compatibility actions (nlscan, sunmi, SCANRESULT and
+// others - all visible in logcat), so one physical trigger press can
+// deliver the same value multiple times within a few milliseconds.
+// Without a guard here, the first copy is processed and every later
+// copy is then correctly rejected as "already scanned" - which looks
+// exactly like a broken scanner from the operator's side. This dedupes
+// on value + time window, so one press is one logical scan, while a
+// deliberate rescan later still works normally.
+let _lastScanValue=null;
+let _lastScanTime=0;
 
-    const value = data.value;
+function _handleBridgeScan(data){
+  try{
+    const value = data && data.value;
     if(!value) return;
+
+    const now = Date.now();
+    if(value===_lastScanValue && (now-_lastScanTime) < 1000){
+      return; // same physical press arriving via another broadcast action
+    }
+    _lastScanValue=value;
+    _lastScanTime=now;
+
     if(document.getElementById('scStow').classList.contains('on')){
       handleStowScan(value);
     } else if(document.getElementById('scReceive').classList.contains('on')){
@@ -714,8 +714,40 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Far
     } else if(document.getElementById('scAssignbins').classList.contains('on')){
       handleAssignBinScan(value);
     }
-  });
+  }catch(e){
+    // Never let an error here kill the listener - a thrown exception
+    // inside a Capacitor listener callback can silently stop further
+    // events from being delivered for the rest of the session.
+    console.log('Scan handling error:', e);
+  }
 }
+
+let _scannerListenerHandle=null;
+async function registerScannerBridge(){
+  if(!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner)) return;
+  try{
+    // Remove any previous registration before adding a new one, so a
+    // re-register can never produce two live listeners firing twice.
+    if(_scannerListenerHandle && typeof _scannerListenerHandle.remove==='function'){
+      await _scannerListenerHandle.remove();
+    }
+    _scannerListenerHandle = await window.Capacitor.Plugins.FarsetScanner.addListener('scan', _handleBridgeScan);
+  }catch(e){
+    console.log('Scanner bridge registration failed:', e);
+  }
+}
+
+registerScannerBridge();
+
+// Re-register whenever the app returns to the foreground. If the WebView
+// was ever reloaded or the bridge connection dropped while backgrounded,
+// the original one-time registration would be gone with nothing to
+// restore it - which is exactly the "worked once, then silently stopped"
+// failure. This makes recovery automatic instead of requiring a restart.
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible') registerScannerBridge();
+});
+window.addEventListener('focus', registerScannerBridge);
 
 </script>
 </body>
