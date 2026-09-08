@@ -1137,7 +1137,7 @@ body::after{content:'';position:fixed;inset:0;
           <div>
             <div class="panel">
               <div class="panel-hdr"><div><div class="panel-ttl">Quick Actions</div><div class="panel-sub">ONE-CLICK OPERATIONS</div></div></div>
-              <button class="cmd-act" onclick="toast('Auto-dispatch queued for all pending signals')"><div class="cmd-ico">&#9889;</div><div><div class="cmd-ttl">Auto-Dispatch All Pending</div><div class="cmd-sub">SmartPath assigns optimal drivers</div></div></button>
+              <button class="cmd-act" onclick="toast('Open SmartSort and upload a CSV to auto-dispatch routes to drivers','ok')"><div class="cmd-ico">&#9889;</div><div><div class="cmd-ttl">Auto-Dispatch Routes</div><div class="cmd-sub">Upload CSV in SmartSort to dispatch</div></div></button>
               <button class="cmd-act" onclick="toast('Fleet broadcast sent via TackPath app')"><div class="cmd-ico">&#128172;</div><div><div class="cmd-ttl">Broadcast to All Drivers</div><div class="cmd-sub">Push notification to active fleet</div></div></button>
               <button class="cmd-act" onclick="toast('Exception escalation report generated')"><div class="cmd-ico">&#128226;</div><div><div class="cmd-ttl">Escalate All Exceptions</div><div class="cmd-sub">Alert supervisor, generate report</div></div></button>
               <button class="cmd-act" onclick="loadJobs()"><div class="cmd-ico">&#8635;</div><div><div class="cmd-ttl">Force Refresh Database</div><div class="cmd-sub">Pull latest jobs from Supabase now</div></div></button>
@@ -1510,6 +1510,15 @@ body::after{content:'';position:fixed;inset:0;
     </div>
   </div>
 
+  <div id="routeCountRow" style="display:none;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.15);border-radius:10px;">
+      <div style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);flex:1;">Routes (auto)</div>
+      <input type="number" id="routeCountInput" min="1" max="50" placeholder="auto"
+        style="width:70px;padding:5px 8px;border-radius:6px;border:1px solid rgba(25,183,239,.3);background:var(--card);color:var(--text);font-family:var(--mono);font-size:0.846rem;text-align:center;"
+        oninput="ssRouteCountOverride=parseInt(this.value)||0;document.getElementById('routeCountHint').textContent=ssRouteCountOverride>=1?ssRouteCountOverride+' routes set':'auto (by area + volume)'"/>
+      <div id="routeCountHint" style="font-family:var(--mono);font-size:0.692rem;color:var(--muted);min-width:120px;">auto (by area + volume)</div>
+    </div>
+  </div>
   <button id="buildBtn" onclick="buildRoutes()" style="display:none;">
     &#9650; Run SmartSort
     <span class="build-badge" id="buildCount"></span>
@@ -4019,11 +4028,13 @@ function renderPackageTable(){
   const pt=document.getElementById('packageTable');
   const sr=document.getElementById('statsRow');
   const es=document.getElementById('ssEmptyState');
+  const rcr=document.getElementById('routeCountRow');
   if(dz) dz.style.display='none';
   if(db) db.style.display='none';
   if(pt) pt.style.display='block';
   if(sr) sr.style.display='grid';
   if(es) es.style.display='none';
+  if(rcr) rcr.style.display='block';
   const totalPkgs=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
   const spEl=document.getElementById('statPkgs'); if(spEl) spEl.textContent=totalPkgs;
   const ssEl=document.getElementById('statStops'); if(ssEl) ssEl.textContent=packages.length;
@@ -4145,7 +4156,10 @@ async function refreshAllLiveETAs(){
   }
 }
 
-async function getTrafficAwareLegSeconds(originCoords,destCoords){
+// Returns {seconds, meters} for a single leg, or null on failure.
+// distanceMeters is captured here because the Routes API already returns it --
+// no extra API call needed to get real road distance.
+async function getTrafficAwareLegData(originCoords,destCoords){
   try{
     const resp=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
       method:'POST',
@@ -4164,9 +4178,9 @@ async function getTrafficAwareLegSeconds(originCoords,destCoords){
     });
     const data=await resp.json();
     if(data.routes&&data.routes[0]&&data.routes[0].duration){
-      // Routes API returns duration as a string like "165s" -- parse out the number of seconds
       const seconds=parseInt(data.routes[0].duration.replace('s',''));
-      if(!isNaN(seconds))return seconds;
+      const meters=parseInt(data.routes[0].distanceMeters)||0;
+      if(!isNaN(seconds))return{seconds,meters};
     }
     return null;
   }catch(e){
@@ -4174,31 +4188,57 @@ async function getTrafficAwareLegSeconds(originCoords,destCoords){
   }
 }
 
-// Real, traffic-aware total duration across every leg of a multi-stop route.
-// Falls back to the simple distance-based formula only for legs where the real API call fails.
-async function getTrafficAwareRouteSeconds(stops){
-  const MINUTES_PER_STOP_HANDLING=4; // time to park, walk, hand off package at each stop
-  let totalSeconds=0;
-  let anyRealData=false;
+// Legacy shim so existing callers (refreshLiveETA) still work unchanged.
+async function getTrafficAwareLegSeconds(originCoords,destCoords){
+  const r=await getTrafficAwareLegData(originCoords,destCoords);
+  return r?r.seconds:null;
+}
 
+// Returns {totalSeconds, roadMiles} for a multi-stop route.
+// Requests are batched 5 at a time to avoid overwhelming the API or the browser.
+// Falls back to 6-min/leg estimate for any leg where the API fails.
+// Road miles come free from distanceMeters already returned in the same API response.
+async function getTrafficAwareRouteData(stops){
+  const MINUTES_PER_STOP_HANDLING=4;
+  const LEG_BATCH=5; // parallel requests per batch
+  let totalSeconds=0;
+  let totalMeters=0;
+
+  // Build leg pairs
+  const legs=[];
   for(let i=0;i<stops.length-1;i++){
     if(stops[i].coords&&stops[i+1].coords){
-      const legSeconds=await getTrafficAwareLegSeconds(stops[i].coords,stops[i+1].coords);
-      if(legSeconds!==null){
-        totalSeconds+=legSeconds;
-        anyRealData=true;
-        continue;
-      }
+      legs.push({i,a:stops[i].coords,b:stops[i+1].coords});
+    } else {
+      legs.push({i,fallback:true});
     }
-    // Missing coords or API failure on this leg -- use a safe drive-time fallback
-    // instead of silently skipping the leg entirely
-    totalSeconds+=(6*60);
   }
 
-  // Add handling time for every stop, including the last one
-  totalSeconds+=stops.length*MINUTES_PER_STOP_HANDLING*60;
+  // Process in batches
+  for(let b=0;b<legs.length;b+=LEG_BATCH){
+    const batch=legs.slice(b,b+LEG_BATCH);
+    const results=await Promise.all(batch.map(leg=>
+      leg.fallback ? Promise.resolve(null) : getTrafficAwareLegData(leg.a,leg.b)
+    ));
+    for(const r of results){
+      if(r){
+        totalSeconds+=r.seconds;
+        totalMeters+=r.meters;
+      } else {
+        totalSeconds+=(6*60); // 6-min fallback for failed/missing legs
+      }
+    }
+  }
 
-  return totalSeconds;
+  totalSeconds+=stops.length*MINUTES_PER_STOP_HANDLING*60;
+  const roadMiles=totalMeters/1609.344; // meters → miles
+  return{totalSeconds,roadMiles};
+}
+
+// Legacy shim — existing callers that only want seconds still work.
+async function getTrafficAwareRouteSeconds(stops){
+  const r=await getTrafficAwareRouteData(stops);
+  return r.totalSeconds;
 }
 
 function haversineDistance(a,b){
@@ -4214,10 +4254,39 @@ function haversineDistance(a,b){
 // ── SMARTSORT CLUSTERING ENGINE ──
 // Goal: equal packages per driver, minimize miles, tight geographic zones, no overlapping territories
 
+// ── ROUTE COUNT ──
+// Priority: dispatcher manual override > geographic spread signal > package-count formula.
+// The dispatcher sets an optional override via the SmartSort drawer input.
+// If not set, uses max(formula_result, geographic_spread_signal).
+// Geographic spread: if stops span a large area (>15mi between extremes), that alone
+// warrants at least 2 routes even at low package counts, so one driver isn't sent
+// across the metro for 20 packages when two drivers could each get a compact zone.
+let ssRouteCountOverride=0; // 0 = auto; set by dispatcher input
+
+function computeRouteCount(totalPackages, geocodedStops){
+  // Dispatcher override takes absolute priority
+  if(ssRouteCountOverride>=1) return Math.min(ssRouteCountOverride, geocodedStops.length||1);
+
+  // Package-count formula (baseline)
+  const formulaK=Math.min(200,Math.max(1,Math.round(totalPackages/30)));
+
+  // Geographic spread signal: measure bounding box diagonal
+  if(geocodedStops&&geocodedStops.length>=2){
+    const lats=geocodedStops.map(s=>s.coords.lat);
+    const lngs=geocodedStops.map(s=>s.coords.lng);
+    const corner1={lat:Math.min(...lats),lng:Math.min(...lngs)};
+    const corner2={lat:Math.max(...lats),lng:Math.max(...lngs)};
+    const spreadMiles=haversineDistance(corner1,corner2);
+    // >15mi spread signals two distinct delivery zones; >35mi signals three
+    const spreadK=spreadMiles>35?3:spreadMiles>15?2:1;
+    return Math.max(formulaK,spreadK);
+  }
+  return formulaK;
+}
+
+// Legacy name kept so nothing else breaks
 function autoDetectDriverCount(totalPackages){
-  // Default: ~60 packages per driver — dispatcher can override
-  // Min 1, max 200 drivers
-  return Math.min(200, Math.max(1, Math.round(totalPackages / 30)));
+  return computeRouteCount(totalPackages, null);
 }
 
 function smartCluster(stops, k){
@@ -4293,36 +4362,62 @@ function smartCluster(stops, k){
   return clusters.filter(c=>c.length>0);
 }
 
+// ── WORKLOAD EQUALIZATION ──
+// Balances clusters by estimated driving time rather than raw package count.
+// Driving time proxy: haversine miles × 2.0 min/mi (urban average, no API call needed here —
+// Routes API corrects the actual ETA later). Service time: 4 min/stop.
+// Package count remains a secondary tiebreaker when workloads are equal.
+// A stop is only moved if doing so does NOT increase its travel distance by more than 25%
+// (preserves geographic zone integrity — we don't ruin a good cluster to fix a minor imbalance).
+function clusterWorkloadMinutes(cluster){
+  if(cluster.length===0)return 0;
+  const SERVICE_MIN_PER_STOP=4;
+  const DRIVE_MIN_PER_MILE=2.0;
+  let driveMin=0;
+  const geo=cluster.filter(s=>s.coords);
+  for(let i=0;i<geo.length-1;i++){
+    driveMin+=haversineDistance(geo[i].coords,geo[i+1].coords)*DRIVE_MIN_PER_MILE;
+  }
+  return driveMin+cluster.length*SERVICE_MIN_PER_STOP;
+}
+
 function equalizeClusterPackages(clusters, targetPkgs, centroids){
-  // Move packages from oversized clusters to undersized ones
-  // Always move to the geographically nearest cluster to preserve zone integrity
+  // Compute target workload in minutes
+  const totalWork=clusters.reduce((s,c)=>s+clusterWorkloadMinutes(c),0);
+  const targetWork=totalWork/Math.max(clusters.length,1);
+  const WORK_TOLERANCE=targetWork*0.20; // 20% tolerance on workload
   const MAX_BALANCE_PASSES=5;
-  const tolerance=Math.ceil(targetPkgs*0.15); // 15% tolerance
 
   for(let pass=0;pass<MAX_BALANCE_PASSES;pass++){
     let balanced=true;
     for(let i=0;i<clusters.length;i++){
-      const iPkgs=clusters[i].reduce((s,p)=>s+(parseInt(p.packages)||1),0);
-      if(iPkgs>targetPkgs+tolerance){
-        // Find nearest undersized cluster
+      const iWork=clusterWorkloadMinutes(clusters[i]);
+      if(iWork>targetWork+WORK_TOLERANCE){
+        // Find nearest underloaded cluster
         let bestJ=-1,bestDist=Infinity;
         for(let j=0;j<clusters.length;j++){
           if(j===i)continue;
-          const jPkgs=clusters[j].reduce((s,p)=>s+(parseInt(p.packages)||1),0);
-          if(jPkgs<targetPkgs-tolerance){
+          const jWork=clusterWorkloadMinutes(clusters[j]);
+          if(jWork<targetWork-WORK_TOLERANCE){
             const d=haversineDistance(centroids[i],centroids[j]);
             if(d<bestDist){bestDist=d;bestJ=j;}
           }
         }
         if(bestJ>=0){
-          // Move the stop in cluster i that is closest to cluster j's centroid
-          let moveIdx=0,moveDist=Infinity;
+          // Move the stop in cluster i closest to cluster j's centroid,
+          // but only if it doesn't increase that stop's nearest-neighbor distance by >25%
+          let moveIdx=-1,moveDist=Infinity;
           for(let s=0;s<clusters[i].length;s++){
-            const d=haversineDistance(clusters[i][s].coords,centroids[bestJ]);
-            if(d<moveDist){moveDist=d;moveIdx=s;}
+            if(!clusters[i][s].coords)continue;
+            const dToJ=haversineDistance(clusters[i][s].coords,centroids[bestJ]);
+            const dToI=haversineDistance(clusters[i][s].coords,centroids[i]);
+            // Only move if this stop is not deeply embedded in cluster i's zone
+            if(dToJ<moveDist&&dToJ<dToI*1.25){moveDist=dToJ;moveIdx=s;}
           }
-          clusters[bestJ].push(clusters[i].splice(moveIdx,1)[0]);
-          balanced=false;
+          if(moveIdx>=0){
+            clusters[bestJ].push(clusters[i].splice(moveIdx,1)[0]);
+            balanced=false;
+          }
         }
       }
     }
@@ -4344,6 +4439,41 @@ function nearestNeighborSort(stopsWithCoords){
     sorted.push(remaining.splice(nearestIdx,1)[0]);
   }
   return sorted;
+}
+
+// ── 2-OPT ROUTE IMPROVEMENT ──
+// Starts from the nearest-neighbor solution and iteratively reverses route segments
+// when doing so reduces total Haversine distance. Deterministic, O(n²) per pass,
+// capped at maxPasses to keep UI responsive. Stops are ONLY passed here if they
+// have coords; no-coord stops are handled separately and never reordered by 2-opt.
+function twoOptImprove(stops,maxPasses=10){
+  if(stops.length<4)return stops; // 2-opt needs at least 4 stops to do anything useful
+  const route=stops.slice();
+  const n=route.length;
+  const IMPROVEMENT_THRESHOLD=0.001; // miles — ignore sub-foot noise
+  let pass=0;
+  let improved=true;
+  while(improved&&pass<maxPasses){
+    improved=false;
+    pass++;
+    for(let i=1;i<n-1;i++){
+      for(let j=i+1;j<n;j++){
+        // Current cost: edge (i-1→i) + edge (j→j+1)
+        // Proposed: reverse segment [i..j], giving edge (i-1→j) + edge (i→j+1)
+        const a=route[i-1].coords,b=route[i].coords;
+        const c=route[j].coords,d=j+1<n?route[j+1].coords:null;
+        const currentCost=haversineDistance(a,b)+(d?haversineDistance(c,d):0);
+        const newCost=haversineDistance(a,c)+(d?haversineDistance(b,d):0);
+        if(newCost<currentCost-IMPROVEMENT_THRESHOLD){
+          // Reverse the segment between i and j (inclusive)
+          let lo=i,hi=j;
+          while(lo<hi){const tmp=route[lo];route[lo]=route[hi];route[hi]=tmp;lo++;hi--;}
+          improved=true;
+        }
+      }
+    }
+  }
+  return route;
 }
 
 async function buildAndAutoDispatch(){
@@ -4414,13 +4544,14 @@ async function buildRoutes(){
   const btn=document.getElementById('buildBtn');
   if(btn){btn.disabled=true;btn.innerHTML='&#9650; Geocoding stops... <span class="build-badge">SmartSort running</span>';}
 
+  // ── STEP 1: GEOCODING (batched, parallel within each batch) ──
   const geocoded=[];
   const failedAddresses=[];
   const BATCH_SIZE=10;
   for(let i=0;i<packages.length;i+=BATCH_SIZE){
     const batch=packages.slice(i,i+BATCH_SIZE);
     const done=Math.min(i+BATCH_SIZE,packages.length);
-    const pct=Math.round((done/packages.length)*60)+10; // 10-70% range for geocoding
+    const pct=Math.round((done/packages.length)*50)+5;
     if(btn){btn.innerHTML='&#9650; Geocoding '+done+' of '+packages.length+'... <span class="build-badge">SmartSort running</span>';}
     updateSmartSortStatus('&#9650; Geocoding '+done+' of '+packages.length+' addresses...', pct);
     const results=await Promise.all(batch.map(pkg=>geocodeAddress(pkg.address).then(coords=>({pkg,coords}))));
@@ -4430,35 +4561,43 @@ async function buildRoutes(){
     }
   }
 
-  if(btn){btn.innerHTML='&#9650; Sequencing route... <span class="build-badge">SmartSort running</span>';}
-  const sorted=[...nearestNeighborSort(geocoded),...failedAddresses];
-
-  const geoSortedOnly=sorted.filter(s=>s.coords);
-  let totalMiles=0;
-  for(let i=0;i<geoSortedOnly.length-1;i++){
-    totalMiles+=haversineDistance(geoSortedOnly[i].coords,geoSortedOnly[i+1].coords);
-  }
-
-  // SmartSort Clustering: split all stops into geographically tight driver routes
+  // ── STEP 2: CLUSTER COUNT (dispatcher override > geographic spread > package formula) ──
   const totalPkgCount=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
-  const numDrivers=autoDetectDriverCount(totalPkgCount);
-  const geoStops=sorted.filter(s=>s.coords);
-  const noGeoStops=sorted.filter(s=>!s.coords);
+  const numRoutes=computeRouteCount(totalPkgCount,geocoded);
+  const geoStops=geocoded;
+  const noGeoStops=failedAddresses;
+
+  // ── STEP 3: GEOGRAPHIC CLUSTERING ──
+  if(btn){btn.innerHTML='&#9650; Clustering into '+numRoutes+' route'+(numRoutes>1?'s':'')+' <span class="build-badge">SmartSort Clustering</span>';}
+  updateSmartSortStatus('&#9650; Clustering '+geoStops.length+' stops into '+numRoutes+' route'+(numRoutes>1?'s':'')+'...', 60);
 
   let clusters;
   if(geoStops.length===0){
     clusters=[noGeoStops];
-  } else if(numDrivers<=1){
-    clusters=[sorted];
+  } else if(numRoutes<=1){
+    clusters=[geoStops];
   } else {
-    clusters=smartCluster(geoStops,numDrivers);
-    clusters=clusters.map(c=>nearestNeighborSort(c));
+    clusters=smartCluster(geoStops,numRoutes);
     if(noGeoStops.length) clusters[clusters.length-1].push(...noGeoStops);
   }
 
-  if(btn){btn.innerHTML='&#9650; Building '+clusters.length+' routes... <span class="build-badge">SmartSort Clustering</span>';}
+  // ── STEP 4: SEQUENCE EACH CLUSTER — nearest-neighbor then 2-opt improvement ──
+  if(btn){btn.innerHTML='&#9650; Optimizing route sequence... <span class="build-badge">2-opt running</span>';}
+  updateSmartSortStatus('&#9650; Optimizing stop sequence (2-opt)...', 72);
 
-  ssRoutes=clusters.map((stops,ri)=>{
+  const optimizedClusters=clusters.map(cluster=>{
+    const geo=cluster.filter(s=>s.coords);
+    const noGeo=cluster.filter(s=>!s.coords);
+    if(geo.length===0)return noGeo;
+    const nn=nearestNeighborSort(geo);
+    const opt=twoOptImprove(nn);
+    return [...opt,...noGeo];
+  });
+
+  // ── STEP 5: BUILD ROUTE OBJECTS ──
+  if(btn){btn.innerHTML='&#9650; Building '+optimizedClusters.length+' routes... <span class="build-badge">SmartSort Clustering</span>';}
+
+  ssRoutes=optimizedClusters.map((stops,ri)=>{
     const routeId='RT-'+String(ri+1).padStart(3,'0');
     const masterCode='TP-ROUTE-'+Math.random().toString(36).slice(2,8).toUpperCase();
     const stopsWithId=stops.map((s,si)=>({
@@ -4466,35 +4605,43 @@ async function buildRoutes(){
       stop_number:si+1,
       smart_id:s.order_id+'-'+(si+1)
     }));
-    const clusterGeo=stopsWithId.filter(s=>s.coords);
-    let clusterMiles=0;
-    for(let i=0;i<clusterGeo.length-1;i++){
-      clusterMiles+=haversineDistance(clusterGeo[i].coords,clusterGeo[i+1].coords);
+    const geoSeq=stopsWithId.filter(s=>s.coords);
+    let hvMiles=0;
+    for(let i=0;i<geoSeq.length-1;i++){
+      hvMiles+=haversineDistance(geoSeq[i].coords,geoSeq[i+1].coords);
     }
+    const workloadMin=clusterWorkloadMinutes(stopsWithId);
     return{
       id:routeId,
       master_code:masterCode,
       stops:stopsWithId,
       total_packages:stops.reduce((s,p)=>s+(parseInt(p.packages)||1),0),
-      est_miles:clusterMiles.toFixed(1),
+      est_miles:hvMiles.toFixed(1),
+      road_miles:null,
+      workload_min:Math.round(workloadMin),
       color:SS_COLORS[ri%SS_COLORS.length]
     };
   });
+
   document.getElementById('statRoutes').textContent=ssRoutes.length;
   renderSSRoutes();
   if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
+
+  const optNote=' (NN+2-opt optimized)';
   if(failedAddresses.length){
-    toast(ssRoutes.length+' routes built. '+failedAddresses.length+' address(es) could not be located and were added at the end.','warn');
+    toast(ssRoutes.length+' routes built'+optNote+'. '+failedAddresses.length+' address(es) could not be located and were added at the end.','warn');
   }else{
-    toast(ssRoutes.length+' routes built, sequenced by real distance','ok');
+    toast(ssRoutes.length+' routes built'+optNote,'ok');
   }
-  // Log clustering run to agent memory
+
   logAgentMemory('SmartSort','cluster_created',null,null,{
     total_stops:packages.length,
-    total_packages:packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0),
+    total_packages:totalPkgCount,
     clusters_created:ssRoutes.length,
     failed_geocodes:failedAddresses.length,
-    avg_packages_per_cluster:Math.round(ssRoutes.reduce((s,r)=>s+r.total_packages,0)/ssRoutes.length)
+    route_count_source:ssRouteCountOverride>=1?'dispatcher_override':'auto',
+    optimizer:'nn+2opt',
+    avg_workload_min:Math.round(ssRoutes.reduce((s,r)=>s+r.workload_min,0)/ssRoutes.length)
   },'completed');
 }
 
@@ -4514,6 +4661,59 @@ function viewRouteOnMap(routeId){
 
   window.open(url,'_blank');
   toast('Opening '+route.stops.length+' stops on Google Maps in sequence order','ok');
+}
+
+// ── DRIVER RECOMMENDATION ENGINE ──
+// Scores available drivers against a route using real data that already exists:
+//   - driver's most recent GPS position (driver_locations table)
+//   - number of active in_transit jobs (jobs table, already in memory)
+//   - haversine distance from driver to route pickup (no extra API calls)
+// Returns an array of {driver, deadheadMiles, activeJobs, score} sorted best-first.
+// This is a scoring system, not auto-assignment. The dispatcher sees the suggestion
+// and assigns manually. The first-accept workflow remains unchanged as a fallback.
+function scoreDriversForRoute(route){
+  if(!driverRoster||!driverRoster.length)return[];
+  const pickup=route.stops[0];
+  if(!pickup||!pickup.coords)return[];
+
+  // Count active jobs per driver from the in-memory jobs array
+  const activeJobCount={};
+  (jobs||[]).forEach(j=>{
+    if(j.driver_name&&(j.status==='in_transit'||j.status==='assigned')){
+      activeJobCount[j.driver_name]=(activeJobCount[j.driver_name]||0)+1;
+    }
+  });
+
+  const scored=driverRoster.map(driver=>{
+    const loc=driverLastLocation[driver.name]; // lat/lng from driver_locations, already fetched
+    const activeJobs=activeJobCount[driver.name]||0;
+
+    // Deadhead: haversine from driver to pickup (proxy for drive time at ~30mph urban)
+    const deadheadMiles=loc?haversineDistance(loc,pickup.coords):null;
+    const deadheadMin=deadheadMiles!==null?deadheadMiles*2.0:999; // 2 min/mile urban proxy
+
+    // Score: lower is better. Busy drivers get a 15-min penalty per active job.
+    const score=deadheadMin+(activeJobs*15);
+
+    return{driver:driver.name,deadheadMiles,deadheadMin,activeJobs,score,hasGps:!!loc};
+  });
+
+  return scored.sort((a,b)=>a.score-b.score);
+}
+
+function renderDriverSuggestion(route){
+  const candidates=scoreDriversForRoute(route);
+  if(!candidates.length)return'';
+  const best=candidates[0];
+  const reason=best.hasGps
+    ?(best.deadheadMiles!==null?Math.round(best.deadheadMiles*10)/10+' mi away':'GPS location known')
+    :'No GPS yet';
+  const workNote=best.activeJobs>0?` · ${best.activeJobs} active route${best.activeJobs>1?'s':''}`:' · Available';
+  return `<div style="margin:8px 0 0;padding:8px 12px;background:rgba(141,92,255,.07);border:1px solid rgba(141,92,255,.2);border-radius:8px;font-size:0.769rem;">
+    <span style="font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:0.692rem;">Suggested</span>
+    <div style="font-weight:700;color:var(--text);margin-top:3px;">${best.driver}</div>
+    <div style="color:var(--muted);font-family:var(--mono);font-size:0.692rem;">${reason}${workNote}</div>
+  </div>`;
 }
 
 function renderSSRoutes(){
@@ -4540,10 +4740,15 @@ function renderSSRoutes(){
             <div class="rc-num-l">Packages</div>
           </div>
           <div class="rc-num">
-            <div class="rc-num-n" style="color:var(--green);">${r.est_miles}</div>
-            <div class="rc-num-l">Est. Miles</div>
+            <div class="rc-num-n" style="color:var(--green);">${r.road_miles||r.est_miles}</div>
+            <div class="rc-num-l">${r.road_miles?'Road Miles':'Est. Miles'}</div>
+          </div>
+          <div class="rc-num">
+            <div class="rc-num-n" style="color:var(--purple);">${r.workload_min}</div>
+            <div class="rc-num-l">Est. Min</div>
           </div>
         </div>
+        ${renderDriverSuggestion(r)}
       </div>
       <div class="rc-stops">
         ${r.stops.map((s,i)=>`
@@ -4564,7 +4769,7 @@ function renderSSRoutes(){
       </div>
       <button onclick="viewRouteOnMap('${r.id}')" style="width:100%;padding:10px;margin-top:8px;border-radius:10px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-family:var(--sans);font-weight:700;font-size:0.846rem;cursor:pointer;">&#128506; View Route on Map</button>
       <div class="rc-footer">
-        <div class="rc-dist">&#9654; ${r.est_miles} miles estimated</div>
+        <div class="rc-dist">&#9654; ${r.road_miles?r.road_miles+' road miles':r.est_miles+' mi (haversine)'} · ~${r.workload_min} min</div>
         <button class="btn-assign" onclick="assignSSRoute('${r.id}')">Assign Driver &rarr;</button>
       </div>
     </div>`).join('');
@@ -4574,9 +4779,16 @@ async function assignSSRoute(routeId){
   const route=ssRoutes.find(r=>r.id===routeId);
   if(!route){toast('Route not found','warn');return;}
 
+  // Get real traffic-aware ETA AND real road distance in one API call set (batched).
+  // distanceMeters comes free from the same Routes API response we already call for ETA —
+  // no additional API calls needed to get actual road miles.
   const fallbackMinutes=15 + (parseFloat(route.est_miles)||0)*3 + route.stops.length*5;
-  const realTrafficSeconds=await getTrafficAwareRouteSeconds(route.stops);
-  const estimatedMinutes=realTrafficSeconds!==null ? (realTrafficSeconds/60) : fallbackMinutes;
+  const routeData=await getTrafficAwareRouteData(route.stops);
+  const estimatedMinutes=routeData.totalSeconds>0 ? (routeData.totalSeconds/60) : fallbackMinutes;
+  const roadMiles=routeData.roadMiles>0 ? routeData.roadMiles : parseFloat(route.est_miles)||0;
+
+  // Update the in-memory route with real road miles for display
+  route.road_miles=roadMiles.toFixed(1);
 
   const job={
     title:'Surge Route '+route.id,
@@ -4600,7 +4812,7 @@ async function assignSSRoute(routeId){
     total_stops: route.stops.length,
     total_packages: route.total_packages,
     price: (route.stops.length * 8 + route.total_packages * 2).toFixed(2),
-    distance_miles: parseFloat(route.est_miles)||0,
+    distance_miles: parseFloat(roadMiles.toFixed(2)),
     estimated_delivery_at: new Date(Date.now() + estimatedMinutes * 60000).toISOString(),
     original_eta_at: new Date(Date.now() + estimatedMinutes * 60000).toISOString(),
     created_at: new Date().toISOString()
@@ -4634,6 +4846,8 @@ async function assignSSRoute(routeId){
       document.getElementById('packageTable').style.display='none';
       document.getElementById('statsRow').style.display='none';
       document.getElementById('buildBtn').style.display='none';
+      const rcrEl=document.getElementById('routeCountRow');if(rcrEl)rcrEl.style.display='none';
+      ssRouteCountOverride=0;const rci=document.getElementById('routeCountInput');if(rci)rci.value='';
       document.getElementById('ssEmptyState').style.display='flex';
       document.getElementById('routeGrid').style.display='none';
     }
