@@ -17,25 +17,17 @@ body::before{content:'';position:fixed;inset:0;
   background:radial-gradient(ellipse at 60% 0%,rgba(25,183,239,.08) 0%,transparent 50%),
     radial-gradient(ellipse at 0% 80%,rgba(83,255,136,.04) 0%,transparent 40%);
   pointer-events:none;z-index:0;}
-
-/* NAV */
 .nav{height:56px;background:rgba(1,14,33,.97);border-bottom:1px solid rgba(25,183,239,.1);
   display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10;}
 .nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
 .nav-wordmark{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:500;letter-spacing:1px;}
-
-/* MAIN */
 .main{max-width:560px;margin:0 auto;padding:32px 20px 60px;position:relative;z-index:1;}
-
-/* STATUS HEADER */
 .status-header{text-align:center;padding:32px 24px 24px;}
 .status-icon{width:72px;height:72px;border-radius:50%;margin:0 auto 16px;
   display:flex;align-items:center;justify-content:center;font-size:32px;}
 .status-label{font-size:24px;font-weight:800;margin-bottom:6px;}
 .status-sub{font-size:14px;color:var(--muted);}
 .status-id{font-family:var(--mono);font-size:10px;color:var(--blue);margin-top:8px;letter-spacing:.08em;}
-
-/* PROGRESS BAR */
 .progress-wrap{margin:0 0 24px;}
 .progress-steps{display:flex;align-items:center;justify-content:space-between;position:relative;padding:0 8px;}
 .progress-steps::before{content:'';position:absolute;top:14px;left:8px;right:8px;height:2px;
@@ -52,8 +44,6 @@ body::before{content:'';position:fixed;inset:0;
 .ps-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.08em;
   text-transform:uppercase;text-align:center;white-space:nowrap;}
 .ps-lbl.active{color:var(--blue);font-weight:700;}
-
-/* CARDS */
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;
   padding:20px;margin-bottom:14px;}
 .card-title{font-family:var(--mono);font-size:9px;color:var(--muted);
@@ -63,21 +53,14 @@ body::before{content:'';position:fixed;inset:0;
 .field-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);
   letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;}
 .field-val{font-size:14px;font-weight:600;color:rgba(238,244,255,.95);line-height:1.5;}
-
-/* DRIVER CARD */
 .driver-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
   padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px;}
-.driver-avatar{width:48px;height:48px;border-radius:50%;background:rgba(25,183,239,.1);
-  border:2px solid rgba(25,183,239,.2);display:flex;align-items:center;
-  justify-content:center;font-size:20px;flex-shrink:0;}
 .driver-name{font-size:16px;font-weight:800;margin-bottom:4px;}
 .driver-status{font-family:var(--mono);font-size:9px;color:var(--green);
   letter-spacing:.08em;display:flex;align-items:center;gap:6px;}
-.driver-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
-  animation:pulse 2s infinite;}
+.driver-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+.driver-stale{color:var(--orange);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
-
-/* RATING */
 .rating-card{background:var(--card);border:1px solid rgba(201,168,76,.15);
   border-radius:16px;padding:20px;margin-bottom:14px;display:none;}
 .rating-card.on{display:block;}
@@ -87,13 +70,9 @@ body::before{content:'';position:fixed;inset:0;
 .star{font-size:28px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .15s;}
 .star.on{color:#f5c518;}
 .rating-thanks{font-size:13px;color:var(--muted);margin-top:8px;display:none;}
-
-/* POLL */
 .poll-bar{display:flex;align-items:center;justify-content:center;gap:8px;
   padding:12px;font-family:var(--mono);font-size:10px;color:var(--muted);}
 .poll-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
-
-/* ERROR / LOADING */
 .loading{text-align:center;padding:80px 24px;}
 .loading-label{font-family:var(--mono);font-size:11px;color:var(--muted);
   letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px;}
@@ -101,33 +80,19 @@ body::before{content:'';position:fixed;inset:0;
   border-radius:14px;padding:24px;text-align:center;}
 .error-title{font-size:16px;font-weight:800;color:var(--red);margin-bottom:8px;}
 .error-sub{font-size:13px;color:var(--muted);}
-
-/* MAP */
-.map-container{border-radius:16px;overflow:hidden;margin-bottom:14px;
-  position:relative;height:240px;background:var(--card2);border:1px solid var(--border);}
-.map-inner{width:100%;height:100%;position:relative;overflow:hidden;}
-.map-grid-bg{position:absolute;inset:0;
-  background:linear-gradient(rgba(25,183,239,.04) 1px,transparent 1px),
-  linear-gradient(90deg,rgba(25,183,239,.04) 1px,transparent 1px);
-  background-size:28px 28px;}
-.map-road-h{position:absolute;height:3px;background:rgba(255,255,255,.06);border-radius:2px;}
-.map-road-v{position:absolute;width:3px;background:rgba(255,255,255,.06);border-radius:2px;}
-.map-pin{position:absolute;display:flex;flex-direction:column;align-items:center;}
-.map-pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--bg);}
-.map-pin-ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid currentColor;
-  opacity:.3;animation:ping 2s infinite;}
-@keyframes ping{0%{transform:scale(1);opacity:.4;}100%{transform:scale(2.2);opacity:0;}}
-.map-label-bar{position:absolute;bottom:0;left:0;right:0;padding:10px 14px;
+/* Live map container */
+#trackMapWrap{height:260px;border-radius:16px;overflow:hidden;margin-bottom:14px;
+  position:relative;background:var(--card2);border:1px solid var(--border);}
+#trackMap{width:100%;height:100%;}
+.map-badge-bar{position:absolute;bottom:0;left:0;right:0;padding:8px 14px;
   background:linear-gradient(transparent,rgba(1,14,33,.9));
-  display:flex;align-items:center;justify-content:space-between;}
-.map-label-txt{font-family:var(--mono);font-size:9px;color:rgba(238,244,255,.6);letter-spacing:.1em;}
-.map-label-badge{font-family:var(--mono);font-size:8px;font-weight:700;
-  padding:3px 8px;border-radius:8px;background:rgba(25,183,239,.1);
-  border:1px solid rgba(25,183,239,.25);color:var(--blue);}
+  display:flex;align-items:center;justify-content:space-between;pointer-events:none;}
+.map-badge-l{font-family:var(--mono);font-size:9px;color:rgba(238,244,255,.7);letter-spacing:.1em;}
+.map-badge-r{font-family:var(--mono);font-size:8px;font-weight:700;padding:3px 8px;border-radius:8px;
+  background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);}
 </style>
 </head>
 <body>
-
 <nav>
   <a class="nav-logo" href="index.html">
     <svg width="13" height="21" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
@@ -149,13 +114,15 @@ body::before{content:'';position:fixed;inset:0;
   </div>
   <div class="poll-bar" id="pollBar" style="display:none;">
     <div class="poll-dot"></div>
-    <span>Live updates every 10 seconds</span>
+    <span>Live updates every 15 seconds</span>
   </div>
 </div>
 
 <script>
 const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+// Google Maps API key — same key already used in dispatcher.html
+const GKEY='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDS'+'NszCZk8';
 
 function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
 async function sbGet(p){
@@ -170,11 +137,190 @@ async function sbPatch(p,b){
   if(!r.ok)throw new Error(await r.text());
 }
 
-// Get job ID from URL
 const params=new URLSearchParams(window.location.search);
 const jobParam=params.get('job')||params.get('id')||params.get('tp');
 let currentJob=null;
 let deliveryRating=0;
+
+// ── GOOGLE MAPS JS API ──
+// Loaded dynamically (same pattern as dispatcher.html fleet map).
+// Only loaded once; subsequent calls reuse the same script.
+let trackMap=null;
+let driverMarker=null;
+let deliveryMarker=null;
+let mapsReady=false;
+
+function loadGMaps(){
+  return new Promise(resolve=>{
+    if(window.google&&window.google.maps){mapsReady=true;resolve();return;}
+    const s=document.createElement('script');
+    s.src='https://maps.googleapis.com/maps/api/js?key='+GKEY;
+    s.onload=()=>{mapsReady=true;resolve();};
+    document.head.appendChild(s);
+  });
+}
+
+// STALE_GPS_MINUTES: if driver_locations.updated_at is older than this, show stale badge
+const STALE_GPS_MINUTES=5;
+
+function gpsIsStale(updatedAt){
+  if(!updatedAt)return true;
+  return(Date.now()-new Date(updatedAt).getTime())>STALE_GPS_MINUTES*60000;
+}
+
+// Initialize the Google Maps instance inside #trackMap div.
+// Called once after renderTracking inserts #trackMapWrap into the DOM.
+async function initTrackMap(deliveryCoords, driverCoords){
+  const el=document.getElementById('trackMap');
+  if(!el)return;
+  await loadGMaps();
+  if(!window.google||!window.google.maps)return;
+
+  // Center on driver if available, else delivery address
+  const center=driverCoords||deliveryCoords||{lat:33.749,lng:-84.388};
+
+  // Dark-mode map styling to match TackPath UI
+  const darkStyle=[
+    {elementType:'geometry',stylers:[{color:'#0d2135'}]},
+    {elementType:'labels.text.fill',stylers:[{color:'#8a9bb0'}]},
+    {elementType:'labels.text.stroke',stylers:[{color:'#071828'}]},
+    {featureType:'road',elementType:'geometry',stylers:[{color:'#1a3050'}]},
+    {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#19b7ef',lightness:-60}]},
+    {featureType:'water',elementType:'geometry',stylers:[{color:'#010e21'}]},
+    {featureType:'poi',stylers:[{visibility:'off'}]},
+    {featureType:'transit',stylers:[{visibility:'off'}]},
+  ];
+
+  trackMap=new google.maps.Map(el,{
+    zoom:13,
+    center,
+    mapTypeId:'roadmap',
+    styles:darkStyle,
+    disableDefaultUI:true,
+    zoomControl:true,
+  });
+
+  // Delivery destination marker (fixed pin — customer's stop address)
+  if(deliveryCoords){
+    deliveryMarker=new google.maps.Marker({
+      position:deliveryCoords,
+      map:trackMap,
+      title:'Delivery address',
+      icon:{
+        path:google.maps.SymbolPath.CIRCLE,
+        scale:10,
+        fillColor:'#53ff88',
+        fillOpacity:1,
+        strokeColor:'#fff',
+        strokeWeight:2
+      }
+    });
+  }
+
+  // Driver position marker
+  if(driverCoords){
+    driverMarker=new google.maps.Marker({
+      position:driverCoords,
+      map:trackMap,
+      title:'Your driver',
+      icon:{
+        path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+        scale:5,
+        fillColor:'#19b7ef',
+        fillOpacity:1,
+        strokeColor:'#fff',
+        strokeWeight:2,
+        rotation:0
+      }
+    });
+  }
+
+  // Fit bounds to show both markers if both exist
+  if(deliveryCoords&&driverCoords){
+    const bounds=new google.maps.LatLngBounds();
+    bounds.extend(deliveryCoords);
+    bounds.extend(driverCoords);
+    trackMap.fitBounds(bounds,{top:30,right:30,bottom:30,left:30});
+  }
+}
+
+// Update driver marker position (called every GPS refresh)
+function updateDriverMarker(lat,lng,stale){
+  if(!window.google||!trackMap)return;
+  const pos={lat:parseFloat(lat),lng:parseFloat(lng)};
+  if(driverMarker){
+    driverMarker.setPosition(pos);
+    driverMarker.setIcon({
+      path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+      scale:5,
+      fillColor:stale?'#ff961e':'#19b7ef',
+      fillOpacity:1,
+      strokeColor:'#fff',
+      strokeWeight:2,
+    });
+  } else if(trackMap){
+    driverMarker=new google.maps.Marker({
+      position:pos,
+      map:trackMap,
+      title:'Your driver',
+      icon:{
+        path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+        scale:5,
+        fillColor:stale?'#ff961e':'#19b7ef',
+        fillOpacity:1,
+        strokeColor:'#fff',
+        strokeWeight:2,
+      }
+    });
+  }
+}
+
+// Fetch the latest driver GPS for this job from driver_locations.
+// Uses job_id to scope the query — customers cannot query other jobs' locations.
+// Returns {lat, lng, updated_at} or null.
+async function fetchDriverGps(jobId){
+  try{
+    const rows=await sbGet('driver_locations?job_id=eq.'+jobId+'&order=updated_at.desc&limit=1&select=lat,lng,updated_at');
+    if(rows&&rows.length)return rows[0];
+    return null;
+  }catch(e){return null;}
+}
+
+// Refresh the driver marker from the latest GPS ping.
+// Called on a 15-second interval once a job is in transit.
+async function refreshDriverPosition(){
+  if(!currentJob||!trackMap)return;
+  const gps=await fetchDriverGps(currentJob.id);
+  if(!gps)return;
+  const stale=gpsIsStale(gps.updated_at);
+  updateDriverMarker(gps.lat,gps.lng,stale);
+
+  // Update stale badge in UI without re-rendering the whole page
+  const staleBadge=document.getElementById('gpsStaleBadge');
+  if(staleBadge){
+    if(stale){
+      const minsAgo=Math.round((Date.now()-new Date(gps.updated_at).getTime())/60000);
+      staleBadge.textContent='Last seen '+minsAgo+' min ago';
+      staleBadge.style.display='inline';
+    } else {
+      staleBadge.style.display='none';
+    }
+  }
+}
+
+// Get geocoded coords for a delivery address using Google Geocoding API.
+// Used to place the delivery pin on the map.
+async function geocodeForMap(address){
+  try{
+    const r=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(address)+'&key='+GKEY);
+    const d=await r.json();
+    if(d.status==='OK'&&d.results[0]){
+      const loc=d.results[0].geometry.location;
+      return{lat:loc.lat,lng:loc.lng};
+    }
+    return null;
+  }catch(e){return null;}
+}
 
 function statusConfig(s){
   const map={
@@ -191,18 +337,27 @@ function statusConfig(s){
 
 const STEPS=['Order Placed','Driver Assigned','Picked Up','Delivered'];
 
-function renderTracking(job){
+async function renderTracking(job){
   currentJob=job;
   const sc=statusConfig(job.status);
   const step=sc.step;
   const pct=step<=0?0:step>=4?100:Math.round((step/4)*100);
 
+  // ETA display
+  let etaText='';
+  if(job.estimated_delivery_at&&job.status!=='delivered'&&job.status!=='cancelled'){
+    const etaMins=Math.round((new Date(job.estimated_delivery_at).getTime()-Date.now())/60000);
+    if(etaMins>0) etaText=etaMins+' min away';
+    else if(etaMins>-15) etaText='Arriving now';
+  }
+
   let html=`
     <div class="status-header">
-      ${sc.icon ? `<div class="status-icon" style="background:rgba(25,183,239,.08);border:2px solid rgba(25,183,239,.15);"><span style="color:${sc.color};">${sc.icon}</span></div>` : ''}
+      ${sc.icon?`<div class="status-icon" style="background:rgba(25,183,239,.08);border:2px solid rgba(25,183,239,.15);"><span style="color:${sc.color};">${sc.icon}</span></div>`:''}
       <div class="status-label" style="color:${sc.color};">${sc.label}</div>
       <div class="status-sub">${job.title||'Your Delivery'}</div>
       <div class="status-id">TP-${(job.id||'').slice(0,8).toUpperCase()}</div>
+      ${etaText?`<div style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--blue);">${etaText}</div>`:''}
     </div>
 
     <div class="progress-wrap">
@@ -216,22 +371,20 @@ function renderTracking(job){
       </div>
     </div>`;
 
-  // Map
+  // Map container — Google Maps JS API will initialize inside #trackMap
   html+=`
-    <div class="map-container" style="height:260px;border-radius:16px;overflow:hidden;margin-bottom:14px;position:relative;">
-      <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d106544!2d-84.3880!3d33.7490!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sus!4v1718364800000!5m2!1sen!2sus"
-        width="100%" height="100%" style="border:0;filter:invert(.9) hue-rotate(180deg);" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
-      <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 14px;
-        background:linear-gradient(transparent,rgba(1,14,33,.9));
-        display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-family:var(--mono);font-size:9px;color:rgba(238,244,255,.7);letter-spacing:.1em;">&#128205; Live Map</div>
-        <div style="font-family:var(--mono);font-size:8px;font-weight:700;padding:3px 8px;border-radius:8px;
-          background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);">SmartTrack</div>
+    <div id="trackMapWrap">
+      <div id="trackMap"></div>
+      <div class="map-badge-bar">
+        <div class="map-badge-l">&#128205; Live Map
+          <span id="gpsStaleBadge" style="display:none;margin-left:8px;color:var(--orange);font-size:8px;"></span>
+        </div>
+        <div class="map-badge-r">SmartTrack</div>
       </div>
     </div>`;
 
-  // Driver card if assigned
-  if(job.driver_name && job.status!=='routing' && job.status!=='pending'){
+  // Driver card — only show driver name, no phone/internal data
+  if(job.driver_name&&job.status!=='routing'&&job.status!=='pending'){
     html+=`
     <div class="driver-card">
       <div>
@@ -241,21 +394,21 @@ function renderTracking(job){
     </div>`;
   }
 
-  // Delivery details
+  // Delivery details — dropoff address only (not surge_stops, not other customer data)
   html+=`
     <div class="card">
       <div class="card-title">Delivery Details</div>
       <div class="field">
-        <div class="field-lbl">Pickup</div>
-        <div class="field-val">${job.pickup_address||'--'}</div>
-      </div>
-      <div class="field">
-        <div class="field-lbl">Dropoff</div>
+        <div class="field-lbl">Delivering to</div>
         <div class="field-val">${job.dropoff_address||'--'}</div>
       </div>
       ${job.total_packages?`<div class="field">
         <div class="field-lbl">Packages</div>
         <div class="field-val">${job.total_packages}</div>
+      </div>`:''}
+      ${job.estimated_delivery_at&&job.status!=='delivered'?`<div class="field">
+        <div class="field-lbl">Estimated Delivery</div>
+        <div class="field-val">${new Date(job.estimated_delivery_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
       </div>`:''}
     </div>`;
 
@@ -277,18 +430,40 @@ function renderTracking(job){
 
   document.getElementById('content').innerHTML=html;
   document.getElementById('pollBar').style.display=job.status==='delivered'?'none':'flex';
+
+  // ── Initialize live map after DOM is ready ──
+  // Geocode the delivery address for the destination pin.
+  // Fetch the latest driver GPS for the driver marker.
+  const deliveryAddr=job.dropoff_address||job.pickup_address;
+  const [deliveryCoords, gps]=await Promise.all([
+    deliveryAddr?geocodeForMap(deliveryAddr):Promise.resolve(null),
+    job.id?fetchDriverGps(job.id):Promise.resolve(null)
+  ]);
+  const driverCoords=gps?{lat:parseFloat(gps.lat),lng:parseFloat(gps.lng)}:null;
+  await initTrackMap(deliveryCoords,driverCoords);
+
+  // Show stale badge if GPS already stale at render time
+  if(gps&&gpsIsStale(gps.updated_at)){
+    const minsAgo=Math.round((Date.now()-new Date(gps.updated_at).getTime())/60000);
+    const badge=document.getElementById('gpsStaleBadge');
+    if(badge){badge.textContent='Last seen '+minsAgo+' min ago';badge.style.display='inline';}
+  }
 }
 
 function setCustRating(n){
   deliveryRating=n;
   document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));
-  // Save to Supabase
   if(currentJob){
     sbPatch('jobs?id=eq.'+currentJob.id,{driver_rating:n}).then(()=>{
-      document.getElementById('ratingThanks').style.display='block';
+      const t=document.getElementById('ratingThanks');
+      if(t)t.style.display='block';
     }).catch(()=>{});
   }
 }
+
+// Load job with a narrow column selector — customers only get fields needed for tracking.
+// surge_stops (all other customers' data) is explicitly excluded.
+const SAFE_COLUMNS='id,title,status,pickup_address,dropoff_address,driver_name,total_packages,price,estimated_delivery_at,driver_rating';
 
 async function loadJob(){
   if(!jobParam){
@@ -301,11 +476,9 @@ async function loadJob(){
   }
 
   try{
-    // Try by full ID first, then by partial match
-    let jobs=await sbGet('jobs?id=eq.'+jobParam+'&select=*');
+    let jobs=await sbGet('jobs?id=eq.'+jobParam+'&select='+SAFE_COLUMNS);
     if(!jobs.length){
-      // Try searching by partial ID
-      jobs=await sbGet('jobs?id=like.'+jobParam+'%&select=*&limit=1');
+      jobs=await sbGet('jobs?id=like.'+jobParam+'%25&select='+SAFE_COLUMNS+'&limit=1');
     }
     if(!jobs.length){
       document.getElementById('content').innerHTML=`
@@ -315,7 +488,7 @@ async function loadJob(){
         </div>`;
       return;
     }
-    renderTracking(jobs[0]);
+    await renderTracking(jobs[0]);
   }catch(e){
     document.getElementById('content').innerHTML=`
       <div class="error-card">
@@ -325,43 +498,59 @@ async function loadJob(){
   }
 }
 
-// Demo mode -- if no job param, run a live simulation
-const DEMO_STATUSES = ['routing','pending','assigned','customer_confirmed','in_transit','delivered'];
-let demoStep = 0;
-
-const demoJob = {
-  id: 'demo-0000-0000-0000-tackpath2026',
-  title: 'Marcus Johnson — Midtown to Buckhead',
-  status: 'routing',
-  pickup_address: '1180 Peachtree St NE, Atlanta GA 30309',
-  dropoff_address: '3500 Lenox Rd NE, Atlanta GA 30326',
-  driver_name: 'Marcus J.',
-  total_packages: 2,
-  price: 44,
-  driver_rating: null,
-  driver_rating_note: null
+// ── DEMO MODE — no job param in URL ──
+const DEMO_STATUSES=['routing','pending','assigned','customer_confirmed','in_transit','delivered'];
+let demoStep=0;
+const demoJob={
+  id:'demo-0000-0000-0000-tackpath2026',
+  title:'Marcus Johnson — Midtown to Buckhead',
+  status:'routing',
+  pickup_address:'1180 Peachtree St NE, Atlanta GA 30309',
+  dropoff_address:'3500 Lenox Rd NE, Atlanta GA 30326',
+  driver_name:'Marcus J.',
+  total_packages:2,
+  price:44,
+  driver_rating:null
 };
 
 if(!jobParam){
-  // Demo mode
   renderTracking(demoJob);
-  document.getElementById('pollBar').style.display = 'flex';
-  document.getElementById('pollBar').innerHTML = '<div class="poll-dot"></div><span>Demo mode — status updating automatically</span>';
+  document.getElementById('pollBar').style.display='flex';
+  document.getElementById('pollBar').innerHTML='<div class="poll-dot"></div><span>Demo mode — status updating automatically</span>';
   setInterval(()=>{
-    demoStep = (demoStep + 1) % DEMO_STATUSES.length;
-    demoJob.status = DEMO_STATUSES[demoStep];
-    if(demoStep === DEMO_STATUSES.length - 1){
-      demoJob.driver_rating = null; // show rating on delivered
-    }
+    demoStep=(demoStep+1)%DEMO_STATUSES.length;
+    demoJob.status=DEMO_STATUSES[demoStep];
     renderTracking(demoJob);
-  }, 3000);
+  },3000);
 } else {
   loadJob();
-  setInterval(()=>{
-    if(currentJob&&currentJob.status!=='delivered'&&currentJob.status!=='cancelled'){
-      loadJob();
+
+  // Poll: reload job status every 15 seconds
+  const jobPoll=setInterval(async()=>{
+    if(!currentJob||currentJob.status==='delivered'||currentJob.status==='cancelled'){
+      clearInterval(jobPoll);
+      return;
     }
-  },10000);
+    try{
+      const jobs=await sbGet('jobs?id=eq.'+currentJob.id+'&select='+SAFE_COLUMNS);
+      if(jobs&&jobs.length){
+        const updated=jobs[0];
+        const statusChanged=updated.status!==currentJob.status;
+        const etaChanged=updated.estimated_delivery_at!==currentJob.estimated_delivery_at;
+        if(statusChanged||etaChanged){
+          await renderTracking(updated);
+        } else {
+          // No status change — just refresh the driver marker silently
+          await refreshDriverPosition();
+          // Update ETA display if it changed
+          currentJob.estimated_delivery_at=updated.estimated_delivery_at;
+        }
+      }
+    }catch(e){}
+  },15000);
+
+  // Also refresh driver position on its own 15s cycle (aligned with job poll)
+  setInterval(refreshDriverPosition,15000);
 }
 </script>
 </body>
