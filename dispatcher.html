@@ -4007,7 +4007,7 @@ function loadDemoData(){
 }
 
 function downloadTemplate(){
-  const csv='order_id,recipient,address,packages\nTP1001,Jane Doe,123 Main St Atlanta GA,1\nTP1002,John Smith,456 Oak Ave Atlanta GA,2';
+  const csv='order_id,recipient,address,packages,tracking_number\nTP1001,Jane Doe,123 Main St Atlanta GA,1,\nTP1002,John Smith,456 Oak Ave Atlanta GA,2,';
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
