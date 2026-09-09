@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TackPath · Track Your Package</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#19b7ef;--green:#53ff88;--orange:#ff961e;--purple:#8d5cff;--red:#ff4444;--gold:#c9a84c;
+  --bg:#010e21;--card:#071828;--card2:#0d2135;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:#eef4ff;--muted:rgba(238,244,255,.65);--mono:'DM Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 60% 0%,rgba(25,183,239,.08) 0%,transparent 50%),
+    radial-gradient(ellipse at 0% 80%,rgba(83,255,136,.04) 0%,transparent 40%);
+  pointer-events:none;z-index:0;}
+
+/* ── Nav ── */
+.nav{height:56px;background:rgba(1,14,33,.97);border-bottom:1px solid rgba(25,183,239,.1);
+  display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:10;}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.nav-wordmark{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:500;letter-spacing:1px;}
+
+/* ── Layout ── */
+.main{max-width:520px;margin:0 auto;padding:40px 20px 80px;position:relative;z-index:1;}
+
+/* ── Search box ── */
+.search-wrap{text-align:center;padding:48px 0 40px;}
+.search-title{font-size:26px;font-weight:800;margin-bottom:6px;}
+.search-sub{font-size:14px;color:var(--muted);margin-bottom:32px;}
+.search-row{display:flex;gap:10px;max-width:420px;margin:0 auto;}
+.search-input{
+  flex:1;padding:14px 18px;border-radius:12px;
+  border:1.5px solid var(--border2);background:var(--card);
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;
+  letter-spacing:.03em;outline:none;transition:border-color .2s;
+}
+.search-input::placeholder{color:var(--muted);font-weight:400;}
+.search-input:focus{border-color:var(--blue);}
+.search-btn{
+  padding:14px 22px;border-radius:12px;border:none;
+  background:var(--blue);color:#fff;font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;
+  transition:opacity .15s;
+}
+.search-btn:hover{opacity:.85;}
+.search-btn:disabled{opacity:.5;cursor:not-allowed;}
+.search-btn.loading::after{content:' ...';animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── Status cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:22px;margin-bottom:14px;}
+.card-title{font-family:var(--mono);font-size:9px;color:var(--muted);
+  letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px;font-weight:600;}
+
+/* ── Progress bar ── */
+.progress-wrap{margin:0 0 20px;}
+.progress-steps{display:flex;align-items:flex-start;justify-content:space-between;
+  position:relative;padding:0 8px;}
+.progress-steps::before{content:'';position:absolute;top:13px;left:8px;right:8px;
+  height:2px;background:var(--border2);z-index:0;}
+.progress-fill{position:absolute;top:13px;left:8px;height:2px;background:var(--blue);
+  z-index:1;transition:width .6s ease;}
+.ps{display:flex;flex-direction:column;align-items:center;gap:7px;
+  position:relative;z-index:2;flex:1;}
+.ps-dot{width:26px;height:26px;border-radius:50%;background:var(--card2);
+  border:2px solid var(--border2);display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:800;transition:all .3s;}
+.ps-dot.done{background:var(--blue);border-color:var(--blue);color:#fff;}
+.ps-dot.active{background:var(--blue);border-color:var(--blue);color:#fff;
+  box-shadow:0 0 16px rgba(25,183,239,.5);}
+.ps-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.06em;
+  text-transform:uppercase;text-align:center;white-space:nowrap;line-height:1.3;}
+.ps-lbl.active{color:var(--blue);font-weight:700;}
+
+/* ── Status headline ── */
+.status-headline{font-size:22px;font-weight:800;margin-bottom:4px;}
+.status-sub{font-size:13px;color:var(--muted);margin-bottom:16px;}
+.tn-chip{font-family:var(--mono);font-size:10px;color:var(--blue);
+  letter-spacing:.1em;background:rgba(25,183,239,.08);
+  border:1px solid rgba(25,183,239,.2);border-radius:6px;
+  padding:4px 10px;display:inline-block;margin-bottom:16px;}
+
+/* ── Fields ── */
+.field{margin-bottom:12px;}
+.field:last-child{margin-bottom:0;}
+.field-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
+.field-val{font-size:14px;font-weight:600;line-height:1.5;}
+
+/* ── Stops-away badge ── */
+.stops-badge{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 18px;border-radius:12px;
+  background:rgba(25,183,239,.06);border:1px solid rgba(25,183,239,.18);
+  margin-bottom:14px;
+}
+.stops-n{font-size:36px;font-weight:800;color:var(--blue);line-height:1;}
+.stops-lbl{font-size:13px;color:var(--muted);}
+.stops-lbl strong{color:var(--text);display:block;font-size:15px;margin-bottom:2px;}
+
+/* ── ETA badge ── */
+.eta-badge{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;border-radius:12px;
+  background:rgba(141,92,255,.06);border:1px solid rgba(141,92,255,.18);
+  margin-bottom:14px;font-size:14px;
+}
+.eta-time{font-size:24px;font-weight:800;color:var(--purple);}
+
+/* ── Delivered badge ── */
+.delivered-badge{
+  padding:18px;border-radius:12px;text-align:center;
+  background:rgba(83,255,136,.06);border:1px solid rgba(83,255,136,.2);
+  margin-bottom:14px;
+}
+.delivered-check{font-size:32px;margin-bottom:6px;}
+.delivered-lbl{font-size:18px;font-weight:800;color:var(--green);}
+.delivered-time{font-size:12px;color:var(--muted);margin-top:4px;font-family:var(--mono);}
+
+/* ── Map ── */
+#trackMapWrap{height:230px;border-radius:14px;overflow:hidden;margin-bottom:14px;
+  position:relative;background:var(--card2);border:1px solid var(--border);}
+#trackMap{width:100%;height:100%;}
+.map-bar{position:absolute;bottom:0;left:0;right:0;padding:8px 14px;
+  background:linear-gradient(transparent,rgba(1,14,33,.9));
+  display:flex;align-items:center;justify-content:space-between;pointer-events:none;}
+.map-bar-l{font-family:var(--mono);font-size:9px;color:rgba(238,244,255,.7);}
+.map-bar-r{font-family:var(--mono);font-size:8px;padding:3px 8px;border-radius:8px;
+  background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.25);color:var(--blue);}
+
+/* ── Poll bar ── */
+.poll-bar{display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px;font-family:var(--mono);font-size:10px;color:var(--muted);}
+.poll-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── Error ── */
+.error-card{background:rgba(255,68,68,.06);border:1px solid rgba(255,68,68,.15);
+  border-radius:14px;padding:28px;text-align:center;}
+.error-title{font-size:16px;font-weight:800;color:var(--red);margin-bottom:8px;}
+.error-sub{font-size:13px;color:var(--muted);}
+
+/* ── Facility card (pending/assigned) ── */
+.facility-badge{
+  padding:16px 18px;border-radius:12px;
+  background:rgba(255,150,30,.06);border:1px solid rgba(255,150,30,.18);
+  display:flex;align-items:center;gap:14px;margin-bottom:14px;
+}
+.facility-icon{font-size:28px;}
+.facility-lbl{font-size:14px;font-weight:700;}
+.facility-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="index.html">
+    <svg width="13" height="21" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/>
+      </linearGradient></defs>
+      <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/>
+      <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/>
+      <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/>
+    </svg>
+    <div class="nav-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  </a>
+</nav>
+
+<div class="main">
+
+  <!-- ── SEARCH SCREEN ── -->
+  <div id="searchScreen">
+    <div class="search-wrap">
+      <div class="search-title">Track Your Package</div>
+      <div class="search-sub">Enter the tracking number from your shipping notification</div>
+      <div class="search-row">
+        <input id="tnInput" class="search-input" type="text"
+          placeholder="e.g. TPTEST001"
+          autocomplete="off" autocapitalize="characters" spellcheck="false"
+          onkeydown="if(event.key==='Enter')doTrack()"/>
+        <button class="search-btn" id="trackBtn" onclick="doTrack()">Track</button>
+      </div>
+      <div id="searchError" style="margin-top:14px;font-size:13px;color:var(--red);display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ── RESULT SCREEN ── -->
+  <div id="resultScreen" style="display:none;">
+
+    <!-- Back link -->
+    <div style="margin-bottom:20px;">
+      <a href="#" onclick="showSearch();return false;"
+        style="font-family:var(--mono);font-size:11px;color:var(--blue);
+          text-decoration:none;letter-spacing:.08em;">
+        ← Track another package
+      </a>
+    </div>
+
+    <div id="resultContent"></div>
+
+    <div class="poll-bar" id="pollBar" style="display:none;">
+      <div class="poll-dot"></div>
+      <span id="pollLabel">Updating every 30 seconds</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──
+const SB_URL = 'https://hofijsiphyjpdvujjzfi.supabase.co';
+const SB_KEY = 'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const GKEY   = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDS' + 'NszCZk8';
+
+// ── HELPERS ──
+async function sbGet(path) {
+  const url = SB_URL + '/rest/v1/' + path +
+    (path.includes('?') ? '&' : '?') + 'apikey=' + SB_KEY;
+  const r = await fetch(url, {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function fmtTime(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+function fmtDateTime(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString([], {
+    month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+// ── STATE ──
+let currentResult = null; // { job, stop, stopsAway }
+let pollInterval  = null;
+let trackMap      = null;
+let driverMarker  = null;
+let delivMarker   = null;
+let mapsLoaded    = false;
+
+// ── SCREEN CONTROL ──
+function showSearch() {
+  document.getElementById('searchScreen').style.display = '';
+  document.getElementById('resultScreen').style.display = 'none';
+  document.getElementById('searchError').style.display = 'none';
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  currentResult = null;
+  trackMap = null; driverMarker = null; delivMarker = null;
+}
+
+function showResult() {
+  document.getElementById('searchScreen').style.display = 'none';
+  document.getElementById('resultScreen').style.display = '';
+}
+
+// ── URL PARAM SUPPORT (?t=TRACKINGNUM) ──
+function getUrlParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+// ── MAIN LOOKUP ──
+// Query strategy: use PostgREST JSONB containment filter on surge_stops.
+// We only retrieve the minimum fields needed for customer display.
+// The customer never sees: bin numbers, job UUIDs in full, other stops,
+// driver phone, org_id, price, or any internal operational data.
+//
+// Field list chosen carefully:
+//   - surge_stops: needed to find the matching stop and calculate stops-away
+//   - status, stops_completed: needed for status and stops-away calculation
+//   - estimated_delivery_at: ETA display
+//   - driver_name: first name only, shown when in transit
+//   - id: needed only to query driver_locations (never shown raw to customer)
+//
+// We DO retrieve surge_stops but ONLY render the single matching stop's data.
+// No other stop's recipient or address is ever rendered.
+
+const TRACKING_COLS = [
+  'id',
+  'status',
+  'stops_completed',
+  'estimated_delivery_at',
+  'driver_name',
+  'surge_stops'
+].join(',');
+
+async function lookupTracking(rawTn) {
+  const tn = rawTn.trim().toUpperCase();
+  if (!tn) throw new Error('Please enter a tracking number.');
+
+  // PostgREST JSONB containment: find jobs where surge_stops contains
+  // an element with this tracking_number.
+  // Note: Supabase REST uses 'cs' (contains) for JSONB arrays.
+  const encoded = encodeURIComponent(JSON.stringify([{ tracking_number: tn }]));
+  const rows = await sbGet(
+    'jobs?surge_stops=cs.' + encoded +
+    '&select=' + TRACKING_COLS +
+    '&limit=1'
+  );
+
+  if (!rows || !rows.length) {
+    throw new Error('NO_MATCH');
+  }
+
+  const job = rows[0];
+
+  // Parse surge_stops if it came back as a string (Supabase sometimes does this)
+  let stops = job.surge_stops;
+  if (typeof stops === 'string') { try { stops = JSON.parse(stops); } catch(e) { stops = []; } }
+  if (!Array.isArray(stops)) stops = [];
+
+  // Find this specific stop — match tracking_number case-insensitively
+  const stop = stops.find(s =>
+    s.tracking_number && s.tracking_number.toUpperCase() === tn
+  );
+
+  if (!stop) throw new Error('NO_MATCH');
+
+  // Calculate stops away: how many stops before this one are still undelivered
+  // stops_completed = how many stops the driver has finished (1-based count)
+  // stop.stop_number = this stop's position (1-based)
+  // stopsAway = max(0, stop_number - stops_completed - 1)
+  // (0 = this is the next stop; negative clamped to 0 = already at or past)
+  const done = parseInt(job.stops_completed) || 0;
+  const pos  = parseInt(stop.stop_number) || 1;
+  const stopsAway = Math.max(0, pos - done - 1);
+
+  return { job, stop, stopsAway, tn };
+}
+
+// ── DRIVER GPS ──
+async function fetchDriverGps(jobId) {
+  try {
+    const rows = await sbGet(
+      'driver_locations?job_id=eq.' + jobId +
+      '&order=updated_at.desc&limit=1&select=lat,lng,updated_at'
+    );
+    return rows && rows.length ? rows[0] : null;
+  } catch(e) { return null; }
+}
+
+function gpsStale(updatedAt) {
+  if (!updatedAt) return true;
+  return (Date.now() - new Date(updatedAt).getTime()) > 5 * 60 * 1000;
+}
+
+// ── GOOGLE MAPS ──
+function loadGMaps() {
+  return new Promise(resolve => {
+    if (mapsLoaded && window.google && window.google.maps) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + GKEY;
+    s.onload = () => { mapsLoaded = true; resolve(); };
+    document.head.appendChild(s);
+  });
+}
+
+const DARK_MAP_STYLE = [
+  { elementType:'geometry', stylers:[{ color:'#0d2135' }] },
+  { elementType:'labels.text.fill', stylers:[{ color:'#8a9bb0' }] },
+  { elementType:'labels.text.stroke', stylers:[{ color:'#071828' }] },
+  { featureType:'road', elementType:'geometry', stylers:[{ color:'#1a3050' }] },
+  { featureType:'road.highway', elementType:'geometry', stylers:[{ color:'#19b7ef', lightness:-60 }] },
+  { featureType:'water', elementType:'geometry', stylers:[{ color:'#010e21' }] },
+  { featureType:'poi', stylers:[{ visibility:'off' }] },
+  { featureType:'transit', stylers:[{ visibility:'off' }] },
+];
+
+async function geocodeAddress(addr) {
+  try {
+    const r = await fetch(
+      'https://maps.googleapis.com/maps/api/geocode/json?address=' +
+      encodeURIComponent(addr) + '&key=' + GKEY
+    );
+    const d = await r.json();
+    if (d.status === 'OK' && d.results[0]) {
+      return d.results[0].geometry.location; // {lat, lng}
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+async function initMap(delivCoords, driverGps) {
+  const el = document.getElementById('trackMap');
+  if (!el) return;
+  await loadGMaps();
+  if (!window.google || !window.google.maps) return;
+
+  const driverCoords = driverGps
+    ? { lat: parseFloat(driverGps.lat), lng: parseFloat(driverGps.lng) }
+    : null;
+
+  const center = driverCoords || delivCoords || { lat: 33.749, lng: -84.388 };
+
+  trackMap = new google.maps.Map(el, {
+    zoom: 13, center,
+    mapTypeId: 'roadmap',
+    styles: DARK_MAP_STYLE,
+    disableDefaultUI: true,
+    zoomControl: true,
+  });
+
+  if (delivCoords) {
+    delivMarker = new google.maps.Marker({
+      position: delivCoords, map: trackMap, title: 'Delivery address',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 9, fillColor: '#53ff88', fillOpacity: 1,
+        strokeColor: '#fff', strokeWeight: 2
+      }
+    });
+  }
+
+  if (driverCoords) {
+    driverMarker = new google.maps.Marker({
+      position: driverCoords, map: trackMap, title: 'Your driver',
+      icon: {
+        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+        scale: 5, fillColor: '#19b7ef', fillOpacity: 1,
+        strokeColor: '#fff', strokeWeight: 2
+      }
+    });
+  }
+
+  if (delivCoords && driverCoords) {
+    const b = new google.maps.LatLngBounds();
+    b.extend(delivCoords); b.extend(driverCoords);
+    trackMap.fitBounds(b, { top: 30, right: 30, bottom: 30, left: 30 });
+  }
+}
+
+function moveDriverMarker(gps) {
+  if (!window.google || !trackMap || !gps) return;
+  const pos = { lat: parseFloat(gps.lat), lng: parseFloat(gps.lng) };
+  const stale = gpsStale(gps.updated_at);
+  if (driverMarker) {
+    driverMarker.setPosition(pos);
+    driverMarker.setIcon({
+      path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+      scale: 5,
+      fillColor: stale ? '#ff961e' : '#19b7ef',
+      fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2
+    });
+  }
+}
+
+// ── RENDER ──
+// Status mapping — translate internal job status to customer language.
+// "Shipment Received"       = job exists (any status)
+// "At Local Delivery Facility" = pending or assigned (not yet picked up)
+// "Out for Delivery"        = in_transit or customer_confirmed
+// "Delivered"               = delivered
+function customerStatus(jobStatus) {
+  const m = {
+    routing:             { label: 'Shipment Received',           step: 0, color: 'var(--muted)' },
+    pending:             { label: 'At Local Delivery Facility',  step: 1, color: 'var(--orange)' },
+    assigned:            { label: 'At Local Delivery Facility',  step: 1, color: 'var(--orange)' },
+    customer_confirmed:  { label: 'Out for Delivery',            step: 2, color: 'var(--blue)' },
+    in_transit:          { label: 'Out for Delivery',            step: 2, color: 'var(--blue)' },
+    delivered:           { label: 'Delivered',                   step: 3, color: 'var(--green)' },
+  };
+  return m[jobStatus] || m.pending;
+}
+
+const STEPS = ['Received', 'At Facility', 'Out for Delivery', 'Delivered'];
+
+function renderResult(result) {
+  const { job, stop, stopsAway, tn } = result;
+  currentResult = result;
+
+  const cs = customerStatus(job.status);
+  const step = cs.step;
+  const pct = step === 0 ? 8 : step >= 3 ? 100 : Math.round((step / 3) * 100);
+
+  // Driver first name only — never expose full name or phone
+  const driverFirst = job.driver_name
+    ? job.driver_name.split(' ')[0]
+    : 'Your driver';
+
+  let html = '';
+
+  // Tracking number chip + status headline
+  html += `<div class="tn-chip">${tn}</div>`;
+  html += `<div class="status-headline" style="color:${cs.color};">${cs.label}</div>`;
+  html += `<div class="status-sub">${stop.recipient ? stop.recipient : ''}</div>`;
+
+  // Progress bar
+  html += `<div class="progress-wrap" style="margin:20px 0 24px;">
+    <div class="progress-steps">
+      <div class="progress-fill" style="width:${pct}%;"></div>
+      ${STEPS.map((s, i) => `
+        <div class="ps">
+          <div class="ps-dot ${i < step ? 'done' : i === step ? 'active' : ''}">
+            ${i < step ? '✓' : i + 1}
+          </div>
+          <div class="ps-lbl ${i === step ? 'active' : ''}">${s}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // ── STATUS-SPECIFIC CONTENT ──
+
+  if (job.status === 'delivered') {
+    // Delivered
+    html += `<div class="delivered-badge">
+      <div class="delivered-check">✅</div>
+      <div class="delivered-lbl">Package Delivered</div>
+      ${job.estimated_delivery_at
+        ? `<div class="delivered-time">${fmtDateTime(job.estimated_delivery_at)}</div>`
+        : ''}
+    </div>`;
+
+  } else if (job.status === 'in_transit' || job.status === 'customer_confirmed') {
+    // Out for delivery — show stops away + ETA
+    html += `<div class="stops-badge">
+      <div class="stops-n">${stopsAway}</div>
+      <div>
+        <strong style="color:var(--text);font-size:15px;font-weight:700;">
+          ${stopsAway === 0 ? 'Next stop — arriving soon' : stopsAway === 1 ? 'stop away' : 'stops away'}
+        </strong>
+        <div class="stops-lbl">${driverFirst} is on the way</div>
+      </div>
+    </div>`;
+
+    if (job.estimated_delivery_at) {
+      const etaMins = Math.round(
+        (new Date(job.estimated_delivery_at).getTime() - Date.now()) / 60000
+      );
+      const etaDisplay = etaMins > 0
+        ? (etaMins < 60
+            ? etaMins + ' min'
+            : Math.round(etaMins / 60) + 'h ' + (etaMins % 60) + 'min')
+        : 'Arriving now';
+      html += `<div class="eta-badge">
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--muted);
+            letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">
+            Estimated Arrival
+          </div>
+          <div class="eta-time">${etaDisplay}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            by ${fmtTime(job.estimated_delivery_at)}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Map placeholder — will be initialized after DOM insert
+    html += `<div id="trackMapWrap">
+      <div id="trackMap"></div>
+      <div class="map-bar">
+        <div class="map-bar-l">&#128205; Live Map
+          <span id="gpsStaleBadge" style="display:none;margin-left:8px;
+            color:var(--orange);font-size:8px;"></span>
+        </div>
+        <div class="map-bar-r">SmartTrack</div>
+      </div>
+    </div>`;
+
+  } else {
+    // Pending / assigned — at facility
+    html += `<div class="facility-badge">
+      <div class="facility-icon">📦</div>
+      <div>
+        <div class="facility-lbl">Package at local delivery facility</div>
+        <div class="facility-sub">Your driver will be assigned soon</div>
+      </div>
+    </div>`;
+  }
+
+  // Delivery address (this stop only — no other customers' data)
+  if (stop.address) {
+    html += `<div class="card">
+      <div class="card-title">Delivery Details</div>
+      <div class="field">
+        <div class="field-lbl">Delivering to</div>
+        <div class="field-val">${stop.address}</div>
+      </div>
+    </div>`;
+  }
+
+  const el = document.getElementById('resultContent');
+  el.innerHTML = html;
+
+  // Initialize map if in transit
+  if (job.status === 'in_transit' || job.status === 'customer_confirmed') {
+    initTrackingMap(job, stop);
+  }
+
+  // Poll while active
+  const active = job.status === 'in_transit'
+    || job.status === 'customer_confirmed'
+    || job.status === 'assigned'
+    || job.status === 'pending';
+
+  const pollBar = document.getElementById('pollBar');
+  if (active) {
+    pollBar.style.display = 'flex';
+    if (!pollInterval) {
+      pollInterval = setInterval(() => refreshResult(tn), 30000);
+    }
+  } else {
+    pollBar.style.display = 'none';
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  }
+}
+
+async function initTrackingMap(job, stop) {
+  const [delivCoords, gps] = await Promise.all([
+    stop.address ? geocodeAddress(stop.address) : Promise.resolve(null),
+    fetchDriverGps(job.id)
+  ]);
+  await initMap(delivCoords, gps);
+
+  if (gps && gpsStale(gps.updated_at)) {
+    const badge = document.getElementById('gpsStaleBadge');
+    if (badge) {
+      const m = Math.round((Date.now() - new Date(gps.updated_at).getTime()) / 60000);
+      badge.textContent = 'Last seen ' + m + 'min ago';
+      badge.style.display = 'inline';
+    }
+  }
+}
+
+async function refreshResult(tn) {
+  try {
+    const result = await lookupTracking(tn);
+    renderResult(result);
+
+    // If map already initialized, just update driver marker
+    if (trackMap && (result.job.status === 'in_transit' || result.job.status === 'customer_confirmed')) {
+      const gps = await fetchDriverGps(result.job.id);
+      if (gps) {
+        moveDriverMarker(gps);
+        const badge = document.getElementById('gpsStaleBadge');
+        if (badge) {
+          if (gpsStale(gps.updated_at)) {
+            const m = Math.round((Date.now() - new Date(gps.updated_at).getTime()) / 60000);
+            badge.textContent = 'Last seen ' + m + 'min ago';
+            badge.style.display = 'inline';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      }
+    }
+  } catch(e) {
+    // Silently ignore refresh errors — don't clear the screen on a transient failure
+  }
+}
+
+// ── TRACK ACTION ──
+async function doTrack() {
+  const raw = document.getElementById('tnInput').value.trim();
+  const btn = document.getElementById('trackBtn');
+  const errEl = document.getElementById('searchError');
+
+  if (!raw) {
+    errEl.textContent = 'Please enter a tracking number.';
+    errEl.style.display = '';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.textContent = 'Searching';
+  errEl.style.display = 'none';
+
+  try {
+    const result = await lookupTracking(raw);
+    showResult();
+    renderResult(result);
+
+    // Update URL without page reload (makes the page shareable/bookmarkable)
+    const u = new URL(window.location.href);
+    u.searchParams.set('t', raw.trim().toUpperCase());
+    window.history.replaceState({}, '', u.toString());
+
+  } catch(e) {
+    if (e.message === 'NO_MATCH') {
+      errEl.textContent =
+        'No package found for "' + raw + '". ' +
+        'Please check the tracking number and try again.';
+    } else {
+      errEl.textContent = 'Unable to look up your package. Please try again in a moment.';
+    }
+    errEl.style.display = '';
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.textContent = 'Track';
+  }
+}
+
+// ── AUTO-LOAD FROM URL PARAM ──
+window.addEventListener('DOMContentLoaded', () => {
+  const t = getUrlParam('t');
+  if (t) {
+    document.getElementById('tnInput').value = t;
+    doTrack();
+  }
+});
+</script>
+</body>
+</html>
