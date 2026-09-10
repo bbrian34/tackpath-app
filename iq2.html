@@ -326,19 +326,16 @@ function updateStowMenuStatus(){
   }
 }
 
-const SCREENS=['scHome','scAssignbins','scStowMenu','scOpenBin','scStow','scReceive','scInduct','scReset',
+const SCREENS=['scHome',
   'scOpenCart','scOpenCartLocation','scScanPackages','scStage','scStageDetail',
   'scReplaceCart','scReplaceCartLocation','scMoveToStage','scRoutes'];
 const TITLES={
-  scHome:'', scAssignbins:'Assign bins', scStowMenu:'Stow', scOpenBin:'Open New Bin',
-  scStow:'Scan Packages', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin',
+  scHome:'',
   scOpenCart:'Open Cart', scOpenCartLocation:'Open Cart', scScanPackages:'Scan Packages',
   scStage:'Stage', scStageDetail:'Stage Route', scReplaceCart:'Open New Cart',
   scReplaceCartLocation:'Open New Cart', scMoveToStage:'Move to Stage', scRoutes:'Routes'
 };
 const BACK_TARGET={
-  scAssignbins:'home', scStowMenu:'home', scOpenBin:'stowMenu', scStow:'stowMenu',
-  scReceive:'home', scInduct:'receive', scReset:'home',
   scOpenCart:'home', scOpenCartLocation:'openCart', scScanPackages:'home',
   scStage:'home', scStageDetail:'stage', scReplaceCart:'stageDetail',
   scReplaceCartLocation:'replaceCart', scMoveToStage:'replaceCartLocation', scRoutes:'home'
@@ -354,10 +351,6 @@ function goTo(screen){
     const backTo=BACK_TARGET[id];
     topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
   }
-  if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
-  if(id==='scStowMenu'){ updateStowMenuStatus(); }
-  if(id==='scOpenBin'){ openBinScreenInit(); }
-  if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
   // IQ2 screen handlers
   if(id==='scOpenCart'){ iq2OpenCartInit(); }
   if(id==='scOpenCartLocation'){ iq2OpenCartLocationInit(); }
