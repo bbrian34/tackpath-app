@@ -276,15 +276,18 @@ function openBinScreenInit(){
   setTimeout(function(){ document.getElementById('openBinInput').focus(); }, 100);
 }
 
+const BAG_LOCATIONS={'BAG-001':'A-1','BAG-002':'A-2','BAG-003':'A-3','BAG-004':'A-4','BAG-005':'A-5','BAG-006':'A-6'};
+
 function handleOpenBinScan(raw){
   const val=raw.trim();
   if(!val) return;
+  const location=BAG_LOCATIONS[val.toUpperCase()]||BAG_LOCATIONS[val]||'A-1';
   // Create a new bin session — clear previous scan history
-  currentBinSession={physicalBinId:val, location:'A-1'};
+  currentBinSession={physicalBinId:val, location:location};
   scannedByBin={};
   // Show confirmation
   document.getElementById('openBinId').textContent=val;
-  document.getElementById('openBinLocation').textContent='A-1';
+  document.getElementById('openBinLocation').textContent=location;
   document.getElementById('openBinResult').style.display='block';
   // Update the stow menu status line
   updateStowMenuStatus();
