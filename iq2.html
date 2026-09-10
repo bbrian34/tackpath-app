@@ -124,31 +124,6 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     </div>
   </div>
 
-  <!-- STOW MENU -->
-  <div class="screen" id="scStowMenu">
-    <div class="wrap">
-      <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
-        <button class="action-btn" onclick="goTo('openBin')" style="background:#0b6fb0;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">OPEN NEW BIN</button>
-        <button class="action-btn" onclick="goTo('stow')" style="background:#0a7a2f;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">SCAN PACKAGES</button>
-      </div>
-      <div id="stowMenuBinStatus" style="margin-top:20px;padding:14px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;font-family:'DM Mono',monospace;font-size:0.85rem;color:#4a525a;text-align:center;"></div>
-    </div>
-  </div>
-
-  <!-- OPEN NEW BIN -->
-  <div class="screen" id="scOpenBin">
-    <div class="wrap">
-
-      <div style="text-align:center;margin-bottom:16px;font-size:1rem;font-weight:700;color:#111418;">SCAN BIN / BAG QR CODE</div>
-      <input type="text" id="openBinInput" class="hidden-scan-input" inputmode="none" placeholder="Scan bin QR"/>
-      <div id="openBinResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;">
-        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">BIN OPEN</div>
-        <div style="font-size:0.9rem;font-weight:700;color:#111418;">LOCATION: <span id="openBinLocation">A-1</span></div>
-        <div style="font-size:0.9rem;font-weight:700;color:#111418;margin-top:4px;">BIN: <span id="openBinId"></span></div>
-      </div>
-    </div>
-  </div>
-
   <!-- STOW -->  <div class="screen" id="scAssignbins">
     <div class="hw-input-row">
       <input type="text" id="assignBinInput" inputmode="none" placeholder="Scan bin QR code"/>
@@ -157,72 +132,6 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     <div class="result-card" id="assignBinResult" style="display:none;"></div>
     <div id="assignRouteList"></div>
   </div>
-
-  <!-- STOW -->
-  <div class="screen" id="scStow">
-    <div class="flip-card-container" id="scanFlipContainer">
-      <div class="flip-card-inner" id="scanFlipInner">
-        <div class="flip-card-face flip-card-front">
-          <div class="scan-heading" id="scanHeading">Scan package</div>
-          <svg id="barcodeIcon" width="140" height="60" viewBox="0 0 140 60">
-            <rect x="0" y="0" width="4" height="60" fill="#111418"/>
-            <rect x="8" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="14" y="0" width="6" height="60" fill="#111418"/>
-            <rect x="24" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="30" y="0" width="4" height="60" fill="#111418"/>
-            <rect x="38" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="44" y="0" width="8" height="60" fill="#111418"/>
-            <rect x="56" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="62" y="0" width="4" height="60" fill="#111418"/>
-            <rect x="70" y="0" width="6" height="60" fill="#111418"/>
-            <rect x="80" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="86" y="0" width="4" height="60" fill="#111418"/>
-            <rect x="94" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="100" y="0" width="8" height="60" fill="#111418"/>
-            <rect x="112" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="118" y="0" width="4" height="60" fill="#111418"/>
-            <rect x="126" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="132" y="0" width="6" height="60" fill="#111418"/>
-          </svg>
-        </div>
-        <div class="flip-card-face flip-card-back">
-          <div class="flip-bin-number" id="flipBinNumber">14A</div>
-          <div class="flip-bin-instruction">SCAN BIN QR</div>
-        </div>
-      </div>
-    </div>
-    <input type="text" id="stowInput" class="hidden-scan-input" inputmode="none" placeholder="Scan here"/>
-    <div class="result-card" id="stowResult" style="display:none;"></div>
-    <div id="debugPanel" style="display:none;background:#000;color:#0f0;font-family:monospace;font-size:0.7rem;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;"></div>
-    <div class="bins-panel" id="binsPanel"></div>
-  </div>
-
-  <!-- PROBLEM: RECEIVE -->
-  <div class="screen" id="scReceive">
-    <div class="step-label">Step 1 of 2 &middot; Receive</div>
-    <div class="hw-input-row">
-      <input type="text" id="receiveInput" inputmode="none" placeholder="Scan the missed package"/>
-    </div>
-    <div class="hw-hint">Scan the package that was missed before arriving here</div>
-    <div class="result-card" id="receiveResult">
-      <div class="result-bin">Ready</div>
-      <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan the package to receive it</div>
-    </div>
-  </div>
-
-  <!-- PROBLEM: INDUCT -->
-  <div class="screen" id="scInduct">
-    <div class="step-label">Step 2 of 2 &middot; Induct</div>
-    <div class="result-card success" id="inductSummary"></div>
-    <button class="action-btn" onclick="confirmInduct()">Confirm Induction</button>
-  </div>
-
-  <!-- RESET BIN -->
-  <div class="screen" id="scReset">
-    <div class="bins-panel" id="resetBinsPanel" style="margin-bottom:16px;"></div>
-    <div id="resetConfirmArea"></div>
-  </div>
-
 
   <!-- IQ2: OPEN CART — step 1: scan cart -->
   <div class="screen" id="scOpenCart">
