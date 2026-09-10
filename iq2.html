@@ -885,6 +885,20 @@ function _handleBridgeScan(data){
       handleReceiveScan(value);
     } else if(document.getElementById('scAssignbins').classList.contains('on')){
       handleAssignBinScan(value);
+    } else if(document.getElementById('scOpenCart').classList.contains('on')){
+      iq2HandleOpenCartScan(value);
+    } else if(document.getElementById('scOpenCartLocation').classList.contains('on')){
+      iq2HandleOpenCartLocationScan(value);
+    } else if(document.getElementById('scScanPackages').classList.contains('on')){
+      iq2HandleScanPackages(value);
+    } else if(document.getElementById('scStageDetail').classList.contains('on')){
+      iq2HandleStageCartScan(value);
+    } else if(document.getElementById('scReplaceCart').classList.contains('on')){
+      iq2HandleReplaceCartScan(value);
+    } else if(document.getElementById('scReplaceCartLocation').classList.contains('on')){
+      iq2HandleReplaceCartLocationScan(value);
+    } else if(document.getElementById('scMoveToStage').classList.contains('on')){
+      iq2HandleMoveToStageScan(value);
     }
   }catch(e){
     // Never let an error here kill the listener - a thrown exception
