@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<link rel="manifest" href="manifest-iq2.json"/>
+<meta name="theme-color" content="#0b6fb0"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="IQ2"/>
+<title>IQ2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&family=Dancing+Script:wght@700&display=swap');
+:root{
+  --bg:#ffffff; --card:#ffffff; --card2:#f2f4f6; --border:#c8ced4;
+  --text:#111418; --muted:#4a525a; --faint:#767e86;
+  --blue:#0b6fb0; --green:#0a7a2f; --orange:#a85a00; --red:#b3261e;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
+.top{padding:16px 18px;border-bottom:1px solid #e4e8ec;display:flex;align-items:center;gap:12px;min-height:24px;background:#fff;}
+.back-btn{background:none;border:none;color:var(--blue);font-family:'DM Sans',sans-serif;font-weight:700;font-size:1rem;padding:4px 0;}
+.top-title{font-weight:800;font-size:1.1rem;}
+.wrap{padding:18px;max-width:520px;margin:0 auto;}
+.screen{display:none;}
+.screen.on{display:block;}
+
+.app-header{text-align:center;padding:24px 18px 20px;margin:-18px -18px 18px;background:linear-gradient(135deg,#0b6fb0,#084d7a);box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.app-footer{text-align:center;padding:16px 18px;margin:24px -18px -18px;background:linear-gradient(135deg,#0b6fb0,#084d7a);color:rgba(255,255,255,.85);font-family:'DM Sans',sans-serif;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;}
+.utility-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:30px 16px 6px;}
+.utility-btn{width:80%;margin:0 auto;background:#eceef0;border:1px solid #d8dee2;border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;padding:12px 10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.06);}
+.utility-btn:active{box-shadow:0 1px 2px rgba(0,0,0,.04) inset;transform:translateY(1px);background:#f7f9fa;}
+.app-brand{font-family:'Montserrat',sans-serif;font-weight:500;font-size:.8rem;letter-spacing:1px;color:var(--faint);}
+.app-title{font-size:1.9rem;font-weight:500;color:var(--text);letter-spacing:1px;font-family:'Montserrat',sans-serif;line-height:1.15;}
+.app-subtitle{font-family:'DM Sans',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-top:4px;}
+.app-tagline{font-family:'DM Sans',sans-serif;font-size:.85rem;color:#111418;margin-top:2px;}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;padding:0 16px;}
+.big-card{position:relative;background:#fff;border:1px solid #e4e8ec;border-radius:10px;padding:8px 4px;aspect-ratio:1.7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;color:#111418;font-family:'DM Sans',sans-serif;box-shadow:0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.06);transition:all .12s ease-out;cursor:pointer;}
+.big-card svg{width:24px;height:24px;stroke:var(--blue);fill:none;stroke-width:1.8;}
+#barcodeIcon{display:block;margin:0 auto;}
+.big-card:active{box-shadow:0 1px 2px rgba(0,0,0,.04) inset;transform:translateY(1px);background:#f7f9fa;}
+.big-card-title{font-size:1.05rem;font-weight:700;text-transform:uppercase;letter-spacing:.02em;}
+
+.hw-input-row{display:flex;gap:8px;margin-bottom:16px;}
+.code-bar{background:#d9f2a3;color:#111418;text-align:center;padding:14px 12px;font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:800;letter-spacing:.03em;border-bottom:2px solid #a8c96b;}
+.hidden-scan-input{width:100%;max-width:200px;height:32px;margin:0 auto;display:block;padding:8px;font-size:0.85rem;font-family:'DM Mono',monospace;text-align:center;border:none;outline:none;box-shadow:none;border-radius:6px;background:#e9ecef;color:#e9ecef;caret-color:transparent;}
+.hidden-scan-input::placeholder{color:#e9ecef;opacity:1;}
+.hidden-scan-input::placeholder{color:#fff;}
+.flip-card-container{margin:0 16px 16px;height:150px;perspective:1000px;}
+.flip-card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d;}
+.flip-card-inner.flipped{transform:rotateY(180deg);}
+.flip-card-face{position:absolute;top:0;left:0;width:100%;height:100%;box-sizing:border-box;border-radius:10px;border:3px solid #111418;display:flex;flex-direction:column;align-items:center;justify-content:center;backface-visibility:hidden;background:#fff;}
+.flip-card-back{transform:rotateY(180deg);background-color:#22a559;border-color:#22a559;}
+.flip-bin-number{color:#fff;font-size:2.2rem;font-weight:800;}
+.flip-bin-instruction{color:#fff;font-size:1rem;font-weight:700;margin-top:8px;letter-spacing:.04em;}
+.scan-heading{font-size:1.3rem;font-weight:800;margin-bottom:16px;}
+.hw-input-row input{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:8px;padding:16px;color:var(--text);font-family:'DM Mono',monospace;font-size:1.1rem;text-align:center;font-weight:700;}
+.hw-hint{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--faint);text-align:center;margin-bottom:16px;}
+
+.result-card{background:var(--card2);border:3px solid var(--border);border-radius:10px;padding:24px;text-align:center;margin-bottom:16px;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.result-card.success{border-color:var(--green);background:#eef8ef;}
+.result-card.staged{border-color:var(--green);background:#e3f5e6;}
+.result-card.error{border-color:var(--red);background:#fbeceb;}
+.result-bin{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:700;}
+.result-bin-num{font-size:2.6rem;font-weight:800;color:var(--blue);line-height:1;margin-bottom:8px;}
+.result-bin-num.success{color:var(--green);}
+.result-bin-num.error{color:var(--red);}
+.result-detail{font-size:.9rem;color:var(--muted);font-weight:600;}
+
+.bins-panel{padding:0;}
+.bins-panel-lbl{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;font-weight:700;}
+.bin-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:2px solid var(--card2);font-size:.9rem;font-weight:600;}
+.bin-row:last-child{border-bottom:none;}
+.bin-row.tappable{cursor:pointer;}
+.bin-row.tappable:active{background:var(--card2);}
+.bin-num-chip{font-family:'DM Mono',monospace;font-weight:800;background:var(--card2);border:2px solid var(--border);padding:4px 10px;border-radius:6px;color:var(--blue);}
+.bin-progress{font-family:'DM Mono',monospace;font-size:.85rem;color:var(--faint);font-weight:700;}
+.staged-row{background:#eef8ef;}
+.staged-badge{font-family:'DM Sans',monospace;font-size:.75rem;font-weight:800;color:var(--green);letter-spacing:.02em;white-space:nowrap;}
+.empty-note{text-align:center;padding:30px 12px;color:var(--faint);font-size:.9rem;}
+
+.confirm-box{background:var(--card);border:3px solid var(--orange);border-radius:10px;padding:20px;text-align:center;}
+.confirm-title{font-weight:800;font-size:1.15rem;margin-bottom:8px;}
+.confirm-sub{font-size:.88rem;color:var(--muted);margin-bottom:18px;}
+.confirm-row{display:flex;gap:10px;}
+.confirm-btn{flex:1;padding:16px;border-radius:8px;font-weight:800;font-size:.95rem;border:2px solid var(--border);font-family:'DM Sans',sans-serif;}
+.confirm-btn.yes{background:var(--orange);color:#fff;border-color:var(--orange);}
+.confirm-btn.no{background:var(--card2);color:var(--text);}
+
+.action-btn{width:100%;padding:18px;border-radius:8px;background:var(--blue);color:#fff;font-weight:800;font-size:1.05rem;border:none;font-family:'DM Sans',sans-serif;margin-top:6px;}
+.step-label{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;text-align:center;margin-bottom:12px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="top" id="topBar">
+  <span id="topTitle" class="top-title"></span>
+</div>
+
+<div class="wrap">
+
+  <!-- HOME -->
+  <div class="screen on" id="scHome">
+    <div class="app-header">
+      <div style="font-family:'Montserrat',sans-serif;font-weight:500;font-size:1.8rem;letter-spacing:1px;"><span style="color:#fff;">IQ</span><span style="color:#5dd4f4;font-family:'Dancing Script',cursive;font-weight:700;font-size:1.3em;">2</span></div>
+    </div>
+    <div class="card-grid" style="grid-template-columns:1fr 1fr;gap:14px;padding:0 16px;margin-top:4px;">
+      <button class="big-card" onclick="goTo('openCart')">
+        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2"/><path d="M12 12v4M10 14h4"/></svg>
+        <div class="big-card-title">Open Cart</div>
+      </button>
+      <button class="big-card" onclick="goTo('scanPackages')">
+        <svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+        <div class="big-card-title">Scan Packages</div>
+      </button>
+      <button class="big-card" onclick="goTo('stage')">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <div class="big-card-title">Stage</div>
+      </button>
+      <button class="big-card" onclick="goTo('routes')">
+        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        <div class="big-card-title">Routes</div>
+      </button>
+    </div>
+    <div class="app-footer"></div>
+    <div class="utility-row">
+      <button class="utility-btn" onclick="alert('Login: still deciding exactly what this does')">Login</button>
+      <button class="utility-btn" onclick="alert('Settings: still deciding exactly what this does')">Settings</button>
+    </div>
+  </div>
+
+  <!-- STOW MENU -->
+  <div class="screen" id="scStowMenu">
+    <div class="wrap">
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
+        <button class="action-btn" onclick="goTo('openBin')" style="background:#0b6fb0;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">OPEN NEW BIN</button>
+        <button class="action-btn" onclick="goTo('stow')" style="background:#0a7a2f;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">SCAN PACKAGES</button>
+      </div>
+      <div id="stowMenuBinStatus" style="margin-top:20px;padding:14px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;font-family:'DM Mono',monospace;font-size:0.85rem;color:#4a525a;text-align:center;"></div>
+    </div>
+  </div>
+
+  <!-- OPEN NEW BIN -->
+  <div class="screen" id="scOpenBin">
+    <div class="wrap">
+
+      <div style="text-align:center;margin-bottom:16px;font-size:1rem;font-weight:700;color:#111418;">SCAN BIN / BAG QR CODE</div>
+      <input type="text" id="openBinInput" class="hidden-scan-input" inputmode="none" placeholder="Scan bin QR"/>
+      <div id="openBinResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">BIN OPEN</div>
+        <div style="font-size:0.9rem;font-weight:700;color:#111418;">LOCATION: <span id="openBinLocation">A-1</span></div>
+        <div style="font-size:0.9rem;font-weight:700;color:#111418;margin-top:4px;">BIN: <span id="openBinId"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STOW -->  <div class="screen" id="scAssignbins">
+    <div class="hw-input-row">
+      <input type="text" id="assignBinInput" inputmode="none" placeholder="Scan bin QR code"/>
+    </div>
+    <div class="hw-hint">Scan a bin's permanent QR code to assign it a route</div>
+    <div class="result-card" id="assignBinResult" style="display:none;"></div>
+    <div id="assignRouteList"></div>
+  </div>
+
+  <!-- STOW -->
+  <div class="screen" id="scStow">
+    <div class="flip-card-container" id="scanFlipContainer">
+      <div class="flip-card-inner" id="scanFlipInner">
+        <div class="flip-card-face flip-card-front">
+          <div class="scan-heading" id="scanHeading">Scan package</div>
+          <svg id="barcodeIcon" width="140" height="60" viewBox="0 0 140 60">
+            <rect x="0" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="8" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="14" y="0" width="6" height="60" fill="#111418"/>
+            <rect x="24" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="30" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="38" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="44" y="0" width="8" height="60" fill="#111418"/>
+            <rect x="56" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="62" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="70" y="0" width="6" height="60" fill="#111418"/>
+            <rect x="80" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="86" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="94" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="100" y="0" width="8" height="60" fill="#111418"/>
+            <rect x="112" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="118" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="126" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="132" y="0" width="6" height="60" fill="#111418"/>
+          </svg>
+        </div>
+        <div class="flip-card-face flip-card-back">
+          <div class="flip-bin-number" id="flipBinNumber">14A</div>
+          <div class="flip-bin-instruction">SCAN BIN QR</div>
+        </div>
+      </div>
+    </div>
+    <input type="text" id="stowInput" class="hidden-scan-input" inputmode="none" placeholder="Scan here"/>
+    <div class="result-card" id="stowResult" style="display:none;"></div>
+    <div id="debugPanel" style="display:none;background:#000;color:#0f0;font-family:monospace;font-size:0.7rem;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;"></div>
+    <div class="bins-panel" id="binsPanel"></div>
+  </div>
+
+  <!-- PROBLEM: RECEIVE -->
+  <div class="screen" id="scReceive">
+    <div class="step-label">Step 1 of 2 &middot; Receive</div>
+    <div class="hw-input-row">
+      <input type="text" id="receiveInput" inputmode="none" placeholder="Scan the missed package"/>
+    </div>
+    <div class="hw-hint">Scan the package that was missed before arriving here</div>
+    <div class="result-card" id="receiveResult">
+      <div class="result-bin">Ready</div>
+      <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan the package to receive it</div>
+    </div>
+  </div>
+
+  <!-- PROBLEM: INDUCT -->
+  <div class="screen" id="scInduct">
+    <div class="step-label">Step 2 of 2 &middot; Induct</div>
+    <div class="result-card success" id="inductSummary"></div>
+    <button class="action-btn" onclick="confirmInduct()">Confirm Induction</button>
+  </div>
+
+  <!-- RESET BIN -->
+  <div class="screen" id="scReset">
+    <div class="bins-panel" id="resetBinsPanel" style="margin-bottom:16px;"></div>
+    <div id="resetConfirmArea"></div>
+  </div>
+
+
+  <!-- IQ2: OPEN CART — step 1: scan cart -->
+  <div class="screen" id="scOpenCart">
+    <div class="wrap">
+      <div class="step-label">Step 1 of 2 · Open Cart</div>
+      <div style="text-align:center;font-size:1rem;font-weight:700;color:#111418;margin-bottom:16px;">SCAN EMPTY CART</div>
+      <input type="text" id="openCartInput" class="hidden-scan-input" inputmode="none" placeholder="Scan cart QR"/>
+      <div id="openCartResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#f2f4f6;border:2px solid #c8ced4;text-align:center;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">CART SCANNED</div>
+        <div style="font-size:1.1rem;font-weight:800;color:#111418;">CART: <span id="openCartId"></span></div>
+        <div style="font-size:0.9rem;color:#4a525a;margin-top:6px;">Now scan the location</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IQ2: OPEN CART — step 2: scan location -->
+  <div class="screen" id="scOpenCartLocation">
+    <div class="wrap">
+      <div class="step-label">Step 2 of 2 · Open Cart</div>
+      <div style="font-family:'DM Mono',monospace;font-size:1rem;font-weight:700;text-align:center;margin-bottom:6px;" id="openCartLocationCartLabel"></div>
+      <div style="text-align:center;font-size:1rem;font-weight:700;color:#111418;margin-bottom:16px;">SCAN LOCATION</div>
+      <input type="text" id="openCartLocationInput" class="hidden-scan-input" inputmode="none" placeholder="Scan location QR"/>
+      <div id="openCartLocationResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">CART OPEN</div>
+        <div style="font-size:0.9rem;font-weight:700;color:#111418;">CART: <span id="openCartLocationCartId"></span></div>
+        <div style="font-size:0.9rem;font-weight:700;color:#111418;margin-top:4px;">LOCATION: <span id="openCartLocationId"></span></div>
+        <div style="font-size:0.85rem;color:#0a7a2f;margin-top:6px;font-weight:700;">READY FOR PACKAGES</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IQ2: SCAN PACKAGES -->
+  <div class="screen" id="scScanPackages">
+    <div class="flip-card-container" id="iq2FlipContainer">
+      <div class="flip-card-inner" id="iq2FlipInner">
+        <div class="flip-card-face flip-card-front">
+          <div class="scan-heading" id="iq2ScanHeading">Scan Package</div>
+          <svg id="iq2BarcodeIcon" width="140" height="60" viewBox="0 0 140 60">
+            <rect x="0" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="8" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="14" y="0" width="6" height="60" fill="#111418"/>
+            <rect x="24" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="30" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="38" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="44" y="0" width="8" height="60" fill="#111418"/>
+            <rect x="56" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="62" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="70" y="0" width="6" height="60" fill="#111418"/>
+            <rect x="80" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="86" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="94" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="100" y="0" width="8" height="60" fill="#111418"/>
+            <rect x="112" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="118" y="0" width="4" height="60" fill="#111418"/>
+            <rect x="126" y="0" width="2" height="60" fill="#111418"/>
+            <rect x="132" y="0" width="6" height="60" fill="#111418"/>
+          </svg>
+        </div>
+        <div class="flip-card-face flip-card-back" id="iq2FlipBack">
+          <div class="flip-bin-number" id="iq2FlipRoute">RT-001</div>
+          <div class="flip-bin-instruction" id="iq2FlipStop">STOP 1</div>
+          <div style="color:#fff;font-size:0.8rem;margin-top:6px;" id="iq2FlipCart"></div>
+        </div>
+      </div>
+    </div>
+    <input type="text" id="scanPackagesInput" class="hidden-scan-input" inputmode="none" placeholder="Scan package"/>
+    <div class="result-card" id="scanPackagesResult" style="display:none;"></div>
+    <div id="iq2PackageList" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- IQ2: STAGE — list routes ready to stage -->
+  <div class="screen" id="scStage">
+    <div class="wrap">
+      <div style="font-size:0.78rem;font-weight:700;color:#4a525a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">ROUTES READY TO STAGE</div>
+      <div id="stageRouteList"></div>
+      <div id="stageEmpty" style="display:none;text-align:center;padding:30px;color:#4a525a;font-size:0.9rem;">No routes ready to stage yet.</div>
+    </div>
+  </div>
+
+  <!-- IQ2: STAGE DETAIL — selected route -->
+  <div class="screen" id="scStageDetail">
+    <div class="wrap">
+      <div id="stageDetailInfo" style="padding:16px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.9rem;"></div>
+      <div style="padding:14px;border-radius:10px;background:#fff8e1;border:1px solid #f0cc70;margin-bottom:16px;font-size:0.88rem;color:#7a5c00;font-weight:700;">
+        Go to location shown above.<br/>Bring an empty replacement cart.
+      </div>
+      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN ROUTE CART</div>
+      <input type="text" id="stageCartInput" class="hidden-scan-input" inputmode="none" placeholder="Scan cart QR"/>
+      <div id="stageCartResult" style="display:none;margin-top:12px;padding:16px;border-radius:10px;background:#eef8ef;border:2px solid #a8d8a8;text-align:center;"></div>
+    </div>
+  </div>
+
+  <!-- IQ2: REPLACE CART — scan replacement cart then location -->
+  <div class="screen" id="scReplaceCart">
+    <div class="wrap">
+      <div id="replaceCartRouteInfo" style="padding:12px;border-radius:8px;background:#f2f4f6;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.85rem;text-align:center;"></div>
+      <div class="step-label">Open New Cart · Step 1 of 2</div>
+      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN EMPTY REPLACEMENT CART</div>
+      <input type="text" id="replaceCartInput" class="hidden-scan-input" inputmode="none" placeholder="Scan replacement cart QR"/>
+      <div id="replaceCartResult" style="display:none;margin-top:12px;padding:14px;border-radius:10px;background:#f2f4f6;border:2px solid #d8dee2;text-align:center;font-family:'DM Mono',monospace;font-size:0.9rem;"></div>
+    </div>
+  </div>
+
+  <!-- IQ2: REPLACE CART LOCATION — scan location for replacement cart -->
+  <div class="screen" id="scReplaceCartLocation">
+    <div class="wrap">
+      <div id="replaceCartLocationInfo" style="padding:12px;border-radius:8px;background:#f2f4f6;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.85rem;text-align:center;"></div>
+      <div class="step-label">Open New Cart · Step 2 of 2</div>
+      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN LOCATION</div>
+      <input type="text" id="replaceCartLocationInput" class="hidden-scan-input" inputmode="none" placeholder="Scan location QR"/>
+      <div id="replaceCartLocationResult" style="display:none;margin-top:12px;padding:14px;border-radius:10px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;font-family:'DM Mono',monospace;font-size:0.9rem;"></div>
+    </div>
+  </div>
+
+  <!-- IQ2: MOVE TO STAGE LOCATION -->
+  <div class="screen" id="scMoveToStage">
+    <div class="wrap">
+      <div id="moveToStageInfo" style="padding:16px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:0.9rem;"></div>
+      <div style="padding:14px;border-radius:10px;background:#fff8e1;border:1px solid #f0cc70;margin-bottom:16px;font-size:0.88rem;color:#7a5c00;font-weight:700;">
+        Move the route cart to the final staging area.
+      </div>
+      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN STAGE LOCATION</div>
+      <input type="text" id="moveToStageInput" class="hidden-scan-input" inputmode="none" placeholder="Scan stage location QR"/>
+      <div id="moveToStageResult" style="display:none;margin-top:12px;padding:16px;border-radius:10px;background:#eef8ef;border:2px solid #a8d8a8;text-align:center;font-family:'DM Mono',monospace;"></div>
+    </div>
+  </div>
+
+  <!-- IQ2: ROUTES LIST -->
+  <div class="screen" id="scRoutes">
+    <div class="wrap">
+      <div style="font-size:0.78rem;font-weight:700;color:#4a525a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">ALL ROUTES</div>
+      <div id="routesList"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
+
+let jobs=[];
+let binMap={};
+let binProgress={};
+let scannedByBin={};
+let pendingPlacement=null;
+let exceptionLog=[];
+let pendingInduct=null;
+
+// ── BIN SESSION ──
+// Tracks the currently open physical bin and its sorting location.
+// Reset every time the worker does OPEN NEW BIN → scan.
+// scannedByBin is also cleared on new session so previous route history
+// never contaminates the new one.
+let currentBinSession=null; // {physicalBinId, location}
+
+function openBinScreenInit(){
+  document.getElementById('openBinResult').style.display='none';
+  document.getElementById('openBinId').textContent='';
+  document.getElementById('openBinInput').value='';
+  setTimeout(function(){ document.getElementById('openBinInput').focus(); }, 100);
+}
+
+const BAG_LOCATIONS={'BAG-001':'A-1','BAG-002':'A-2','BAG-003':'A-3','BAG-004':'A-4','BAG-005':'A-5','BAG-006':'A-6'};
+
+function handleOpenBinScan(raw){
+  const val=raw.trim();
+  if(!val) return;
+  const location=BAG_LOCATIONS[val.toUpperCase()]||BAG_LOCATIONS[val]||'A-1';
+  // Create a new bin session — clear previous scan history
+  currentBinSession={physicalBinId:val, location:location};
+  scannedByBin={};
+  // Show confirmation
+  document.getElementById('openBinId').textContent=val;
+  document.getElementById('openBinLocation').textContent=location;
+  document.getElementById('openBinResult').style.display='block';
+  // Update the stow menu status line
+  updateStowMenuStatus();
+  document.getElementById('openBinInput').value='';
+}
+
+function updateStowMenuStatus(){
+  const el=document.getElementById('stowMenuBinStatus');
+  if(!el) return;
+  if(currentBinSession){
+    el.textContent='Active bin: '+currentBinSession.physicalBinId+' → '+currentBinSession.location;
+    el.style.color='#0a7a2f';
+  } else {
+    el.textContent='No bin open. Tap OPEN NEW BIN first.';
+    el.style.color='#a85a00';
+  }
+}
+
+const SCREENS=['scHome','scAssignbins','scStowMenu','scOpenBin','scStow','scReceive','scInduct','scReset',
+  'scOpenCart','scOpenCartLocation','scScanPackages','scStage','scStageDetail',
+  'scReplaceCart','scReplaceCartLocation','scMoveToStage','scRoutes'];
+const TITLES={
+  scHome:'', scAssignbins:'Assign bins', scStowMenu:'Stow', scOpenBin:'Open New Bin',
+  scStow:'Scan Packages', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin',
+  scOpenCart:'Open Cart', scOpenCartLocation:'Open Cart', scScanPackages:'Scan Packages',
+  scStage:'Stage', scStageDetail:'Stage Route', scReplaceCart:'Open New Cart',
+  scReplaceCartLocation:'Open New Cart', scMoveToStage:'Move to Stage', scRoutes:'Routes'
+};
+const BACK_TARGET={
+  scAssignbins:'home', scStowMenu:'home', scOpenBin:'stowMenu', scStow:'stowMenu',
+  scReceive:'home', scInduct:'receive', scReset:'home',
+  scOpenCart:'home', scOpenCartLocation:'openCart', scScanPackages:'home',
+  scStage:'home', scStageDetail:'stage', scReplaceCart:'stageDetail',
+  scReplaceCartLocation:'replaceCart', scMoveToStage:'replaceCartLocation', scRoutes:'home'
+};
+
+function goTo(screen){
+  const id='sc'+screen.charAt(0).toUpperCase()+screen.slice(1);
+  SCREENS.forEach(s=>document.getElementById(s).classList.toggle('on', s===id));
+  const topBar=document.getElementById('topBar');
+  if(id==='scHome'){
+    topBar.innerHTML='<span id="topTitle" class="top-title"></span>';
+  } else {
+    const backTo=BACK_TARGET[id];
+    topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
+  }
+  if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
+  if(id==='scStowMenu'){ updateStowMenuStatus(); }
+  if(id==='scOpenBin'){ openBinScreenInit(); }
+  if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
+  // IQ2 screen handlers
+  if(id==='scOpenCart'){ iq2OpenCartInit(); }
+  if(id==='scOpenCartLocation'){ iq2OpenCartLocationInit(); }
+  if(id==='scScanPackages'){ iq2ScanPackagesInit(); }
+  if(id==='scStage'){ iq2RenderStage(); }
+  if(id==='scStageDetail'){ iq2StageDetailInit(); }
+  if(id==='scReplaceCart'){ iq2ReplaceCartInit(); }
+  if(id==='scReplaceCartLocation'){ iq2ReplaceCartLocationInit(); }
+  if(id==='scMoveToStage'){ iq2MoveToStageInit(); }
+  if(id==='scRoutes'){ iq2RenderRoutes(); }
+  if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
+  if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
+  if(id==='scInduct'){ renderInductSummary(); }
+}
+
+async function loadRoutes(){
+  let fetchErrorOccurred=false;
+  try{
+    const r=await fetch(SB+'/rest/v1/jobs?status=in.(pending,assigned,in_transit)&order=created_at.asc&limit=50&apikey='+KEY,{headers:H});
+    jobs=await r.json();
+    if(!Array.isArray(jobs)){
+      fetchErrorOccurred=true;
+      const dbgElBad=document.getElementById('debugPanel');
+      if(dbgElBad) dbgElBad.textContent='FETCH RETURNED NON-ARRAY (likely auth/permission error)\nhttp status = '+r.status+'\nresponse = '+JSON.stringify(jobs).slice(0,300);
+      console.log('FETCH RETURNED NON-ARRAY', r.status, jobs);
+      jobs=[];
+    }
+  }catch(e){
+    fetchErrorOccurred=true;
+    jobs=[];
+    const dbgEl0=document.getElementById('debugPanel');
+    if(dbgEl0) dbgEl0.textContent='FETCH FAILED\nerror = '+e.message+'\nname = '+e.name;
+    console.log('FETCH FAILED', e);
+  }
+
+  binMap={};
+  const newProgress={};
+
+  // Always reset scannedByBin when jobs are reloaded. The job signature
+  // check was too conservative -- it kept stale scan history alive across
+  // test runs when package IDs repeated. A full reload always means a
+  // fresh start; binProgress already rebuilds correctly from the DB.
+  scannedByBin={};
+
+  jobs.forEach((j, idx)=>{
+    // A route should always have a real bin_label by the time it reaches
+    // here. If one is somehow missing, don't silently skip the whole
+    // route, assign a real, usable fallback bin right now based on its
+    // position among today's active jobs, so scanning still works.
+    const binNum=j.bin_label || ((idx+1)+'A');
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
+    const stopList=Array.isArray(stops)?stops:[];
+    const already=binProgress[binNum];
+    newProgress[binNum]={total:stopList.length||1, sorted:already?already.sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
+    stopList.forEach(s=>{
+      // A physical package's real, pre-printed identifier (tracking_number
+      // or order_id) is permanent -- it's fixed before the package ever
+      // arrives. smart_id is computed internally from stop position within
+      // a route, which can change every time SmartSort re-clusters. A
+      // stable, real-world barcode can never chase a value that shifts on
+      // every run, so it must win the match, not lose to it.
+      const stableCode=s.tracking_number||s.order_id||s.orderId;
+      if(stableCode) binMap[String(stableCode).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+      const code=s.smart_id||s.id;
+      if(code) binMap[String(code).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+    });
+    if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
+  });
+  binProgress=newProgress;
+
+  // ── DIAGNOSTIC: confirm binMap actually built correctly, and whether
+  // the specific real test package genuinely exists as a key ──
+  const debugMsg1 = 'BINMAP BUILT\ncount = '+Object.keys(binMap).length
+    +'\nhas TP6100001 = '+('TP6100001' in binMap)
+    +'\nTP6100001 -> '+JSON.stringify(binMap['TP6100001']||null)
+    +'\njobs fetched from Supabase = '+jobs.length
+    +'\nraw jobs contain TP6100001 = '+JSON.stringify(jobs).includes('TP6100001');
+  console.log(debugMsg1);
+  const dbgEl = document.getElementById('debugPanel');
+  if(dbgEl && !fetchErrorOccurred) dbgEl.textContent = debugMsg1;
+
+  if(document.getElementById('scStow').classList.contains('on')) renderBinsPanel();
+  if(document.getElementById('scReset').classList.contains('on')) renderResetBinsPanel();
+}
+
+function renderBinsPanel(){
+  const el=document.getElementById('binsPanel');
+  const nums=Object.keys(binProgress);
+  if(!nums.length){
+    el.innerHTML='<div class="empty-note">No active routes right now. Run SmartSort first.</div>';
+    return;
+  }
+  const sortedNums=[...nums].sort((a,b)=>{
+    const aDone=binProgress[a].sorted>=binProgress[a].total;
+    const bDone=binProgress[b].sorted>=binProgress[b].total;
+    if(aDone!==bDone) return aDone?-1:1;
+    return parseInt(a) - parseInt(b);
+  });
+  el.innerHTML=sortedNums.map(n=>{
+    const p=binProgress[n];
+    const complete=p.sorted>=p.total;
+    return '<div class="bin-row '+(complete?'staged-row':'')+'">'
+      +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
+      +(complete
+        ? '<span class="staged-badge">&#10003; STAGED &middot; READY FOR PICKUP</span>'
+        : '<span class="bin-progress">'+p.sorted+' of '+p.total+' sorted</span>')
+      +'</div>';
+  }).join('');
+}
+
+// ── ASSIGN BINS ──
+// Bins are permanent physical objects with fixed QR codes. A route only
+// gets linked to one through this deliberate step, never guessed at by
+// creation order. Scan the bin, then pick which of today's unassigned
+// routes it carries.
+let unassignedRoutes=[];
+let pendingBinScan=null;
+
+async function loadUnassignedRoutes(){
+  try{
+    const r=await fetch(SB+'/rest/v1/jobs?bin_label=is.null&status=in.(pending,assigned,in_transit)&order=created_at.asc&apikey='+KEY,{headers:H});
+    unassignedRoutes=await r.json();
+    if(!Array.isArray(unassignedRoutes)) unassignedRoutes=[];
+  }catch(e){ unassignedRoutes=[]; }
+  renderAssignRouteList();
+}
+
+function renderAssignRouteList(){
+  const el=document.getElementById('assignRouteList');
+  if(!pendingBinScan){ el.innerHTML=''; return; }
+  if(!unassignedRoutes.length){
+    el.innerHTML='<div class="empty-note">No unassigned routes right now.</div>';
+    return;
+  }
+  el.innerHTML='<div class="bins-panel-lbl">Assign Bin '+pendingBinScan+' to:</div>'
+    + unassignedRoutes.map(function(j){
+      const stopCount=(j.surge_stops||[]).length || j.total_stops || 0;
+      return '<div class="bin-row tappable" onclick="confirmBinAssignment(\''+j.id+'\')">'
+        +'<span>'+(j.title||'Untitled Route')+'</span>'
+        +'<span class="bin-progress">'+stopCount+' stops</span>'
+        +'</div>';
+    }).join('');
+}
+
+function resetAssignBinResult(){
+  const card=document.getElementById('assignBinResult');
+  card.style.display='none';
+  card.innerHTML='';
+  pendingBinScan=null;
+  document.getElementById('assignRouteList').innerHTML='';
+}
+
+function handleAssignBinScan(code){
+  const clean=code.trim().toUpperCase();
+  if(!clean) return;
+  pendingBinScan=clean;
+  const card=document.getElementById('assignBinResult');
+  card.style.display='flex';
+  card.className='result-card';
+  card.innerHTML='<div class="result-bin">Bin Scanned</div><div class="result-bin-num" style="font-size:2rem;">'+clean+'</div><div class="result-detail">Select which route this bin carries today</div>';
+  renderAssignRouteList();
+}
+
+async function confirmBinAssignment(jobId){
+  try{
+    await fetch(SB+'/rest/v1/jobs?id=eq.'+jobId,{
+      method:'PATCH',
+      headers:Object.assign({},H,{'Content-Type':'application/json'}),
+      body:JSON.stringify({bin_label:pendingBinScan})
+    });
+    const card=document.getElementById('assignBinResult');
+    card.className='result-card success';
+    card.innerHTML='<div class="result-bin">Assigned</div><div class="result-bin-num success">Bin '+pendingBinScan+'</div><div class="result-detail">Ready to scan the next bin</div>';
+    pendingBinScan=null;
+    document.getElementById('assignRouteList').innerHTML='';
+    loadUnassignedRoutes();
+  }catch(e){
+    const card=document.getElementById('assignBinResult');
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">Assignment Failed</div><div class="result-detail">'+e.message+'</div>';
+  }
+}
+
+function resetStowResult(){
+  pendingPlacement=null;
+  const heading=document.getElementById('scanHeading');
+  if(heading) heading.textContent='Scan package';
+  const icon=document.getElementById('barcodeIcon');
+  if(icon) icon.style.display='block';
+  const flipInner=document.getElementById('scanFlipInner');
+  if(flipInner) flipInner.classList.remove('flipped');
+  const card=document.getElementById('stowResult');
+  card.style.display='none';
+  card.className='result-card';
+  card.innerHTML='';
+}
+
+// ── SCAN AUDIO FEEDBACK ──
+// Both generated directly with the Web Audio API - no audio files, no
+// network dependency, nothing added to the project beyond this code.
+let audioCtx=null;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSuccessSound(){
+  try{
+    const ctx=getAudioCtx();
+    const notes=[523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 - quick ascending win arpeggio
+    notes.forEach((freq, i)=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.type='square';
+      osc.frequency.value=freq;
+      const startTime=ctx.currentTime + i*0.09;
+      gain.gain.setValueAtTime(0.15, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime+0.1);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(startTime); osc.stop(startTime+0.1);
+    });
+  }catch(e){ console.log('Success sound failed:', e); }
+}
+
+function playErrorSound(){
+  try{
+    const ctx=getAudioCtx();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(220, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime+0.35); // short falling buzz
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.4);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.4);
+  }catch(e){ console.log('Error sound failed:', e); }
+}
+
+function handleStowScan(code){
+  const clean=code.trim().toUpperCase();
+
+  // ── DIAGNOSTIC: full chain from raw input through lookup result.
+  // Appends to whatever the native bridge already wrote, so a single
+  // screenshot shows every step together, not just the last one to run ──
+  const keys=Object.keys(binMap);
+  const found=(clean in binMap);
+  const debugLines=[
+    'RAW SCAN VALUE = '+JSON.stringify(code)+' (length '+code.length+')',
+    'NORMALIZED VALUE = '+JSON.stringify(clean)+' (length '+clean.length+')',
+    'EXACT LOOKUP: binMap has normalized value = '+found
+  ];
+  if(found){
+    debugLines.push('MATCHED BIN = '+JSON.stringify(binMap[clean]));
+  } else {
+    debugLines.push('binMap has "TP6100001" (known-good key) = '+('TP6100001' in binMap));
+    debugLines.push('keys starting with TP6100001 = '+JSON.stringify(keys.filter(k=>k.startsWith('TP6100001'))));
+    debugLines.push('JSON.stringify(normalized) = '+JSON.stringify(clean));
+    debugLines.push('JSON.stringify("TP6100001") = '+JSON.stringify('TP6100001'));
+    debugLines.push('SAMPLE KEYS (first 10) = '+JSON.stringify(keys.slice(0,10)));
+  }
+  const debugMsg2=debugLines.join('\n');
+  console.log(debugMsg2);
+  const dbgEl2=document.getElementById('debugPanel');
+  const existingDbg=dbgEl2 ? dbgEl2.textContent : '';
+  if(dbgEl2) dbgEl2.textContent=(existingDbg?existingDbg+'\n\n':'')+debugMsg2;
+
+  if(!clean)return;
+  const card=document.getElementById('stowResult');
+  card.style.display='flex';
+
+  // ── STEP 2: confirming placement, expecting the bin's own QR code ──
+  // A package was already scanned and is waiting on its bin confirmation.
+  // This scan is checked against THAT specific pending bin, not looked up
+  // as a package at all.
+  if(pendingPlacement){
+    if(clean===pendingPlacement.binNum){
+      playSuccessSound();
+      const binNum=pendingPlacement.binNum;
+      if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
+      scannedByBin[binNum].add(pendingPlacement.code);
+      binProgress[binNum].sorted=Math.min(binProgress[binNum].total, binProgress[binNum].sorted+1);
+      const justCompleted=binProgress[binNum].sorted>=binProgress[binNum].total;
+      const jobTitle=pendingPlacement.jobTitle;
+      pendingPlacement=null;
+      const flipInner=document.getElementById('scanFlipInner');
+
+      // Flip directly back to the package-scanning side - the front
+      // face content never changed, so nothing else needs resetting.
+      if(flipInner) flipInner.classList.remove('flipped');
+
+      if(justCompleted){
+        card.className='result-card staged';
+        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
+        const stagedJobId=binProgress[binNum].jobId;
+        if(stagedJobId){
+          fetch(SB+'/rest/v1/jobs?id=eq.'+stagedJobId,{
+            method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
+            body:JSON.stringify({staged_at:new Date().toISOString()})
+          }).catch(()=>{});
+        }
+      } else {
+        card.className='result-card success';
+        card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>';
+      }
+      renderBinsPanel();
+    } else {
+      // Wrong bin scanned. Package stays pending - worker can try the
+      // correct bin without needing to re-scan the package.
+      playErrorSound();
+      card.className='result-card error';
+      card.innerHTML='<div class="result-bin">Wrong Bin</div><div class="result-bin-num error" style="font-size:1.4rem;">Expected Bin '+pendingPlacement.binNum+'</div><div class="result-detail">Scan Bin '+pendingPlacement.binNum+' to confirm, or scan the correct bin now.</div>';
+    }
+    return;
+  }
+
+  // ── STEP 1: scanning a package - shows the instruction only, does not
+  // count until the matching bin is actually scanned ──
+  const match=binMap[clean];
+
+  if(!match){
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">Not Found</div><div class="result-bin-num error" style="font-size:1.4rem;">Unrecognized code</div><div class="result-detail">"'+code+'" does not match any active route or package.</div>';
+    return;
+  }
+
+  if(!scannedByBin[match.binNum]) scannedByBin[match.binNum]=new Set();
+  if(scannedByBin[match.binNum].has(clean)){
+    card.className='result-card';
+    card.innerHTML='<div class="result-bin">Already Sorted</div><div class="result-bin-num" style="color:var(--orange);">Bin '+match.binNum+'</div><div class="result-detail">This package was already scanned.</div>';
+    return;
+  }
+
+  pendingPlacement={binNum:match.binNum, code:clean, jobTitle:match.jobTitle};
+  const flipBinNumber=document.getElementById('flipBinNumber');
+  const flipInner=document.getElementById('scanFlipInner');
+  if(flipBinNumber) flipBinNumber.textContent=match.binNum;
+  if(flipInner) flipInner.classList.add('flipped');
+  // The card itself is the single shared space communicating this step -
+  // this second card stays hidden here so nothing duplicates it.
+  card.style.display='none';
+}
+
+function resetReceiveResult(){
+  const card=document.getElementById('receiveResult');
+  card.className='result-card';
+  card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan the package to receive it</div>';
+}
+
+function handleReceiveScan(code){
+  const clean=code.trim().toUpperCase();
+  if(!clean)return;
+  const card=document.getElementById('receiveResult');
+  const match=binMap[clean];
+
+  if(!match){
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">Not Found</div><div class="result-bin-num error" style="font-size:1.4rem;">Not in manifest</div><div class="result-detail">"'+code+'" does not match anything SmartSort has assigned.</div>';
+    return;
+  }
+
+  pendingInduct={code:clean, binNum:match.binNum, jobTitle:match.jobTitle, address:match.address};
+  card.className='result-card success';
+  card.innerHTML='<div class="result-bin">Received</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+'</div>';
+  setTimeout(function(){ goTo('induct'); }, 500);
+}
+
+function renderInductSummary(){
+  const el=document.getElementById('inductSummary');
+  if(!pendingInduct){ el.innerHTML='<div class="empty-note">No package pending induction.</div>'; return; }
+  el.innerHTML='<div class="result-bin">Pending Induction</div><div class="result-bin-num success">Bin '+pendingInduct.binNum+'</div><div class="result-detail">'+pendingInduct.jobTitle+(pendingInduct.address?' &middot; '+pendingInduct.address:'')+'</div><div class="result-detail" style="margin-top:6px;font-family:\'DM Mono\',monospace;font-size:.7rem;">'+pendingInduct.code+'</div>';
+}
+
+function confirmInduct(){
+  if(!pendingInduct)return;
+  const record=Object.assign({}, pendingInduct, {time:new Date()});
+  exceptionLog.push(record);
+  const doneCode=pendingInduct.code;
+  pendingInduct=null;
+  goTo('stow');
+  document.getElementById('stowResult').innerHTML='<div class="result-bin">Inducted</div><div class="result-bin-num" style="font-size:1.2rem;color:var(--faint);">Now scan '+doneCode+' to stow it</div>';
+}
+
+function renderResetBinsPanel(){
+  const el=document.getElementById('resetBinsPanel');
+  const nums=Object.keys(binProgress);
+  if(!nums.length){
+    el.innerHTML='<div class="bins-panel-lbl">Active Bins</div><div class="empty-note">No active bins right now.</div>';
+    return;
+  }
+  const sortedNums=[...nums].sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  el.innerHTML='<div class="bins-panel-lbl">Select a bin to reset</div>' + sortedNums.map(function(n){
+    const p=binProgress[n];
+    return '<div class="bin-row tappable" onclick="askResetConfirm(\''+n+'\')">'
+      +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
+      +'<span class="bin-progress">'+p.sorted+' of '+p.total+' sorted</span>'
+      +'</div>';
+  }).join('');
+}
+
+function askResetConfirm(binNum){
+  const p=binProgress[binNum];
+  document.getElementById('resetConfirmArea').innerHTML=
+    '<div class="confirm-box">'
+    +'<div class="confirm-title">Reset Bin '+binNum+'?</div>'
+    +'<div class="confirm-sub">'+p.sorted+' of '+p.total+' packages currently marked sorted. This clears its progress back to 0 so it can be sorted again from scratch.</div>'
+    +'<div class="confirm-row">'
+    +'<button class="confirm-btn no" onclick="document.getElementById(\'resetConfirmArea\').innerHTML=\'\'">Cancel</button>'
+    +'<button class="confirm-btn yes" onclick="doResetBin(\''+binNum+'\')">Reset it</button>'
+    +'</div></div>';
+}
+
+function doResetBin(binNum){
+  if(binProgress[binNum]) binProgress[binNum].sorted=0;
+  if(scannedByBin[binNum]) scannedByBin[binNum].clear();
+  document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
+  renderResetBinsPanel();
+}
+
+document.getElementById('assignBinInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ handleAssignBinScan(e.target.value); e.target.value=''; }
+});
+document.getElementById('openBinInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ handleOpenBinScan(e.target.value); e.target.value=''; }
+});
+document.getElementById('stowInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){
+    const dbgClear=document.getElementById('debugPanel');
+    if(dbgClear) dbgClear.textContent='';
+    handleStowScan(e.target.value); e.target.value='';
+  }
+});
+document.getElementById('receiveInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ handleReceiveScan(e.target.value); e.target.value=''; }
+});
+document.addEventListener('click', function(){
+  if(document.getElementById('scOpenBin').classList.contains('on')) document.getElementById('openBinInput').focus();
+  if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
+  if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
+  // IQ2 inputs
+  if(document.getElementById('scOpenCart').classList.contains('on')) document.getElementById('openCartInput').focus();
+  if(document.getElementById('scOpenCartLocation').classList.contains('on')) document.getElementById('openCartLocationInput').focus();
+  if(document.getElementById('scScanPackages').classList.contains('on')) document.getElementById('scanPackagesInput').focus();
+  if(document.getElementById('scStageDetail').classList.contains('on')) document.getElementById('stageCartInput').focus();
+  if(document.getElementById('scReplaceCart').classList.contains('on')) document.getElementById('replaceCartInput').focus();
+  if(document.getElementById('scReplaceCartLocation').classList.contains('on')) document.getElementById('replaceCartLocationInput').focus();
+  if(document.getElementById('scMoveToStage').classList.contains('on')) document.getElementById('moveToStageInput').focus();
+});
+
+// IQ2 input keydown listeners
+document.getElementById('openCartInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ iq2HandleOpenCartScan(e.target.value); e.target.value=''; }
+});
+document.getElementById('openCartLocationInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ iq2HandleOpenCartLocationScan(e.target.value); e.target.value=''; }
+});
+document.getElementById('scanPackagesInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ iq2HandleScanPackages(e.target.value); e.target.value=''; }
+});
+document.getElementById('stageCartInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ iq2HandleStageCartScan(e.target.value); e.target.value=''; }
+});
+document.getElementById('replaceCartInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ iq2HandleReplaceCartScan(e.target.value); e.target.value=''; }
+});
+document.getElementById('replaceCartLocationInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ iq2HandleReplaceCartLocationScan(e.target.value); e.target.value=''; }
+});
+document.getElementById('moveToStageInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ iq2HandleMoveToStageScan(e.target.value); e.target.value=''; }
+});
+
+loadRoutes();
+setInterval(loadRoutes, 5000);
+
+// ── RELIABILITY FIX ──
+// Both of these call the exact same, unmodified loadRoutes() above.
+// Neither changes the fetch, the query, or how routes are matched or
+// displayed - they only add two more real moments that trigger it,
+// on top of the existing 5-second interval, which still runs exactly
+// as before.
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible') loadRoutes();
+});
+window.addEventListener('online', loadRoutes);
+
+// ── NATIVE SCANNER BRIDGE ──
+// The FARSET/ARBOR G47 does not emulate a keyboard -- confirmed by two
+// direct tests, inside the packaged app and in plain Chrome, both
+// receiving nothing on scan. It only broadcasts. This listens for that
+// broadcast via the native FarsetScanner plugin and routes the decoded
+// value into the exact same functions a keyboard-wedge scan would have
+// called, based on whichever screen is actually open. Nothing about the
+// existing scan-handling logic itself changes.
+//
+// LIFECYCLE: the scanner service broadcasts the SAME decoded value
+// through several compatibility actions (nlscan, sunmi, SCANRESULT and
+// others - all visible in logcat), so one physical trigger press can
+// deliver the same value multiple times within a few milliseconds.
+// Without a guard here, the first copy is processed and every later
+// copy is then correctly rejected as "already scanned" - which looks
+// exactly like a broken scanner from the operator's side. This dedupes
+// on value + time window, so one press is one logical scan, while a
+// deliberate rescan later still works normally.
+let _lastScanValue=null;
+let _lastScanTime=0;
+
+function _handleBridgeScan(data){
+  try{
+    const value = data && data.value;
+    if(!value) return;
+
+    const now = Date.now();
+    if(value===_lastScanValue && (now-_lastScanTime) < 1000){
+      return; // same physical press arriving via another broadcast action
+    }
+    _lastScanValue=value;
+    _lastScanTime=now;
+
+    if(document.getElementById('scStow').classList.contains('on')){
+      handleStowScan(value);
+    } else if(document.getElementById('scReceive').classList.contains('on')){
+      handleReceiveScan(value);
+    } else if(document.getElementById('scAssignbins').classList.contains('on')){
+      handleAssignBinScan(value);
+    }
+  }catch(e){
+    // Never let an error here kill the listener - a thrown exception
+    // inside a Capacitor listener callback can silently stop further
+    // events from being delivered for the rest of the session.
+    console.log('Scan handling error:', e);
+  }
+}
+
+let _scannerListenerHandle=null;
+async function registerScannerBridge(){
+  if(!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner)) return;
+  try{
+    // Remove any previous registration before adding a new one, so a
+    // re-register can never produce two live listeners firing twice.
+    if(_scannerListenerHandle && typeof _scannerListenerHandle.remove==='function'){
+      await _scannerListenerHandle.remove();
+    }
+    _scannerListenerHandle = await window.Capacitor.Plugins.FarsetScanner.addListener('scan', _handleBridgeScan);
+  }catch(e){
+    console.log('Scanner bridge registration failed:', e);
+  }
+}
+
+registerScannerBridge();
+
+// Re-register whenever the app returns to the foreground. If the WebView
+// was ever reloaded or the bridge connection dropped while backgrounded,
+// the original one-time registration would be gone with nothing to
+// restore it - which is exactly the "worked once, then silently stopped"
+// failure. This makes recovery automatic instead of requiring a restart.
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible') registerScannerBridge();
+});
+window.addEventListener('focus', registerScannerBridge);
+
+</script>
+
+// ════════════════════════════════════════════════════
+// IQ2 — CART / LOCATION / ROUTE STATE
+// ════════════════════════════════════════════════════
+
+// Active cart session: cart currently open at a location, receiving packages
+let iq2ActiveCart = null; // {cartId, location}
+
+// Staging state: route selected for staging workflow
+let iq2StagingRoute = null; // {routeId, cartId, location, stopCount, packageCount}
+
+// Replacement cart being opened during staging
+let iq2ReplacementCart = null; // {cartId}
+
+// Route cart sessions: routeId → {cartId, location, staged, stageLocation, packages[]}
+let iq2RouteSessions = {};
+
+// ── IQ2 OPEN CART ──
+
+function iq2OpenCartInit() {
+  document.getElementById('openCartResult').style.display = 'none';
+  document.getElementById('openCartId').textContent = '';
+  document.getElementById('openCartInput').value = '';
+  setTimeout(function(){ document.getElementById('openCartInput').focus(); }, 100);
+}
+
+function iq2HandleOpenCartScan(raw) {
+  const val = raw.trim();
+  if (!val) return;
+  // Store cart ID, wait for location scan
+  iq2ReplacementCart = { cartId: val };
+  document.getElementById('openCartId').textContent = val;
+  document.getElementById('openCartResult').style.display = 'block';
+  document.getElementById('openCartInput').value = '';
+  // Auto-advance to location scan after brief confirmation
+  setTimeout(function(){
+    // Pass cart ID to next screen
+    document.getElementById('openCartLocationCartLabel').textContent = 'CART: ' + val;
+    document.getElementById('openCartLocationResult').style.display = 'none';
+    document.getElementById('openCartLocationInput').value = '';
+    goTo('openCartLocation');
+    setTimeout(function(){ document.getElementById('openCartLocationInput').focus(); }, 150);
+  }, 900);
+}
+
+function iq2OpenCartLocationInit() {
+  document.getElementById('openCartLocationResult').style.display = 'none';
+  document.getElementById('openCartLocationInput').value = '';
+  setTimeout(function(){ document.getElementById('openCartLocationInput').focus(); }, 100);
+}
+
+function iq2HandleOpenCartLocationScan(raw) {
+  const val = raw.trim();
+  if (!val) return;
+  const cartId = iq2ReplacementCart ? iq2ReplacementCart.cartId : '?';
+  // Open the cart session
+  iq2ActiveCart = { cartId: cartId, location: val };
+  document.getElementById('openCartLocationCartId').textContent = cartId;
+  document.getElementById('openCartLocationId').textContent = val;
+  document.getElementById('openCartLocationResult').style.display = 'block';
+  document.getElementById('openCartLocationInput').value = '';
+}
+
+// ── IQ2 SCAN PACKAGES ──
+
+function iq2ScanPackagesInit() {
+  document.getElementById('scanPackagesResult').style.display = 'none';
+  document.getElementById('iq2PackageList').innerHTML = '';
+  document.getElementById('scanPackagesInput').value = '';
+  document.getElementById('iq2FlipInner').classList.remove('flipped');
+  document.getElementById('iq2ScanHeading').textContent = 'Scan Package';
+  setTimeout(function(){ document.getElementById('scanPackagesInput').focus(); }, 100);
+}
+
+function iq2HandleScanPackages(raw) {
+  const clean = raw.trim().toUpperCase();
+  if (!clean) return;
+  document.getElementById('scanPackagesInput').value = '';
+
+  if (!iq2ActiveCart) {
+    iq2ShowPackageResult('error', 'NO CART OPEN', 'Open a cart first before scanning packages.');
+    return;
+  }
+
+  // Look up package in binMap (inherited from PathIQ loadRoutes)
+  const match = binMap[clean];
+  if (!match) {
+    iq2ShowPackageResult('error', 'NOT FOUND', clean + ' is not in any active route.');
+    return;
+  }
+
+  const routeId = match.routeId || match.binNum || 'RT-?';
+  const stopNum  = match.stopNum  || match.stop_number || '?';
+
+  // Record in route session
+  if (!iq2RouteSessions[routeId]) {
+    iq2RouteSessions[routeId] = {
+      cartId: iq2ActiveCart.cartId,
+      location: iq2ActiveCart.location,
+      staged: false,
+      stageLocation: null,
+      packages: []
+    };
+  }
+  const session = iq2RouteSessions[routeId];
+
+  // Check already scanned
+  if (session.packages.includes(clean)) {
+    iq2ShowPackageResult('error', 'ALREADY ADDED', clean + ' was already scanned into this route.');
+    return;
+  }
+
+  session.packages.push(clean);
+
+  // Show flip confirmation
+  document.getElementById('iq2FlipRoute').textContent = routeId;
+  document.getElementById('iq2FlipStop').textContent = 'STOP ' + stopNum;
+  document.getElementById('iq2FlipCart').textContent = 'CART: ' + iq2ActiveCart.cartId + '  |  ' + iq2ActiveCart.location;
+  document.getElementById('iq2FlipInner').classList.add('flipped');
+
+  // Check if route is complete
+  const totalInRoute = Object.values(binMap).filter(function(v){ return (v.routeId||v.binNum) === routeId; }).length;
+  const doneCount = session.packages.length;
+
+  setTimeout(function(){
+    document.getElementById('iq2FlipInner').classList.remove('flipped');
+    if (doneCount >= totalInRoute && totalInRoute > 0) {
+      iq2ShowPackageResult('staged',
+        routeId + ' READY',
+        'CART: ' + session.cartId + '  |  ' + session.location + '\nREADY TO STAGE');
+    } else {
+      iq2ShowPackageResult('success',
+        'PACKAGE ADDED',
+        routeId + ' · STOP ' + stopNum + '\nCART: ' + session.cartId + '  (' + doneCount + '/' + totalInRoute + ')');
+    }
+    iq2RenderPackageList();
+  }, 800);
+}
+
+function iq2ShowPackageResult(type, title, detail) {
+  const el = document.getElementById('scanPackagesResult');
+  el.className = 'result-card ' + (type === 'error' ? 'error' : type === 'staged' ? 'staged' : 'success');
+  el.innerHTML = '<div class="result-bin">' + title + '</div>' +
+    '<div class="result-detail" style="white-space:pre-line;">' + detail + '</div>';
+  el.style.display = 'flex';
+}
+
+function iq2RenderPackageList() {
+  const el = document.getElementById('iq2PackageList');
+  const rows = [];
+  Object.entries(iq2RouteSessions).forEach(function(e){
+    const rid = e[0], sess = e[1];
+    if (!sess.staged) {
+      rows.push('<div class="bin-row"><span class="bin-num-chip">' + rid + '</span>' +
+        '<span>' + sess.cartId + ' · ' + sess.location + '</span>' +
+        '<span class="bin-progress">' + sess.packages.length + ' pkg</span></div>');
+    }
+  });
+  el.innerHTML = rows.length ? rows.join('') : '';
+}
+
+// ── IQ2 STAGE ──
+
+function iq2RenderStage() {
+  const list = document.getElementById('stageRouteList');
+  const empty = document.getElementById('stageEmpty');
+  const ready = Object.entries(iq2RouteSessions).filter(function(e){ return !e[1].staged; });
+
+  if (!ready.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = ready.map(function(e){
+    const rid = e[0], sess = e[1];
+    return '<div class="bin-row tappable" onclick="iq2SelectStageRoute('' + rid + '')">' +
+      '<span class="bin-num-chip">' + rid + '</span>' +
+      '<span>' + sess.cartId + ' — ' + sess.location + '</span>' +
+      '<span class="bin-progress">' + sess.packages.length + ' pkg ›</span>' +
+      '</div>';
+  }).join('');
+}
+
+function iq2SelectStageRoute(routeId) {
+  iq2StagingRoute = Object.assign({ routeId: routeId }, iq2RouteSessions[routeId]);
+  goTo('stageDetail');
+}
+
+function iq2StageDetailInit() {
+  if (!iq2StagingRoute) return;
+  const r = iq2StagingRoute;
+  document.getElementById('stageDetailInfo').innerHTML =
+    'ROUTE: ' + r.routeId + '<br>' +
+    'CART: ' + r.cartId + '<br>' +
+    'LOCATION: ' + r.location + '<br>' +
+    'PACKAGES: ' + r.packages.length + '<br><br>' +
+    'Go to ' + r.location + ' · Bring empty cart';
+  document.getElementById('stageCartResult').style.display = 'none';
+  document.getElementById('stageCartInput').value = '';
+  setTimeout(function(){ document.getElementById('stageCartInput').focus(); }, 100);
+}
+
+function iq2HandleStageCartScan(raw) {
+  const val = raw.trim();
+  if (!val) return;
+  if (!iq2StagingRoute) return;
+  document.getElementById('stageCartInput').value = '';
+
+  if (val.toUpperCase() !== iq2StagingRoute.cartId.toUpperCase()) {
+    const el = document.getElementById('stageCartResult');
+    el.style.display = 'block';
+    el.className = 'result-card error';
+    el.innerHTML = '<div class="result-bin">WRONG CART</div>' +
+      '<div class="result-detail">Expected ' + iq2StagingRoute.cartId + ', scanned ' + val + '</div>';
+    return;
+  }
+
+  const el = document.getElementById('stageCartResult');
+  el.style.display = 'block';
+  el.className = 'result-card success';
+  el.innerHTML = '<div class="result-bin">ROUTE FOUND</div>' +
+    '<div class="result-detail">ROUTE: ' + iq2StagingRoute.routeId + '<br>' +
+    'CART: ' + iq2StagingRoute.cartId + '<br>' +
+    'LOCATION: ' + iq2StagingRoute.location + '<br>READY TO STAGE</div>';
+
+  setTimeout(function(){ goTo('replaceCart'); }, 900);
+}
+
+// ── IQ2 REPLACE CART ──
+
+function iq2ReplaceCartInit() {
+  if (!iq2StagingRoute) return;
+  document.getElementById('replaceCartRouteInfo').textContent =
+    'Route: ' + iq2StagingRoute.routeId + '  |  Cart: ' + iq2StagingRoute.cartId + '  |  Location: ' + iq2StagingRoute.location;
+  document.getElementById('replaceCartResult').style.display = 'none';
+  document.getElementById('replaceCartInput').value = '';
+  setTimeout(function(){ document.getElementById('replaceCartInput').focus(); }, 100);
+}
+
+function iq2HandleReplaceCartScan(raw) {
+  const val = raw.trim();
+  if (!val) return;
+  iq2ReplacementCart = { cartId: val };
+  document.getElementById('replaceCartResult').style.display = 'block';
+  document.getElementById('replaceCartResult').textContent = 'CART: ' + val + '  — Scan location next';
+  document.getElementById('replaceCartInput').value = '';
+  setTimeout(function(){ goTo('replaceCartLocation'); }, 800);
+}
+
+function iq2ReplaceCartLocationInit() {
+  if (!iq2StagingRoute) return;
+  document.getElementById('replaceCartLocationInfo').textContent =
+    'Replacing at: ' + iq2StagingRoute.location + '  |  New cart: ' + (iq2ReplacementCart ? iq2ReplacementCart.cartId : '?');
+  document.getElementById('replaceCartLocationResult').style.display = 'none';
+  document.getElementById('replaceCartLocationInput').value = '';
+  setTimeout(function(){ document.getElementById('replaceCartLocationInput').focus(); }, 100);
+}
+
+function iq2HandleReplaceCartLocationScan(raw) {
+  const val = raw.trim();
+  if (!val) return;
+  document.getElementById('replaceCartLocationInput').value = '';
+
+  const newCartId = iq2ReplacementCart ? iq2ReplacementCart.cartId : '?';
+  // Open new cart at this location
+  iq2ActiveCart = { cartId: newCartId, location: val };
+
+  document.getElementById('replaceCartLocationResult').style.display = 'block';
+  document.getElementById('replaceCartLocationResult').innerHTML =
+    'CART OPEN<br>CART: ' + newCartId + '<br>LOCATION: ' + val + '<br>READY FOR PACKAGES';
+
+  setTimeout(function(){ goTo('moveToStage'); }, 900);
+}
+
+// ── IQ2 MOVE TO STAGE ──
+
+function iq2MoveToStageInit() {
+  if (!iq2StagingRoute) return;
+  document.getElementById('moveToStageInfo').innerHTML =
+    'ROUTE: ' + iq2StagingRoute.routeId + '<br>' +
+    'CART: ' + iq2StagingRoute.cartId + '<br><br>' +
+    'Move this cart to the final staging area, then scan the stage location QR.';
+  document.getElementById('moveToStageResult').style.display = 'none';
+  document.getElementById('moveToStageInput').value = '';
+  setTimeout(function(){ document.getElementById('moveToStageInput').focus(); }, 100);
+}
+
+function iq2HandleMoveToStageScan(raw) {
+  const val = raw.trim();
+  if (!val) return;
+  document.getElementById('moveToStageInput').value = '';
+
+  // Mark route as staged
+  if (iq2StagingRoute && iq2RouteSessions[iq2StagingRoute.routeId]) {
+    iq2RouteSessions[iq2StagingRoute.routeId].staged = true;
+    iq2RouteSessions[iq2StagingRoute.routeId].stageLocation = val;
+  }
+
+  const el = document.getElementById('moveToStageResult');
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div style="font-size:1.1rem;font-weight:800;color:#0a7a2f;">' + (iq2StagingRoute ? iq2StagingRoute.routeId : '') + ' STAGED</div>' +
+    '<div style="margin-top:8px;">CART: ' + (iq2StagingRoute ? iq2StagingRoute.cartId : '') + '</div>' +
+    '<div>STAGE LOCATION: ' + val + '</div>' +
+    '<div style="margin-top:8px;font-weight:700;">READY FOR DRIVER</div>';
+
+  iq2StagingRoute = null;
+}
+
+// ── IQ2 ROUTES ──
+
+function iq2RenderRoutes() {
+  const el = document.getElementById('routesList');
+  const all = Object.entries(iq2RouteSessions);
+  if (!all.length) {
+    el.innerHTML = '<div class="empty-note">No routes yet.</div>';
+    return;
+  }
+  el.innerHTML = all.map(function(e){
+    const rid = e[0], sess = e[1];
+    const statusColor = sess.staged ? '#0a7a2f' : '#0b6fb0';
+    const statusText  = sess.staged
+      ? '★ STAGED @ ' + sess.stageLocation
+      : 'Building · ' + sess.packages.length + ' pkg';
+    return '<div class="bin-row">' +
+      '<span class="bin-num-chip">' + rid + '</span>' +
+      '<span>' + sess.cartId + '</span>' +
+      '<span style="font-size:.8rem;color:' + statusColor + ';font-weight:700;">' + statusText + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+// ── IQ2 INPUT WIRING (added below existing input listeners) ──
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js', {scope:'/'})
+    .then(function(r){ console.log('PathIQ SW registered', r.scope); })
+    .catch(function(e){ console.log('PathIQ SW registration failed', e); });
+}
+</script>
+</body>
+</html>
