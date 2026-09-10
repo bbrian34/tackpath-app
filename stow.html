@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<link rel="manifest" href="manifest-pathiq.json"/>
+<meta name="theme-color" content="#0b6fb0"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="PathIQ"/>
 <title>PathIQ</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&family=Dancing+Script:wght@700&display=swap');
@@ -837,6 +842,14 @@ document.addEventListener('visibilitychange', function(){
 });
 window.addEventListener('focus', registerScannerBridge);
 
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js', {scope:'/'})
+    .then(function(r){ console.log('PathIQ SW registered', r.scope); })
+    .catch(function(e){ console.log('PathIQ SW registration failed', e); });
+}
 </script>
 </body>
 </html>
