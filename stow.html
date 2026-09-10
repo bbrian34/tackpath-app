@@ -104,7 +104,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
         <svg viewBox="0 0 24 24"><rect x="3" y="10" width="7" height="10" rx="1"/><rect x="14" y="10" width="7" height="10" rx="1"/><path d="M12 3v5M9 5l3 3 3-3"/></svg>
         <div class="big-card-title">Assign Bins</div>
       </button>
-      <button class="big-card" onclick="goTo('stow')">
+      <button class="big-card" onclick="goTo('stowMenu')">
         <svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
         <div class="big-card-title">Stow</div>
       </button>
@@ -140,8 +140,35 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     </div>
   </div>
 
-  <!-- ASSIGN BINS -->
-  <div class="screen" id="scAssignbins">
+  <!-- STOW MENU -->
+  <div class="screen" id="scStowMenu">
+    <div class="wrap">
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
+        <button class="action-btn" onclick="goTo('openBin')" style="background:#0b6fb0;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">OPEN NEW BIN</button>
+        <button class="action-btn" onclick="goTo('stow')" style="background:#0a7a2f;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">SCAN PACKAGES</button>
+      </div>
+      <div id="stowMenuBinStatus" style="margin-top:20px;padding:14px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;font-family:'DM Mono',monospace;font-size:0.85rem;color:#4a525a;text-align:center;"></div>
+    </div>
+  </div>
+
+  <!-- OPEN NEW BIN -->
+  <div class="screen" id="scOpenBin">
+    <div class="wrap">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:1rem;font-weight:700;color:#4a525a;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Sorting Location</div>
+        <div style="font-size:2.5rem;font-weight:900;color:#0b6fb0;font-family:'DM Mono',monospace;">A-1</div>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;font-size:1rem;font-weight:700;color:#111418;">SCAN BIN / BAG QR CODE</div>
+      <input type="text" id="openBinInput" class="hidden-scan-input" inputmode="none" placeholder="Scan bin QR"/>
+      <div id="openBinResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">BIN OPEN</div>
+        <div style="font-size:0.9rem;font-weight:700;color:#111418;">LOCATION: <span id="openBinLocation">A-1</span></div>
+        <div style="font-size:0.9rem;font-weight:700;color:#111418;margin-top:4px;">BIN: <span id="openBinId"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STOW -->  <div class="screen" id="scAssignbins">
     <div class="hw-input-row">
       <input type="text" id="assignBinInput" inputmode="none" placeholder="Scan bin QR code"/>
     </div>
@@ -230,9 +257,50 @@ let pendingPlacement=null;
 let exceptionLog=[];
 let pendingInduct=null;
 
-const SCREENS=['scHome','scAssignbins','scStow','scReceive','scInduct','scReset'];
-const TITLES={scHome:'', scAssignbins:'Assign bins', scStow:'Stow', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
-const BACK_TARGET={scAssignbins:'home', scStow:'home', scReceive:'home', scInduct:'receive', scReset:'home'};
+// ── BIN SESSION ──
+// Tracks the currently open physical bin and its sorting location.
+// Reset every time the worker does OPEN NEW BIN → scan.
+// scannedByBin is also cleared on new session so previous route history
+// never contaminates the new one.
+let currentBinSession=null; // {physicalBinId, location}
+
+function openBinScreenInit(){
+  document.getElementById('openBinResult').style.display='none';
+  document.getElementById('openBinId').textContent='';
+  document.getElementById('openBinInput').value='';
+  setTimeout(function(){ document.getElementById('openBinInput').focus(); }, 100);
+}
+
+function handleOpenBinScan(raw){
+  const val=raw.trim();
+  if(!val) return;
+  // Create a new bin session — clear previous scan history
+  currentBinSession={physicalBinId:val, location:'A-1'};
+  scannedByBin={};
+  // Show confirmation
+  document.getElementById('openBinId').textContent=val;
+  document.getElementById('openBinLocation').textContent='A-1';
+  document.getElementById('openBinResult').style.display='block';
+  // Update the stow menu status line
+  updateStowMenuStatus();
+  document.getElementById('openBinInput').value='';
+}
+
+function updateStowMenuStatus(){
+  const el=document.getElementById('stowMenuBinStatus');
+  if(!el) return;
+  if(currentBinSession){
+    el.textContent='Active bin: '+currentBinSession.physicalBinId+' → '+currentBinSession.location;
+    el.style.color='#0a7a2f';
+  } else {
+    el.textContent='No bin open. Tap OPEN NEW BIN first.';
+    el.style.color='#a85a00';
+  }
+}
+
+const SCREENS=['scHome','scAssignbins','scStowMenu','scOpenBin','scStow','scReceive','scInduct','scReset'];
+const TITLES={scHome:'', scAssignbins:'Assign bins', scStowMenu:'Stow', scOpenBin:'Open New Bin', scStow:'Scan Packages', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
+const BACK_TARGET={scAssignbins:'home', scStowMenu:'home', scOpenBin:'stowMenu', scStow:'stowMenu', scReceive:'home', scInduct:'receive', scReset:'home'};
 
 function goTo(screen){
   const id='sc'+screen.charAt(0).toUpperCase()+screen.slice(1);
@@ -245,6 +313,8 @@ function goTo(screen){
     topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
   }
   if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
+  if(id==='scStowMenu'){ updateStowMenuStatus(); }
+  if(id==='scOpenBin'){ openBinScreenInit(); }
   if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
   if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
   if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
@@ -659,6 +729,9 @@ function doResetBin(binNum){
 document.getElementById('assignBinInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){ handleAssignBinScan(e.target.value); e.target.value=''; }
 });
+document.getElementById('openBinInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ handleOpenBinScan(e.target.value); e.target.value=''; }
+});
 document.getElementById('stowInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){
     const dbgClear=document.getElementById('debugPanel');
@@ -670,6 +743,7 @@ document.getElementById('receiveInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){ handleReceiveScan(e.target.value); e.target.value=''; }
 });
 document.addEventListener('click', function(){
+  if(document.getElementById('scOpenBin').classList.contains('on')) document.getElementById('openBinInput').focus();
   if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
   if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
 });
