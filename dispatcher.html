@@ -2381,7 +2381,7 @@ async function loadJobs(){
     jobs=newJobs;
     syncSurgeBlocksFromJobs();
     try{
-      const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
+      const locs=await sbGet('driver_locations?order=updated_at.desc&limit=200');
       driverLastSeen={};
       driverLastLocation={};
       (locs||[]).forEach(function(l){
@@ -4150,7 +4150,8 @@ async function refreshAllLiveETAs(){
   const activeJobs=jobs.filter(j=>(j.status==='assigned'||j.status==='in_transit'||j.status==='customer_confirmed')&&j.driver_name);
   for(const job of activeJobs){
     const last=lastEtaRefresh[job.id]||0;
-    if(now-last<ETA_REFRESH_MINUTES*60000)continue;
+    const noEtaYet=!job.estimated_delivery_at;
+    if(!noEtaYet&&now-last<ETA_REFRESH_MINUTES*60000)continue;
     lastEtaRefresh[job.id]=now;
     await refreshLiveETA(job);
   }
