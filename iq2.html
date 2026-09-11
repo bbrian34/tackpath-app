@@ -94,7 +94,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 <body>
 
 <div class="top" id="topBar">
-  <button onclick="window.location.href='stow.html'" style="background:none;border:none;color:#fff;font-size:1.6rem;cursor:pointer;padding:0 10px 0 0;line-height:1;">&#8249;</button>
+  <button onclick="window.parent.postMessage('iq2:back','*')" style="background:none;border:none;color:#fff;font-size:1.6rem;cursor:pointer;padding:0 10px 0 0;line-height:1;">&#8249;</button>
   <span id="topTitle" class="top-title"></span>
 </div>
 
@@ -928,12 +928,15 @@ async function registerScannerBridge(){
 // Re-register with retry loop — when navigating from stow.html to iq2.html
 // Capacitor bridge may not be immediately available; retry until it is.
 (function retryBridge(attempts){
-  if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner){
+  // Check own window first, then parent (when loaded in iframe from stow.html)
+  const cap = (window.Capacitor) || (window.parent && window.parent.Capacitor);
+  if(cap && cap.Plugins && cap.Plugins.FarsetScanner){
+    if(!window.Capacitor) window.Capacitor = cap;
     registerScannerBridge();
   } else if(attempts > 0){
     setTimeout(function(){ retryBridge(attempts-1); }, 300);
   }
-})(20);
+})(30);
 
 // Re-register whenever the app returns to the foreground. If the WebView
 // was ever reloaded or the bridge connection dropped while backgrounded,
