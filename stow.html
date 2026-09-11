@@ -3,11 +3,6 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<link rel="manifest" href="manifest-pathiq.json"/>
-<meta name="theme-color" content="#0b6fb0"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-title" content="PathIQ"/>
 <title>PathIQ</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&family=Dancing+Script:wght@700&display=swap');
@@ -109,7 +104,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
         <svg viewBox="0 0 24 24"><rect x="3" y="10" width="7" height="10" rx="1"/><rect x="14" y="10" width="7" height="10" rx="1"/><path d="M12 3v5M9 5l3 3 3-3"/></svg>
         <div class="big-card-title">Assign Bins</div>
       </button>
-      <button class="big-card" onclick="goTo('stowMenu')">
+      <button class="big-card" onclick="goTo('stow')">
         <svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
         <div class="big-card-title">Stow</div>
       </button>
@@ -145,32 +140,8 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     </div>
   </div>
 
-  <!-- STOW MENU -->
-  <div class="screen" id="scStowMenu">
-    <div class="wrap">
-      <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
-        <button class="action-btn" onclick="goTo('openBin')" style="background:#0b6fb0;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">OPEN NEW BIN</button>
-        <button class="action-btn" onclick="goTo('stow')" style="background:#0a7a2f;color:#fff;border:none;border-radius:12px;padding:20px;font-size:1.1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;">SCAN PACKAGES</button>
-      </div>
-      <div id="stowMenuBinStatus" style="margin-top:20px;padding:14px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;font-family:'DM Mono',monospace;font-size:0.85rem;color:#4a525a;text-align:center;"></div>
-    </div>
-  </div>
-
-  <!-- OPEN NEW BIN -->
-  <div class="screen" id="scOpenBin">
-    <div class="wrap">
-
-      <div style="text-align:center;margin-bottom:16px;font-size:1rem;font-weight:700;color:#111418;">SCAN BIN / BAG QR CODE</div>
-      <input type="text" id="openBinInput" class="hidden-scan-input" inputmode="none" placeholder="Scan bin QR"/>
-      <div id="openBinResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;">
-        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">BIN OPEN</div>
-        <div style="font-size:0.9rem;font-weight:700;color:#111418;">LOCATION: <span id="openBinLocation">A-1</span></div>
-        <div style="font-size:0.9rem;font-weight:700;color:#111418;margin-top:4px;">BIN: <span id="openBinId"></span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- STOW -->  <div class="screen" id="scAssignbins">
+  <!-- ASSIGN BINS -->
+  <div class="screen" id="scAssignbins">
     <div class="hw-input-row">
       <input type="text" id="assignBinInput" inputmode="none" placeholder="Scan bin QR code"/>
     </div>
@@ -259,53 +230,9 @@ let pendingPlacement=null;
 let exceptionLog=[];
 let pendingInduct=null;
 
-// ── BIN SESSION ──
-// Tracks the currently open physical bin and its sorting location.
-// Reset every time the worker does OPEN NEW BIN → scan.
-// scannedByBin is also cleared on new session so previous route history
-// never contaminates the new one.
-let currentBinSession=null; // {physicalBinId, location}
-
-function openBinScreenInit(){
-  document.getElementById('openBinResult').style.display='none';
-  document.getElementById('openBinId').textContent='';
-  document.getElementById('openBinInput').value='';
-  setTimeout(function(){ document.getElementById('openBinInput').focus(); }, 100);
-}
-
-const BAG_LOCATIONS={'BAG-001':'A-1','BAG-002':'A-2','BAG-003':'A-3','BAG-004':'A-4','BAG-005':'A-5','BAG-006':'A-6'};
-
-function handleOpenBinScan(raw){
-  const val=raw.trim();
-  if(!val) return;
-  const location=BAG_LOCATIONS[val.toUpperCase()]||BAG_LOCATIONS[val]||'A-1';
-  // Create a new bin session — clear previous scan history
-  currentBinSession={physicalBinId:val, location:location};
-  scannedByBin={};
-  // Show confirmation
-  document.getElementById('openBinId').textContent=val;
-  document.getElementById('openBinLocation').textContent=location;
-  document.getElementById('openBinResult').style.display='block';
-  // Update the stow menu status line
-  updateStowMenuStatus();
-  document.getElementById('openBinInput').value='';
-}
-
-function updateStowMenuStatus(){
-  const el=document.getElementById('stowMenuBinStatus');
-  if(!el) return;
-  if(currentBinSession){
-    el.textContent='Active bin: '+currentBinSession.physicalBinId+' → '+currentBinSession.location;
-    el.style.color='#0a7a2f';
-  } else {
-    el.textContent='No bin open. Tap OPEN NEW BIN first.';
-    el.style.color='#a85a00';
-  }
-}
-
-const SCREENS=['scHome','scAssignbins','scStowMenu','scOpenBin','scStow','scReceive','scInduct','scReset'];
-const TITLES={scHome:'', scAssignbins:'Assign bins', scStowMenu:'Stow', scOpenBin:'Open New Bin', scStow:'Scan Packages', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
-const BACK_TARGET={scAssignbins:'home', scStowMenu:'home', scOpenBin:'stowMenu', scStow:'stowMenu', scReceive:'home', scInduct:'receive', scReset:'home'};
+const SCREENS=['scHome','scAssignbins','scStow','scReceive','scInduct','scReset'];
+const TITLES={scHome:'', scAssignbins:'Assign bins', scStow:'Stow', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
+const BACK_TARGET={scAssignbins:'home', scStow:'home', scReceive:'home', scInduct:'receive', scReset:'home'};
 
 function goTo(screen){
   const id='sc'+screen.charAt(0).toUpperCase()+screen.slice(1);
@@ -318,8 +245,6 @@ function goTo(screen){
     topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
   }
   if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
-  if(id==='scStowMenu'){ updateStowMenuStatus(); }
-  if(id==='scOpenBin'){ openBinScreenInit(); }
   if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
   if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
   if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
@@ -349,11 +274,19 @@ async function loadRoutes(){
   binMap={};
   const newProgress={};
 
-  // Always reset scannedByBin when jobs are reloaded. The job signature
-  // check was too conservative -- it kept stale scan history alive across
-  // test runs when package IDs repeated. A full reload always means a
-  // fresh start; binProgress already rebuilds correctly from the DB.
-  scannedByBin={};
+  // scannedByBin accumulates every package ever scanned this session and
+  // was previously never reset except by the manual Reset Bin tool. When a
+  // new manifest is loaded, binProgress correctly rebuilds from the
+  // database, but stale scan history survived - and package IDs repeat
+  // across manifests, so genuinely new packages were rejected as
+  // "already scanned". Detect a real change in the loaded job set and
+  // clear that history, so a new run starts genuinely clean while an
+  // ordinary refresh of the same routes keeps its progress intact.
+  const jobSignature = jobs.map(j=>j.id).sort().join(',');
+  if(window._lastJobSignature !== undefined && window._lastJobSignature !== jobSignature){
+    scannedByBin={};
+  }
+  window._lastJobSignature = jobSignature;
 
   jobs.forEach((j, idx)=>{
     // A route should always have a real bin_label by the time it reaches
@@ -734,9 +667,6 @@ function doResetBin(binNum){
 document.getElementById('assignBinInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){ handleAssignBinScan(e.target.value); e.target.value=''; }
 });
-document.getElementById('openBinInput').addEventListener('keydown', function(e){
-  if(e.key==='Enter'){ handleOpenBinScan(e.target.value); e.target.value=''; }
-});
 document.getElementById('stowInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){
     const dbgClear=document.getElementById('debugPanel');
@@ -748,7 +678,6 @@ document.getElementById('receiveInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){ handleReceiveScan(e.target.value); e.target.value=''; }
 });
 document.addEventListener('click', function(){
-  if(document.getElementById('scOpenBin').classList.contains('on')) document.getElementById('openBinInput').focus();
   if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
   if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
 });
@@ -842,14 +771,6 @@ document.addEventListener('visibilitychange', function(){
 });
 window.addEventListener('focus', registerScannerBridge);
 
-</script>
-
-<script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js', {scope:'/'})
-    .then(function(r){ console.log('PathIQ SW registered', r.scope); })
-    .catch(function(e){ console.log('PathIQ SW registration failed', e); });
-}
 </script>
 </body>
 </html>
