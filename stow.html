@@ -125,9 +125,9 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
         <svg viewBox="0 0 24 24"><path d="M3 6h6l3 12h9"/><path d="M3 18h6l1.5-6"/><path d="M17 3l4 3-4 3M17 15l4 3-4 3"/></svg>
         <div class="big-card-title">SmartSort</div>
       </button>
-      <button class="big-card" onclick="goTo('iq2Home')">
+      <button class="big-card" onclick="alert('WMS: still deciding exactly what this does')">
         <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-        <div class="big-card-title">IQ2</div>
+        <div class="big-card-title">WMS</div>
       </button>
       <button class="big-card" onclick="alert('Connect: still deciding exactly what this does')">
         <svg viewBox="0 0 24 24"><path d="M9 15l6-6"/><path d="M11 6l1-1a3.5 3.5 0 0 1 5 5l-1 1"/><path d="M13 18l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg>
@@ -244,158 +244,6 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     <div id="resetConfirmArea"></div>
   </div>
 
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- IQ2 SCREENS                                 -->
-  <!-- ═══════════════════════════════════════════ -->
-
-  <!-- IQ2 HOME -->
-  <div class="screen" id="scIq2Home">
-    <div class="card-grid" style="padding:0 16px;margin-top:4px;">
-      <button class="big-card" onclick="goTo('iq2OpenCart')">
-        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2"/><path d="M12 12v4M10 14h4"/></svg>
-        <div class="big-card-title">Open Cart</div>
-      </button>
-      <button class="big-card" onclick="goTo('iq2ScanPkgs')">
-        <svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-        <div class="big-card-title">Stow</div>
-      </button>
-      <button class="big-card" onclick="goTo('iq2Stage')">
-        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        <div class="big-card-title">Stage</div>
-      </button>
-      <button class="big-card" onclick="goTo('iq2Routes')">
-        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-        <div class="big-card-title">Routes</div>
-      </button>
-      <button class="big-card" onclick="alert('Problem')">
-        <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
-        <div class="big-card-title">Problem</div>
-      </button>
-      <button class="big-card" onclick="alert('Support')">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><path d="M12 17h.01"/></svg>
-        <div class="big-card-title">Support</div>
-      </button>
-    </div>
-    <div id="iq2ActiveCartStatus" style="margin:12px 16px 0;padding:10px 14px;border-radius:8px;background:rgba(11,111,176,.08);border:1px solid rgba(11,111,176,.2);font-family:var(--mono);font-size:0.82rem;color:#0b6fb0;display:none;"></div>
-  </div>
-
-  <!-- IQ2 OPEN CART step 1 -->
-  <div class="screen" id="scIq2OpenCart">
-    <div class="wrap">
-      <div style="text-align:center;font-size:1rem;font-weight:700;color:#111418;margin-bottom:16px;">SCAN EMPTY CART</div>
-      <input type="text" id="iq2CartInput" class="hidden-scan-input" inputmode="none" placeholder="Scan cart QR"/>
-      <div id="iq2CartResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#f2f4f6;border:2px solid #c8ced4;text-align:center;">
-        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">CART SCANNED</div>
-        <div style="font-size:1.1rem;font-weight:800;color:#111418;">CART: <span id="iq2CartId"></span></div>
-        <div style="font-size:0.9rem;color:#4a525a;margin-top:6px;">Now scan the location</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- IQ2 OPEN CART step 2 -->
-  <div class="screen" id="scIq2OpenCartLoc">
-    <div class="wrap">
-      <div id="iq2CartLocCartLabel" style="font-family:var(--mono);font-size:1rem;font-weight:700;text-align:center;margin-bottom:6px;"></div>
-      <div style="text-align:center;font-size:1rem;font-weight:700;color:#111418;margin-bottom:16px;">SCAN LOCATION</div>
-      <input type="text" id="iq2CartLocInput" class="hidden-scan-input" inputmode="none" placeholder="Scan location QR"/>
-      <div id="iq2CartLocResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;">
-        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">CART OPEN</div>
-        <div style="font-size:0.9rem;font-weight:700;color:#111418;">CART: <span id="iq2CartLocCartId"></span></div>
-        <div style="font-size:0.9rem;font-weight:700;color:#111418;margin-top:4px;">LOCATION: <span id="iq2CartLocId"></span></div>
-        <div style="font-size:0.85rem;color:#0a7a2f;margin-top:6px;font-weight:700;">READY FOR PACKAGES</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- IQ2 SCAN PACKAGES -->
-  <div class="screen" id="scIq2ScanPkgs">
-    <div class="flip-card-container" id="iq2FlipContainer">
-      <div class="flip-card-inner" id="iq2FlipInner">
-        <div class="flip-card-face flip-card-front">
-          <div class="scan-heading" id="iq2ScanHeading">Scan Package</div>
-          <svg id="iq2BarcodeIcon" width="140" height="60" viewBox="0 0 140 60">
-            <rect x="0" y="0" width="4" height="60" fill="#111418"/><rect x="8" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="14" y="0" width="6" height="60" fill="#111418"/><rect x="24" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="30" y="0" width="4" height="60" fill="#111418"/><rect x="38" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="44" y="0" width="8" height="60" fill="#111418"/><rect x="56" y="0" width="2" height="60" fill="#111418"/>
-            <rect x="62" y="0" width="4" height="60" fill="#111418"/><rect x="70" y="0" width="6" height="60" fill="#111418"/>
-            <rect x="80" y="0" width="2" height="60" fill="#111418"/><rect x="86" y="0" width="4" height="60" fill="#111418"/>
-            <rect x="94" y="0" width="2" height="60" fill="#111418"/><rect x="100" y="0" width="8" height="60" fill="#111418"/>
-            <rect x="112" y="0" width="2" height="60" fill="#111418"/><rect x="118" y="0" width="4" height="60" fill="#111418"/>
-            <rect x="126" y="0" width="2" height="60" fill="#111418"/><rect x="132" y="0" width="6" height="60" fill="#111418"/>
-          </svg>
-        </div>
-        <div class="flip-card-face flip-card-back" id="iq2FlipBack">
-          <div class="flip-bin-number" id="iq2FlipRoute">RT-001</div>
-          <div class="flip-bin-instruction" id="iq2FlipStop">STOP 1</div>
-          <div style="color:#fff;font-size:0.8rem;margin-top:6px;" id="iq2FlipCart"></div>
-        </div>
-      </div>
-    </div>
-    <input type="text" id="iq2PkgInput" class="hidden-scan-input" inputmode="none" placeholder="Scan package"/>
-    <div class="result-card" id="iq2PkgResult" style="display:none;"></div>
-  </div>
-
-  <!-- IQ2 STAGE LIST -->
-  <div class="screen" id="scIq2Stage">
-    <div class="wrap">
-      <div style="font-size:0.78rem;font-weight:700;color:#4a525a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">ROUTES READY TO STAGE</div>
-      <div id="iq2StageList"></div>
-      <div id="iq2StageEmpty" style="display:none;text-align:center;padding:30px;color:#4a525a;font-size:0.9rem;">No routes ready to stage yet.</div>
-    </div>
-  </div>
-
-  <!-- IQ2 STAGE DETAIL -->
-  <div class="screen" id="scIq2StageDetail">
-    <div class="wrap">
-      <div id="iq2StageDetailInfo" style="padding:16px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;margin-bottom:16px;font-family:var(--mono);font-size:0.9rem;"></div>
-      <div style="padding:14px;border-radius:10px;background:#fff8e1;border:1px solid #f0cc70;margin-bottom:16px;font-size:0.88rem;color:#7a5c00;font-weight:700;">Go to location. Bring an empty replacement cart.</div>
-      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN ROUTE CART</div>
-      <input type="text" id="iq2StageCartInput" class="hidden-scan-input" inputmode="none" placeholder="Scan cart QR"/>
-      <div id="iq2StageCartResult" style="display:none;margin-top:12px;padding:16px;border-radius:10px;text-align:center;"></div>
-    </div>
-  </div>
-
-  <!-- IQ2 REPLACE CART -->
-  <div class="screen" id="scIq2ReplaceCart">
-    <div class="wrap">
-      <div id="iq2ReplaceInfo" style="padding:12px;border-radius:8px;background:#f2f4f6;margin-bottom:16px;font-family:var(--mono);font-size:0.85rem;text-align:center;"></div>
-      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN EMPTY REPLACEMENT CART</div>
-      <input type="text" id="iq2ReplaceCartInput" class="hidden-scan-input" inputmode="none" placeholder="Scan replacement cart QR"/>
-      <div id="iq2ReplaceCartResult" style="display:none;margin-top:12px;padding:14px;border-radius:10px;background:#f2f4f6;border:2px solid #d8dee2;text-align:center;font-family:var(--mono);font-size:0.9rem;"></div>
-    </div>
-  </div>
-
-  <!-- IQ2 REPLACE CART LOCATION -->
-  <div class="screen" id="scIq2ReplaceCartLoc">
-    <div class="wrap">
-      <div id="iq2ReplaceLocInfo" style="padding:12px;border-radius:8px;background:#f2f4f6;margin-bottom:16px;font-family:var(--mono);font-size:0.85rem;text-align:center;"></div>
-      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN LOCATION</div>
-      <input type="text" id="iq2ReplaceLocInput" class="hidden-scan-input" inputmode="none" placeholder="Scan location QR"/>
-      <div id="iq2ReplaceLocResult" style="display:none;margin-top:12px;padding:14px;border-radius:10px;background:#d9f2a3;border:2px solid #a8c96b;text-align:center;font-family:var(--mono);font-size:0.9rem;"></div>
-    </div>
-  </div>
-
-  <!-- IQ2 MOVE TO STAGE -->
-  <div class="screen" id="scIq2MoveToStage">
-    <div class="wrap">
-      <div id="iq2MoveInfo" style="padding:16px;border-radius:10px;background:#f2f4f6;border:1px solid #d8dee2;margin-bottom:16px;font-family:var(--mono);font-size:0.9rem;"></div>
-      <div style="padding:14px;border-radius:10px;background:#fff8e1;border:1px solid #f0cc70;margin-bottom:16px;font-size:0.88rem;color:#7a5c00;font-weight:700;">Move the route cart to the final staging area, then scan the stage location QR.</div>
-      <div style="text-align:center;font-size:1rem;font-weight:700;margin-bottom:12px;">SCAN STAGE LOCATION</div>
-      <input type="text" id="iq2MoveInput" class="hidden-scan-input" inputmode="none" placeholder="Scan stage location QR"/>
-      <div id="iq2MoveResult" style="display:none;margin-top:12px;padding:16px;border-radius:10px;text-align:center;font-family:var(--mono);"></div>
-    </div>
-  </div>
-
-  <!-- IQ2 ROUTES -->
-  <div class="screen" id="scIq2Routes">
-    <div class="wrap">
-      <div style="font-size:0.78rem;font-weight:700;color:#4a525a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">ALL ROUTES</div>
-      <div id="iq2RoutesList"></div>
-    </div>
-  </div>
-
 </div>
 
 <script>
@@ -455,9 +303,9 @@ function updateStowMenuStatus(){
   }
 }
 
-const SCREENS=['scHome','scAssignbins','scStowMenu','scOpenBin','scStow','scReceive','scInduct','scReset','scIq2Home','scIq2OpenCart','scIq2OpenCartLoc','scIq2ScanPkgs','scIq2Stage','scIq2StageDetail','scIq2ReplaceCart','scIq2ReplaceCartLoc','scIq2MoveToStage','scIq2Routes'];
-const TITLES={scHome:'', scAssignbins:'Assign bins', scStowMenu:'Stow', scOpenBin:'Open New Bin', scStow:'Scan Packages', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin', scIq2Home:'IQ2', scIq2OpenCart:'Open Cart', scIq2OpenCartLoc:'Open Cart', scIq2ScanPkgs:'Stow', scIq2Stage:'Stage', scIq2StageDetail:'Stage Route', scIq2ReplaceCart:'Open New Cart', scIq2ReplaceCartLoc:'Open New Cart', scIq2MoveToStage:'Move to Stage', scIq2Routes:'Routes'};
-const BACK_TARGET={scAssignbins:'home', scStowMenu:'home', scOpenBin:'stowMenu', scStow:'stowMenu', scReceive:'home', scInduct:'receive', scReset:'home', scIq2Home:'home', scIq2OpenCart:'iq2Home', scIq2OpenCartLoc:'iq2OpenCart', scIq2ScanPkgs:'iq2Home', scIq2Stage:'iq2Home', scIq2StageDetail:'iq2Stage', scIq2ReplaceCart:'iq2StageDetail', scIq2ReplaceCartLoc:'iq2ReplaceCart', scIq2MoveToStage:'iq2ReplaceCartLoc', scIq2Routes:'iq2Home'};
+const SCREENS=['scHome','scAssignbins','scStowMenu','scOpenBin','scStow','scReceive','scInduct','scReset'];
+const TITLES={scHome:'', scAssignbins:'Assign bins', scStowMenu:'Stow', scOpenBin:'Open New Bin', scStow:'Scan Packages', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
+const BACK_TARGET={scAssignbins:'home', scStowMenu:'home', scOpenBin:'stowMenu', scStow:'stowMenu', scReceive:'home', scInduct:'receive', scReset:'home'};
 
 function goTo(screen){
   const id='sc'+screen.charAt(0).toUpperCase()+screen.slice(1);
@@ -470,17 +318,6 @@ function goTo(screen){
     topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
   }
   if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
-  // IQ2 screen inits
-  if(id==='scIq2Home'){ iq2UpdateHomeStatus(); }
-  if(id==='scIq2OpenCart'){ iq2InitOpenCart(); }
-  if(id==='scIq2OpenCartLoc'){ iq2InitOpenCartLoc(); }
-  if(id==='scIq2ScanPkgs'){ iq2InitScanPkgs(); }
-  if(id==='scIq2Stage'){ iq2InitStage(); }
-  if(id==='scIq2StageDetail'){ iq2InitStageDetail(); }
-  if(id==='scIq2ReplaceCart'){ iq2InitReplaceCart(); }
-  if(id==='scIq2ReplaceCartLoc'){ iq2InitReplaceCartLoc(); }
-  if(id==='scIq2MoveToStage'){ iq2InitMoveToStage(); }
-  if(id==='scIq2Routes'){ iq2InitRoutes(); }
   if(id==='scStowMenu'){ updateStowMenuStatus(); }
   if(id==='scOpenBin'){ openBinScreenInit(); }
   if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
@@ -963,21 +800,7 @@ function _handleBridgeScan(data){
     _lastScanValue=value;
     _lastScanTime=now;
 
-    if(document.getElementById('scIq2OpenCart').classList.contains('on')){
-      iq2HandleCartScan(value);
-    } else if(document.getElementById('scIq2OpenCartLoc').classList.contains('on')){
-      iq2HandleCartLocScan(value);
-    } else if(document.getElementById('scIq2ScanPkgs').classList.contains('on')){
-      iq2HandlePkgScan(value);
-    } else if(document.getElementById('scIq2StageDetail').classList.contains('on')){
-      iq2HandleStageCartScan(value);
-    } else if(document.getElementById('scIq2ReplaceCart').classList.contains('on')){
-      iq2HandleReplaceCartScan(value);
-    } else if(document.getElementById('scIq2ReplaceCartLoc').classList.contains('on')){
-      iq2HandleReplaceCartLocScan(value);
-    } else if(document.getElementById('scIq2MoveToStage').classList.contains('on')){
-      iq2HandleMoveScan(value);
-    } else if(document.getElementById('scStow').classList.contains('on')){
+    if(document.getElementById('scStow').classList.contains('on')){
       handleStowScan(value);
     } else if(document.getElementById('scReceive').classList.contains('on')){
       handleReceiveScan(value);
@@ -1007,198 +830,6 @@ async function registerScannerBridge(){
   }
 }
 
-
-// ═══════════════════════════════════════════════════
-// IQ2 — STATE AND WORKFLOW
-// ═══════════════════════════════════════════════════
-
-let iq2ActiveCart = null;   // {cartId, location}
-let iq2StagingRoute = null; // {routeId, cartId, location, packages[]}
-let iq2NewCart = null;      // {cartId} replacement cart during staging
-let iq2RouteSessions = {};  // routeId → {cartId, location, staged, stageLocation, packages[]}
-
-// ── SCREEN INIT ──
-function iq2InitOpenCart(){
-  document.getElementById('iq2CartResult').style.display='none';
-  document.getElementById('iq2CartInput').value='';
-  setTimeout(function(){ document.getElementById('iq2CartInput').focus(); },100);
-}
-function iq2InitOpenCartLoc(){
-  document.getElementById('iq2CartLocResult').style.display='none';
-  document.getElementById('iq2CartLocInput').value='';
-  setTimeout(function(){ document.getElementById('iq2CartLocInput').focus(); },100);
-}
-function iq2InitScanPkgs(){
-  document.getElementById('iq2PkgResult').style.display='none';
-  document.getElementById('iq2FlipInner').classList.remove('flipped');
-  document.getElementById('iq2PkgInput').value='';
-  document.getElementById('iq2ScanHeading').textContent='Scan Package';
-}
-function iq2InitStage(){
-  const list=document.getElementById('iq2StageList');
-  const empty=document.getElementById('iq2StageEmpty');
-  const ready=Object.entries(iq2RouteSessions).filter(function(e){ return !e[1].staged; });
-  if(!ready.length){ list.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  list.innerHTML=ready.map(function(e){
-    const rid=e[0],sess=e[1];
-    return '<div class="bin-row tappable" onclick="iq2SelectStage(''+rid+'')">'+
-      '<span class="bin-num-chip">'+rid+'</span>'+
-      '<span>'+sess.cartId+' — '+sess.location+'</span>'+
-      '<span class="bin-progress">'+sess.packages.length+' pkg ›</span></div>';
-  }).join('');
-}
-function iq2InitStageDetail(){
-  if(!iq2StagingRoute) return;
-  const r=iq2StagingRoute;
-  document.getElementById('iq2StageDetailInfo').innerHTML=
-    'ROUTE: '+r.routeId+'<br>CART: '+r.cartId+'<br>LOCATION: '+r.location+'<br>PACKAGES: '+r.packages.length+'<br><br>Go to '+r.location+' · Bring empty cart';
-  document.getElementById('iq2StageCartResult').style.display='none';
-  document.getElementById('iq2StageCartInput').value='';
-  setTimeout(function(){ document.getElementById('iq2StageCartInput').focus(); },100);
-}
-function iq2InitReplaceCart(){
-  if(!iq2StagingRoute) return;
-  document.getElementById('iq2ReplaceInfo').textContent='Route: '+iq2StagingRoute.routeId+'  |  Cart: '+iq2StagingRoute.cartId+'  |  Location: '+iq2StagingRoute.location;
-  document.getElementById('iq2ReplaceCartResult').style.display='none';
-  document.getElementById('iq2ReplaceCartInput').value='';
-  setTimeout(function(){ document.getElementById('iq2ReplaceCartInput').focus(); },100);
-}
-function iq2InitReplaceCartLoc(){
-  document.getElementById('iq2ReplaceLocInfo').textContent='Replacing at: '+(iq2StagingRoute?iq2StagingRoute.location:'?')+'  |  New cart: '+(iq2NewCart?iq2NewCart.cartId:'?');
-  document.getElementById('iq2ReplaceLocResult').style.display='none';
-  document.getElementById('iq2ReplaceLocInput').value='';
-  setTimeout(function(){ document.getElementById('iq2ReplaceLocInput').focus(); },100);
-}
-function iq2InitMoveToStage(){
-  if(!iq2StagingRoute) return;
-  document.getElementById('iq2MoveInfo').innerHTML='ROUTE: '+iq2StagingRoute.routeId+'<br>CART: '+iq2StagingRoute.cartId+'<br><br>Move this cart to the final staging area.';
-  document.getElementById('iq2MoveResult').style.display='none';
-  document.getElementById('iq2MoveInput').value='';
-  setTimeout(function(){ document.getElementById('iq2MoveInput').focus(); },100);
-}
-function iq2InitRoutes(){
-  const el=document.getElementById('iq2RoutesList');
-  const all=Object.entries(iq2RouteSessions);
-  if(!all.length){ el.innerHTML='<div class="empty-note">No routes yet.</div>'; return; }
-  el.innerHTML=all.map(function(e){
-    const rid=e[0],sess=e[1];
-    const color=sess.staged?'#0a7a2f':'#0b6fb0';
-    const status=sess.staged?'★ STAGED @ '+sess.stageLocation:'Building · '+sess.packages.length+' pkg';
-    return '<div class="bin-row"><span class="bin-num-chip">'+rid+'</span><span>'+sess.cartId+'</span><span style="font-size:.8rem;color:'+color+';font-weight:700;">'+status+'</span></div>';
-  }).join('');
-}
-function iq2UpdateHomeStatus(){
-  const el=document.getElementById('iq2ActiveCartStatus');
-  if(!el) return;
-  if(iq2ActiveCart){
-    el.textContent='Active: '+iq2ActiveCart.cartId+' → '+iq2ActiveCart.location;
-    el.style.display='block';
-  } else {
-    el.style.display='none';
-  }
-}
-
-// ── SCAN HANDLERS ──
-function iq2HandleCartScan(raw){
-  const val=raw.trim(); if(!val) return;
-  iq2NewCart={cartId:val};
-  document.getElementById('iq2CartId').textContent=val;
-  document.getElementById('iq2CartResult').style.display='block';
-  document.getElementById('iq2CartLocCartLabel').textContent='CART: '+val;
-  document.getElementById('iq2CartLocResult').style.display='none';
-  document.getElementById('iq2CartLocInput').value='';
-  setTimeout(function(){ goTo('iq2OpenCartLoc'); setTimeout(function(){ document.getElementById('iq2CartLocInput').focus(); },150); },900);
-}
-function iq2HandleCartLocScan(raw){
-  const val=raw.trim(); if(!val) return;
-  const cartId=iq2NewCart?iq2NewCart.cartId:'?';
-  iq2ActiveCart={cartId:cartId, location:val};
-  document.getElementById('iq2CartLocCartId').textContent=cartId;
-  document.getElementById('iq2CartLocId').textContent=val;
-  document.getElementById('iq2CartLocResult').style.display='block';
-  iq2UpdateHomeStatus();
-}
-function iq2HandlePkgScan(raw){
-  const clean=raw.trim().toUpperCase(); if(!clean) return;
-  if(!iq2ActiveCart){ iq2ShowPkgResult('error','NO CART OPEN','Open a cart first.'); return; }
-  const match=binMap[clean];
-  if(!match){ iq2ShowPkgResult('error','NOT FOUND',clean+' is not in any active route.'); return; }
-  const routeId=match.binNum||match.jobTitle||'RT-?';
-  const stopNum=match.stopNum||'?';
-  if(!iq2RouteSessions[routeId]) iq2RouteSessions[routeId]={cartId:iq2ActiveCart.cartId,location:iq2ActiveCart.location,staged:false,stageLocation:null,packages:[]};
-  const sess=iq2RouteSessions[routeId];
-  if(sess.packages.includes(clean)){ iq2ShowPkgResult('error','ALREADY ADDED',clean+' already scanned.'); return; }
-  sess.packages.push(clean);
-  document.getElementById('iq2FlipRoute').textContent=routeId;
-  document.getElementById('iq2FlipStop').textContent='STOP '+stopNum;
-  document.getElementById('iq2FlipCart').textContent='CART: '+iq2ActiveCart.cartId+' | '+iq2ActiveCart.location;
-  document.getElementById('iq2FlipInner').classList.add('flipped');
-  const total=Object.values(binMap).filter(function(v){ return (v.binNum||v.jobTitle)===routeId; }).length;
-  setTimeout(function(){
-    document.getElementById('iq2FlipInner').classList.remove('flipped');
-    if(sess.packages.length>=total&&total>0){
-      iq2ShowPkgResult('staged',routeId+' READY','CART: '+sess.cartId+' | '+sess.location+'\nREADY TO STAGE');
-    } else {
-      iq2ShowPkgResult('success','PACKAGE ADDED',routeId+' · STOP '+stopNum+'\nCART: '+sess.cartId+' ('+sess.packages.length+'/'+total+')');
-    }
-  },800);
-}
-function iq2ShowPkgResult(type,title,detail){
-  const el=document.getElementById('iq2PkgResult');
-  el.className='result-card '+(type==='error'?'error':type==='staged'?'staged':'success');
-  el.innerHTML='<div class="result-bin">'+title+'</div><div class="result-detail" style="white-space:pre-line;">'+detail+'</div>';
-  el.style.display='flex';
-}
-function iq2SelectStage(routeId){
-  iq2StagingRoute=Object.assign({routeId:routeId},iq2RouteSessions[routeId]);
-  goTo('iq2StageDetail');
-}
-function iq2HandleStageCartScan(raw){
-  const val=raw.trim(); if(!val) return;
-  if(!iq2StagingRoute) return;
-  if(val.toUpperCase()!==iq2StagingRoute.cartId.toUpperCase()){
-    const el=document.getElementById('iq2StageCartResult');
-    el.style.display='block'; el.className='result-card error';
-    el.innerHTML='<div class="result-bin">WRONG CART</div><div class="result-detail">Expected '+iq2StagingRoute.cartId+', scanned '+val+'</div>';
-    return;
-  }
-  const el=document.getElementById('iq2StageCartResult');
-  el.style.display='block'; el.className='result-card success';
-  el.innerHTML='<div class="result-bin">ROUTE FOUND</div><div class="result-detail">ROUTE: '+iq2StagingRoute.routeId+'<br>CART: '+iq2StagingRoute.cartId+'<br>LOCATION: '+iq2StagingRoute.location+'<br>READY TO STAGE</div>';
-  setTimeout(function(){ goTo('iq2ReplaceCart'); },900);
-}
-function iq2HandleReplaceCartScan(raw){
-  const val=raw.trim(); if(!val) return;
-  iq2NewCart={cartId:val};
-  document.getElementById('iq2ReplaceCartResult').style.display='block';
-  document.getElementById('iq2ReplaceCartResult').textContent='CART: '+val+' — Scan location next';
-  setTimeout(function(){ goTo('iq2ReplaceCartLoc'); },800);
-}
-function iq2HandleReplaceCartLocScan(raw){
-  const val=raw.trim(); if(!val) return;
-  const cartId=iq2NewCart?iq2NewCart.cartId:'?';
-  iq2ActiveCart={cartId:cartId,location:val};
-  document.getElementById('iq2ReplaceLocResult').style.display='block';
-  document.getElementById('iq2ReplaceLocResult').innerHTML='CART OPEN<br>CART: '+cartId+'<br>LOCATION: '+val+'<br>READY FOR PACKAGES';
-  iq2UpdateHomeStatus();
-  setTimeout(function(){ goTo('iq2MoveToStage'); },900);
-}
-function iq2HandleMoveScan(raw){
-  const val=raw.trim(); if(!val) return;
-  if(iq2StagingRoute&&iq2RouteSessions[iq2StagingRoute.routeId]){
-    iq2RouteSessions[iq2StagingRoute.routeId].staged=true;
-    iq2RouteSessions[iq2StagingRoute.routeId].stageLocation=val;
-  }
-  const el=document.getElementById('iq2MoveResult');
-  el.style.display='block';
-  el.innerHTML='<div style="font-size:1.1rem;font-weight:800;color:#0a7a2f;">'+(iq2StagingRoute?iq2StagingRoute.routeId:'')+' STAGED</div>'+
-    '<div style="margin-top:8px;">CART: '+(iq2StagingRoute?iq2StagingRoute.cartId:'')+'</div>'+
-    '<div>STAGE LOCATION: '+val+'</div>'+
-    '<div style="margin-top:8px;font-weight:700;">READY FOR DRIVER</div>';
-  iq2StagingRoute=null;
-}
-
 registerScannerBridge();
 
 // Re-register whenever the app returns to the foreground. If the WebView
@@ -1220,6 +851,5 @@ if('serviceWorker' in navigator){
     .catch(function(e){ console.log('PathIQ SW registration failed', e); });
 }
 </script>
-
 </body>
 </html>
