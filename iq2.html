@@ -147,6 +147,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
       <div class="step-label">Step 1 of 2 · Open Cart</div>
       <div style="text-align:center;font-size:1rem;font-weight:700;color:#111418;margin-bottom:16px;">SCAN EMPTY CART</div>
       <input type="text" id="openCartInput" class="hidden-scan-input" inputmode="none" placeholder="Scan cart QR"/>
+      <div id="iq2DebugOut" style="margin-top:16px;padding:12px;background:#f2f4f6;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.85rem;color:#333;min-height:40px;word-break:break-all;">Waiting for scan...</div>
       <div id="openCartResult" style="display:none;margin-top:16px;padding:20px;border-radius:12px;background:#f2f4f6;border:2px solid #c8ced4;text-align:center;">
         <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;color:#4a525a;text-transform:uppercase;margin-bottom:8px;">CART SCANNED</div>
         <div style="font-size:1.1rem;font-weight:800;color:#111418;">CART: <span id="openCartId"></span></div>
@@ -965,6 +966,8 @@ function iq2OpenCartInit() {
 
 function iq2HandleOpenCartScan(raw) {
   const val = raw.trim();
+  const dbg = document.getElementById('iq2DebugOut');
+  if(dbg) dbg.textContent = 'SCANNED: "' + raw + '" → trimmed: "' + val + '"';
   if (!val) return;
   // Store cart ID, wait for location scan
   iq2ReplacementCart = { cartId: val };
