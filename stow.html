@@ -125,7 +125,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
         <svg viewBox="0 0 24 24"><path d="M3 6h6l3 12h9"/><path d="M3 18h6l1.5-6"/><path d="M17 3l4 3-4 3M17 15l4 3-4 3"/></svg>
         <div class="big-card-title">SmartSort</div>
       </button>
-      <button class="big-card" onclick="window.location.href='iq2.html'">
+      <button class="big-card" onclick="showIQ2()">
         <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
         <div class="big-card-title">IQ2</div>
       </button>
@@ -850,6 +850,37 @@ if('serviceWorker' in navigator){
     .then(function(r){ console.log('PathIQ SW registered', r.scope); })
     .catch(function(e){ console.log('PathIQ SW registration failed', e); });
 }
+</script>
+
+<!-- IQ2 OVERLAY — loads iq2.html in same WebView context so FarsetScanner bridge stays alive -->
+<div id="iq2Overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#fff;flex-direction:column;">
+  <iframe id="iq2Frame" src="iq2.html" style="border:none;width:100%;flex:1;" allowfullscreen></iframe>
+</div>
+
+<script>
+function showIQ2(){
+  const overlay = document.getElementById('iq2Overlay');
+  overlay.style.display = 'flex';
+  // Pass FarsetScanner to iframe when it loads
+  const frame = document.getElementById('iq2Frame');
+  frame.onload = function(){
+    try{
+      if(frame.contentWindow && window.Capacitor){
+        frame.contentWindow.Capacitor = window.Capacitor;
+        if(frame.contentWindow.registerScannerBridge){
+          frame.contentWindow.registerScannerBridge();
+        }
+      }
+    }catch(e){ console.log('IQ2 bridge inject error:', e); }
+  };
+}
+function hideIQ2(){
+  document.getElementById('iq2Overlay').style.display = 'none';
+}
+// Listen for back message from iq2.html iframe
+window.addEventListener('message', function(e){
+  if(e.data === 'iq2:back') hideIQ2();
+});
 </script>
 </body>
 </html>
