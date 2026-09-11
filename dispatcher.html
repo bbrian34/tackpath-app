@@ -2381,7 +2381,7 @@ async function loadJobs(){
     jobs=newJobs;
     syncSurgeBlocksFromJobs();
     try{
-      const locs=await sbGet('driver_locations?order=updated_at.desc&limit=200');
+      const locs=await sbGet('driver_locations?order=updated_at.desc&limit=50');
       driverLastSeen={};
       driverLastLocation={};
       (locs||[]).forEach(function(l){
@@ -4000,79 +4000,6 @@ function parseCSV(text){
   setTimeout(buildAndAutoDispatch, 600);
 }
 
-function printLabels(routeId){
-  const r=ssRoutes.find(x=>x.id===routeId);
-  if(!r){toast('Route not found','warn');return;}
-  const binNum=(parseInt(r.id.split('-')[1])||0)+'A';
-
-  // Build package label cards
-  const cards=r.stops.map((s,i)=>{
-    const scanCode=(s.tracking_number||s.order_id||s.smart_id||'PKG'+(i+1)).toUpperCase();
-    return `
-    <div class="lbl">
-      <div class="lbl-stop">STOP ${i+1} &nbsp;|&nbsp; BIN ${binNum}</div>
-      <div class="lbl-name">${s.recipient||''}</div>
-      <div class="lbl-addr">${s.address||''}</div>
-      <div class="lbl-codes">
-        <div>
-          <svg class="bc" data-code="${scanCode}"></svg>
-          <div class="lbl-id">${scanCode}</div>
-        </div>
-        <svg class="qr" data-code="${scanCode}" data-qr="1"></svg>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Build bin QR card
-  const binCard=`
-    <div class="lbl bin-lbl">
-      <div class="lbl-stop" style="color:#19b7ef;">BIN QR — Scan this after every package</div>
-      <div class="lbl-name" style="font-size:2rem;">${binNum}</div>
-      <svg class="qr-big" data-code="${binNum}" data-qr="1"></svg>
-      <div class="lbl-id">${binNum}</div>
-    </div>`;
-
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-<title>TackPath Labels — ${r.id}</title>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"><\/script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:Arial,sans-serif;background:#eee;padding:20px;}
-.print-btn{display:block;margin:0 auto 20px;padding:10px 28px;background:#19b7ef;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;max-width:920px;margin:0 auto;}
-.lbl{background:#fff;border:2px solid #111;border-radius:6px;padding:14px;break-inside:avoid;}
-.bin-lbl{grid-column:1/-1;text-align:center;border-color:#19b7ef;}
-.lbl-stop{font-size:0.65rem;font-weight:700;color:#19b7ef;letter-spacing:.1em;margin-bottom:4px;}
-.lbl-name{font-size:1rem;font-weight:800;color:#111;margin-bottom:2px;}
-.lbl-addr{font-size:0.85rem;color:#444;margin-bottom:10px;border-bottom:1px solid #ddd;padding-bottom:8px;}
-.lbl-codes{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.bc{width:100%;height:70px;}
-.qr{width:80px;height:80px;flex-shrink:0;}
-.qr-big{width:220px;height:220px;margin:12px auto;display:block;}
-.lbl-id{font-family:monospace;font-size:0.9rem;font-weight:700;text-align:center;margin-top:4px;}
-@media print{.print-btn{display:none;}body{background:#fff;padding:0;}.grid{gap:8px;}}
-</style></head><body>
-<button class="print-btn" onclick="window.print()">Print Labels</button>
-<div class="grid">${cards}${binCard}</div>
-<script>
-document.querySelectorAll('.bc').forEach(function(el){
-  try{JsBarcode(el,el.dataset.code,{format:'CODE128',displayValue:false,height:60,margin:4});}catch(e){}
-});
-document.querySelectorAll('[data-qr]').forEach(function(el){
-  var size=el.classList.contains('qr-big')?220:80;
-  QRCode.toDataURL(el.dataset.code,{width:size,margin:2},function(err,url){
-    if(!err){var img=document.createElement('img');img.src=url;img.width=size;img.height=size;el.parentNode.replaceChild(img,el);}
-  });
-});
-<\/script>
-</body></html>`;
-
-  const w=window.open('','_blank');
-  if(w){w.document.write(html);w.document.close();}
-  else{toast('Allow popups to print labels','warn');}
-}
-
 function loadDemoData(){
   packages=[...DEMO_PACKAGES];
   renderPackageTable();
@@ -4080,7 +4007,7 @@ function loadDemoData(){
 }
 
 function downloadTemplate(){
-  const csv='order_id,recipient,address,packages,tracking_number\nTP1001,Jane Doe,123 Main St Atlanta GA,1,\nTP1002,John Smith,456 Oak Ave Atlanta GA,2,';
+  const csv='order_id,recipient,address,packages\nTP1001,Jane Doe,123 Main St Atlanta GA,1\nTP1002,John Smith,456 Oak Ave Atlanta GA,2';
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -4223,8 +4150,7 @@ async function refreshAllLiveETAs(){
   const activeJobs=jobs.filter(j=>(j.status==='assigned'||j.status==='in_transit'||j.status==='customer_confirmed')&&j.driver_name);
   for(const job of activeJobs){
     const last=lastEtaRefresh[job.id]||0;
-    const noEtaYet=!job.estimated_delivery_at;
-    if(!noEtaYet&&now-last<ETA_REFRESH_MINUTES*60000)continue;
+    if(now-last<ETA_REFRESH_MINUTES*60000)continue;
     lastEtaRefresh[job.id]=now;
     await refreshLiveETA(job);
   }
@@ -4842,7 +4768,6 @@ function renderSSRoutes(){
         <div class="mc-hint">1 scan &rarr; ${r.stops.length} stops &rarr; ${r.total_packages} packages loaded on driver app</div>
       </div>
       <button onclick="viewRouteOnMap('${r.id}')" style="width:100%;padding:10px;margin-top:8px;border-radius:10px;background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:var(--blue);font-family:var(--sans);font-weight:700;font-size:0.846rem;cursor:pointer;">&#128506; View Route on Map</button>
-      <button onclick="printLabels('${r.id}')" style="width:100%;padding:10px;margin-top:6px;border-radius:10px;background:rgba(83,255,136,.08);border:1px solid rgba(83,255,136,.25);color:var(--green);font-family:var(--sans);font-weight:700;font-size:0.846rem;cursor:pointer;">&#128230; Print Package Labels</button>
       <div class="rc-footer">
         <div class="rc-dist">&#9654; ${r.road_miles?r.road_miles+' road miles':r.est_miles+' mi (haversine)'} · ~${r.workload_min} min</div>
         <button class="btn-assign" onclick="assignSSRoute('${r.id}')">Assign Driver &rarr;</button>
