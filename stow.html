@@ -501,6 +501,7 @@ function handleStowScan(code){
   const debugMsg2=debugLines.join('\n');
   console.log(debugMsg2);
   const dbgEl2=document.getElementById('debugPanel');
+  if(dbgEl2) dbgEl2.textContent+='\nRAW SCAN: ['+raw+'] CLEAN: ['+clean+'] IN MAP: '+(!!binMap[clean]);
   const existingDbg=dbgEl2 ? dbgEl2.textContent : '';
   if(dbgEl2) dbgEl2.textContent=(existingDbg?existingDbg+'\n\n':'')+debugMsg2;
 
