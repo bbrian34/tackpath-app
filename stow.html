@@ -746,7 +746,21 @@ async function registerScannerBridge(){
   }
 }
 
-registerScannerBridge();
+// Capacitor injects window.Capacitor asynchronously. A single check at
+// parse time can run before that injection lands, in which case the
+// guard clause returns and no listener is ever attached - a silent
+// failure that looks exactly like a dead scanner. This polls until the
+// bridge actually exists, then registers once, and gives up after 15s
+// so it can never spin forever.
+(function waitForBridge(attemptsLeft){
+  if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner){
+    registerScannerBridge();
+    return;
+  }
+  if(attemptsLeft > 0){
+    setTimeout(function(){ waitForBridge(attemptsLeft - 1); }, 250);
+  }
+})(60);
 
 // Re-register whenever the app returns to the foreground. If the WebView
 // was ever reloaded or the bridge connection dropped while backgrounded,
