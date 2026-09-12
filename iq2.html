@@ -371,7 +371,7 @@ function goTo(screen){
   if(id==='scReplaceCartLocation'){ iq2ReplaceCartLocationInit(); }
   if(id==='scMoveToStage'){ iq2MoveToStageInit(); }
   if(id==='scRoutes'){ iq2RenderRoutes(); }
-  if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
+
   if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
   if(id==='scInduct'){ renderInductSummary(); }
 }
@@ -443,8 +443,7 @@ async function loadRoutes(){
   const dbgEl = document.getElementById('debugPanel');
   if(dbgEl && !fetchErrorOccurred) dbgEl.textContent = debugMsg1;
 
-  if(document.getElementById('scStow').classList.contains('on')) renderBinsPanel();
-  if(document.getElementById('scReset').classList.contains('on')) renderResetBinsPanel();
+
 }
 
 function renderBinsPanel(){
@@ -799,8 +798,7 @@ document.getElementById('receiveInput').addEventListener('keydown', function(e){
 });
 document.addEventListener('click', function(){
   if(document.getElementById('scOpenBin').classList.contains('on')) document.getElementById('openBinInput').focus();
-  if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
-  if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
+
   // IQ2 inputs
   if(document.getElementById('scOpenCart').classList.contains('on')) document.getElementById('openCartInput').focus();
   if(document.getElementById('scOpenCartLocation').classList.contains('on')) document.getElementById('openCartLocationInput').focus();
