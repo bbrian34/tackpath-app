@@ -695,74 +695,59 @@ window.addEventListener('online', loadRoutes);
 // receiving nothing on scan. It only broadcasts. This listens for that
 // broadcast via the native FarsetScanner plugin and routes the decoded
 // value into the exact same functions a keyboard-wedge scan would have
-// called, based on whichever screen is actually open. Nothing about the
-// existing scan-handling logic itself changes.
+// called, based on whichever screen is actually open.
 //
-// LIFECYCLE: the scanner service broadcasts the SAME decoded value
-// through several compatibility actions (nlscan, sunmi, SCANRESULT and
-// others - all visible in logcat), so one physical trigger press can
-// deliver the same value multiple times within a few milliseconds.
-// Without a guard here, the first copy is processed and every later
-// copy is then correctly rejected as "already scanned" - which looks
-// exactly like a broken scanner from the operator's side. This dedupes
-// on value + time window, so one press is one logical scan, while a
-// deliberate rescan later still works normally.
+// Direct synchronous registration — the proven working pattern.
+// The async/await wrapper caused timing issues with Capacitor bridge
+// initialization. This fires synchronously at page load when Capacitor
+// is already available, exactly matching the working backup version.
 let _lastScanValue=null;
 let _lastScanTime=0;
 
-function _handleBridgeScan(data){
-  try{
-    const value = data && data.value;
-    if(!value) return;
+if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner){
+  window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+    try{
+      const value = data && data.value;
+      if(!value) return;
 
-    const now = Date.now();
-    if(value===_lastScanValue && (now-_lastScanTime) < 1000){
-      return; // same physical press arriving via another broadcast action
-    }
-    _lastScanValue=value;
-    _lastScanTime=now;
+      const now = Date.now();
+      if(value===_lastScanValue && (now-_lastScanTime) < 1000){
+        return; // dedupe multiple broadcasts from one physical press
+      }
+      _lastScanValue=value;
+      _lastScanTime=now;
 
-    if(document.getElementById('scStow').classList.contains('on')){
-      handleStowScan(value);
-    } else if(document.getElementById('scReceive').classList.contains('on')){
-      handleReceiveScan(value);
-    } else if(document.getElementById('scAssignbins').classList.contains('on')){
-      handleAssignBinScan(value);
+      const dbg=document.getElementById('debugPanel');
+      if(dbg) dbg.textContent+='\nRAW SCAN: ['+value+'] IN MAP: '+(!!binMap[value.toUpperCase()]);
+
+      if(document.getElementById('scStow').classList.contains('on')){
+        handleStowScan(value);
+      } else if(document.getElementById('scReceive').classList.contains('on')){
+        handleReceiveScan(value);
+      } else if(document.getElementById('scAssignbins').classList.contains('on')){
+        handleAssignBinScan(value);
+      }
+    }catch(e){
+      console.log('Scan handling error:', e);
     }
-  }catch(e){
-    // Never let an error here kill the listener - a thrown exception
-    // inside a Capacitor listener callback can silently stop further
-    // events from being delivered for the rest of the session.
-    console.log('Scan handling error:', e);
-  }
+  });
 }
 
-let _scannerListenerHandle=null;
-async function registerScannerBridge(){
-  if(!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner)) return;
-  try{
-    // Remove any previous registration before adding a new one, so a
-    // re-register can never produce two live listeners firing twice.
-    if(_scannerListenerHandle && typeof _scannerListenerHandle.remove==='function'){
-      await _scannerListenerHandle.remove();
-    }
-    _scannerListenerHandle = await window.Capacitor.Plugins.FarsetScanner.addListener('scan', _handleBridgeScan);
-  }catch(e){
-    console.log('Scanner bridge registration failed:', e);
-  }
-}
-
-registerScannerBridge();
-
-// Re-register whenever the app returns to the foreground. If the WebView
-// was ever reloaded or the bridge connection dropped while backgrounded,
-// the original one-time registration would be gone with nothing to
-// restore it - which is exactly the "worked once, then silently stopped"
-// failure. This makes recovery automatic instead of requiring a restart.
+// Re-register on resume in case the bridge dropped while backgrounded
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState==='visible') registerScannerBridge();
+  if(document.visibilityState==='visible' &&
+     window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner){
+    window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+      const value = data && data.value; if(!value) return;
+      const now=Date.now();
+      if(value===_lastScanValue && (now-_lastScanTime)<1000) return;
+      _lastScanValue=value; _lastScanTime=now;
+      if(document.getElementById('scStow').classList.contains('on')) handleStowScan(value);
+      else if(document.getElementById('scReceive').classList.contains('on')) handleReceiveScan(value);
+      else if(document.getElementById('scAssignbins').classList.contains('on')) handleAssignBinScan(value);
+    });
+  }
 });
-window.addEventListener('focus', registerScannerBridge);
 
 </script>
 </body>
