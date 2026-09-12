@@ -871,7 +871,8 @@ let _lastScanTime=0;
 // Dead PathIQ screen references (scStow, scReceive, scAssignbins) removed —
 // those elements don't exist in iq2.html and threw null errors that silently
 // killed the handler before IQ2 screens were ever reached.
-if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner){
+function iq2RegisterScanner(){
+  if(!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner)) return false;
   window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
     try{
       const value = data && data.value;
@@ -897,7 +898,16 @@ if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Fars
       }
     }catch(e){ console.log('IQ2 scan error:', e); }
   });
+  return true;
 }
+
+// Poll until Capacitor injects the bridge, then register once.
+(function iq2WaitForBridge(attemptsLeft){
+  if(iq2RegisterScanner()) return;
+  if(attemptsLeft > 0){
+    setTimeout(function(){ iq2WaitForBridge(attemptsLeft - 1); }, 250);
+  }
+})(60);
 
 document.addEventListener('visibilitychange', function(){
   if(document.visibilityState==='visible' &&
