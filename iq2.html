@@ -869,84 +869,56 @@ window.addEventListener('online', loadRoutes);
 let _lastScanValue=null;
 let _lastScanTime=0;
 
-function _handleBridgeScan(data){
-  try{
-    const value = data && data.value;
-    if(!value) return;
-
-    const now = Date.now();
-    if(value===_lastScanValue && (now-_lastScanTime) < 1000){
-      return; // same physical press arriving via another broadcast action
-    }
-    _lastScanValue=value;
-    _lastScanTime=now;
-
-    if(document.getElementById('scStow').classList.contains('on')){
-      handleStowScan(value);
-    } else if(document.getElementById('scReceive').classList.contains('on')){
-      handleReceiveScan(value);
-    } else if(document.getElementById('scAssignbins').classList.contains('on')){
-      handleAssignBinScan(value);
-    } else if(document.getElementById('scOpenCart').classList.contains('on')){
-      iq2HandleOpenCartScan(value);
-    } else if(document.getElementById('scOpenCartLocation').classList.contains('on')){
-      iq2HandleOpenCartLocationScan(value);
-    } else if(document.getElementById('scScanPackages').classList.contains('on')){
-      iq2HandleScanPackages(value);
-    } else if(document.getElementById('scStageDetail').classList.contains('on')){
-      iq2HandleStageCartScan(value);
-    } else if(document.getElementById('scReplaceCart').classList.contains('on')){
-      iq2HandleReplaceCartScan(value);
-    } else if(document.getElementById('scReplaceCartLocation').classList.contains('on')){
-      iq2HandleReplaceCartLocationScan(value);
-    } else if(document.getElementById('scMoveToStage').classList.contains('on')){
-      iq2HandleMoveToStageScan(value);
-    }
-  }catch(e){
-    // Never let an error here kill the listener - a thrown exception
-    // inside a Capacitor listener callback can silently stop further
-    // events from being delivered for the rest of the session.
-    console.log('Scan handling error:', e);
-  }
+// Direct synchronous registration — proven working pattern from PathIQ.
+// Dead PathIQ screen references (scStow, scReceive, scAssignbins) removed —
+// those elements don't exist in iq2.html and threw null errors that silently
+// killed the handler before IQ2 screens were ever reached.
+if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner){
+  window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+    try{
+      const value = data && data.value;
+      if(!value) return;
+      const now = Date.now();
+      if(value===_lastScanValue && (now-_lastScanTime) < 1000) return;
+      _lastScanValue=value;
+      _lastScanTime=now;
+      if(document.getElementById('scOpenCart').classList.contains('on')){
+        iq2HandleOpenCartScan(value);
+      } else if(document.getElementById('scOpenCartLocation').classList.contains('on')){
+        iq2HandleOpenCartLocationScan(value);
+      } else if(document.getElementById('scScanPackages').classList.contains('on')){
+        iq2HandleScanPackages(value);
+      } else if(document.getElementById('scStageDetail').classList.contains('on')){
+        iq2HandleStageCartScan(value);
+      } else if(document.getElementById('scReplaceCart').classList.contains('on')){
+        iq2HandleReplaceCartScan(value);
+      } else if(document.getElementById('scReplaceCartLocation').classList.contains('on')){
+        iq2HandleReplaceCartLocationScan(value);
+      } else if(document.getElementById('scMoveToStage').classList.contains('on')){
+        iq2HandleMoveToStageScan(value);
+      }
+    }catch(e){ console.log('IQ2 scan error:', e); }
+  });
 }
 
-let _scannerListenerHandle=null;
-async function registerScannerBridge(){
-  if(!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner)) return;
-  try{
-    // Remove any previous registration before adding a new one, so a
-    // re-register can never produce two live listeners firing twice.
-    if(_scannerListenerHandle && typeof _scannerListenerHandle.remove==='function'){
-      await _scannerListenerHandle.remove();
-    }
-    _scannerListenerHandle = await window.Capacitor.Plugins.FarsetScanner.addListener('scan', _handleBridgeScan);
-  }catch(e){
-    console.log('Scanner bridge registration failed:', e);
-  }
-}
-
-// Re-register with retry loop — when navigating from stow.html to iq2.html
-// Capacitor bridge may not be immediately available; retry until it is.
-(function retryBridge(attempts){
-  // Check own window first, then parent (when loaded in iframe from stow.html)
-  const cap = (window.Capacitor) || (window.parent && window.parent.Capacitor);
-  if(cap && cap.Plugins && cap.Plugins.FarsetScanner){
-    if(!window.Capacitor) window.Capacitor = cap;
-    registerScannerBridge();
-  } else if(attempts > 0){
-    setTimeout(function(){ retryBridge(attempts-1); }, 300);
-  }
-})(30);
-
-// Re-register whenever the app returns to the foreground. If the WebView
-// was ever reloaded or the bridge connection dropped while backgrounded,
-// the original one-time registration would be gone with nothing to
-// restore it - which is exactly the "worked once, then silently stopped"
-// failure. This makes recovery automatic instead of requiring a restart.
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState==='visible') registerScannerBridge();
+  if(document.visibilityState==='visible' &&
+     window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner){
+    window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+      const value = data && data.value; if(!value) return;
+      const now=Date.now();
+      if(value===_lastScanValue && (now-_lastScanTime)<1000) return;
+      _lastScanValue=value; _lastScanTime=now;
+      if(document.getElementById('scOpenCart').classList.contains('on')) iq2HandleOpenCartScan(value);
+      else if(document.getElementById('scOpenCartLocation').classList.contains('on')) iq2HandleOpenCartLocationScan(value);
+      else if(document.getElementById('scScanPackages').classList.contains('on')) iq2HandleScanPackages(value);
+      else if(document.getElementById('scStageDetail').classList.contains('on')) iq2HandleStageCartScan(value);
+      else if(document.getElementById('scReplaceCart').classList.contains('on')) iq2HandleReplaceCartScan(value);
+      else if(document.getElementById('scReplaceCartLocation').classList.contains('on')) iq2HandleReplaceCartLocationScan(value);
+      else if(document.getElementById('scMoveToStage').classList.contains('on')) iq2HandleMoveToStageScan(value);
+    });
+  }
 });
-window.addEventListener('focus', registerScannerBridge);
 
 </script>
 
