@@ -354,6 +354,74 @@ function gpsStale(updatedAt) {
   return (Date.now() - new Date(updatedAt).getTime()) > 5 * 60 * 1000;
 }
 
+// ── CUSTOMER ETA ──
+// The job's estimated_delivery_at is the driver's arrival at the NEXT stop
+// only - that is what the dispatcher needs. A customer needs arrival at
+// THEIR stop, which is that leg plus every stop still in front of them.
+// This walks the real remaining route (driver -> next stop -> ... -> this
+// customer's stop) in one Routes API call and adds a service allowance per
+// intervening stop, so stop 17 of 20 reads as hours, not minutes.
+const SERVICE_MINUTES_PER_STOP = 3;
+
+async function computeCustomerEta(stops, doneCount, myStopNumber, driverGps){
+  try{
+    if(!driverGps) return null;
+    // Stops still ahead of the driver, up to and including the customer's.
+    const remaining = stops
+      .filter(s => {
+        const n = parseInt(s.stop_number) || 0;
+        return n > doneCount && n <= myStopNumber;
+      })
+      .sort((a,b) => (parseInt(a.stop_number)||0) - (parseInt(b.stop_number)||0));
+    if(!remaining.length) return null;
+
+    const origin = { lat: parseFloat(driverGps.lat), lng: parseFloat(driverGps.lng) };
+    const dest   = remaining[remaining.length - 1].coords;
+    if(!dest) return null;
+    const waypoints = remaining.slice(0, -1).map(s => s.coords).filter(Boolean);
+
+    const body = {
+      origin:      { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
+      destination: { location: { latLng: { latitude: dest.lat,   longitude: dest.lng   } } },
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_AWARE'
+    };
+    if(waypoints.length){
+      body.intermediates = waypoints.map(w => ({
+        location: { latLng: { latitude: w.lat, longitude: w.lng } }
+      }));
+    }
+
+    const r = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GKEY,
+        'X-Goog-FieldMask': 'routes.duration'
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    const dur = data && data.routes && data.routes[0] && data.routes[0].duration;
+    if(!dur) return null;
+
+    const driveSeconds = parseInt(String(dur).replace('s','')) || 0;
+    // Each stop before the customer's costs a delivery, not just drive time.
+    const serviceSeconds = Math.max(0, remaining.length - 1) * SERVICE_MINUTES_PER_STOP * 60;
+    return new Date(Date.now() + (driveSeconds + serviceSeconds) * 1000);
+  }catch(e){
+    return null; // fall back to the job ETA
+  }
+}
+
+function fmtEtaGap(target){
+  const mins = Math.round((target.getTime() - Date.now()) / 60000);
+  if(mins <= 0) return 'Arriving now';
+  if(mins < 60) return mins + ' min';
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return m ? h + 'h ' + m + 'min' : h + 'h';
+}
+
 // ── GOOGLE MAPS ──
 function loadGMaps() {
   return new Promise(resolve => {
@@ -533,22 +601,17 @@ function renderResult(result) {
     </div>`;
 
     if (job.estimated_delivery_at) {
-      const etaMins = Math.round(
-        (new Date(job.estimated_delivery_at).getTime() - Date.now()) / 60000
-      );
-      const etaDisplay = etaMins > 0
-        ? (etaMins < 60
-            ? etaMins + ' min'
-            : Math.round(etaMins / 60) + 'h ' + (etaMins % 60) + 'min')
-        : 'Arriving now';
+      // Seed with the job ETA so something sensible shows immediately; the
+      // per-stop figure replaces it once the route call returns.
+      const seed = new Date(job.estimated_delivery_at);
       html += `<div class="eta-badge">
         <div>
           <div style="font-size:10px;font-family:var(--mono);color:var(--muted);
             letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">
             Estimated Arrival
           </div>
-          <div class="eta-time">${etaDisplay}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+          <div class="eta-time" id="etaValue">${fmtEtaGap(seed)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="etaClock">
             by ${fmtTime(job.estimated_delivery_at)}
           </div>
         </div>
@@ -621,6 +684,24 @@ async function initTrackingMap(job, stop) {
     fetchDriverGps(job.id)
   ]);
   await initMap(delivCoords, gps);
+
+  // Replace the seeded next-stop ETA with this customer's own arrival time.
+  let allStops = job.surge_stops;
+  if (typeof allStops === 'string') { try { allStops = JSON.parse(allStops); } catch(e) { allStops = []; } }
+  if (Array.isArray(allStops)) {
+    const myEta = await computeCustomerEta(
+      allStops,
+      parseInt(job.stops_completed) || 0,
+      parseInt(stop.stop_number) || 1,
+      gps
+    );
+    if (myEta) {
+      const v = document.getElementById('etaValue');
+      const k = document.getElementById('etaClock');
+      if (v) v.textContent = fmtEtaGap(myEta);
+      if (k) k.textContent = 'by ' + fmtTime(myEta.toISOString());
+    }
+  }
 
   if (gps && gpsStale(gps.updated_at)) {
     const badge = document.getElementById('gpsStaleBadge');
