@@ -1304,7 +1304,42 @@ function showOffer(job){
 async function acceptOffer(){
   if(!pendingJob)return;
   stopOfferAlert();unlockSpeech();
-  currentJob=pendingJob;pendingJob=null;
+
+  // ── ATOMIC CLAIM ──
+  // Previously acceptance was a local assignment and the database was not
+  // told until much later, so two drivers tapping Accept in the same window
+  // both believed they owned the route and the last write silently won.
+  // The claim now happens in one conditional update: status must still be
+  // 'pending' at the moment the row is written. Postgres decides the winner,
+  // not JavaScript timing. PH already sends Prefer: return=representation,
+  // so an empty result set means someone else got there first.
+  const claimId=pendingJob.id;
+  try{
+    // status=eq.pending is the whole precondition. The dispatcher's own
+    // assign and unassign paths always move status and driver_name together,
+    // so pending already implies unclaimed -- adding more predicates would
+    // only create ways for a legitimate acceptance to fail.
+    const claimed=await sbPatch(
+      'jobs?id=eq.'+claimId+'&status=eq.pending',
+      {status:'assigned',driver_name:driver.name}
+    );
+    if(!Array.isArray(claimed)||claimed.length===0){
+      // Lost the race, or the dispatcher reassigned it. Say so plainly and
+      // return the driver to the offer list rather than into a phantom route.
+      pendingJob=null;
+      toast('That route was just taken by another driver','warn');
+      showHome();
+      return;
+    }
+    currentJob=Object.assign({},pendingJob,claimed[0]);
+  }catch(e){
+    // A failed claim must never look like a successful one.
+    pendingJob=null;
+    toast('Could not accept route: '+String(e.message||e).slice(0,50),'warn');
+    showHome();
+    return;
+  }
+  pendingJob=null;
 
   // Refresh with the real, current job record before proceeding - the
   // offer snapshot above may predate PathIQ finishing bin assignment,
@@ -1541,7 +1576,7 @@ function confirmPickup(){
   // scanning finishes.
   currentJob.status='in_transit';
   saveRouteState('list');
-  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   enterSurgeMapFlow();
 }
 
@@ -1695,7 +1730,7 @@ async function arrivedAtPickup(){
 async function startDelivery(){
   if(!currentJob)return;
   try{
-    await sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name});
+    await sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'in_transit',driver_name:driver.name});
     currentJob.status='in_transit';
     showJobNotification(isSurgeJob?'Delivering -- '+surgeStops.length+' stops':'Heading to dropoff');
     startGPS();
@@ -2158,7 +2193,7 @@ function surgeTapStop(i){
 
 function confirmSurgeLoad(){
   currentJob.status='in_transit';
-  sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   startGPS();
   currentSurgeStop=0;
   // Hide Begin Route button
@@ -2238,6 +2273,105 @@ function initSig(){
   if(currentJob){const title=currentJob.title||'';document.getElementById('podRecipient').value=title.split('—')[0].trim();}
 }
 function clearSig(){if(sigCtxPad){const c=document.getElementById('sigPad');sigCtxPad.clearRect(0,0,c.offsetWidth,c.offsetHeight);}}
+
+// ── PROOF OF DELIVERY: DURABLE STORAGE ──
+// Previously the photo and signature were captured, required, and then
+// discarded -- podPhotoData was set to null and nothing was ever uploaded.
+// The capture flow below is unchanged from the driver's point of view.
+// The only new behavior is that what was captured now survives.
+const POD_BUCKET='pod';
+const POD_QUEUE_KEY='tp_pod_queue';
+
+// Returns {kind, dataUrl} for whichever proof tab is active, or null.
+// The signature pad was never converted to an image anywhere in the app --
+// that is why signature PODs left no trace at all, not even a discarded one.
+function capturePOD(){
+  if(podTab==='photo'){
+    return podPhotoData?{kind:'photo',dataUrl:podPhotoData}:null;
+  }
+  const c=document.getElementById('sigPad');
+  if(!c)return null;
+  try{ return {kind:'signature',dataUrl:c.toDataURL('image/png')}; }
+  catch(e){ return null; }
+}
+
+function dataUrlToBlob(dataUrl){
+  const parts=dataUrl.split(',');
+  const mime=(parts[0].match(/:(.*?);/)||[null,'image/png'])[1];
+  const bin=atob(parts[1]);
+  const buf=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+  return new Blob([buf],{type:mime});
+}
+
+// Uploads to Supabase Storage and returns the public URL, or null on failure.
+// Never throws -- a failed upload must not trap a driver at a doorstep.
+async function uploadPOD(jobId,stopNumber,kind,dataUrl){
+  try{
+    const ext=kind==='photo'?'jpg':'png';
+    const path=jobId+'/stop-'+stopNumber+'-'+kind+'-'+Date.now()+'.'+ext;
+    const blob=dataUrlToBlob(dataUrl);
+    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
+      method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
+      body:blob
+    });
+    if(!r.ok)throw new Error('storage '+r.status);
+    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+  }catch(e){
+    console.log('POD upload failed, queued for retry:',e.message);
+    queuePOD(jobId,stopNumber,kind,dataUrl);
+    return null;
+  }
+}
+
+// A driver in a dead zone still delivered the package. Hold the proof on
+// the device and push it when the connection comes back, rather than
+// losing it the way the old code did.
+function queuePOD(jobId,stopNumber,kind,dataUrl){
+  try{
+    const q=JSON.parse(localStorage.getItem(POD_QUEUE_KEY)||'[]');
+    q.push({jobId,stopNumber,kind,dataUrl,queued_at:new Date().toISOString()});
+    localStorage.setItem(POD_QUEUE_KEY,JSON.stringify(q.slice(-25)));
+  }catch(e){ console.log('POD queue write failed:',e.message); }
+}
+
+async function flushPODQueue(){
+  let q;
+  try{ q=JSON.parse(localStorage.getItem(POD_QUEUE_KEY)||'[]'); }catch(e){ return; }
+  if(!q.length)return;
+  const remaining=[];
+  for(const item of q){
+    const url=await uploadPODRaw(item);
+    if(url){
+      sbPost('messages',{job_id:item.jobId,sender:'system',sender_role:'dispatcher',
+        body:'POD_ATTACHED::'+JSON.stringify({stop_number:item.stopNumber,kind:item.kind,url,recovered:true})
+      }).catch(()=>{});
+    }else{
+      remaining.push(item);
+    }
+  }
+  try{ localStorage.setItem(POD_QUEUE_KEY,JSON.stringify(remaining)); }catch(e){}
+}
+
+// Same upload as above but without re-queueing on failure, so the retry
+// loop can never grow the queue it is trying to drain.
+async function uploadPODRaw(item){
+  try{
+    const ext=item.kind==='photo'?'jpg':'png';
+    const path=item.jobId+'/stop-'+item.stopNumber+'-'+item.kind+'-'+Date.now()+'.'+ext;
+    const blob=dataUrlToBlob(item.dataUrl);
+    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
+      method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
+      body:blob
+    });
+    if(!r.ok)return null;
+    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+  }catch(e){ return null; }
+}
+
+window.addEventListener('online',function(){ flushPODQueue().catch(function(){}); });
 async function startPODCamera(){
   try{
     podStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
@@ -2272,11 +2406,21 @@ async function submitPOD(){
   // Surge mode -- confirm this stop and move to next
   if(window._surgePODMode){
     stopPODCamera();
+    // Persist the proof before advancing. The driver's steps are unchanged;
+    // this just makes sure what they captured still exists afterwards.
+    const cap=capturePOD();
+    let podUrl=null;
+    if(cap&&currentJob&&currentJob.id){
+      podUrl=await uploadPOD(currentJob.id,currentSurgeStop+1,cap.kind,cap.dataUrl);
+    }
     if(btn){btn.textContent=currentSurgeStop>=surgeStops.length-1?'✓ Confirm Final Delivery':'✓ Confirm & Next Stop';btn.disabled=false;}
-    confirmSurgeStop();
+    confirmSurgeStop({recipient:recipient,pod_kind:cap?cap.kind:null,pod_url:podUrl});
     return;
   }
   try{
+    const cap=capturePOD();
+    let podUrl=null;
+    if(cap)podUrl=await uploadPOD(currentJob.id,1,cap.kind,cap.dataUrl);
     const resp=await fetch(SB+'/rest/v1/jobs?id=eq.'+currentJob.id,{
       method:'PATCH',
       headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
@@ -2285,6 +2429,20 @@ async function submitPOD(){
     if(!resp.ok){const err=await resp.text();throw new Error('Status '+resp.status+': '+err.slice(0,80));}
     // Notify dispatch
     sbPost('messages',{job_id:currentJob.id,sender:driver.name,sender_role:'driver',body:'Delivered to '+recipient+'. POD: '+podTab+'.'}).catch(()=>{});
+    // Durable delivery record carrying the proof reference
+    sbPost('messages',{job_id:currentJob.id,sender:driver.name,sender_role:'driver',
+      body:'STOP_DELIVERED::'+JSON.stringify({
+        stop_number:1,stop_total:1,
+        recipient:currentJob.customer_name||currentJob.dropoff_name||'',
+        address:currentJob.dropoff_address||'',
+        order_id:currentJob.id?currentJob.id.slice(0,8):'',
+        delivered_at:new Date().toISOString(),
+        signed_by:recipient,
+        pod_kind:cap?cap.kind:null,
+        pod_url:podUrl,
+        pod_pending:!!(cap&&!podUrl)
+      })
+    }).catch(()=>{});
     stopPODCamera();
     clearJobNotification();
     const pay=currentJob.price||Math.floor(Math.random()*35+45);
@@ -2414,9 +2572,10 @@ function openSurgePOD(){
   if(btn)btn.textContent=currentSurgeStop>=total-1?'✓ Confirm Final Delivery':'✓ Confirm & Next Stop';
 }
 
-function confirmSurgeStop(){
+function confirmSurgeStop(pod){
   const total=surgeStops.length;
   const stop=surgeStops[currentSurgeStop];
+  pod=pod||{};
 
   // Safety guard -- block confirming if previous non-cancelled stops haven't been completed
   const nonCancelledBefore=surgeStops.slice(0,currentSurgeStop).filter(s=>!s.cancelled).length;
@@ -2436,13 +2595,17 @@ function confirmSurgeStop(){
         recipient:stop.recipient||'',
         address:stop.address||'',
         order_id:stop.smart_id||stop.order_id||'',
-        delivered_at:new Date().toISOString()
+        delivered_at:new Date().toISOString(),
+        signed_by:pod.recipient||'',
+        pod_kind:pod.pod_kind||null,
+        pod_url:pod.pod_url||null,
+        pod_pending:!!(pod.pod_kind&&!pod.pod_url)
       })
     }).catch(()=>{});
   }
   window._surgePODMode=false;
   if(currentSurgeStop>=total-1){
-    sbPatch('jobs?id=eq.'+currentJob.id,{status:'delivered',driver_name:driver.name,stops_completed:total}).catch(()=>{});
+    sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'delivered',driver_name:driver.name,stops_completed:total}).catch(()=>{});
     clearJobNotification();
   if(window._gpsInterval)clearInterval(window._gpsInterval); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
@@ -2454,7 +2617,7 @@ function confirmSurgeStop(){
   }else{
     currentSurgeStop++;
     if(currentJob) currentJob.stops_completed=currentSurgeStop;
-    sbPatch('jobs?id=eq.'+currentJob.id,{stops_completed:currentSurgeStop}).catch(()=>{});
+    sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{stops_completed:currentSurgeStop}).catch(()=>{});
     // Return to the stop list, scrolled to the next unfinished stop -- driver taps it to open and navigate
     showScreen('scSurgeMap');
     renderSurgeList();
