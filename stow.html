@@ -222,12 +222,131 @@ const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
 const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
 
+// ════════════════════════════════════════════════════════════════════
+// OPERATIONAL MEMORY
+//
+// Every scan, stow, reset and problem now becomes a durable event in
+// Supabase. Before this, all of it lived in JS variables that were
+// wiped every 5 seconds by the polling loop, so PathIQ could not tell
+// you whether a package had been stowed, by whom, or when -- and two
+// devices could hold contradictory beliefs with nothing detecting it.
+//
+// PathIQ writes to `events` only. It deliberately does not write to
+// `packages`: the event stream is the source of truth, and package
+// rows are materialized from it. One writer per table.
+// ════════════════════════════════════════════════════════════════════
+
+// Who is standing at the bin. Asked once, then remembered on the device.
+function getWorker(){
+  let w=null;
+  try{ w=localStorage.getItem('tp_worker'); }catch(e){}
+  return w||null;
+}
+function setWorker(name){
+  try{ localStorage.setItem('tp_worker',name); }catch(e){}
+}
+function ensureWorker(){
+  let w=getWorker();
+  if(!w){
+    const entered=(typeof prompt==='function')?prompt('Your name (so scans are traceable):'):null;
+    w=(entered&&entered.trim())?entered.trim():null;
+    if(w)setWorker(w);
+  }
+  return w||('Device '+getDeviceId().slice(0,4).toUpperCase());
+}
+function getDeviceId(){
+  let d=null;
+  try{ d=localStorage.getItem('tp_device'); }catch(e){}
+  if(!d){
+    d=(Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+    try{ localStorage.setItem('tp_device',d); }catch(e){}
+  }
+  return d;
+}
+
+// Writes one operational event. The idempotency key is what makes a
+// duplicate scanner broadcast, a double tap, or a retry after a dropped
+// connection collapse into a single business fact -- enforced by a
+// unique index in Postgres, not by a JS Set that dies on the next poll.
+async function logEvent(eventType,opts){
+  opts=opts||{};
+  try{
+    const body={
+      org_id:opts.org_id||null,
+      event_type:eventType,
+      job_id:opts.job_id||null,
+      driver_name:opts.driver_name||null,
+      actor:opts.actor||getWorker()||('Device '+getDeviceId().slice(0,4).toUpperCase()),
+      device_id:getDeviceId(),
+      payload:opts.payload||{},
+      idempotency_key:opts.idem||null,
+      occurred_at:new Date().toISOString()
+    };
+    const r=await fetch(SB+'/rest/v1/events?on_conflict=idempotency_key',{
+      method:'POST',
+      headers:Object.assign({},H,{'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates,return=minimal'}),
+      body:JSON.stringify(body)
+    });
+    return r.ok;
+  }catch(e){
+    console.log('event write failed:',eventType,e.message);
+    return false;
+  }
+}
+
+// Rebuilds today's warehouse reality from the event stream, so a device
+// refresh, a second scanner, or a supervisor opening PathIQ an hour later
+// all see the same thing. Returns {stowed, resetEpoch, detail}.
+async function loadEventState(){
+  const out={stowed:{},resetEpoch:{},detail:{}};
+  try{
+    const dayStart=new Date(); dayStart.setHours(0,0,0,0);
+    const url=SB+'/rest/v1/events?event_type=in.(package.stowed,bin.reset)'
+      +'&occurred_at=gte.'+encodeURIComponent(dayStart.toISOString())
+      +'&order=occurred_at.asc&limit=5000&apikey='+KEY;
+    const r=await fetch(url,{headers:H});
+    if(!r.ok)return out;
+    const rows=await r.json();
+    if(!Array.isArray(rows))return out;
+    rows.forEach(function(ev){
+      const p=ev.payload||{};
+      const bin=p.bin;
+      if(!bin)return;
+      if(ev.event_type==='bin.reset'){
+        // A reset clears the bin's membership and opens a new epoch, so the
+        // same package can legitimately be stowed again without its earlier
+        // idempotency key blocking it.
+        out.stowed[bin]=new Set();
+        out.resetEpoch[bin]=ev.occurred_at;
+        return;
+      }
+      if(ev.event_type==='package.stowed'&&p.code){
+        if(!out.stowed[bin])out.stowed[bin]=new Set();
+        out.stowed[bin].add(p.code);
+        out.detail[p.code]={bin:bin,actor:ev.actor,at:ev.occurred_at};
+      }
+    });
+  }catch(e){ console.log('event state load failed:',e.message); }
+  return out;
+}
+
+function fmtEventTime(iso){
+  try{
+    const d=new Date(iso);
+    let h=d.getHours(); const m=String(d.getMinutes()).padStart(2,'0');
+    const ap=h>=12?'PM':'AM'; h=h%12; if(h===0)h=12;
+    return h+':'+m+' '+ap;
+  }catch(e){ return ''; }
+}
+
 let jobs=[];
 let binMap={};
 let binProgress={};
 let scannedByBin={};
 let pendingPlacement=null;
 let exceptionLog=[];
+let stowDetail={};   // code -> {bin, actor, at}  rebuilt from events
+let resetEpoch={};   // bin  -> ISO timestamp of that bin's last reset
 let pendingInduct=null;
 
 const SCREENS=['scHome','scAssignbins','scStow','scReceive','scInduct','scReset'];
@@ -274,11 +393,13 @@ async function loadRoutes(){
   binMap={};
   const newProgress={};
 
-  // Always reset scannedByBin when jobs are reloaded. The job signature
-  // check was too conservative -- it kept stale scan history alive across
-  // test runs when package IDs repeated. A full reload always means a
-  // fresh start; binProgress already rebuilds correctly from the DB.
-  scannedByBin={};
+  // Scan history is no longer thrown away on every poll. It is rebuilt
+  // from the durable event stream, which means it survives a refresh, a
+  // process kill, and is shared across every device on the floor.
+  const evState=await loadEventState();
+  scannedByBin=evState.stowed||{};
+  stowDetail=evState.detail||{};
+  resetEpoch=evState.resetEpoch||{};
 
   jobs.forEach((j, idx)=>{
     // A route should always have a real bin_label by the time it reaches
@@ -290,7 +411,10 @@ async function loadRoutes(){
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const stopList=Array.isArray(stops)?stops:[];
     const already=binProgress[binNum];
-    newProgress[binNum]={total:stopList.length||1, sorted:already?already.sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id};
+    // Sorted count comes from the event stream, not from a counter this
+    // device happened to increment. Two scanners on the same bin now agree.
+    const stowedHere=(scannedByBin[binNum]&&scannedByBin[binNum].size)||0;
+    newProgress[binNum]={total:stopList.length||1, sorted:stowedHere, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
     stopList.forEach(s=>{
       // A physical package's real, pre-printed identifier (tracking_number
       // or order_id) is permanent -- it's fixed before the package ever
@@ -501,7 +625,6 @@ function handleStowScan(code){
   const debugMsg2=debugLines.join('\n');
   console.log(debugMsg2);
   const dbgEl2=document.getElementById('debugPanel');
-
   const existingDbg=dbgEl2 ? dbgEl2.textContent : '';
   if(dbgEl2) dbgEl2.textContent=(existingDbg?existingDbg+'\n\n':'')+debugMsg2;
 
@@ -519,7 +642,18 @@ function handleStowScan(code){
       const binNum=pendingPlacement.binNum;
       if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
       scannedByBin[binNum].add(pendingPlacement.code);
+      stowDetail[pendingPlacement.code]={bin:binNum,actor:ensureWorker(),at:new Date().toISOString()};
       binProgress[binNum].sorted=Math.min(binProgress[binNum].total, binProgress[binNum].sorted+1);
+
+      // Durable record. The epoch suffix lets a package be legitimately
+      // re-stowed after a bin reset, while still collapsing genuine
+      // duplicates (repeat broadcast, double tap, retry) into one event.
+      logEvent('package.stowed',{
+        org_id:binProgress[binNum].orgId,
+        job_id:binProgress[binNum].jobId,
+        payload:{bin:binNum, code:pendingPlacement.code, route:pendingPlacement.jobTitle},
+        idem:'stow:'+binProgress[binNum].jobId+':'+pendingPlacement.code+':'+(resetEpoch[binNum]||'r0')
+      });
       const justCompleted=binProgress[binNum].sorted>=binProgress[binNum].total;
       const jobTitle=pendingPlacement.jobTitle;
       pendingPlacement=null;
@@ -533,6 +667,12 @@ function handleStowScan(code){
         card.className='result-card staged';
         card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
         const stagedJobId=binProgress[binNum].jobId;
+        logEvent('bin.completed',{
+          org_id:binProgress[binNum].orgId,
+          job_id:stagedJobId,
+          payload:{bin:binNum, route:jobTitle, packages:binProgress[binNum].total},
+          idem:'bincomplete:'+stagedJobId+':'+(resetEpoch[binNum]||'r0')
+        });
         if(stagedJobId){
           fetch(SB+'/rest/v1/jobs?id=eq.'+stagedJobId,{
             method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
@@ -566,8 +706,16 @@ function handleStowScan(code){
 
   if(!scannedByBin[match.binNum]) scannedByBin[match.binNum]=new Set();
   if(scannedByBin[match.binNum].has(clean)){
+    // Explain the state rather than merely refusing the scan. The worker
+    // needs to know whether THEY stowed it or someone else did, and when.
+    const d=stowDetail[clean]||{};
+    const who=d.actor?(' by '+d.actor):'';
+    const when=d.at?(' at '+fmtEventTime(d.at)):'';
     card.className='result-card';
-    card.innerHTML='<div class="result-bin">Already Sorted</div><div class="result-bin-num" style="color:var(--orange);">Bin '+match.binNum+'</div><div class="result-detail">This package was already scanned.</div>';
+    card.innerHTML='<div class="result-bin">Already Stowed</div>'
+      +'<div class="result-bin-num" style="color:var(--orange);">Bin '+(d.bin||match.binNum)+'</div>'
+      +'<div class="result-detail">Stowed'+who+when+'.</div>'
+      +'<div class="result-detail" style="margin-top:4px;color:var(--faint);">Nothing to do. Move to the next package.</div>';
     return;
   }
 
@@ -615,6 +763,20 @@ function confirmInduct(){
   if(!pendingInduct)return;
   const record=Object.assign({}, pendingInduct, {time:new Date()});
   exceptionLog.push(record);
+
+  // Previously this was the whole story: a push into a local array that
+  // vanished on refresh. Every Problem/Induct recovery performed in a
+  // shift left no trace anywhere. Now it is a durable event, which is what
+  // makes "this package has been through Problem three times" answerable.
+  const inf=binProgress[pendingInduct.binNum]||{};
+  logEvent('package.inducted',{
+    org_id:inf.orgId,
+    job_id:inf.jobId,
+    payload:{bin:pendingInduct.binNum, code:pendingInduct.code,
+             route:pendingInduct.jobTitle||'', address:pendingInduct.address||'',
+             reason:'missed_package_recovery'},
+    idem:'induct:'+(inf.jobId||pendingInduct.binNum)+':'+pendingInduct.code+':'+Date.now()
+  });
   const doneCode=pendingInduct.code;
   pendingInduct=null;
   goTo('stow');
@@ -651,8 +813,28 @@ function askResetConfirm(binNum){
 }
 
 function doResetBin(binNum){
+  const info=binProgress[binNum]||{};
+  const now=new Date().toISOString();
+
   if(binProgress[binNum]) binProgress[binNum].sorted=0;
   if(scannedByBin[binNum]) scannedByBin[binNum].clear();
+  resetEpoch[binNum]=now;
+
+  // A reset used to change only local memory, leaving Supabase still
+  // believing the bin was staged and ready for pickup while PathIQ showed
+  // it empty. Both now move together.
+  logEvent('bin.reset',{
+    org_id:info.orgId,
+    job_id:info.jobId,
+    payload:{bin:binNum, route:info.jobTitle||'', cleared:info.total||0},
+    idem:'binreset:'+(info.jobId||binNum)+':'+now
+  });
+  if(info.jobId){
+    fetch(SB+'/rest/v1/jobs?id=eq.'+info.jobId,{
+      method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
+      body:JSON.stringify({staged_at:null})
+    }).catch(function(){});
+  }
   document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
   renderResetBinsPanel();
 }
