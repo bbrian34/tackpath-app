@@ -2730,13 +2730,18 @@ function renderPipeline(){
         <div class="pcard-name">${j.title||'Untitled Job'}</div>
         <div class="pcard-route">${secondLine}</div>
         ${s==='in_transit'&&j._transitAddr?`<div class="pcard-route" style="color:var(--muted);font-size:0.715rem;margin-top:1px;">${j._transitAddr}</div>`:''}
-        ${(s==='in_transit'||s==='assigned')&&j.estimated_delivery_at?(()=>{
-          const etaMins=Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000);
+        ${(()=>{
+          // Each column reads the field that matches what it is describing.
+          // Previously both read estimated_delivery_at and only the label
+          // differed, so an assigned card said "Pickup" over a delivery time.
+          const etaSource=s==='assigned'?pickupEtaByJob[j.id]:(s==='in_transit'?j.estimated_delivery_at:null);
+          if(!etaSource)return '';
+          const etaMins=Math.round((new Date(etaSource).getTime()-Date.now())/60000);
           const etaColor=etaMins<=0?'var(--red)':etaMins<=20?'var(--orange)':'var(--green)';
           const prefix=s==='assigned'?'Pickup: ':'';
           const etaLabel=etaMins<=0?prefix+'Past due':prefix+etaMins+' min ETA';
           return `<div class="pcard-route" style="color:${etaColor};font-size:0.692rem;font-weight:700;margin-top:2px;">&#9200; ${etaLabel}</div>`;
-        })():''}
+        })()}
         <div class="pcard-age">${age}</div>
       </div>`;
     }).join('')+(col.length>4?`<div class="pipe-empty">+${col.length-4} more</div>`:'');
@@ -4204,67 +4209,62 @@ function maybeReportMarcoStatus(){
 // ── LIVE ETA: recalculates using driver's actual current GPS position ──
 const ETA_REFRESH_MINUTES=2;
 const lastEtaRefresh={};
+// Pickup-leg ETA per job id. Kept in a keyed map rather than on the job
+// object because the jobs array is rebuilt from Supabase on every poll,
+// which would discard anything stored on the row itself.
+const pickupEtaByJob={};
 
 async function refreshLiveETA(job){
-  const tag='[LiveETA '+(job.title||job.id.slice(0,8))+']';
   try{
-    if(!job.driver_name){console.warn(tag,'skipped: no driver_name on job');return;}
+    if(!job.driver_name)return;
     const loc=driverLastLocation[job.driver_name];
-    if(!loc){console.warn(tag,'skipped: no recent GPS position for driver "'+job.driver_name+'" (name mismatch or no pings yet)');return;}
+    if(!loc)return;
+
+    // ── ASSIGNED, NOT YET PICKED UP ──
+    // The driver is heading to the PICKUP, not to a delivery stop. Measuring
+    // to stops[0] here produced a number labelled "Pickup ETA" that actually
+    // described the first delivery address, which is a different place and
+    // often a different direction.
+    //
+    // This result is deliberately NOT written to estimated_delivery_at.
+    // SmartTrack locks that field as the lateness deadline, so writing a
+    // pickup-leg time into it would give Todd a deadline for a journey the
+    // driver has not started yet.
+    if(job.status==='assigned'){
+      if(!job.pickup_address)return;
+      const pickupCoords=await geocodeAddress(job.pickup_address);
+      if(!pickupCoords)return;
+      const pickupSeconds=await getTrafficAwareLegSeconds(loc,pickupCoords);
+      if(pickupSeconds===null)return;
+      pickupEtaByJob[job.id]=new Date(Date.now()+pickupSeconds*1000).toISOString();
+      return;
+    }
 
     let stops=job.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
-    if(!stops||!Array.isArray(stops)){console.warn(tag,'skipped: surge_stops missing or not an array');return;}
+    if(!stops||!Array.isArray(stops))return;
 
     const doneCount=job.stops_completed||0;
     const currentStop=stops[Math.min(doneCount,stops.length-1)];
-    if(!currentStop){console.warn(tag,'skipped: no stop found at index',doneCount);return;}
+    if(!currentStop)return;
 
     // Fallback: if this stop was saved before coords were stored, geocode it live now
     let destCoords=currentStop.coords;
     if(!destCoords&&currentStop.address){
       destCoords=await geocodeAddress(currentStop.address);
-      if(!destCoords){console.warn(tag,'skipped: live geocode failed for',currentStop.address);return;}
+      if(!destCoords)return;
     }
-    if(!destCoords){console.warn(tag,'skipped: current stop has no coords and no address to geocode');return;}
+    if(!destCoords)return;
 
     const legSeconds=await getTrafficAwareLegSeconds(loc,destCoords);
-    if(legSeconds===null){console.warn(tag,'skipped: Routes API returned no result');return;}
+    if(legSeconds===null)return;
 
     const newEta=new Date(Date.now()+legSeconds*1000).toISOString();
     await sbPatch('jobs?id=eq.'+job.id,{estimated_delivery_at:newEta});
     job.estimated_delivery_at=newEta;
-    job._etaLastRefreshedAt=Date.now();
   }catch(e){
-    console.error(tag,'Live ETA refresh error:',e);
+    console.error('Live ETA refresh error:',e);
   }
-}
-
-// Captures real per-stop drift the moment a stop is detected as delivered, using
-// the deadline snapshot taken BEFORE SmartTrack could relock it for the next stop.
-// Persists to the messages table (no schema changes) so it survives refreshes and
-// accumulates real history going forward. Silently skips any stop where the timing
-// doesn't line up cleanly -- an honest missed capture beats a wrong one.
-function captureStopDrift(preRelockDeadlines){
-  stopDeliveries.forEach(sd=>{
-    const key=sd.job_id+'-'+sd.stop_number;
-    if(capturedDriftKeys.has(key))return;
-    const job=jobs.find(j=>j.id===sd.job_id);
-    if(!job)return;
-    const tracked=preRelockDeadlines[sd.job_id];
-    if(!tracked||!tracked.deadline)return;
-    if(tracked.stopIndex!==sd.stop_number-1)return; // deadline doesn't correspond to this stop, skip rather than guess
-    if(!job.estimated_delivery_at)return;
-    const driftMin=(new Date(job.estimated_delivery_at).getTime()-new Date(tracked.deadline).getTime())/60000;
-    capturedDriftKeys.add(key);
-    sbPostMsg(sd.job_id,'STOP_DRIFT::'+JSON.stringify({
-      stop_number:sd.stop_number,
-      stop_total:sd.stop_total,
-      driver_name:job.driver_name||null,
-      driftMin:Math.round(driftMin*10)/10,
-      delivered_at:sd.delivered_at||sd.created_at
-    }),'dispatcher').catch(function(){});
-  });
 }
 
 async function refreshAllLiveETAs(){
