@@ -2398,7 +2398,16 @@ async function loadJobs(){
     runSmartComms().catch(function(){});
     runRuby().catch(function(){});
     runProactiveCoordinator().catch(function(){});
-    // Fetch individual stop delivery records from messages table
+
+    // ── BIN SHORTFALL INTELLIGENCE ──
+    // The bin_shortfall view was built when the memory spine went in.
+    // This is the first reader. A route that is short packages is worth
+    // knowing about before the van leaves, not after a customer calls.
+    try{
+      const orgF=currentOrgId?('&org_id=eq.'+currentOrgId):'';
+      const shortfalls=await sbGet('bin_shortfall?select=*'+orgF);
+      renderBinShortfallAlerts(shortfalls||[]);
+    }catch(e){ renderBinShortfallAlerts([]); }
     try{
       const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||j.status==='delivered').map(j=>j.id);
       if(activeJobIds.length){
@@ -2646,6 +2655,56 @@ function renderKPIs(){
 }
 
 // ── PIPELINE ──
+let binShortfalls=[];
+
+function renderBinShortfallAlerts(shortfalls){
+  binShortfalls=shortfalls||[];
+
+  // Only surface routes that are genuinely short — where the driver has
+  // not yet left (status pending/assigned) and the bin is missing at least
+  // one package. Routes already in transit can't be fixed from the bin.
+  const actionable=binShortfalls.filter(function(s){
+    const job=jobs.find(function(j){return j.id===s.job_id;});
+    const status=job?job.status:'pending';
+    const short=(s.expected_packages||0)-(s.stowed_packages||0);
+    return short>0 && (status==='pending'||status==='assigned');
+  });
+
+  let el=document.getElementById('binShortfallBar');
+  if(!actionable.length){
+    if(el)el.remove();
+    return;
+  }
+
+  if(!el){
+    el=document.createElement('div');
+    el.id='binShortfallBar';
+    el.style.cssText='margin:0 0 14px;display:flex;flex-direction:column;gap:6px;';
+    // Insert at the top of the pipeline section so it's impossible to miss
+    const pipeline=document.querySelector('.pipeline-wrap');
+    if(pipeline&&pipeline.parentNode)pipeline.parentNode.insertBefore(el,pipeline);
+  }
+
+  el.innerHTML=actionable.map(function(s){
+    const short=(s.expected_packages||0)-(s.stowed_packages||0);
+    const inProblem=s.in_problem||0;
+    const problemNote=inProblem>0
+      ?' <span style="color:var(--orange);">· '+inProblem+' in Problem queue</span>'
+      :'';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;'
+      +'background:rgba(255,107,94,.08);border:1px solid rgba(255,107,94,.3);border-radius:8px;">'
+      +'<span style="font-size:1.1rem;">&#9888;</span>'
+      +'<div style="flex:1;">'
+      +'<span style="font-weight:700;color:var(--text);">Bin '+(s.bin||'?')+' — '+(s.title||'Route')+'</span>'
+      +'<span style="color:var(--red);font-weight:700;"> · '+short+' package'+(short!==1?'s':'')+' missing</span>'
+      +problemNote
+      +'<span style="font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-left:8px;">'
+      +s.stowed_packages+' of '+s.expected_packages+' stowed</span>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
 function renderPipeline(){
   const cols={pending:[],assigned:[],in_transit:[],delivered:[]};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(cols[s]) cols[s].push(j); });
