@@ -765,10 +765,27 @@ button,a,input,textarea{font-family:var(--sans);}
       <button onclick="navigateToStop()" style="background:var(--blue);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;margin-right:8px;">&#9194; Navigate</button>
       <button onclick="showScreen('scSurgeMap')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 14px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;">&#8592; List</button>
     </div>
-    <!-- Map -->
+    <!-- Map — Google Maps JS API renders here, not a static iframe embed -->
     <div style="flex:1;position:relative;overflow:hidden;">
-      <iframe id="sdMap" src="about:blank" style="position:absolute;inset:0;width:100%;height:100%;border:0;filter:hue-rotate(195deg) saturate(.85) brightness(.7);"></iframe>
+      <div id="sdMap" style="position:absolute;inset:0;width:100%;height:100%;background:#0b1f35;"></div>
       <div style="position:absolute;top:12px;left:12px;background:rgba(2,6,14,.9);border:1px solid rgba(25,183,239,.3);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:0.625rem;font-weight:700;color:var(--blue);" id="sdPkgBadge">2 packages</div>
+      <!-- Turn-by-turn instruction banner -->
+      <div id="navInstruction" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);max-width:calc(100% - 100px);background:rgba(2,6,14,.95);border:1px solid rgba(25,183,239,.4);border-radius:12px;padding:10px 16px;text-align:center;z-index:10;">
+        <div id="navInstructionText" style="font-size:0.875rem;font-weight:700;color:#fff;line-height:1.3;"></div>
+        <div id="navDistanceText" style="font-family:var(--mono);font-size:0.75rem;color:var(--blue);margin-top:3px;"></div>
+      </div>
+      <!-- Arrival prompt — fires automatically when driver enters geofence -->
+      <div id="arrivalPrompt" style="display:none;position:absolute;inset:0;background:rgba(2,6,14,.92);flex-direction:column;align-items:center;justify-content:center;z-index:20;padding:32px;">
+        <div style="font-family:var(--mono);font-size:0.75rem;color:var(--blue);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;" id="arrivalStopLabel">STOP 7</div>
+        <div style="font-size:2rem;font-weight:900;color:#fff;margin-bottom:4px;" id="arrivalDistance">180 FT</div>
+        <div style="font-size:0.9rem;color:rgba(255,255,255,.6);margin-bottom:32px;">You are here</div>
+        <button onclick="confirmArrival()" style="width:100%;max-width:320px;padding:20px;border-radius:18px;background:linear-gradient(135deg,var(--green),#00b347);border:none;color:#000;font-size:1.1rem;font-weight:900;cursor:pointer;box-shadow:0 8px 32px rgba(83,255,136,.3);">
+          ✓ Mark Arrived
+        </button>
+        <button onclick="dismissArrivalPrompt()" style="margin-top:12px;background:none;border:none;color:rgba(255,255,255,.4);font-size:0.875rem;cursor:pointer;padding:8px;">
+          Keep driving
+        </button>
+      </div>
     </div>
     <!-- Step buttons + Ruby side by side -->
     <div style="padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid rgba(25,183,239,.1);flex-shrink:0;">
@@ -893,6 +910,7 @@ button,a,input,textarea{font-family:var(--sans);}
 // ── CONSTANTS ──
 const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
 const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const GKEY='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
 const GH={'apikey':KEY,'Authorization':'Bearer '+KEY};
 const PH={...GH,'Content-Type':'application/json','Prefer':'return=representation'};
 const sbu=p=>SB+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+KEY;
@@ -918,7 +936,7 @@ function showRouteMapOverlay(){
     const destination=encodeURIComponent(surgeStops[surgeStops.length-1].address);
     const waypoints=surgeStops.slice(1,-1).map(s=>encodeURIComponent(s.address)).join('|');
 
-    let url='https://www.google.com/maps/embed/v1/directions?key=AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8&origin='+origin+'&destination='+destination;
+    let url='https://www.google.com/maps/embed/v1/directions?key='+GKEY+'&origin='+origin+'&destination='+destination;
     if(waypoints) url+='&waypoints='+waypoints;
     url+='&mode=driving';
 
@@ -2151,7 +2169,10 @@ function sdScanConfirmed(){
 
 function navigateToStop(){
   if(!surgeStops||!surgeStops[currentSurgeStop])return;
-  startTurnByTurn(surgeStops[currentSurgeStop].address);
+  // Reset nav state between stops so each stop gets a fresh route
+  _navMap=null;_navSteps=[];_navStepIdx=0;_navDestCoords=null;_arrivalDismissed=false;
+  const mapEl=document.getElementById('sdMap');if(mapEl)mapEl.innerHTML='';
+  startTurnByTurn(surgeStops[currentSurgeStop].coords||surgeStops[currentSurgeStop].address);
 }
 
 function surgeTapStop(i){
@@ -2658,48 +2679,256 @@ function startGPS(){
     },()=>{},{enableHighAccuracy:true,timeout:8000,maximumAge:5000});
   },10000);
   gpsWatcher=navigator.geolocation.watchPosition(
-    pos=>{if(!currentJob)return;sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed,updated_at:new Date().toISOString()}).catch(()=>{});},
+    pos=>{
+      if(!currentJob)return;
+      sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed,updated_at:new Date().toISOString()}).catch(()=>{});
+      // Feed live position into the navigation module for step advancement
+      // and geofence-based arrival detection.
+      if(currentJob.status==='in_transit')onNavPositionUpdate(pos.coords.latitude,pos.coords.longitude);
+    },
     err=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:15000}
   );
 }
 
-// ── IN-APP NAVIGATION ──
-async function openExternalLink(url){
-  if(!url)return;
-  const AL=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AppLauncher;
-  if(AL){
-    try{await AL.openUrl({url:url});}catch(e){}
-  }else{
-    window.open(url,'_blank');
+// ════════════════════════════════════════════════════════════════════════
+// IN-APP NAVIGATION MODULE
+//
+// Google Maps JavaScript API renders inside the WebView — the driver
+// never leaves TackPath. Turn-by-turn directions come from the Directions
+// API. Voice comes from the Web Speech API (no extra dependency).
+// Arrival detection runs off the live GPS watcher already running.
+//
+// The old approach opened Google Maps as a separate app (AppLauncher) or
+// a new tab (window.open), which meant the driver lost the delivery
+// workflow while navigating. This replaces both paths.
+// ════════════════════════════════════════════════════════════════════════
+
+let _navMap=null;           // google.maps.Map instance
+let _navDirections=null;    // DirectionsRenderer
+let _navSteps=[];           // parsed turn-by-turn steps for current route
+let _navStepIdx=0;          // which step the driver is currently on
+let _navDestCoords=null;    // {lat,lng} of the current stop
+let _navSpeechEnabled=true; // togglable by the driver
+let _navGeofenceRadius=91;  // metres (~300ft) — triggers arrival prompt
+let _arrivalDismissed=false;// prevent re-firing after driver dismisses
+let _mapsApiLoading=false;
+let _mapsApiReady=false;
+
+// Load the Maps JS API once, lazily.
+function loadMapsApi(){
+  return new Promise(function(resolve,reject){
+    if(_mapsApiReady){resolve();return;}
+    if(_mapsApiLoading){
+      const t=setInterval(function(){if(_mapsApiReady){clearInterval(t);resolve();}},100);
+      return;
+    }
+    _mapsApiLoading=true;
+    window._mapsApiCallback=function(){_mapsApiReady=true;resolve();};
+    const s=document.createElement('script');
+    s.src='https://maps.googleapis.com/maps/api/js?key='+GKEY+'&callback=_mapsApiCallback&libraries=geometry';
+    s.async=true; s.defer=true;
+    s.onerror=function(){_mapsApiLoading=false;reject(new Error('Maps API failed to load'));};
+    document.head.appendChild(s);
+  });
+}
+
+// Primary entry point. Called by Navigate button and auto-advances.
+async function startTurnByTurn(addressOrCoords){
+  if(!addressOrCoords)return;
+  _arrivalDismissed=false;
+  showScreen('scSurgeDelivery');
+  try{
+    await loadMapsApi();
+    initNavMap();
+    const dest=await resolveDestination(addressOrCoords);
+    if(!dest){toast('Could not locate destination','warn');return;}
+    _navDestCoords=dest;
+    await routeToDestination(dest);
+  }catch(e){
+    console.log('Nav error:',e.message);
+    toast('Navigation unavailable — check connection','warn');
+    // Fall back to external navigation only if the Maps API truly fails
+    externalNavFallback(addressOrCoords);
   }
 }
 
-async function startTurnByTurn(address){
-  if(!address)return;
-  const dest=encodeURIComponent(address);
-  const AL=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AppLauncher;
-  const navUrl='google.navigation:q='+dest+'&mode=d';
-  const webUrl='https://www.google.com/maps/dir/?api=1&destination='+dest+'&travelmode=driving';
-  if(AL){
-    try{
-      const r=await AL.openUrl({url:navUrl});
-      if(!r||!r.completed) await AL.openUrl({url:webUrl});
-    }catch(e){
-      try{await AL.openUrl({url:webUrl});}catch(e2){}
-    }
-  }else{
-    // Browser fallback (Chrome, testing) -- safe here since there's no WebView job state to lose
-    window.open(webUrl,'_blank');
+function initNavMap(){
+  const el=document.getElementById('sdMap');
+  if(!el||_navMap)return;
+  _navMap=new google.maps.Map(el,{
+    zoom:15,
+    center:{lat:33.749,lng:-84.388}, // Atlanta — recentered on first GPS fix
+    mapTypeId:'roadmap',
+    disableDefaultUI:true,
+    gestureHandling:'greedy',
+    styles:[
+      {elementType:'geometry',stylers:[{color:'#0b1f35'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#8098ae'}]},
+      {elementType:'labels.text.stroke',stylers:[{color:'#071828'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#1a3a5c'}]},
+      {featureType:'road.arterial',elementType:'geometry',stylers:[{color:'#1e4a7a'}]},
+      {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#19b7ef',lightness:-30}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#071828'}]},
+      {featureType:'poi',stylers:[{visibility:'off'}]},
+      {featureType:'transit',stylers:[{visibility:'off'}]}
+    ]
+  });
+  _navDirections=new google.maps.DirectionsRenderer({
+    map:_navMap,
+    suppressMarkers:false,
+    polylineOptions:{strokeColor:'#19b7ef',strokeWeight:5,strokeOpacity:.9}
+  });
+}
+
+// Accepts a string address or {lat,lng} coords.
+// Uses stored stop coords first — avoids a geocode round-trip for
+// addresses TackPath already validated during manifest upload.
+async function resolveDestination(addressOrCoords){
+  if(addressOrCoords&&typeof addressOrCoords==='object'&&addressOrCoords.lat){
+    return addressOrCoords;
   }
+  // Try stored coords on the current stop first
+  if(surgeStops&&surgeStops[currentSurgeStop]&&surgeStops[currentSurgeStop].coords){
+    return surgeStops[currentSurgeStop].coords;
+  }
+  // Fall back to geocoding the address string
+  return new Promise(function(resolve){
+    const gc=new google.maps.Geocoder();
+    gc.geocode({address:String(addressOrCoords)},function(results,status){
+      if(status==='OK'&&results[0]){
+        const loc=results[0].geometry.location;
+        resolve({lat:loc.lat(),lng:loc.lng()});
+      }else{
+        resolve(null);
+      }
+    });
+  });
+}
+
+async function routeToDestination(dest){
+  return new Promise(function(resolve){
+    const ds=new google.maps.DirectionsService();
+    navigator.geolocation.getCurrentPosition(function(pos){
+      const origin={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      ds.route({
+        origin:origin,
+        destination:dest,
+        travelMode:google.maps.TravelMode.DRIVING,
+        drivingOptions:{departureTime:new Date(),trafficModel:'bestguess'},
+        unitSystem:google.maps.UnitSystem.IMPERIAL
+      },function(result,status){
+        if(status===google.maps.DirectionsStatus.OK){
+          _navDirections.setDirections(result);
+          const leg=result.routes[0].legs[0];
+          _navSteps=leg.steps;
+          _navStepIdx=0;
+          showNavStep(0);
+          speakInstruction(_navSteps[0]&&_navSteps[0].instructions);
+          resolve();
+        }else{
+          resolve(); // non-fatal — map still shows, just no route line
+        }
+      });
+    },function(){resolve();},{enableHighAccuracy:true,timeout:8000});
+  });
+}
+
+function showNavStep(idx){
+  const step=_navSteps[idx];
+  if(!step)return;
+  const el=document.getElementById('navInstruction');
+  const txt=document.getElementById('navInstructionText');
+  const dist=document.getElementById('navDistanceText');
+  if(!el||!txt||!dist)return;
+  // Strip HTML tags from Google's instruction strings
+  txt.textContent=step.instructions.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  dist.textContent=step.distance?step.distance.text:'';
+  el.style.display='block';
+}
+
+function speakInstruction(html){
+  if(!_navSpeechEnabled||!html||!window.speechSynthesis)return;
+  const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  if(!text)return;
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=1.0; u.pitch=1.0; u.volume=1.0;
+  window.speechSynthesis.cancel(); // don't queue up
+  window.speechSynthesis.speak(u);
+}
+
+// Called by the GPS watcher on every position update while in_transit.
+// Two jobs: advance the turn-by-turn step and detect arrival.
+function onNavPositionUpdate(lat,lng){
+  if(!_navDestCoords||!_mapsApiReady)return;
+
+  // ── ARRIVAL DETECTION ──
+  // haversineDistance is already defined and used elsewhere in this file.
+  const distMetres=haversineDistance({lat,lng},_navDestCoords)*1609.34;
+  if(distMetres<=_navGeofenceRadius&&!_arrivalDismissed){
+    showArrivalPrompt(distMetres);
+    return;
+  }
+
+  // ── STEP ADVANCEMENT ──
+  // When the driver passes within 30m of the next step's start point,
+  // advance to the next instruction and speak it.
+  if(!_navSteps.length)return;
+  const nextStep=_navSteps[_navStepIdx+1];
+  if(!nextStep)return;
+  const stepLat=nextStep.start_location?nextStep.start_location.lat():null;
+  const stepLng=nextStep.start_location?nextStep.start_location.lng():null;
+  if(stepLat===null)return;
+  const toStep=haversineDistance({lat,lng},{lat:stepLat,lng:stepLng})*1609.34;
+  if(toStep<30){
+    _navStepIdx++;
+    showNavStep(_navStepIdx);
+    speakInstruction(nextStep.instructions);
+  }
+
+  // Keep map centered on driver
+  if(_navMap)_navMap.panTo({lat,lng});
+}
+
+function showArrivalPrompt(distMetres){
+  const ft=Math.round(distMetres*3.28084);
+  const stop=surgeStops&&surgeStops[currentSurgeStop];
+  document.getElementById('arrivalStopLabel').textContent='STOP '+(currentSurgeStop+1);
+  document.getElementById('arrivalDistance').textContent=ft+' FT';
+  const el=document.getElementById('arrivalPrompt');
+  if(el){el.style.display='flex';}
+  speakInstruction('You have arrived at stop '+(currentSurgeStop+1));
+}
+
+function dismissArrivalPrompt(){
+  _arrivalDismissed=true;
+  const el=document.getElementById('arrivalPrompt');
+  if(el)el.style.display='none';
+}
+
+function confirmArrival(){
+  dismissArrivalPrompt();
+  // Hide the nav instruction banner — the driver is here
+  const ni=document.getElementById('navInstruction');
+  if(ni)ni.style.display='none';
+  // Trigger the same "At Stop" flow the button uses
+  sdAtStop();
+}
+
+// Last resort: if the Maps API fails to load, open external navigation
+// rather than leaving the driver stranded with no directions at all.
+function externalNavFallback(addressOrCoords){
+  let dest='';
+  if(typeof addressOrCoords==='object'&&addressOrCoords.lat){
+    dest=addressOrCoords.lat+','+addressOrCoords.lng;
+  }else{
+    dest=encodeURIComponent(String(addressOrCoords));
+  }
+  const url='https://www.google.com/maps/dir/?api=1&destination='+dest+'&travelmode=driving';
+  window.open(url,'_blank');
 }
 
 function navigateInApp(address){
   if(!address)return;
-  const iframe=document.getElementById('jobMap');
-  if(iframe){
-    const dest=encodeURIComponent(address);
-    iframe.src='https://maps.google.com/maps?q='+dest+'&output=embed&z=15';
-  }
   startTurnByTurn(address);
 }
 
