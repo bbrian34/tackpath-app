@@ -4,7 +4,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const GKEY = "AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8";
+// Server-side key is read from the function secret, never committed.
+// Set with: supabase secrets set GOOGLE_MAPS_KEY=...
+const GKEY = Deno.env.get("GOOGLE_MAPS_KEY") || "";
 const SB_URL = "https://hofijsiphyjpdvujjzfi.supabase.co";
 const SB_KEY = Deno.env.get("SERVICE_ROLE_KEY") || "";
 
