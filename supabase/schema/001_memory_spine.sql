@@ -291,3 +291,41 @@ create trigger addresses_touch before update on addresses
 -- Nothing in the existing application reads these objects yet, so rollback
 -- is safe at any point before readers are migrated.
 -- ════════════════════════════════════════════════════════════════════════
+
+
+-- ── MIGRATION ADDENDUM: address failure counter ──────────────────────────────
+-- Called by smartsort when a geocode fails. Using a stored procedure rather
+-- than a client-side upsert so the increment is atomic and cannot race.
+create or replace function increment_address_failures(p_org_id uuid, p_address text)
+returns void language plpgsql as $$
+begin
+  insert into addresses (org_id, normalized_address, geocode_attempts, geocode_failures)
+  values (p_org_id, p_address, 1, 1)
+  on conflict (org_id, normalized_address) do update
+    set geocode_attempts = addresses.geocode_attempts + 1,
+        geocode_failures = addresses.geocode_failures + 1,
+        updated_at        = now();
+end $$;
+
+-- ── GEOCODE FAILURE QUEUE ────────────────────────────────────────────────────
+-- What the dispatcher reads to surface failed packages before dispatch.
+-- A failed geocode is no longer a silent count -- it is a visible record
+-- with a recipient, an address, and a reason.
+create or replace view geocode_failures_today as
+select
+  e.org_id,
+  e.occurred_at,
+  e.payload->>'tracking_number'  as tracking_number,
+  e.payload->>'recipient'        as recipient,
+  e.payload->>'raw_address'      as raw_address,
+  e.payload->>'geocode_status'   as geocode_status,
+  e.payload->>'geocode_error'    as geocode_error,
+  a.geocode_failures             as total_failures_this_address,
+  a.access_notes                 as known_access_notes
+from events e
+left join addresses a
+  on a.org_id = e.org_id
+  and a.normalized_address = upper(trim(e.payload->>'raw_address'))
+where e.event_type = 'package.geocode_failed'
+  and e.occurred_at >= current_date
+order by e.occurred_at desc;

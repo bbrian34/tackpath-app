@@ -25,10 +25,35 @@ serve(async (req) => {
     const supabase = createClient(SB_URL, SB_KEY);
     const perDriver = pkgs_per_driver || 26;
 
-    // Step 1: Geocode all addresses
+    // Step 1: Geocode all addresses — writing results to the addresses table
+    // so the same address is never geocoded twice across any session or user,
+    // and failed geocodes become actionable events instead of a silent count.
     const geocoded = [];
     const failed = [];
     for (const pkg of packages) {
+      // Check the shared address cache first. If TackPath has already
+      // geocoded and validated this address, reuse the result rather than
+      // calling Google again. This is what Marco's cache was always supposed
+      // to be — it just lived in a browser tab before, dying on every refresh.
+      let cachedCoords: any = null;
+      if (org_id && pkg.address) {
+        const norm = pkg.address.trim().toUpperCase();
+        const { data: cached } = await supabase
+          .from("addresses")
+          .select("lat,lng,geocode_precision,geocode_failures")
+          .eq("org_id", org_id)
+          .eq("normalized_address", norm)
+          .single();
+        if (cached && cached.lat && cached.lng && cached.geocode_failures === 0) {
+          cachedCoords = { lat: cached.lat, lng: cached.lng };
+        }
+      }
+
+      if (cachedCoords) {
+        geocoded.push({ ...pkg, coords: cachedCoords });
+        continue;
+      }
+
       try {
         const res = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(pkg.address)}&key=${GKEY}`
@@ -36,12 +61,71 @@ serve(async (req) => {
         const data = await res.json();
         if (data.status === "OK" && data.results[0]) {
           const loc = data.results[0].geometry.location;
-          geocoded.push({ ...pkg, coords: { lat: loc.lat, lng: loc.lng } });
+          const precision = data.results[0].geometry.location_type || "UNKNOWN";
+          const normalized = (data.results[0].formatted_address || pkg.address).trim().toUpperCase();
+          const coords = { lat: loc.lat, lng: loc.lng };
+          geocoded.push({ ...pkg, coords });
+
+          // Persist to the shared address table. On conflict (same address,
+          // same org), update the coordinates and mark it verified now.
+          if (org_id) {
+            await supabase.from("addresses").upsert({
+              org_id,
+              normalized_address: normalized,
+              lat: loc.lat,
+              lng: loc.lng,
+              geocode_precision: precision,
+              geocode_failures: 0,
+              last_verified_at: new Date().toISOString(),
+            }, { onConflict: "org_id,normalized_address", ignoreDuplicates: false });
+          }
         } else {
-          failed.push(pkg);
+          failed.push({ ...pkg, geocode_status: data.status, geocode_error: data.error_message || null });
+
+          // Failed geocodes are now events, not a silent count. The dispatcher
+          // can query these before dispatch and surface them as an actionable
+          // queue rather than discovering them after a customer calls.
+          if (org_id) {
+            await supabase.from("events").insert({
+              org_id,
+              event_type: "package.geocode_failed",
+              payload: {
+                tracking_number: pkg.tracking_number || pkg.order_id || null,
+                raw_address: pkg.address,
+                recipient: pkg.recipient || null,
+                geocode_status: data.status,
+                geocode_error: data.error_message || null,
+                manifest_run: new Date().toISOString(),
+              },
+              idempotency_key: null, // each manifest run should produce its own failure record
+            });
+
+            // Also increment the failure counter on the address so TackPath
+            // can eventually say "this address has failed 4 times."
+            const norm = pkg.address.trim().toUpperCase();
+            await supabase.rpc("increment_address_failures", {
+              p_org_id: org_id,
+              p_address: norm,
+            }).catch(() => {}); // non-fatal if the RPC doesn't exist yet
+          }
         }
       } catch (e) {
-        failed.push(pkg);
+        failed.push({ ...pkg, geocode_status: "EXCEPTION", geocode_error: String(e) });
+        if (org_id) {
+          await supabase.from("events").insert({
+            org_id,
+            event_type: "package.geocode_failed",
+            payload: {
+              tracking_number: pkg.tracking_number || pkg.order_id || null,
+              raw_address: pkg.address,
+              recipient: pkg.recipient || null,
+              geocode_status: "EXCEPTION",
+              geocode_error: String(e),
+              manifest_run: new Date().toISOString(),
+            },
+            idempotency_key: null,
+          });
+        }
       }
     }
 
@@ -105,12 +189,46 @@ serve(async (req) => {
     // Step 6: Jobs are created as 'pending' - drivers see them and accept (first-accept mechanic)
     // No need to update status - pending jobs are visible to all drivers
 
+    // Write package.manifested events for every package in this run.
+    // A package now has a durable identity from the moment the manifest
+    // is uploaded — before it is sorted, stowed, or delivered.
+    if (org_id && packages.length) {
+      const manifestedEvents = packages.map((pkg: any) => ({
+        org_id,
+        event_type: "package.manifested",
+        payload: {
+          tracking_number: pkg.tracking_number || pkg.order_id || null,
+          recipient: pkg.recipient || null,
+          raw_address: pkg.address,
+          geocoded: geocoded.some((g: any) =>
+            (g.tracking_number || g.order_id) === (pkg.tracking_number || pkg.order_id)
+          ),
+          manifest_run: new Date().toISOString(),
+        },
+        idempotency_key: org_id + ":manifest:" + (pkg.tracking_number || pkg.order_id || pkg.address) + ":" + new Date().toDateString(),
+      }));
+      await supabase.from("events").upsert(manifestedEvents, {
+        onConflict: "idempotency_key",
+        ignoreDuplicates: true,
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         clusters: results.length,
         total_packages: totalPkgs,
-        failed_addresses: failed.length,
+        failed_count: failed.length,
+        // Return the actual failed packages so the dispatcher can surface
+        // them as an actionable queue — not just a number that tells the
+        // operator almost nothing.
+        failed_packages: failed.map((p: any) => ({
+          tracking_number: p.tracking_number || p.order_id || null,
+          recipient: p.recipient || null,
+          address: p.address,
+          reason: p.geocode_status || "UNKNOWN",
+          error: p.geocode_error || null,
+        })),
         jobs: results,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
