@@ -3417,7 +3417,7 @@ async function surgeRebroadcast(routeId){
   const b = surgeBlocks.find(x=>x.id===routeId);
   if(!b) return;
   try{
-    await sbPatch('jobs?id=eq.'+b.jobId,{status:'pending',driver_name:null});
+    await sbPatch('jobs?id=eq.'+b.jobId+(currentOrgId?'&org_id=eq.'+currentOrgId:''),{status:'pending',driver_name:null});
     surgeFeedEntry(routeId, routeId+' rebroadcast to driver pool');
     toast('Route rebroadcast to driver pool','ok');
     loadJobs();
@@ -3593,7 +3593,7 @@ async function renderHistory(){
 async function archiveJob(id){
   if(!confirm('Archive this delivery? It will move to History and leave the active board.'))return;
   try{
-    await sbPatch('jobs?id=eq.'+id,{archived:true});
+    await sbPatch('jobs?id=eq.'+id+(currentOrgId?'&org_id=eq.'+currentOrgId:''),{archived:true});
     closeDrawer();
     loadJobs();
     toast('Delivery archived','ok');
@@ -3658,7 +3658,7 @@ async function cancelSpecificStop(jobId,stopIndexStr){
 async function cancelJob(id){
   if(!confirm('Cancel this job? The driver app will exit this delivery within a few seconds.'))return;
   try{
-    await sbPatch('jobs?id=eq.'+id,{status:'cancelled'});
+    await sbPatch('jobs?id=eq.'+id+(currentOrgId?'&org_id=eq.'+currentOrgId:''),{status:'cancelled'});
     closeDrawer();
     loadJobs();
     toast('Job cancelled -- driver app will clear shortly','ok');
@@ -3673,7 +3673,7 @@ async function saveStatus(){
   if(!currentJobId)return;
   const status=document.getElementById('drStatusSel').value;
   try{
-    await sbPatch('jobs?id=eq.'+currentJobId,{status});
+    await sbPatch('jobs?id=eq.'+currentJobId+(currentOrgId?'&org_id=eq.'+currentOrgId:''),{status});
     toast('Status updated to: '+status.replace('_',' '));
     addIntelEvent('Job TP-'+currentJobId.slice(0,8)+' status updated to <strong>'+status.replace('_',' ')+'</strong> by dispatcher.','var(--green)');
     closeDrawer();loadJobs();
@@ -3722,7 +3722,7 @@ async function deleteJob(){
 async function quickDispatch(id,status){
   const newStatus=status==='pending'?'assigned':'in_transit';
   try{
-    await sbPatch('jobs?id=eq.'+id,{status:newStatus});
+    await sbPatch('jobs?id=eq.'+id+(currentOrgId?'&org_id=eq.'+currentOrgId:''),{status:newStatus});
     toast('Dispatched — status: '+newStatus.replace('_',' '));
     addIntelEvent('SmartPath dispatched job TP-'+id.slice(0,8)+' — status: <strong>'+newStatus.replace('_',' ')+'</strong>','var(--blue)');
     loadJobs();
