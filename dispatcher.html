@@ -1651,6 +1651,7 @@ async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:{...H,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbDelete(p){const r=await fetch(sbUrl(p),{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());return true;}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 async function sbPostMsg(jobId,body,role){
   return sbPost('messages',{job_id:jobId,sender:'Dispatcher',sender_role:role||'dispatcher',body});
 }
@@ -5256,8 +5257,8 @@ async function rpBuild(jobId){
     <div class="rp-action">
       <input type="checkbox" id="rpa-${i}" ${a.checked?'checked':''}>
       <div class="rp-action-body">
-        <div class="rp-action-to">→ ${a.to}</div>
-        <div class="rp-action-msg">${a.msg}</div>
+        <div class="rp-action-to">→ ${esc(a.to)}</div>
+        <div class="rp-action-msg">${esc(a.msg)}</div>
       </div>
     </div>`).join('');
 
