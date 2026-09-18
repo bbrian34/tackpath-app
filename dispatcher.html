@@ -1489,7 +1489,30 @@ body::after{content:'';position:fixed;inset:0;
   </div>
 
   <div id="dropZone">
-    <input type="file" accept=".csv" id="csvInput" onchange="handleFile(this.files[0]);setTimeout(()=>{this.value='';},100)"/>
+    <input type="file" accept=".csv" id="csvInput" onchange="
+  var f=this.files[0];
+  if(f){
+    var r2=new FileReader();
+    r2.onload=function(e){
+      var lines=e.target.result.split(/\r?\n/);
+      if(lines.length>1){
+        var hdrs=lines[0].split(',').map(function(h){return h.trim().toLowerCase().replace(/"/g,'');});
+        var hi=hdrs.indexOf('route_hint');
+        if(hi>=0){
+          var hints=new Set();
+          for(var i=1;i<lines.length;i++){var c=lines[i].split(',');if(c[hi])hints.add(c[hi].trim());}
+          if(hints.size>=2){
+            ssRouteCountOverride=hints.size;
+            var rci=document.getElementById('routeCountInput');if(rci)rci.value=hints.size;
+            var rch=document.getElementById('routeCountHint');if(rch)rch.textContent=hints.size+' routes (from manifest)';
+          }
+        }
+      }
+      handleFile(f);
+    };
+    r2.readAsText(f);
+  }
+  setTimeout(()=>{this.value='';},100)"/>
     <div class="dz-icon">&#9783;</div>
     <div class="dz-title">Drop your CSV here</div>
     <div class="dz-sub">
