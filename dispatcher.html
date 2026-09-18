@@ -4795,24 +4795,50 @@ async function buildRoutes(){
     }
   }
 
-  // ── STEP 2: CLUSTER COUNT (dispatcher override > geographic spread > package formula) ──
+  // ── STEP 2: GROUP BY route_hint IF PRESENT, OTHERWISE CLUSTER ──
   const totalPkgCount=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
-  const numRoutes=computeRouteCount(totalPkgCount,geocoded);
   const geoStops=geocoded;
   const noGeoStops=failedAddresses;
 
-  // ── STEP 3: GEOGRAPHIC CLUSTERING ──
-  if(btn){btn.innerHTML='&#9650; Clustering into '+numRoutes+' route'+(numRoutes>1?'s':'')+' <span class="build-badge">SmartSort Clustering</span>';}
-  updateSmartSortStatus('&#9650; Clustering '+geoStops.length+' stops into '+numRoutes+' route'+(numRoutes>1?'s':'')+'...', 60);
+  // Check if the manifest has route_hint values — if so, the courier
+  // has already defined their routes. Respect them. Do not re-cluster.
+  const hintGroups={};
+  const hintOrder=[];
+  let hasHints=false;
+  for(const pkg of packages){
+    const h=pkg.route_hint;
+    if(h){
+      hasHints=true;
+      if(!hintGroups[h]){hintGroups[h]=[];hintOrder.push(h);}
+    }
+  }
+  // Map geocoded stops back to their hint groups
+  if(hasHints){
+    for(const stop of geoStops){
+      const h=stop.route_hint;
+      if(h&&hintGroups[h])hintGroups[h].push(stop);
+      else{
+        // Stop has no hint — put in first group
+        if(hintOrder.length)hintGroups[hintOrder[0]].push(stop);
+      }
+    }
+  }
 
   let clusters;
-  if(geoStops.length===0){
-    clusters=[noGeoStops];
-  } else if(numRoutes<=1){
-    clusters=[geoStops];
+  if(hasHints&&hintOrder.length>=1){
+    // Courier defined the routes — use their grouping, optimize sequence within each
+    clusters=hintOrder.map(h=>hintGroups[h]).filter(g=>g.length>0);
+    if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);
+    updateSmartSortStatus('&#9650; Optimizing sequence within '+clusters.length+' courier-defined routes...', 60);
+    if(btn){btn.innerHTML='&#9650; Sequencing '+clusters.length+' routes... <span class="build-badge">SmartSort</span>';}
   } else {
-    clusters=smartCluster(geoStops,numRoutes);
-    if(noGeoStops.length) clusters[clusters.length-1].push(...noGeoStops);
+    // No route hints — use geographic clustering as before
+    const numRoutes=computeRouteCount(totalPkgCount,geocoded);
+    if(btn){btn.innerHTML='&#9650; Clustering into '+numRoutes+' route'+(numRoutes>1?'s':'')+' <span class="build-badge">SmartSort Clustering</span>';}
+    updateSmartSortStatus('&#9650; Clustering '+geoStops.length+' stops into '+numRoutes+' route'+(numRoutes>1?'s':'')+'...', 60);
+    if(geoStops.length===0){clusters=[noGeoStops];}
+    else if(numRoutes<=1){clusters=[geoStops];}
+    else{clusters=smartCluster(geoStops,numRoutes);if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);}
   }
 
   // ── STEP 4: SEQUENCE EACH CLUSTER — nearest-neighbor then 2-opt improvement ──
