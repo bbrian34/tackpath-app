@@ -2764,10 +2764,20 @@ function renderPipeline(){
           // differed, so an assigned card said "Pickup" over a delivery time.
           const etaSource=s==='assigned'?pickupEtaByJob[j.id]:(s==='in_transit'?j.estimated_delivery_at:null);
           if(!etaSource)return '';
-          const etaMins=Math.round((new Date(etaSource).getTime()-Date.now())/60000);
+          const etaMs=new Date(etaSource).getTime()-Date.now();
+          const etaMins=Math.round(etaMs/60000);
           const etaColor=etaMins<=0?'var(--red)':etaMins<=20?'var(--orange)':'var(--green)';
-          const prefix=s==='assigned'?'Pickup: ':'';
-          const etaLabel=etaMins<=0?prefix+'Past due':prefix+etaMins+' min ETA';
+          const prefix=s==='assigned'?'Pickup ':'ETA ';
+          let etaLabel;
+          if(etaMins<=0){
+            etaLabel=(s==='assigned'?'Pickup ':'')+'Past due';
+          }else{
+            // Show arrival clock time (like Google Maps) not a countdown
+            const arr=new Date(Date.now()+etaMs);
+            let h=arr.getHours(),m=arr.getMinutes(),ap=h>=12?'PM':'AM';
+            h=h%12||12;
+            etaLabel=prefix+h+':'+(m<10?'0':'')+m+' '+ap+(etaMins<60?' ('+etaMins+'m)':''  );
+          }
           return `<div class="pcard-route" style="color:${etaColor};font-size:0.692rem;font-weight:700;margin-top:2px;">&#9200; ${etaLabel}</div>`;
         })()}
         <div class="pcard-age">${age}</div>
@@ -3957,6 +3967,10 @@ async function refreshFleetMap(){
   }catch(e){console.error('GPS:',e);}
 }
 setInterval(refreshFleetMap,10000);
+// Dedicated ETA refresh — runs independently of the job poll so the
+// dispatcher ETA tracks the driver's actual position rather than
+// counting down from a stale Routes API result.
+setInterval(function(){refreshAllLiveETAs().catch(function(){});},30000);
 
 
 // ── TWILIO SMS ──
@@ -4246,7 +4260,7 @@ function maybeReportMarcoStatus(){
 // per house policy: TackPath should not run on the same legacy infrastructure we're helping
 // couriers move away from). Each leg of a multi-stop route needs its own call, same as before.
 // ── LIVE ETA: recalculates using driver's actual current GPS position ──
-const ETA_REFRESH_MINUTES=2;
+const ETA_REFRESH_MINUTES=0.5; // 30 seconds — keeps dispatcher ETA close to Google Maps
 const lastEtaRefresh={};
 // Pickup-leg ETA per job id. Kept in a keyed map rather than on the job
 // object because the jobs array is rebuilt from Supabase on every poll,
@@ -4326,20 +4340,22 @@ async function refreshAllLiveETAs(){
 // distanceMeters is captured here because the Routes API already returns it --
 // no extra API call needed to get real road distance.
 async function getTrafficAwareLegData(originCoords,destCoords){
+  // The dispatcher browser key is restricted to Maps JS + Maps Embed APIs only.
+  // Routes API calls from the browser would be rejected with REQUEST_DENIED.
+  // All routing goes through the nav-proxy Supabase edge function which holds
+  // the server-side key with Routes API enabled.
   try{
-    const resp=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+    const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
+    const SB_ANON='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+    const resp=await fetch(SB_URL+'/functions/v1/nav-proxy',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'X-Goog-Api-Key':GKEY,
-        'X-Goog-FieldMask':'routes.duration,routes.distanceMeters'
-      },
+      headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
       body:JSON.stringify({
-        origin:{location:{latLng:{latitude:originCoords.lat,longitude:originCoords.lng}}},
-        destination:{location:{latLng:{latitude:destCoords.lat,longitude:destCoords.lng}}},
-        travelMode:'DRIVE',
-        routingPreference:'TRAFFIC_AWARE',
-        departureTime:new Date().toISOString()
+        action:'routes',
+        params:{
+          origin:originCoords.lat+','+originCoords.lng,
+          destination:destCoords.lat+','+destCoords.lng
+        }
       })
     });
     const data=await resp.json();

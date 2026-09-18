@@ -65,6 +65,36 @@ serve(async (req) => {
       });
     }
 
+    if (action === "routes") {
+      // params: { origin: "lat,lng", destination: "lat,lng" }
+      // Used by the dispatcher for live ETA calculation.
+      const { origin, destination } = params;
+      if (!origin || !destination) throw new Error("origin and destination required");
+
+      const [oLat, oLng] = origin.split(",").map(Number);
+      const [dLat, dLng] = destination.split(",").map(Number);
+
+      const r = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": GKEY,
+          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+        },
+        body: JSON.stringify({
+          origin: { location: { latLng: { latitude: oLat, longitude: oLng } } },
+          destination: { location: { latLng: { latitude: dLat, longitude: dLng } } },
+          travelMode: "DRIVE",
+          routingPreference: "TRAFFIC_AWARE",
+          departureTime: new Date().toISOString(),
+        }),
+      });
+      const data = await r.json();
+      return new Response(JSON.stringify(data), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error("unknown action: " + action);
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
