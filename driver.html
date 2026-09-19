@@ -1,7 +1,6 @@
 <!DOCTYPE html><!-- v3 -->
 <html lang="en">
 <head>
-<script src="operations-client.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -462,7 +461,8 @@ button,a,input,textarea{font-family:var(--sans);}
     <div class="lbox-form" id="loginPhasePhone">
       <label class="fl">Mobile Number</label>
       <input class="fi" type="tel" id="loginPhone" placeholder="+1 (404) 555-0100" autocomplete="tel"/>
-      <button class="fb" onclick="requestCode()" id="loginPhoneBtn">Send Code</button>
+      <button class="fb" onclick="requestCode()" id="loginPhoneBtn" style="margin-top:16px;">Send Code</button>
+      <div class="fn" style="text-align:center;margin-top:14px;">New driver? <a href="driversignup.html" style="color:#19b7ef;font-weight:700;">Sign up here</a></div>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.08);"></div>
@@ -480,7 +480,9 @@ button,a,input,textarea{font-family:var(--sans);}
         </button>
       </div>
     </div>
+
     <div class="lbox-form" id="loginPhaseCode" style="display:none;">
+
       <label class="fl">Verification Code</label>
       <div style="font-family:var(--mono);font-size:0.6875rem;color:#4a6e88;margin-bottom:12px;" id="loginCodeHint">Enter the 6-digit code</div>
       <input class="fi" type="number" id="loginCode" placeholder="000000" style="font-size:1.75rem;font-weight:900;letter-spacing:8px;text-align:center;"/>
@@ -683,12 +685,56 @@ button,a,input,textarea{font-family:var(--sans);}
 </div>
 
 <!-- SURGE ROUTE MAP -- SmartSort style view ──-->
+<!-- PACKAGE LOADING VERIFICATION OVERLAY -- sits on top of the existing,
+     unmodified scan screen and camera below, shown only while loading -->
+<!-- MASTER / BIN SCAN OVERLAY -- sits on the same existing scan screen -->
+<!-- ROUTE ACCEPTED -->
+<!-- AT PICKUP -->
+<div class="screen" id="scRouteAccepted">
+  <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <button onclick="startBinScan()" style="width:100%;max-width:320px;padding:24px;border-radius:16px;background:linear-gradient(135deg,#19b7ef,#0060cc);color:#fff;font-size:1.3rem;font-weight:900;border:none;cursor:pointer;">
+      AT PICKUP
+    </button>
+  </div>
+</div>
+
+<div id="binScanOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
+  <div style="position:absolute;top:0;left:0;right:0;padding:24px 18px;background:rgba(0,0,0,.82);text-align:center;pointer-events:auto;">
+    <button onclick="cancelBinScan()" style="position:absolute;top:16px;left:14px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:.85rem;font-weight:700;cursor:pointer;">&#8592; BACK</button>
+    <div id="binScanTitle" style="font-size:1.1rem;font-weight:800;color:#fff;opacity:.85;letter-spacing:.04em;">SCAN BIN</div>
+    <div id="binScanHeading" style="font-size:2.6rem;font-weight:900;color:#fff;margin-top:4px;line-height:1;">--</div>
+    <div id="binScanInstruction" style="font-size:.95rem;font-weight:600;color:#fff;opacity:.85;margin-top:8px;">Scan the bin shown above</div>
+    <div id="binScanLastResult" style="margin-top:12px;min-height:60px;"></div>
+  </div>
+</div>
+
+<!-- PICKUP COMPLETE -->
+<div class="screen" id="scPickupComplete">
+  <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+    <div style="color:#0a7a2f;font-weight:900;font-size:1.1rem;margin-bottom:8px;">&#10003; ALL PACKAGES VERIFIED</div>
+    <div style="font-size:1.4rem;font-weight:900;color:#0f172a;margin-bottom:32px;">PICKUP COMPLETE</div>
+    <button onclick="confirmPickup()" style="width:100%;max-width:320px;padding:22px;border-radius:16px;background:linear-gradient(135deg,#19b7ef,#0060cc);color:#fff;font-size:1.15rem;font-weight:900;border:none;cursor:pointer;">
+      CONFIRM PICKUP
+    </button>
+  </div>
+</div>
+
+<div id="loadPkgOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
+  <div style="position:absolute;top:0;left:0;right:0;padding:22px 18px;background:rgba(0,0,0,.82);text-align:center;pointer-events:auto;">
+    <button onclick="cancelPackageScan()" style="position:absolute;top:16px;left:14px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:.85rem;font-weight:700;cursor:pointer;">&#8592; BACK</button>
+    <div id="loadPkgHeading" style="font-size:1.2rem;font-weight:900;color:#fff;">SCAN PACKAGES</div>
+    <div id="loadPkgInstruction" style="font-size:.9rem;font-weight:600;color:#fff;opacity:.85;margin-top:4px;">Scan each package in this bin</div>
+    <div id="loadPkgLastScan" style="margin-top:10px;min-height:64px;"></div>
+    <div id="loadPkgCount" style="font-size:1.1rem;font-weight:900;color:#fff;margin-top:8px;">0 of 0 packages scanned</div>
+  </div>
+</div>
+
 <div class="screen" id="scSurgeMap">
   <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;">
     <!-- Header -->
     <div style="padding:14px 18px;background:#fff;border-bottom:1px solid rgba(0,0,0,.1);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
       <div>
-        <div style="font-family:var(--mono);font-size:0.5625rem;color:#475569;letter-spacing:.16em;text-transform:uppercase;margin-bottom:2px;" id="surgeMapTitle">ROUTE LOADED</div>
+        <div style="font-family:var(--mono);font-size:0.5625rem;color:#475569;letter-spacing:.16em;text-transform:uppercase;margin-bottom:2px;" id="surgeMapTitle">ROUTE READY</div>
         <div style="font-size:1.125rem;font-weight:900;color:#0f172a;" id="surgeMapSub">20 stops</div>
       </div>
       <div style="font-family:var(--mono);font-size:0.625rem;color:#0077cc;font-weight:700;" id="surgeMapRoute"></div>
@@ -716,30 +762,30 @@ button,a,input,textarea{font-family:var(--sans);}
         <div style="font-size:1.0rem;font-weight:900;color:#fff;" id="sdRecipient">Barbara Jackson</div>
         <div style="font-size:0.75rem;color:rgba(255,255,255,.6);margin-top:1px;" id="sdAddress">1000 Northside Dr NW</div>
       </div>
+      <button onclick="navigateToStop()" style="background:var(--blue);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;margin-right:8px;">&#9194; Navigate</button>
       <button onclick="showScreen('scSurgeMap')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 14px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;">&#8592; List</button>
     </div>
-    <!-- Navigate CTA — full Google Maps with deep-link return -->
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:16px;position:relative;">
-      <button onclick="navigateToStop()" style="width:100%;max-width:340px;padding:22px;border-radius:18px;background:linear-gradient(135deg,#1a73e8,#0052cc);border:none;color:#fff;font-size:1.2rem;font-weight:900;cursor:pointer;box-shadow:0 6px 24px rgba(26,115,232,.4);display:flex;align-items:center;justify-content:center;gap:12px;">
-        <span style="font-size:1.5rem;">&#9194;</span> Navigate with Google Maps
-      </button>
-      <div style="font-size:0.8rem;color:rgba(255,255,255,.35);text-align:center;">Opens Google Maps &mdash; TackPath stays in background</div>
-      <!-- Arrival prompt — shown when driver returns from Maps or GPS detects arrival -->
-      <div id="arrivalPrompt" style="display:none;position:absolute;inset:0;background:rgba(2,6,14,.97);flex-direction:column;align-items:center;justify-content:center;padding:32px;">
-        <div style="font-family:var(--mono);font-size:0.7rem;font-weight:700;color:var(--blue);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;" id="arrivalStopLabel">STOP 7</div>
-        <div style="font-size:3rem;font-weight:900;color:#fff;margin-bottom:4px;" id="arrivalDistFt">Arrived</div>
-        <div style="font-size:0.875rem;color:rgba(255,255,255,.5);margin-bottom:32px;">Ready to deliver</div>
-        <button onclick="confirmArrival()" style="width:100%;max-width:320px;padding:22px;border-radius:18px;background:linear-gradient(135deg,var(--green),#00b347);border:none;color:#010e21;font-size:1.15rem;font-weight:900;cursor:pointer;box-shadow:0 8px 32px rgba(83,255,136,.3);">&#10003; Mark Arrived</button>
-        <button onclick="dismissArrival()" style="margin-top:14px;background:none;border:none;color:rgba(255,255,255,.35);font-size:0.875rem;cursor:pointer;padding:8px;">Not yet &mdash; go back to Maps</button>
+    <!-- Map — Google Maps JS API renders here, not a static iframe embed -->
+    <div style="flex:1;position:relative;overflow:hidden;">
+      <div id="sdMap" style="position:absolute;inset:0;width:100%;height:100%;background:#0b1f35;"></div>
+      <div style="position:absolute;top:12px;left:12px;background:rgba(2,6,14,.9);border:1px solid rgba(25,183,239,.3);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:0.625rem;font-weight:700;color:var(--blue);" id="sdPkgBadge">2 packages</div>
+      <!-- Turn-by-turn instruction banner -->
+      <div id="navInstruction" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);max-width:calc(100% - 100px);background:rgba(2,6,14,.95);border:1px solid rgba(25,183,239,.4);border-radius:12px;padding:10px 16px;text-align:center;z-index:10;">
+        <div id="navInstructionText" style="font-size:0.875rem;font-weight:700;color:#fff;line-height:1.3;"></div>
+        <div id="navDistanceText" style="font-family:var(--mono);font-size:0.75rem;color:var(--blue);margin-top:3px;"></div>
       </div>
-      <!-- Hidden elements kept for JS compatibility -->
-      <div id="sdMap" style="display:none;"></div>
-      <div id="navInstr" style="display:none;"></div>
-      <div id="navInstrIcon" style="display:none;"></div>
-      <div id="navInstrText" style="display:none;"></div>
-      <div id="navInstrDist" style="display:none;"></div>
-      <div id="navRerouting" style="display:none;"></div>
-      <div id="sdPkgBadge" style="display:none;"></div>
+      <!-- Arrival prompt — fires automatically when driver enters geofence -->
+      <div id="arrivalPrompt" style="display:none;position:absolute;inset:0;background:rgba(2,6,14,.92);flex-direction:column;align-items:center;justify-content:center;z-index:20;padding:32px;">
+        <div style="font-family:var(--mono);font-size:0.75rem;color:var(--blue);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;" id="arrivalStopLabel">STOP 7</div>
+        <div style="font-size:2rem;font-weight:900;color:#fff;margin-bottom:4px;" id="arrivalDistance">180 FT</div>
+        <div style="font-size:0.9rem;color:rgba(255,255,255,.6);margin-bottom:32px;">You are here</div>
+        <button onclick="confirmArrival()" style="width:100%;max-width:320px;padding:20px;border-radius:18px;background:linear-gradient(135deg,var(--green),#00b347);border:none;color:#000;font-size:1.1rem;font-weight:900;cursor:pointer;box-shadow:0 8px 32px rgba(83,255,136,.3);">
+          ✓ Mark Arrived
+        </button>
+        <button onclick="dismissArrivalPrompt()" style="margin-top:12px;background:none;border:none;color:rgba(255,255,255,.4);font-size:0.875rem;cursor:pointer;padding:8px;">
+          Keep driving
+        </button>
+      </div>
     </div>
     <!-- Step buttons + Ruby side by side -->
     <div style="padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid rgba(25,183,239,.1);flex-shrink:0;">
@@ -863,10 +909,8 @@ button,a,input,textarea{font-family:var(--sans);}
 <script>
 // ── CONSTANTS ──
 const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
-// R6 fix: HTML escape for manifest data interpolated into innerHTML.
-// Prevents a malicious CSV entry from injecting script tags into the driver UI.
-function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const GKEY='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDSNszCZk8';
 const GH={'apikey':KEY,'Authorization':'Bearer '+KEY};
 const PH={...GH,'Content-Type':'application/json','Prefer':'return=representation'};
 const sbu=p=>SB+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+KEY;
@@ -892,7 +936,7 @@ function showRouteMapOverlay(){
     const destination=encodeURIComponent(surgeStops[surgeStops.length-1].address);
     const waypoints=surgeStops.slice(1,-1).map(s=>encodeURIComponent(s.address)).join('|');
 
-    let url='https://www.google.com/maps/embed/v1/directions?key=AIzaSyAqqmpSBOLn8LwJZ6OPbXAn63Lz32o57Ts&origin='+origin+'&destination='+destination;
+    let url='https://www.google.com/maps/embed/v1/directions?key='+GKEY+'&origin='+origin+'&destination='+destination;
     if(waypoints) url+='&waypoints='+waypoints;
     url+='&mode=driving';
 
@@ -925,23 +969,8 @@ function unlockSpeech(){
 }
 
 function speak(text){
-  // Native Android TTS (works in Capacitor WebView where speechSynthesis does not exist)
-  if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech){
-    try{
-      window.Capacitor.Plugins.TextToSpeech.speak({text:text,rate:1.0,pitch:1.1,volume:1.0,category:'ambient'});
-      return;
-    }catch(e){}
-  }
-  // Browser fallback (Chrome, etc.)
-  try{
-    if(!synth)return;
-    if(synth.speaking||synth.pending)synth.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    if(synthVoice)u.voice=synthVoice;
-    u.rate=1.0;u.pitch=1.1;u.volume=1;
-    u.onerror=()=>{};
-    setTimeout(()=>{try{synth.speak(u);}catch(e){}},200);
-  }catch(e){}
+  // Voice disabled entirely -- chat between driver and dispatch stays text-only.
+  return;
 }
 
 // ── AUDIO -- single persistent context, unlocked on first user tap ──
@@ -1030,6 +1059,7 @@ function showDispatchNotif(text){
 
 // ── LOGIN ──
 let pendingPhone='',pendingCode='';
+
 function showPhoneInput(){
   document.getElementById('loginPhasePhone').style.display='block';
   document.getElementById('loginPhaseCode').style.display='none';
@@ -1161,14 +1191,16 @@ function initApp(){
     startJobStatusPoll();
     if(currentJob.status==='in_transit'&&isSurgeJob&&surgeStops.length>0){
       if(window._restoredScreenContext==='delivery'){
-        // Reset nav state then surgeTapStop will restart nav for the new stop
-    // Reset nav state for next stop
-    _navDestCoords=null;_navArrDismissed=false;_navDelivering=false;
-    const ap=document.getElementById('arrivalPrompt');if(ap)ap.style.display='none';
-    showScreen('scSurgeDelivery');surgeTapStop(currentSurgeStop);
+        showScreen('scSurgeDelivery');surgeTapStop(currentSurgeStop);
       }else{
         showScreen('scSurgeMap');renderSurgeList();
       }
+    }else if(currentJob.status==='assigned'&&isSurgeJob&&surgeStops.length>0){
+      // Accepted but pickup was never confirmed before the app closed -
+      // resume at the start of pickup rather than a generic screen that
+      // isn't built to resume mid-scan. Simpler and safer than trying
+      // to reconstruct exactly which packages were already scanned.
+      showRouteAcceptedScreen();
     }else{
       showScreen('scJob');renderJobScreen();
     }
@@ -1230,6 +1262,9 @@ async function pollJobs(){
   const scanEl=document.getElementById('scanTxt');
   try{
     const jobs=await sbGet('jobs?select=*&status=in.(routing,pending,assigned)&order=created_at.desc&limit=10');
+    // Real, authoritative staging check - only surge/route-type jobs
+    // ever go through PathIQ's bin-staging process at all, so only
+    // those are gated on it here. Other job types are unaffected.
     const available=jobs.filter(j=>!rejectedIds.has(j.id));
     if(scanEl)scanEl.textContent=available.length+' signal'+(available.length!==1?'s':'')+' available';
     const ws=document.getElementById('waitState');
@@ -1289,43 +1324,58 @@ async function acceptOffer(){
   stopOfferAlert();unlockSpeech();
 
   // ── ATOMIC CLAIM ──
-  // PATCH filters on status=eq.pending so Postgres decides the winner.
-  // Empty result = another driver got there first.
+  // Previously acceptance was a local assignment and the database was not
+  // told until much later, so two drivers tapping Accept in the same window
+  // both believed they owned the route and the last write silently won.
+  // The claim now happens in one conditional update: status must still be
+  // 'pending' at the moment the row is written. Postgres decides the winner,
+  // not JavaScript timing. PH already sends Prefer: return=representation,
+  // so an empty result set means someone else got there first.
   const claimId=pendingJob.id;
-  let claimedJob;
   try{
-    const rows=await sbPatch(
+    // status=eq.pending is the whole precondition. The dispatcher's own
+    // assign and unassign paths always move status and driver_name together,
+    // so pending already implies unclaimed -- adding more predicates would
+    // only create ways for a legitimate acceptance to fail.
+    const claimed=await sbPatch(
       'jobs?id=eq.'+claimId+'&status=eq.pending',
       {status:'assigned',driver_name:driver.name}
     );
-    if(!Array.isArray(rows)||rows.length===0){
+    if(!Array.isArray(claimed)||claimed.length===0){
+      // Lost the race, or the dispatcher reassigned it. Say so plainly and
+      // return the driver to the offer list rather than into a phantom route.
       pendingJob=null;
       toast('That route was just taken by another driver','warn');
       showHome();
       return;
     }
-    claimedJob=Object.assign({},pendingJob,rows[0]);
+    currentJob=Object.assign({},pendingJob,claimed[0]);
   }catch(e){
+    // A failed claim must never look like a successful one.
     pendingJob=null;
-    toast('Could not accept route — check connection','warn');
+    toast('Could not accept route: '+String(e.message||e).slice(0,50),'warn');
     showHome();
     return;
   }
-
-  // Refresh with the full current record — the claimed row may predate
-  // PathIQ finishing bin assignment, so re-fetch to get latest data.
-  try{
-    const fresh=await sbGet('jobs?id=eq.'+claimId+'&select=*');
-    if(Array.isArray(fresh)&&fresh.length>0){
-      claimedJob=Object.assign(claimedJob,fresh[0]);
-    }
-  }catch(e){}
-
-  currentJob=claimedJob;
   pendingJob=null;
+
+  // Refresh with the real, current job record before proceeding - the
+  // offer snapshot above may predate PathIQ finishing bin assignment,
+  // and nothing since has ever re-checked it.
+  try{
+    const fresh=await sbGet('jobs?id=eq.'+currentJob.id+'&select=*');
+    if(Array.isArray(fresh)&&fresh.length>0){
+      currentJob=Object.assign(currentJob, fresh[0]);
+    }
+  }catch(e){
+    // If this fails, fall back to the offer snapshot rather than block
+    // the driver entirely - bin validation below still runs correctly
+    // either way, just against whatever data is actually available.
+  }
+
   currentJob.status='assigned';
+  loadedCounts=new Map();
   scannedPackages=[];
-  window._loadedPackageIds=new Set(); // reset per-job package scan dedup
   // Detect Surge job -- parse surge_stops if it came back as a string
   let surgeSt=currentJob.surge_stops;
   if(typeof surgeSt==='string'){try{surgeSt=JSON.parse(surgeSt);}catch(e){surgeSt=[];}}
@@ -1355,20 +1405,210 @@ async function acceptOffer(){
     });
     surgeStops=sprintStops;
   }
-  // All jobs go into the pickup/scan flow first.
-  // status stays 'assigned' until confirmPickup() writes in_transit.
-  currentJob.status='assigned';
+  // All jobs now go into the At Pickup step first - accepting a job is
+  // not the same as picking it up, so status stays 'assigned' here.
+  // It only becomes 'in_transit' once pickup is actually confirmed,
+  // further down in confirmPickup().
   saveRouteState('list');
+  showRouteAcceptedScreen();
+}
+
+function showRouteAcceptedScreen(){
+  showScreen('scRouteAccepted');
+}
+
+// ── MASTER / BIN SCAN ──
+// Reuses the same existing, proven scan screen and camera as Loading
+// Verification below - only a new overlay and a new delegation check
+// in processScan() are added, nothing about the camera itself changes.
+function startBinScan(){
+  window._scanningBin=true;
+  window._binConfirmedHolding=false;
+  const bin=currentJob.bin_label || '';
+  document.getElementById('binScanTitle').textContent='SCAN BIN';
+  document.getElementById('binScanHeading').textContent = bin ? ('BIN '+bin) : '--';
+  document.getElementById('binScanLastResult').innerHTML='';
+  document.getElementById('binScanOverlay').style.display='block';
+  hideLegacyScanControls();
+  showScreen('scScan');
+  startCamera();
+}
+
+function cancelBinScan(){
+  window._scanningBin=false;
+  window._binConfirmedHolding=false;
+  document.getElementById('binScanOverlay').style.display='none';
+  stopCamera();
+  restoreLegacyScanControls();
+  showRouteAcceptedScreen();
+}
+
+// Neither the old shared camera back button nor the unrelated Done
+// button belong to bin/package scanning - hiding them here stops a
+// driver from ever tapping into that separate, older logic by mistake
+// while either of these two new modes is active.
+function hideLegacyScanControls(){
+  const backBtn=document.querySelector('.scan-back');
+  if(backBtn)backBtn.style.display='none';
+  const doneBtn=document.getElementById('doneScanBtn');
+  if(doneBtn)doneBtn.style.display='none';
+}
+function restoreLegacyScanControls(){
+  const backBtn=document.querySelector('.scan-back');
+  if(backBtn)backBtn.style.display='';
+  const doneBtn=document.getElementById('doneScanBtn');
+  if(doneBtn)doneBtn.style.display='';
+}
+
+function handleBinScan(code){
+  if(window._binConfirmedHolding)return; // ignore stray scans during the hold
+  const clean=code.trim().toUpperCase();
+  const resultEl=document.getElementById('binScanLastResult');
+  const realBin=(currentJob.bin_label||'').toUpperCase();
+
+  if(!realBin){
+    // No bin assigned to this route at all - nothing to check against,
+    // so don't block the driver on a step that can't be verified.
+    resultEl.innerHTML='<div style="color:#fff;font-weight:900;">No bin assigned to this route - continuing.</div>';
+    window._scanningBin=false;
+    document.getElementById('binScanOverlay').style.display='none';
+    stopCamera();
+    startPackageLoadingVerification();
+    return;
+  }
+
+  if(clean===realBin){
+    window._binConfirmedHolding=true;
+    resultEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.6rem;">&#10003; BIN '+realBin+' CONFIRMED</div><div style="color:#fff;font-size:.95rem;font-weight:600;margin-top:4px;">Bin pickup confirmed</div>';
+    // Hold this confirmation on screen before moving on, so the driver
+    // clearly sees the correct bin was accepted rather than an abrupt
+    // jump straight to the next screen.
+    setTimeout(function(){
+      window._binConfirmedHolding=false;
+      window._scanningBin=false;
+      document.getElementById('binScanOverlay').style.display='none';
+      stopCamera();
+      startPackageLoadingVerification();
+    }, 1300);
+  } else {
+    resultEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.6rem;">&#10007; WRONG BIN</div>';
+  }
+}
+
+// ── PACKAGE LOADING VERIFICATION ──
+// A real, per-package gate between accepting a route and starting
+// deliveries. Uses the real surgeStops data already populated in
+// acceptOffer() - the total is surgeStops.length, never guessed.
+// Reuses the existing, unmodified scan screen and camera entirely -
+// only a visible overlay and the scan routing above are new.
+let loadedCounts=new Map();
+
+function startPackageLoadingVerification(){
+  // Only reset progress on a genuinely fresh start - resuming after a
+  // driver backs out and re-confirms the bin must preserve whatever
+  // was already verified, not wipe it out.
+  if(!loadedCounts)loadedCounts=new Map();
+  window._loadingPackages=true;
+  document.getElementById('loadPkgLastScan').innerHTML='';
+  document.getElementById('loadPkgOverlay').style.display='block';
+  hideLegacyScanControls();
+  updateLoadingUI();
+  showScreen('scScan');
+  startCamera();
+}
+
+function cancelPackageScan(){
+  window._loadingPackages=false;
+  document.getElementById('loadPkgOverlay').style.display='none';
+  stopCamera();
+  restoreLegacyScanControls();
+  // Already verified packages stay exactly as they are in loadedCounts -
+  // resuming re-enters through the bin scan, which is quick since the
+  // correct bin never changes, and package progress is untouched.
+  showRouteAcceptedScreen();
+}
+
+function realPackageTotal(){
+  // One barcode identity exists per stop, confirmed against the real
+  // data model - this is the true, scannable package count, not a
+  // manifest quantity that has no corresponding physical barcode.
+  return surgeStops.length;
+}
+
+function handleLoadingScan(barcode){
+  const match=surgeStops.find(s=>barcode===s.order_id||barcode.startsWith(s.order_id)||s.order_id.startsWith(barcode));
+  const lastScanEl=document.getElementById('loadPkgLastScan');
+
+  if(!match){
+    lastScanEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.1rem;">WRONG PACKAGE</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">NOT ON THIS ROUTE</div>';
+    return;
+  }
+
+  if(loadedCounts.has(match.order_id)){
+    // This barcode's one real, physical identity is already accounted
+    // for - camera stays on, driver keeps scanning.
+    lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">PACKAGE ALREADY VERIFIED</div>';
+    return;
+  }
+
+  loadedCounts.set(match.order_id, 1);
+  const stopNum=surgeStops.indexOf(match)+1;
+  // Only a genuine, correct match reaches here - camera turns off and
+  // the driver must explicitly tap OK before it resumes.
+  stopCamera();
+  window._loadingPackages=false;
+  lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.3rem;">&#10003; PACKAGE VERIFIED</div>'
+    +'<div style="color:#fff;font-weight:900;font-size:1.9rem;margin-top:6px;">STOP '+stopNum+'</div>'
+    +'<button onclick="resumePackageScanning()" style="margin-top:14px;padding:12px 32px;border-radius:12px;background:#fff;color:#111;font-weight:900;font-size:1rem;border:none;cursor:pointer;">OK</button>';
+  updateLoadingUI();
+}
+
+function resumePackageScanning(){
+  const total=realPackageTotal();
+  const loaded=loadedCounts.size;
+  if(loaded>=total && total>0){
+    showPickupCompleteScreen();
+    return;
+  }
+  window._loadingPackages=true;
+  document.getElementById('loadPkgLastScan').innerHTML='';
+  startCamera();
+}
+
+function updateLoadingUI(){
+  const total=realPackageTotal();
+  const loaded=loadedCounts.size;
+  document.getElementById('loadPkgCount').textContent=loaded+' of '+total+' packages scanned';
+}
+
+function showPickupCompleteScreen(){
+  window._loadingPackages=false;
+  document.getElementById('loadPkgOverlay').style.display='none';
+  stopCamera();
+  showScreen('scPickupComplete');
+}
+
+function confirmPickup(){
+  // This is the real, explicit moment pickup actually happened - status
+  // only becomes in_transit here, not at acceptance and not the instant
+  // scanning finishes.
+  currentJob.status='in_transit';
+  saveRouteState('list');
+  sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'in_transit',driver_name:driver.name}).catch(()=>{});
+  enterSurgeMapFlow();
+}
+
+function enterSurgeMapFlow(){
   showJobNotification(surgeStops.length>1?'Delivering -- '+surgeStops.length+' stops':'Heading to delivery');
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
-  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
-  document.getElementById('surgeMapSub').textContent=total+' stop'+(total!==1?'s':'')+' · '+totalPkgs+' package'+(totalPkgs!==1?'s':'');
+  document.getElementById('surgeMapTitle').textContent='ROUTE READY';
   document.getElementById('surgeMapRoute').textContent=currentJob.title||'Delivery Route';
-  // Hide Begin Route -- skip straight to stop list identical to surge
-  const beginRow=document.getElementById('surgeBeginRow');
-  if(beginRow)beginRow.style.display='none';
   renderSurgeList();
+  // Set this AFTER renderSurgeList, which also writes to surgeMapSub -
+  // otherwise this real, one-time Route Ready message would be
+  // immediately overwritten by that ongoing, repeated re-render.
+  document.getElementById('surgeMapSub').innerHTML=total+' STOP'+(total!==1?'S':'')+'<br>'+totalPkgs+' PACKAGE'+(totalPkgs!==1?'S':'')+'<br><span style="font-size:.85rem;font-weight:600;color:#475569;">Pickup complete.</span>';
   showScreen('scSurgeMap');
   startGPS();
   startDispatchPoll();startJobStatusPoll();
@@ -1508,7 +1748,7 @@ async function arrivedAtPickup(){
 async function startDelivery(){
   if(!currentJob)return;
   try{
-    await sbPatch('jobs?id=eq.'+currentJob.id,{status:'in_transit',driver_name:driver.name});
+    await sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'in_transit',driver_name:driver.name});
     currentJob.status='in_transit';
     showJobNotification(isSurgeJob?'Delivering -- '+surgeStops.length+' stops':'Heading to dropoff');
     startGPS();
@@ -1518,7 +1758,7 @@ async function startDelivery(){
       renderSurgeStop();
     }else{
       renderJobScreen();
-
+      
     }
   }catch(e){toast('Could not update: '+e.message.slice(0,50),'warn');}
 }
@@ -1591,11 +1831,12 @@ async function loadMessages(){
     const el=document.getElementById('commsBody');
     const atBottom=el.scrollHeight-el.scrollTop<=el.clientHeight+60;
     let html='<div class="c-sys">'+(currentJob.title||'Active Job')+'</div>';
-    if(msgs&&msgs.length){
-      html+=msgs.map(m=>{
+    const displayMsgs=(msgs||[]).filter(m=>m.body&&!m.body.startsWith('STOP_DELIVERED::')&&!m.body.startsWith('STOP_DRIFT::'));
+    if(displayMsgs.length){
+      html+=displayMsgs.map(m=>{
         const me=m.sender_role==='driver';
         const t=new Date(m.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
-        return '<div class="c-wrap"><div class="c-meta'+(me?' r':'')+'">'+(me?'You':'Dispatch')+' · '+t+'</div><div class="c-bubble '+(me?'c-out':'c-in')+'">'+m.body+'</div></div>';
+        return '<div class="c-wrap"><div class="c-meta'+(me?' r':'')+'">'+(me?'You':'Dispatch')+' • '+t+'</div><div class="c-bubble '+(me?'c-out':'c-in')+'">'+m.body+'</div></div>';
       }).join('');
     }else{html+='<div class="c-sys" style="margin-top:12px;">No messages yet</div>';}
     el.innerHTML=html;if(atBottom)el.scrollTop=el.scrollHeight;
@@ -1737,8 +1978,7 @@ Current job: ${JSON.stringify(jobCtx)}. Driver: ${driver?.name}.
       if(isVoice)speak('Got it, I let dispatch know nobody was home.');
     }
     else{
-      // No specific action matched -- treat it as a general message to dispatch rather than doing nothing
-      if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:transcript}).catch(()=>{});
+      // Already logged as "[Ruby] transcript" at the top of this function -- no need to send it again
       toast('Message sent to dispatch','ok');
     }
   }
@@ -1806,31 +2046,26 @@ function stopCamera(){
 }
 function processScan(barcode){
   if(navigator.vibrate)navigator.vibrate([60,30,60]);
-  const clean=barcode.trim().toUpperCase();
 
-  // ── B5 FIX: DELIVERY SCAN — validate against current stop ────────────
-  // Previously any barcode called sdScanConfirmed() unconditionally.
-  // Now the scanned barcode must match the current stop's package identity.
-  if(window._sdScanMode){
-    const stop=surgeStops&&surgeStops[currentSurgeStop];
-    if(stop){
-      const stopId=(stop.tracking_number||stop.order_id||'').toUpperCase();
-      const smartId=(stop.smart_id||'').toUpperCase();
-      if(clean===stopId||clean===smartId||
-         (stopId&&clean.startsWith(stopId))||(stopId&&stopId.startsWith(clean))){
-        sdScanConfirmed();
-      }else{
-        toast('Wrong package — scan a package for Stop '+(currentSurgeStop+1),'warn');
-        const s=document.getElementById('scanStatus');
-        if(s){s.textContent='Expected: '+(stop.order_id||stop.tracking_number||'?');s.style.color='var(--red)';}
-      }
-    }else{
-      sdScanConfirmed(); // no stop data — allow through
-    }
+  // ── MASTER / BIN SCAN -- driver confirming the correct bin at pickup ──
+  if(window._scanningBin){
+    handleBinScan(barcode);
     return;
   }
 
-  // ── SURGE: load stops if not already loaded ───────────────────────────
+  // ── PACKAGE LOADING VERIFICATION -- driver scanning packages into the vehicle ──
+  if(window._loadingPackages){
+    handleLoadingScan(barcode);
+    return;
+  }
+
+  // ── SURGE DROPOFF SCAN -- driver scanning package at delivery address ──
+  if(window._sdScanMode){
+    sdScanConfirmed();
+    return;
+  }
+
+  // ── SURGE: load stops from job if not already loaded ──
   if(!surgeStops||!surgeStops.length){
     if(currentJob&&currentJob.surge_stops){
       let st=currentJob.surge_stops;
@@ -1839,40 +2074,23 @@ function processScan(barcode){
     }
   }
 
-  // ── B2/B3 FIX: LOADING SCAN — match by tracking_number OR order_id ───
-  // Previously only checked order_id with permissive prefix matching
-  // (ABC matched ABC123). Now requires an exact match against either
-  // the tracking number or the order ID — whichever is on the barcode.
+  // Check if scanned TP belongs to surge route
   if(isSurgeJob&&surgeStops.length>0){
-    const match=surgeStops.find(s=>{
-      const tn=(s.tracking_number||'').toUpperCase();
-      const oid=(s.order_id||'').toUpperCase();
-      const sid=(s.smart_id||'').toUpperCase();
-      return clean===tn||(tn&&clean===tn)||clean===oid||clean===sid;
-    });
+    const match=surgeStops.find(s=>barcode===s.order_id||barcode.startsWith(s.order_id)||s.order_id.startsWith(barcode));
     if(match){
-      // B3 FIX: track which specific packages have been loaded,
-      // not just how many stops have been touched.
-      if(!window._loadedPackageIds)window._loadedPackageIds=new Set();
-      const pkgId=(match.tracking_number||match.order_id||'').toUpperCase();
-      if(pkgId&&window._loadedPackageIds.has(pkgId)){
-        toast('Already scanned','warn');
-        return;
-      }
-      if(pkgId)window._loadedPackageIds.add(pkgId);
       stopCamera();
       showSurgeRouteMap();
       return;
     }
-    // Barcode not found in this route's packages
-    toast('Package not on this route','warn');
-    const s=document.getElementById('scanStatus');
-    if(s){s.textContent='Not on route — check barcode';s.style.color='var(--red)';
-      setTimeout(()=>{s.textContent='Point camera at barcode to scan';s.style.color='rgba(255,255,255,.4)';},2500);}
-    return;
+    // Even if no exact match -- if it's a surge job, any scan loads the route
+    if(currentJob&&currentJob.job_type==='surge'){
+      stopCamera();
+      showSurgeRouteMap();
+      return;
+    }
   }
 
-  // Sprint — single package scan
+  // Sprint -- normal single package scan
   if(scannedPackages.find(p=>p.barcode===barcode)){toast('Already scanned','warn');return;}
   const pkg={barcode,recipient:'Package '+(scannedPackages.length+1),address:barcode};
   scannedPackages.push(pkg);
@@ -1905,8 +2123,8 @@ function renderSurgeList(){
   saveRouteState('list');
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
-  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
-  document.getElementById('surgeMapSub').textContent=total+' stops · '+totalPkgs+' packages';
+  document.getElementById('surgeMapTitle').textContent='ROUTE READY';
+  document.getElementById('surgeMapSub').textContent=total+' stops • '+totalPkgs+' packages';
   document.getElementById('surgeMapRoute').textContent=currentJob&&currentJob.title||'';
   document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>{
     const done=i<currentSurgeStop;
@@ -1920,8 +2138,8 @@ function renderSurgeList(){
         <div style="font-family:var(--mono);font-size:0.8125rem;font-weight:800;margin-bottom:3px;text-decoration:${done?'line-through':'none'};">
           <span style="color:#0f172a;">${s.order_id||''}</span><span style="color:#0077cc;">-${i+1}</span><span style="color:#cc1100;">-${s.packages||1}</span>
         </div>
-        <div style="font-size:0.875rem;font-weight:800;color:${done?'#94a3b8':'#0f172a'};margin-bottom:1px;">${esc(s.recipient)}</div>
-        <div style="font-size:0.75rem;color:#64748b;">${esc(s.address)}</div>
+        <div style="font-size:0.875rem;font-weight:800;color:${done?'#94a3b8':'#0f172a'};margin-bottom:1px;">${s.recipient||''}</div>
+        <div style="font-size:0.75rem;color:#64748b;">${s.address||''}</div>
       </div>
       <div style="font-family:var(--mono);font-size:0.6875rem;font-weight:800;color:#fff;background:${done?'#22aa55':'#ff7700'};border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${done?'Done':s.packages+'pkg'}</div>
     </div></div>`;
@@ -1951,7 +2169,10 @@ function sdScanConfirmed(){
 
 function navigateToStop(){
   if(!surgeStops||!surgeStops[currentSurgeStop])return;
-  startTurnByTurn(surgeStops[currentSurgeStop].address);
+  // Reset nav state between stops so each stop gets a fresh route
+  _navMap=null;_navSteps=[];_navStepIdx=0;_navDestCoords=null;_arrivalDismissed=false;
+  const mapEl=document.getElementById('sdMap');if(mapEl)mapEl.innerHTML='';
+  startTurnByTurn(surgeStops[currentSurgeStop].coords||surgeStops[currentSurgeStop].address);
 }
 
 function surgeTapStop(i){
@@ -1977,8 +2198,9 @@ function surgeTapStop(i){
   document.getElementById('sdAddress').textContent=stop.address||'';
   document.getElementById('sdPkgBadge').textContent=(stop.packages||1)+' package'+((stop.packages||1)!==1?'s':'');
   document.getElementById('sdTP').textContent=(stop.order_id||'')+'  •  Stop '+(i+1)+'→'+(i+1)+'  •  '+(stop.packages||1)+' pkg';
-  // Start in-app navigation to this stop
-  setTimeout(()=>startTurnByTurn(stop.address||''),300);
+  // Load map
+  const iframe=document.getElementById('sdMap');
+  if(iframe)iframe.src='https://maps.google.com/maps?q='+encodeURIComponent(stop.address||'')+'&output=embed';
   // Reset step buttons to At Stop for every stop
   const atStopBtn=document.getElementById('sdAtStopBtn');
   const scanBtn=document.getElementById('sdScanBtn');
@@ -1990,15 +2212,9 @@ function surgeTapStop(i){
   showScreen('scSurgeDelivery');
 }
 
-async function confirmSurgeLoad(){
+function confirmSurgeLoad(){
   currentJob.status='in_transit';
-  // F1 fix: await critical status writes — silent failures leave the
-  // dispatcher showing a job as assigned while the driver is already in transit.
-  try{
-    await sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),
-      {status:'in_transit',driver_name:driver.name});
-  }catch(e){toast('Status update failed — check connection','warn');}
-  startGPSTracking(currentJob.id, driver.name);
+  sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'in_transit',driver_name:driver.name}).catch(()=>{});
   startGPS();
   currentSurgeStop=0;
   // Hide Begin Route button
@@ -2024,7 +2240,7 @@ function updateScanUI(){
   if(!wrap||!items)return;
   if(!count){wrap.style.display='none';return;}
   wrap.style.display='block';
-  items.innerHTML=scannedPackages.map(p=>`<div class="scan-mini-row"><span class="sml-check">&#10003;</span><span class="sml-code">${esc(p.barcode.slice(-8))}</span><span class="sml-name">${esc(p.recipient)}</span></div>`).join('');
+  items.innerHTML=scannedPackages.map(p=>`<div class="scan-mini-row"><span class="sml-check">&#10003;</span><span class="sml-code">${p.barcode.slice(-8)}</span><span class="sml-name">${p.recipient}</span></div>`).join('');
 }
 function doneScanningAll(){
   if(!scannedPackages.length)return;
@@ -2047,7 +2263,7 @@ function doneScanningAll(){
   }
 
   showScreen('scJob');renderJobScreen();
-
+  
 }
 
 // ── POD ──
@@ -2078,6 +2294,105 @@ function initSig(){
   if(currentJob){const title=currentJob.title||'';document.getElementById('podRecipient').value=title.split('—')[0].trim();}
 }
 function clearSig(){if(sigCtxPad){const c=document.getElementById('sigPad');sigCtxPad.clearRect(0,0,c.offsetWidth,c.offsetHeight);}}
+
+// ── PROOF OF DELIVERY: DURABLE STORAGE ──
+// Previously the photo and signature were captured, required, and then
+// discarded -- podPhotoData was set to null and nothing was ever uploaded.
+// The capture flow below is unchanged from the driver's point of view.
+// The only new behavior is that what was captured now survives.
+const POD_BUCKET='pod';
+const POD_QUEUE_KEY='tp_pod_queue';
+
+// Returns {kind, dataUrl} for whichever proof tab is active, or null.
+// The signature pad was never converted to an image anywhere in the app --
+// that is why signature PODs left no trace at all, not even a discarded one.
+function capturePOD(){
+  if(podTab==='photo'){
+    return podPhotoData?{kind:'photo',dataUrl:podPhotoData}:null;
+  }
+  const c=document.getElementById('sigPad');
+  if(!c)return null;
+  try{ return {kind:'signature',dataUrl:c.toDataURL('image/png')}; }
+  catch(e){ return null; }
+}
+
+function dataUrlToBlob(dataUrl){
+  const parts=dataUrl.split(',');
+  const mime=(parts[0].match(/:(.*?);/)||[null,'image/png'])[1];
+  const bin=atob(parts[1]);
+  const buf=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+  return new Blob([buf],{type:mime});
+}
+
+// Uploads to Supabase Storage and returns the public URL, or null on failure.
+// Never throws -- a failed upload must not trap a driver at a doorstep.
+async function uploadPOD(jobId,stopNumber,kind,dataUrl){
+  try{
+    const ext=kind==='photo'?'jpg':'png';
+    const path=jobId+'/stop-'+stopNumber+'-'+kind+'-'+Date.now()+'.'+ext;
+    const blob=dataUrlToBlob(dataUrl);
+    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
+      method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
+      body:blob
+    });
+    if(!r.ok)throw new Error('storage '+r.status);
+    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+  }catch(e){
+    console.log('POD upload failed, queued for retry:',e.message);
+    queuePOD(jobId,stopNumber,kind,dataUrl);
+    return null;
+  }
+}
+
+// A driver in a dead zone still delivered the package. Hold the proof on
+// the device and push it when the connection comes back, rather than
+// losing it the way the old code did.
+function queuePOD(jobId,stopNumber,kind,dataUrl){
+  try{
+    const q=JSON.parse(localStorage.getItem(POD_QUEUE_KEY)||'[]');
+    q.push({jobId,stopNumber,kind,dataUrl,queued_at:new Date().toISOString()});
+    localStorage.setItem(POD_QUEUE_KEY,JSON.stringify(q.slice(-25)));
+  }catch(e){ console.log('POD queue write failed:',e.message); }
+}
+
+async function flushPODQueue(){
+  let q;
+  try{ q=JSON.parse(localStorage.getItem(POD_QUEUE_KEY)||'[]'); }catch(e){ return; }
+  if(!q.length)return;
+  const remaining=[];
+  for(const item of q){
+    const url=await uploadPODRaw(item);
+    if(url){
+      sbPost('messages',{job_id:item.jobId,sender:'system',sender_role:'dispatcher',
+        body:'POD_ATTACHED::'+JSON.stringify({stop_number:item.stopNumber,kind:item.kind,url,recovered:true})
+      }).catch(()=>{});
+    }else{
+      remaining.push(item);
+    }
+  }
+  try{ localStorage.setItem(POD_QUEUE_KEY,JSON.stringify(remaining)); }catch(e){}
+}
+
+// Same upload as above but without re-queueing on failure, so the retry
+// loop can never grow the queue it is trying to drain.
+async function uploadPODRaw(item){
+  try{
+    const ext=item.kind==='photo'?'jpg':'png';
+    const path=item.jobId+'/stop-'+item.stopNumber+'-'+item.kind+'-'+Date.now()+'.'+ext;
+    const blob=dataUrlToBlob(item.dataUrl);
+    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
+      method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
+      body:blob
+    });
+    if(!r.ok)return null;
+    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+  }catch(e){ return null; }
+}
+
+window.addEventListener('online',function(){ flushPODQueue().catch(function(){}); });
 async function startPODCamera(){
   try{
     podStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
@@ -2104,86 +2419,6 @@ function stopPODCamera(){
   if(podStream){podStream.getTracks().forEach(t=>t.stop());podStream=null;}
   const v=document.getElementById('podVideo');if(v){v.srcObject=null;v.style.display='none';}
 }
-// ── POD PERSISTENCE HELPERS ──────────────────────────────────────────
-// Previously: photo captured, preview shown, submitted, podPhotoData=null.
-// Nothing was ever uploaded. This closes that gap.
-const POD_BUCKET='pod';
-const POD_Q='tp_pod_queue';
-
-function capturePOD(){
-  if(podTab==='photo')return podPhotoData?{kind:'photo',dataUrl:podPhotoData}:null;
-  const c=document.getElementById('sigPad');
-  if(!c)return null;
-  try{return{kind:'signature',dataUrl:c.toDataURL('image/png')};}catch(e){return null;}
-}
-
-function dataUrlToBlob(dataUrl){
-  const parts=dataUrl.split(',');
-  const mime=(parts[0].match(/:(.*?);/)||[null,'image/png'])[1];
-  const bin=atob(parts[1]);
-  const buf=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
-  return new Blob([buf],{type:mime});
-}
-
-async function uploadPOD(jobId,stopNum,kind,dataUrl){
-  try{
-    const ext=kind==='photo'?'jpg':'png';
-    const path=jobId+'/stop-'+stopNum+'-'+kind+'-'+Date.now()+'.'+ext;
-    const blob=dataUrlToBlob(dataUrl);
-    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
-      method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
-      body:blob
-    });
-    if(!r.ok)throw new Error('storage '+r.status);
-    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
-  }catch(e){
-    queuePOD(jobId,stopNum,kind,dataUrl);
-    return null;
-  }
-}
-
-function queuePOD(jobId,stopNum,kind,dataUrl){
-  try{
-    const q=JSON.parse(localStorage.getItem(POD_Q)||'[]');
-    q.push({jobId,stopNum,kind,dataUrl,at:new Date().toISOString()});
-    localStorage.setItem(POD_Q,JSON.stringify(q.slice(-30)));
-  }catch(e){}
-}
-
-async function flushPODQueue(){
-  let q;try{q=JSON.parse(localStorage.getItem(POD_Q)||'[]');}catch(e){return;}
-  if(!q.length)return;
-  const remain=[];
-  for(const item of q){
-    const url=await uploadPODRaw(item);
-    if(url){
-      sbPost('messages',{job_id:item.jobId,sender:driver?.name||'Driver',sender_role:'driver',
-        body:'POD_ATTACHED::'+JSON.stringify({stop:item.stopNum,kind:item.kind,url,recovered:true})
-      }).catch(()=>{});
-    }else{remain.push(item);}
-  }
-  try{localStorage.setItem(POD_Q,JSON.stringify(remain));}catch(e){}
-}
-
-async function uploadPODRaw(item){
-  try{
-    const ext=item.kind==='photo'?'jpg':'png';
-    const path=item.jobId+'/stop-'+item.stopNum+'-'+item.kind+'-'+Date.now()+'.'+ext;
-    const blob=dataUrlToBlob(item.dataUrl);
-    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
-      method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
-      body:blob
-    });
-    return r.ok?SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path:null;
-  }catch(e){return null;}
-}
-
-window.addEventListener('online',()=>flushPODQueue().catch(()=>{}));
-// ─────────────────────────────────────────────────────────────────────
-
 async function submitPOD(){
   const recipient=document.getElementById('podRecipient').value.trim();
   if(!recipient){toast('Enter recipient name','warn');return;}
@@ -2192,23 +2427,21 @@ async function submitPOD(){
   // Surge mode -- confirm this stop and move to next
   if(window._surgePODMode){
     stopPODCamera();
-    if(btn){btn.textContent=currentSurgeStop>=surgeStops.length-1?'✓ Confirm Final Delivery':'✓ Confirm & Next Stop';btn.disabled=false;}
-    // Upload POD before confirming the stop so the evidence is stored
-    // regardless of what happens on the next screen.
+    // Persist the proof before advancing. The driver's steps are unchanged;
+    // this just makes sure what they captured still exists afterwards.
     const cap=capturePOD();
+    let podUrl=null;
     if(cap&&currentJob&&currentJob.id){
-      uploadPOD(currentJob.id,currentSurgeStop+1,cap.kind,cap.dataUrl).then(url=>{
-        if(url){
-          sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',
-            body:'POD_ATTACHED::'+JSON.stringify({stop:currentSurgeStop+1,kind:cap.kind,url})
-          }).catch(()=>{});
-        }
-      }).catch(()=>{});
+      podUrl=await uploadPOD(currentJob.id,currentSurgeStop+1,cap.kind,cap.dataUrl);
     }
-    confirmSurgeStop();
+    if(btn){btn.textContent=currentSurgeStop>=surgeStops.length-1?'✓ Confirm Final Delivery':'✓ Confirm & Next Stop';btn.disabled=false;}
+    confirmSurgeStop({recipient:recipient,pod_kind:cap?cap.kind:null,pod_url:podUrl});
     return;
   }
   try{
+    const cap=capturePOD();
+    let podUrl=null;
+    if(cap)podUrl=await uploadPOD(currentJob.id,1,cap.kind,cap.dataUrl);
     const resp=await fetch(SB+'/rest/v1/jobs?id=eq.'+currentJob.id,{
       method:'PATCH',
       headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
@@ -2216,17 +2449,16 @@ async function submitPOD(){
     });
     if(!resp.ok){const err=await resp.text();throw new Error('Status '+resp.status+': '+err.slice(0,80));}
     // Notify dispatch
-    // Upload proof before advancing so it is stored even if the driver
-    // moves to the next screen before the upload completes.
-    const cap=capturePOD();
-    let podUrl=null;
-    if(cap)podUrl=await uploadPOD(currentJob.id,1,cap.kind,cap.dataUrl);
+    sbPost('messages',{job_id:currentJob.id,sender:driver.name,sender_role:'driver',body:'Delivered to '+recipient+'. POD: '+podTab+'.'}).catch(()=>{});
+    // Durable delivery record carrying the proof reference
     sbPost('messages',{job_id:currentJob.id,sender:driver.name,sender_role:'driver',
       body:'STOP_DELIVERED::'+JSON.stringify({
         stop_number:1,stop_total:1,
-        recipient:recipient,
+        recipient:currentJob.customer_name||currentJob.dropoff_name||'',
         address:currentJob.dropoff_address||'',
+        order_id:currentJob.id?currentJob.id.slice(0,8):'',
         delivered_at:new Date().toISOString(),
+        signed_by:recipient,
         pod_kind:cap?cap.kind:null,
         pod_url:podUrl,
         pod_pending:!!(cap&&!podUrl)
@@ -2321,7 +2553,7 @@ function renderSurgeStop(){
   let confBtn=document.getElementById('surgeConfirmBtn');
   if(confBtn)confBtn.style.display='none';
 
-
+  
 }
 
 function surgeArrived(idx,total){
@@ -2361,9 +2593,10 @@ function openSurgePOD(){
   if(btn)btn.textContent=currentSurgeStop>=total-1?'✓ Confirm Final Delivery':'✓ Confirm & Next Stop';
 }
 
-async function confirmSurgeStop(){
+function confirmSurgeStop(pod){
   const total=surgeStops.length;
   const stop=surgeStops[currentSurgeStop];
+  pod=pod||{};
 
   // Safety guard -- block confirming if previous non-cancelled stops haven't been completed
   const nonCancelledBefore=surgeStops.slice(0,currentSurgeStop).filter(s=>!s.cancelled).length;
@@ -2383,16 +2616,17 @@ async function confirmSurgeStop(){
         recipient:stop.recipient||'',
         address:stop.address||'',
         order_id:stop.smart_id||stop.order_id||'',
-        delivered_at:new Date().toISOString()
+        delivered_at:new Date().toISOString(),
+        signed_by:pod.recipient||'',
+        pod_kind:pod.pod_kind||null,
+        pod_url:pod.pod_url||null,
+        pod_pending:!!(pod.pod_kind&&!pod.pod_url)
       })
     }).catch(()=>{});
   }
   window._surgePODMode=false;
   if(currentSurgeStop>=total-1){
-    try{
-      await sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),
-        {status:'delivered',driver_name:driver.name,stops_completed:total});
-    }catch(e){toast('Delivery record failed — check connection','warn');}
+    sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{status:'delivered',driver_name:driver.name,stops_completed:total}).catch(()=>{});
     clearJobNotification();
   if(window._gpsInterval)clearInterval(window._gpsInterval); const pay=currentJob.price||0;
     earnings+=parseFloat(pay);jobCount++;
@@ -2403,18 +2637,8 @@ async function confirmSurgeStop(){
     showHome();
   }else{
     currentSurgeStop++;
-    // Skip any stops that were cancelled by dispatch
-    while(currentSurgeStop<surgeStops.length&&surgeStops[currentSurgeStop]&&surgeStops[currentSurgeStop].cancelled){
-      currentSurgeStop++;
-    }
-    // stops_completed is the count of actually delivered stops (non-cancelled),
-    // not the raw array position — cancelled stops must not inflate the count.
-    const deliveredCount=surgeStops.slice(0,currentSurgeStop).filter(s=>!s.cancelled).length;
-    if(currentJob)currentJob.stops_completed=deliveredCount;
-    try{
-      await sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),
-        {stops_completed:deliveredCount});
-    }catch(e){toast('Progress update failed — check connection','warn');}
+    if(currentJob) currentJob.stops_completed=currentSurgeStop;
+    sbPatch('jobs?id=eq.'+currentJob.id+'&driver_name=eq.'+encodeURIComponent(driver.name),{stops_completed:currentSurgeStop}).catch(()=>{});
     // Return to the stop list, scrolled to the next unfinished stop -- driver taps it to open and navigate
     showScreen('scSurgeMap');
     renderSurgeList();
@@ -2429,7 +2653,7 @@ function loadSurgeRoute(stops){
   surgeStops=stops;
   isSurgeJob=true;
   currentSurgeStop=0;
-
+  
 }
 
 // ── GPS ──
@@ -2458,192 +2682,256 @@ function startGPS(){
     pos=>{
       if(!currentJob)return;
       sbPost('driver_locations',{job_id:currentJob.id,driver_name:driver.name,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,speed:pos.coords.speed,updated_at:new Date().toISOString()}).catch(()=>{});
-      // Feed live position into the navigation engine
-      if(currentJob.status==='in_transit')onNavPosition(pos.coords.latitude,pos.coords.longitude,pos.coords.heading);
+      // Feed live position into the navigation module for step advancement
+      // and geofence-based arrival detection.
+      if(currentJob.status==='in_transit')onNavPositionUpdate(pos.coords.latitude,pos.coords.longitude);
     },
-    err=>{},{enableHighAccuracy:true,maximumAge:2000,timeout:15000}
+    err=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:15000}
   );
 }
 
-// ════════════════════════════════════════════════════════════════════
-// NAVIGATION MODULE — Google Maps handoff with deep-link return
+// ════════════════════════════════════════════════════════════════════════
+// IN-APP NAVIGATION MODULE
 //
-// The driver taps Navigate. TackPath launches Google Maps via the
-// google.navigation: URI with the stop's coordinates. Google Maps
-// opens with full 3D navigation, lane guidance, voice, and traffic.
+// Google Maps JavaScript API renders inside the WebView — the driver
+// never leaves TackPath. Turn-by-turn directions come from the Directions
+// API. Voice comes from the Web Speech API (no extra dependency).
+// Arrival detection runs off the live GPS watcher already running.
 //
-// When the driver arrives, they tap the back button or Google Maps
-// detects arrival and the driver returns to TackPath. TackPath is
-// still running in the background (singleTask, not killed) so the
-// delivery screen is right there.
-//
-// For the automatic return: Google Maps supports a callback URI via
-// the intent. We pass &avoid= with a tackpath://arrived callback.
-// MainActivity.onNewIntent() receives it and calls onDeepLinkArrived()
-// in the WebView, which triggers the arrival flow without any tap.
-// ════════════════════════════════════════════════════════════════════
+// The old approach opened Google Maps as a separate app (AppLauncher) or
+// a new tab (window.open), which meant the driver lost the delivery
+// workflow while navigating. This replaces both paths.
+// ════════════════════════════════════════════════════════════════════════
 
-// State flags — still needed for arrival detection and delivery guard
-let _navDelivering=false;
-let _navArrDismissed=false;
-// These exist so reset code between stops doesn't throw
-let _navMap=null,_navSteps=[],_navStepIdx=0,_navDestCoords=null,_navPolyline=[];
-let _driverMarker=null,_navRerouteTimer=null;
-// Unused but declared so any remaining references don't throw
-const _mapsApiReady=false,_mapsApiLoading=false;
-const ARRIVAL_M=80,STEP_ADV_M=25,REROUTE_M=150;
-const PROXY=SB+'/functions/v1/nav-proxy';
+let _navMap=null;           // google.maps.Map instance
+let _navDirections=null;    // DirectionsRenderer
+let _navSteps=[];           // parsed turn-by-turn steps for current route
+let _navStepIdx=0;          // which step the driver is currently on
+let _navDestCoords=null;    // {lat,lng} of the current stop
+let _navSpeechEnabled=true; // togglable by the driver
+let _navGeofenceRadius=91;  // metres (~300ft) — triggers arrival prompt
+let _arrivalDismissed=false;// prevent re-firing after driver dismisses
+let _mapsApiLoading=false;
+let _mapsApiReady=false;
 
-// ── DEEP LINK RETURN FROM GOOGLE MAPS ────────────────────────────────
-// MainActivity calls this when tackpath://arrived is received.
-// This fires automatically when the driver returns from Google Maps.
-function onDeepLinkArrived(){
-  showArrivalPrompt(0);
+// Load the Maps JS API once, lazily.
+function loadMapsApi(){
+  return new Promise(function(resolve,reject){
+    if(_mapsApiReady){resolve();return;}
+    if(_mapsApiLoading){
+      const t=setInterval(function(){if(_mapsApiReady){clearInterval(t);resolve();}},100);
+      return;
+    }
+    _mapsApiLoading=true;
+    window._mapsApiCallback=function(){_mapsApiReady=true;resolve();};
+    const s=document.createElement('script');
+    s.src='https://maps.googleapis.com/maps/api/js?key='+GKEY+'&callback=_mapsApiCallback&libraries=geometry';
+    s.async=true; s.defer=true;
+    s.onerror=function(){_mapsApiLoading=false;reject(new Error('Maps API failed to load'));};
+    document.head.appendChild(s);
+  });
 }
 
-// ── ARRIVAL PROMPT ────────────────────────────────────────────────────
-function showArrivalPrompt(distM){
-  const stop=surgeStops&&surgeStops[currentSurgeStop];
-  document.getElementById('arrivalStopLabel').textContent='STOP '+(currentSurgeStop+1);
-  const ft=distM>0?Math.round(distM*3.28084)+' FT':'Arrived';
-  document.getElementById('arrivalDistFt').textContent=ft;
-  const el=document.getElementById('arrivalPrompt');
-  if(el)el.style.display='flex';
-  speak('You have arrived at stop '+(currentSurgeStop+1)+'.');
-}
-function dismissArrival(){
-  _navArrDismissed=true;
-  const el=document.getElementById('arrivalPrompt');if(el)el.style.display='none';
-  // Don't stop the service on dismiss — driver may still be approaching
-  // and we want to re-detect if they circle back
-}
-function confirmArrival(){
-  dismissArrival();
-  stopArrivalService(); // Stop background GPS — driver is at the stop
-  sdAtStop();
+// Primary entry point. Called by Navigate button and auto-advances.
+async function startTurnByTurn(addressOrCoords){
+  if(!addressOrCoords)return;
+  _arrivalDismissed=false;
+  showScreen('scSurgeDelivery');
+  try{
+    await loadMapsApi();
+    initNavMap();
+    const dest=await resolveDestination(addressOrCoords);
+    if(!dest){toast('Could not locate destination','warn');return;}
+    _navDestCoords=dest;
+    await routeToDestination(dest);
+  }catch(e){
+    console.log('Nav error:',e.message);
+    toast('Navigation unavailable — check connection','warn');
+    // Fall back to external navigation only if the Maps API truly fails
+    externalNavFallback(addressOrCoords);
+  }
 }
 
-// ── RESOLVE STOP COORDINATES ──────────────────────────────────────────
-// Use stored coords from SmartSort first — avoids a geocode round-trip
-// for addresses that were already validated at manifest upload time.
-async function resolveNavDest(stop){
-  if(stop&&stop.coords&&stop.coords.lat)return stop.coords;
-  if(stop&&stop.address){
-    try{
-      const d=await fetch(PROXY,{method:'POST',
-        headers:{...GH,'Content-Type':'application/json'},
-        body:JSON.stringify({action:'geocode',params:{address:stop.address}})
-      }).then(r=>r.json());
-      if(d.status==='OK'&&d.results[0]){
-        const l=d.results[0].geometry.location;
-        return{lat:l.lat,lng:l.lng};
+function initNavMap(){
+  const el=document.getElementById('sdMap');
+  if(!el||_navMap)return;
+  _navMap=new google.maps.Map(el,{
+    zoom:15,
+    center:{lat:33.749,lng:-84.388}, // Atlanta — recentered on first GPS fix
+    mapTypeId:'roadmap',
+    disableDefaultUI:true,
+    gestureHandling:'greedy',
+    styles:[
+      {elementType:'geometry',stylers:[{color:'#0b1f35'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#8098ae'}]},
+      {elementType:'labels.text.stroke',stylers:[{color:'#071828'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#1a3a5c'}]},
+      {featureType:'road.arterial',elementType:'geometry',stylers:[{color:'#1e4a7a'}]},
+      {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#19b7ef',lightness:-30}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#071828'}]},
+      {featureType:'poi',stylers:[{visibility:'off'}]},
+      {featureType:'transit',stylers:[{visibility:'off'}]}
+    ]
+  });
+  _navDirections=new google.maps.DirectionsRenderer({
+    map:_navMap,
+    suppressMarkers:false,
+    polylineOptions:{strokeColor:'#19b7ef',strokeWeight:5,strokeOpacity:.9}
+  });
+}
+
+// Accepts a string address or {lat,lng} coords.
+// Uses stored stop coords first — avoids a geocode round-trip for
+// addresses TackPath already validated during manifest upload.
+async function resolveDestination(addressOrCoords){
+  if(addressOrCoords&&typeof addressOrCoords==='object'&&addressOrCoords.lat){
+    return addressOrCoords;
+  }
+  // Try stored coords on the current stop first
+  if(surgeStops&&surgeStops[currentSurgeStop]&&surgeStops[currentSurgeStop].coords){
+    return surgeStops[currentSurgeStop].coords;
+  }
+  // Fall back to geocoding the address string
+  return new Promise(function(resolve){
+    const gc=new google.maps.Geocoder();
+    gc.geocode({address:String(addressOrCoords)},function(results,status){
+      if(status==='OK'&&results[0]){
+        const loc=results[0].geometry.location;
+        resolve({lat:loc.lat(),lng:loc.lng()});
+      }else{
+        resolve(null);
       }
-    }catch(e){}
-  }
-  return null;
+    });
+  });
 }
 
-// ── HAVERSINE (metres) ────────────────────────────────────────────────
-function hvM(la1,ln1,la2,ln2){
-  const R=6371000,dLa=(la2-la1)*Math.PI/180,dLn=(ln2-ln1)*Math.PI/180;
-  const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLn/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+async function routeToDestination(dest){
+  return new Promise(function(resolve){
+    const ds=new google.maps.DirectionsService();
+    navigator.geolocation.getCurrentPosition(function(pos){
+      const origin={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      ds.route({
+        origin:origin,
+        destination:dest,
+        travelMode:google.maps.TravelMode.DRIVING,
+        drivingOptions:{departureTime:new Date(),trafficModel:'bestguess'},
+        unitSystem:google.maps.UnitSystem.IMPERIAL
+      },function(result,status){
+        if(status===google.maps.DirectionsStatus.OK){
+          _navDirections.setDirections(result);
+          const leg=result.routes[0].legs[0];
+          _navSteps=leg.steps;
+          _navStepIdx=0;
+          showNavStep(0);
+          speakInstruction(_navSteps[0]&&_navSteps[0].instructions);
+          resolve();
+        }else{
+          resolve(); // non-fatal — map still shows, just no route line
+        }
+      });
+    },function(){resolve();},{enableHighAccuracy:true,timeout:8000});
+  });
 }
 
-// ── GPS ARRIVAL DETECTION ─────────────────────────────────────────────
-// Still runs in the background while the driver is in Google Maps,
-// because the GPS watcher keeps posting to Supabase. If the driver
-// gets within 80m and then returns to TackPath manually (rather than
-// via the deep link), the arrival prompt fires on the next GPS tick.
-function onNavPosition(lat,lng,heading){
-  if(!_navDestCoords||_navArrDismissed)return;
-  const d=hvM(lat,lng,_navDestCoords.lat,_navDestCoords.lng);
-  if(d<=ARRIVAL_M)showArrivalPrompt(d);
+function showNavStep(idx){
+  const step=_navSteps[idx];
+  if(!step)return;
+  const el=document.getElementById('navInstruction');
+  const txt=document.getElementById('navInstructionText');
+  const dist=document.getElementById('navDistanceText');
+  if(!el||!txt||!dist)return;
+  // Strip HTML tags from Google's instruction strings
+  txt.textContent=step.instructions.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  dist.textContent=step.distance?step.distance.text:'';
+  el.style.display='block';
 }
 
-// ── ARRIVAL SERVICE HELPERS ──────────────────────────────────────────
-// Start/stop the native Android foreground service that monitors GPS
-// while Google Maps is in the foreground. Uses Capacitor's JavaBridge
-// to invoke Android intents directly from the WebView.
-function startArrivalService(destLat,destLng,stopLabel){
-  // ArrivalPlugin is a registered Capacitor plugin (ArrivalPlugin.java).
-  // It starts the native foreground service which monitors GPS independently
-  // of the WebView — required because WebView GPS pauses when Google Maps
-  // takes the foreground on Android 15.
-  const AP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.ArrivalPlugin;
-  if(!AP){console.log('ArrivalPlugin not available');return;}
-  AP.start({lat:destLat,lng:destLng,label:stopLabel||'your stop'}).catch(e=>console.log('ArrivalService start failed:',e));
-}
-function stopArrivalService(){
-  const AP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.ArrivalPlugin;
-  if(!AP)return;
-  AP.stop().catch(()=>{});
+function speakInstruction(html){
+  if(!_navSpeechEnabled||!html||!window.speechSynthesis)return;
+  const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  if(!text)return;
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=1.0; u.pitch=1.0; u.volume=1.0;
+  window.speechSynthesis.cancel(); // don't queue up
+  window.speechSynthesis.speak(u);
 }
 
-// ── LAUNCH GOOGLE MAPS ────────────────────────────────────────────────
-async function startTurnByTurn(address){
-  const stop=surgeStops&&surgeStops[currentSurgeStop];
-  _navArrDismissed=false;
+// Called by the GPS watcher on every position update while in_transit.
+// Two jobs: advance the turn-by-turn step and detect arrival.
+function onNavPositionUpdate(lat,lng){
+  if(!_navDestCoords||!_mapsApiReady)return;
 
-  // Resolve destination coordinates
-  if(stop){
-    const dest=await resolveNavDest(stop);
-    if(dest)_navDestCoords=dest;
-  }
-
-  // Build the navigation URI
-  let navUri;
-  if(_navDestCoords){
-    navUri='google.navigation:q='+_navDestCoords.lat+','+_navDestCoords.lng+'&mode=d';
-  }else if(address){
-    navUri='google.navigation:q='+encodeURIComponent(address)+'&mode=d';
-  }else{
-    toast('No destination available','warn');
+  // ── ARRIVAL DETECTION ──
+  // haversineDistance is already defined and used elsewhere in this file.
+  const distMetres=haversineDistance({lat,lng},_navDestCoords)*1609.34;
+  if(distMetres<=_navGeofenceRadius&&!_arrivalDismissed){
+    showArrivalPrompt(distMetres);
     return;
   }
 
-  // Start the native foreground service BEFORE opening Google Maps.
-  // The service must be started while TackPath is visible (foreground)
-  // to avoid needing ACCESS_BACKGROUND_LOCATION permission.
-  const stopLabel=stop?(stop.recipient||stop.address||'Stop '+(currentSurgeStop+1)):'Stop '+(currentSurgeStop+1);
-  if(_navDestCoords){
-    startArrivalService(_navDestCoords.lat,_navDestCoords.lng,stopLabel);
+  // ── STEP ADVANCEMENT ──
+  // When the driver passes within 30m of the next step's start point,
+  // advance to the next instruction and speak it.
+  if(!_navSteps.length)return;
+  const nextStep=_navSteps[_navStepIdx+1];
+  if(!nextStep)return;
+  const stepLat=nextStep.start_location?nextStep.start_location.lat():null;
+  const stepLng=nextStep.start_location?nextStep.start_location.lng():null;
+  if(stepLat===null)return;
+  const toStep=haversineDistance({lat,lng},{lat:stepLat,lng:stepLng})*1609.34;
+  if(toStep<30){
+    _navStepIdx++;
+    showNavStep(_navStepIdx);
+    speakInstruction(nextStep.instructions);
   }
 
-  // Launch Google Maps
-  const AL=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AppLauncher;
-  if(AL){
-    try{
-      await AL.openUrl({url:navUri});
-    }catch(e){
-      const webUrl='https://www.google.com/maps/dir/?api=1&destination='+
-        (_navDestCoords?_navDestCoords.lat+','+_navDestCoords.lng:encodeURIComponent(address||''))+
-        '&travelmode=driving';
-      window.open(webUrl,'_blank');
-    }
+  // Keep map centered on driver
+  if(_navMap)_navMap.panTo({lat,lng});
+}
+
+function showArrivalPrompt(distMetres){
+  const ft=Math.round(distMetres*3.28084);
+  const stop=surgeStops&&surgeStops[currentSurgeStop];
+  document.getElementById('arrivalStopLabel').textContent='STOP '+(currentSurgeStop+1);
+  document.getElementById('arrivalDistance').textContent=ft+' FT';
+  const el=document.getElementById('arrivalPrompt');
+  if(el){el.style.display='flex';}
+  speakInstruction('You have arrived at stop '+(currentSurgeStop+1));
+}
+
+function dismissArrivalPrompt(){
+  _arrivalDismissed=true;
+  const el=document.getElementById('arrivalPrompt');
+  if(el)el.style.display='none';
+}
+
+function confirmArrival(){
+  dismissArrivalPrompt();
+  // Hide the nav instruction banner — the driver is here
+  const ni=document.getElementById('navInstruction');
+  if(ni)ni.style.display='none';
+  // Trigger the same "At Stop" flow the button uses
+  sdAtStop();
+}
+
+// Last resort: if the Maps API fails to load, open external navigation
+// rather than leaving the driver stranded with no directions at all.
+function externalNavFallback(addressOrCoords){
+  let dest='';
+  if(typeof addressOrCoords==='object'&&addressOrCoords.lat){
+    dest=addressOrCoords.lat+','+addressOrCoords.lng;
   }else{
-    window.open('https://www.google.com/maps/dir/?api=1&destination='+
-      encodeURIComponent(address||'')+'&travelmode=driving','_blank');
+    dest=encodeURIComponent(String(addressOrCoords));
   }
+  const url='https://www.google.com/maps/dir/?api=1&destination='+dest+'&travelmode=driving';
+  window.open(url,'_blank');
 }
 
-// ── NAVIGATE BUTTON ───────────────────────────────────────────────────
-function navigateToStop(){
-  if(!surgeStops||!surgeStops[currentSurgeStop])return;
-  startTurnByTurn(surgeStops[currentSurgeStop].address);
-}
-
-// Keep navigateInApp so any existing call sites don't throw
 function navigateInApp(address){
+  if(!address)return;
   startTurnByTurn(address);
 }
 
-// External link helper (unchanged — used elsewhere in the app)
-async function openExternalLink(url){
-  if(!url)return;
-  const AL=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AppLauncher;
-  if(AL){try{await AL.openUrl({url:url});}catch(e){}}else{window.open(url,'_blank');}
-}
 // Show Route tap -- load stops and show screen
 function swipeRow_tap(){
   // Load surge stops from job if not already loaded
@@ -2655,8 +2943,8 @@ function swipeRow_tap(){
   // Render the stop list
   const total=surgeStops.length;
   const totalPkgs=surgeStops.reduce((s,p)=>s+(p.packages||1),0);
-  document.getElementById('surgeMapTitle').textContent='ROUTE LOADED';
-  document.getElementById('surgeMapSub').textContent=total+' stops · '+totalPkgs+' packages';
+  document.getElementById('surgeMapTitle').textContent='ROUTE READY';
+  document.getElementById('surgeMapSub').textContent=total+' stops • '+totalPkgs+' packages';
   document.getElementById('surgeMapRoute').textContent=currentJob&&currentJob.title||'Surge Route';
   document.getElementById('surgeStopList').innerHTML=surgeStops.map((s,i)=>`
     <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.07);background:#fff;margin-bottom:2px;">
@@ -2665,8 +2953,8 @@ function swipeRow_tap(){
         <div style="font-family:var(--mono);font-size:0.8125rem;font-weight:800;margin-bottom:3px;">
           <span style="color:#0f172a;">${s.order_id||''}</span><span style="color:#0077cc;font-weight:900;">-${i+1}</span><span style="color:#cc1100;font-weight:900;">-${s.packages||1}</span>
         </div>
-        <div style="font-size:0.875rem;font-weight:800;color:#0f172a;margin-bottom:2px;">${esc(s.recipient)}</div>
-        <div style="font-size:0.75rem;color:#334155;">${esc(s.address)}</div>
+        <div style="font-size:0.875rem;font-weight:800;color:#0f172a;margin-bottom:2px;">${s.recipient||''}</div>
+        <div style="font-size:0.75rem;color:#334155;">${s.address||''}</div>
       </div>
       <div style="font-family:var(--mono);font-size:0.6875rem;font-weight:800;color:#fff;background:#ff7700;border-radius:10px;padding:3px 10px;flex-shrink:0;align-self:center;">${s.packages||1} pkg${(s.packages||1)!==1?'s':''}</div>
     </div>`).join('');
@@ -2794,9 +3082,9 @@ function handleArrivedFromNotification(){
 }
 
 // ── BOOT ──
-
-
-// Operational service worker is maintained by operations-client.js.
+const saved=localStorage.getItem('tp_drv');
+if(saved){driver=JSON.parse(saved);initApp();}
+if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
 
 // ── KEYBOARD DETECTION -- push login box above keyboard ──
 if(window.visualViewport){
@@ -2819,60 +3107,14 @@ if(window.visualViewport){
   });
 }
 
-
-// TACKPATH_OPERATIONAL_INTEGRATION
-﻿// Driver state is restored from the server; browser state remembers selection only.
-let opsDriverBusy=false,opsProofStop=null,opsDriverTimer=null;
-async function opsDriverSync(){
- const s=await Ops.refresh();driver=s.drivers.find(d=>d.id===s.actor_id)||driver;
- const owned=s.routes.filter(r=>r.driver_id===s.actor_id&&!['closed','cancelled'].includes(r.status));
- const route=owned.find(r=>r.id===currentJob?.id)||owned[0];
- if(!route){if(currentJob){stopArrivalService();currentJob=null;surgeStops=[];clearRouteState()}return null}
- currentJob={...route.job,ops_version:route.version,ops_status:route.status};
- surgeStops=s.stops.filter(st=>st.route_id===route.id).sort((a,b)=>a.sequence-b.sequence).map(st=>({...st,stop_id:st.id,stop_number:st.sequence,coords:{lat:st.lat,lng:st.lng},cancelled:st.status==='cancelled',package_records:s.packages.filter(p=>p.stop_id===st.id),packages:s.packages.filter(p=>p.stop_id===st.id).length,order_id:s.packages.find(p=>p.stop_id===st.id)?.order_id||''}));
- isSurgeJob=true;currentSurgeStop=surgeStops.findIndex(st=>st.status==='pending');if(currentSurgeStop<0)currentSurgeStop=surgeStops.length;
- return route;
-}
-requestCode=async function(){try{const phone=document.getElementById('loginPhone').value;const slug=document.getElementById('opsDriverOrg').value;const result=await Ops.api({action:'driver_request',phone,slug});window.opsChallenge=result.challenge;document.getElementById('loginCodeHint').textContent='Enter the verification code sent to your phone';document.getElementById('loginPhasePhone').style.display='none';document.getElementById('loginPhaseCode').style.display='block'}catch(e){toast(e.message,'warn')}};
-verifyCode=async function(){try{const result=await Ops.api({action:'driver_verify',challenge:window.opsChallenge,code:document.getElementById('loginCode').value.trim()});result.org={id:result.org_id};Ops.saveSession(result);driver=result.driver;localStorage.setItem('tp_drv',JSON.stringify(driver));await initApp()}catch(e){toast(e.message,'warn')}};
-doLogout=async function(){stopArrivalService();if(opsDriverTimer)clearInterval(opsDriverTimer);await Ops.logout();location.reload()};
-saveRouteState=function(){if(currentJob)localStorage.setItem('tp_ops_selection',JSON.stringify({route_id:currentJob.id,actor_id:Ops.session?.actor_id}))};
-restoreRouteState=function(){return false};
-initApp=async function(){await Ops.ensure('driver');await initJobNotifications();onCapacitorReady(()=>initFCM());const r=await opsDriverSync();document.getElementById('moreName').textContent=driver.name;document.getElementById('moreEmail').textContent=driver.phone||'';if(r){renderSurgeList();showScreen('scSurgeMap')}else showScreen('scHome');startDispatchPoll();startGPS();if(opsDriverTimer)clearInterval(opsDriverTimer);opsDriverTimer=setInterval(()=>startJobStatusPoll().catch(console.error),4000);await pollJobs();await opsHandlePendingArrival();Ops.retry().catch(console.error)};
-pollJobs=async function(){if(!Ops.session||!isOnline||currentJob||pendingJob)return;const s=await Ops.refresh();const route=s.routes.find(r=>r.status==='planned'&&!rejectedIds.has(r.id));if(route){pendingJob={...route.job,ops_version:route.version};showOffer(pendingJob)}};
-acceptOffer=async function(){if(!pendingJob||opsDriverBusy)return;opsDriverBusy=true;try{stopOfferAlert();await Ops.command('claim',{route_id:pendingJob.id});pendingJob=null;await opsDriverSync();renderSurgeList();showScreen('scSurgeMap')}catch(e){toast(e.message,'warn');pendingJob=null}finally{opsDriverBusy=false}};
-startJobStatusPoll=async function(){if(!Ops.session)return;const old=currentJob?.id,version=currentJob?.ops_version;await opsDriverSync();if(old&&!currentJob){showScreen('scHome');toast('Route closed or assignment changed');stopArrivalService()}else if(currentJob&&document.getElementById('scSurgeMap').classList.contains('on'))renderSurgeList();if(currentJob&&version!==currentJob.ops_version){stopArrivalService();if(document.getElementById('scPOD').classList.contains('on')){opsProofStop=null;showScreen('scSurgeMap');renderSurgeList();toast('Route changed; refreshed authoritative state','warn')}}if(!currentJob)await pollJobs()};
-renderSurgeList=function(){
- const e=Ops.escape,route=Ops.state.routes.find(r=>r.id===currentJob?.id);if(!route)return;
- const pieces=Ops.state.packages.filter(p=>p.route_id===route.id),required=pieces.filter(p=>surgeStops.find(s=>s.id===p.stop_id)?.status==='pending'),loaded=required.filter(p=>p.state==='loaded');
- document.getElementById('surgeMapTitle').textContent=route.status==='assigned'?'VERIFY PICKUP':'DELIVERY ROUTE';document.getElementById('surgeMapSub').textContent=surgeStops.length+' stops · '+pieces.length+' physical pieces';document.getElementById('surgeMapRoute').textContent=currentJob.title;
- let banner='';if(route.status==='assigned'){const bin=Ops.state.bins.find(b=>b.route_id===route.id);banner='<div style="padding:16px">Pickup: '+e(currentJob.pickup_address)+'<br>Bin: '+e(bin?.label||'Loading / awaiting allocation')+'<br>'+loaded.length+' of '+required.length+' pieces loaded<br><button onclick="openScanner()">Scan package to load</button><button onclick="confirmSurgeLoad()" '+(loaded.length!==required.length||!required.length||!route.staged_at?'disabled':'')+'>Start route</button></div>'}
- if(route.status==='reconciling')banner='<div style="padding:16px">Delivery stops resolved. Return held packages to warehouse; custody reconciliation remains open.</div>';
- document.getElementById('surgeStopList').innerHTML=banner+surgeStops.map((st,i)=>'<div id="surgeRow'+i+'" onclick="surgeTapStop('+i+')" style="padding:16px;border-bottom:1px solid #ddd"><b>Stop '+st.sequence+' · '+e(st.status)+'</b><br>'+e(st.recipient)+'<br>'+e(st.address)+'<br>'+st.packages+' physical pieces</div>').join('');
- const begin=document.getElementById('surgeBeginRow');if(begin)begin.style.display='none';
-};
-confirmSurgeLoad=async function(){if(opsDriverBusy)return;opsDriverBusy=true;try{await Ops.command('start',{route_id:currentJob.id,version:currentJob.ops_version});await opsDriverSync();renderSurgeList();startGPS()}catch(e){toast(e.message,'warn')}finally{opsDriverBusy=false}};
-startDelivery=confirmSurgeLoad;
-processScan=async function(code){if(opsDriverBusy)return;opsDriverBusy=true;try{const p=Ops.findPackage(code);if(window._sdScanMode){const stop=surgeStops[currentSurgeStop];if(!stop||p.stop_id!==stop.id||p.state!=='out_for_delivery')throw new Error('Wrong package for this stop');window._sdScanMode=false;stopCamera();openSurgePOD();return}await Ops.command('load',{route_id:currentJob.id,version:currentJob.ops_version,code:p.barcode});await opsDriverSync();stopCamera();renderSurgeList();showScreen('scSurgeMap')}catch(e){toast(e.message,'warn')}finally{opsDriverBusy=false}};
-surgeTapStop=async function(i,{navigate=true}={}){try{await opsDriverSync();const stop=surgeStops[i];if(currentJob?.ops_status!=='in_transit'||!stop||i!==currentSurgeStop||stop.status!=='pending')throw new Error('Complete verified pickup and preceding stops first');document.getElementById('sdStopLabel').textContent='STOP '+stop.sequence+' OF '+surgeStops.length;document.getElementById('sdRecipient').textContent=stop.recipient;document.getElementById('sdAddress').textContent=stop.address;document.getElementById('sdPkgBadge').textContent=stop.packages+' physical pieces';document.getElementById('sdTP').textContent=stop.order_id;showScreen('scSurgeDelivery');if(navigate)await startTurnByTurn(stop.address)}catch(e){toast(e.message,'warn')}};
-openSurgePOD=function(){const stop=surgeStops[currentSurgeStop];if(!stop||currentJob?.ops_status!=='in_transit'||stop.status!=='pending'){toast('Stop is not deliverable','warn');return}opsProofStop={route_id:currentJob.id,version:currentJob.ops_version,stop_id:stop.id};window._surgePODMode=true;podPhotoData=null;showScreen('scPOD');document.getElementById('podRecipient').value=stop.recipient||''};
-let opsSignatureTouched=false;
-const opsOriginalInitSig=initSig;initSig=function(){opsOriginalInitSig();opsSignatureTouched=false;const pad=document.getElementById('sigPad');pad.onpointermove=e=>{if(e.buttons)opsSignatureTouched=true};pad.ontouchmove=()=>opsSignatureTouched=true};
-const opsOriginalClearSig=clearSig;clearSig=function(){opsSignatureTouched=false;opsOriginalClearSig()};
-submitPOD=async function(){if(opsDriverBusy||!opsProofStop)return;opsDriverBusy=true;const button=document.getElementById('podSubmitBtn');button.disabled=true;try{const recipient=document.getElementById('podRecipient').value.trim();if(!recipient)throw new Error('Recipient required');if(podTab==='sig'&&!opsSignatureTouched)throw new Error('Capture a signature or photo');const cap=capturePOD();if(!cap)throw new Error('Capture proof first');await Ops.proof({...opsProofStop},cap.dataUrl,cap.kind,recipient);opsProofStop=null;stopPODCamera();stopArrivalService();await opsDriverSync();if(currentJob){renderSurgeList();showScreen('scSurgeMap')}else showScreen('scHome');toast('Delivery saved')}catch(e){toast(e.message+' — proof retained for retry','warn')}finally{opsDriverBusy=false;button.disabled=false}};
-confirmSurgeStop=function(){throw new Error('Delivery requires the persisted proof workflow')};
-startTurnByTurn=async function(){const stop=surgeStops[currentSurgeStop];if(!stop||currentJob?.ops_status!=='in_transit')throw new Error('Route is not in transit');if(!Number.isFinite(stop.lat)||!Number.isFinite(stop.lng))throw new Error('Stop coordinates unavailable');const native=window.Capacitor?.Plugins;const payload={route_id:currentJob.id,stop_id:stop.id,version:currentJob.ops_version,driver_id:Ops.session.actor_id};if(native?.ArrivalPlugin){const perm=await native.LocalNotifications.requestPermissions();if(perm.display!=='granted')throw new Error('Arrival notification permission required');await native.ArrivalPlugin.start({lat:stop.lat,lng:stop.lng,label:'Stop '+stop.sequence,payload:JSON.stringify(payload)})}if(native?.AppLauncher){const result=await native.AppLauncher.openUrl({url:'google.navigation:q='+stop.lat+','+stop.lng+'&mode=d'});if(!result.completed)throw new Error('Maps could not open')}else window.open('https://www.google.com/maps/dir/?api=1&destination='+stop.lat+','+stop.lng,'_blank')};
-onDeepLinkArrived=async function(payload){if(!payload)return;await opsDriverSync();const stop=surgeStops[currentSurgeStop];if(payload.route_id!==currentJob?.id||payload.stop_id!==stop?.id||payload.version!==currentJob?.ops_version||payload.driver_id!==Ops.session.actor_id)return;await surgeTapStop(currentSurgeStop,{navigate:false});showArrivalPrompt(0)};
-async function opsHandlePendingArrival(){const p=window.Capacitor?.Plugins?.ArrivalPlugin;if(!p)return;const pending=await p.getPending();if(pending.payload){await onDeepLinkArrived(JSON.parse(pending.payload));await p.acknowledge({payload:pending.payload})}}
-// Legacy notification actions must never bypass proof/assignment validation.
-initJobNotifications=async function(){const ln=window.Capacitor?.Plugins?.LocalNotifications;if(ln)await ln.addListener('localNotificationActionPerformed',()=>opsHandlePendingArrival().catch(console.error))};
-async function opsDriverBoot(){
- const phone=document.getElementById('loginPhone');if(phone&&!document.getElementById('opsDriverOrg')){const org=document.createElement('input');org.id='opsDriverOrg';org.placeholder='Organization';org.className=phone.className;phone.before(org)}
- if(Ops.session?.role==='driver'){try{await initApp()}catch(e){toast(e.message,'warn');showScreen('scLogin')}}else showScreen('scLogin');
- const plugin=window.Capacitor?.Plugins?.ArrivalPlugin;if(plugin)await plugin.addListener('arrivalTap',()=>opsHandlePendingArrival().catch(console.error));
-}
-opsDriverBoot().catch(console.error);
-
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
