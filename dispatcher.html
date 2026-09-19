@@ -4238,12 +4238,7 @@ async function geocodeAddress(address){
   if(MARCO_CACHE[cacheKey]) return MARCO_CACHE[cacheKey];
 
   try{
-    const SB_ANON='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
-    const resp=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/nav-proxy',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
-      body:JSON.stringify({action:'geocode',params:{address}})
-    });
+    const resp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(address)+'&key='+GKEY);
     const data=await resp.json();
     if(data.status==='OK'&&data.results&&data.results[0]){
       const loc=data.results[0].geometry.location;
