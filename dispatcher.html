@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="operations-client.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>TackPath — Command Intelligence</title>
@@ -1647,7 +1646,7 @@ async function resolveOrgFromUrl(){
     if(rows&&rows[0])currentOrgId=rows[0].id;
   }catch(e){}
 }
-const orgReady=Promise.resolve();
+const orgReady=resolveOrgFromUrl();
 async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:{...H,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
@@ -3902,10 +3901,35 @@ function toast(msg){
 }
 
 // ── MOBILE REDIRECT ──
-
+if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
+  window.location.replace('dispatcher-mobile.html');
+}
 
 // ── AUTO LOGIN + POLLING ──
-window.addEventListener('load',opsDispatcherBoot);
+window.addEventListener('load',async function(){
+  await orgReady; // resolves currentOrgId from ?org= URL param if present
+  let sessionOrg=null;
+  try{ sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null'); }catch(e){}
+
+  if(currentOrgId || sessionOrg){
+    if(!currentOrgId && sessionOrg) currentOrgId=sessionOrg.id;
+    if(sessionOrg) localStorage.setItem('tp_dispatch_org',JSON.stringify(sessionOrg.id===currentOrgId?sessionOrg:{id:currentOrgId}));
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('shell').style.display='flex';
+    startClock();
+    loadJobs();
+    if(typeof loadDrivers==='function') loadDrivers();
+    dispatchPollId=setInterval(function(){loadJobs().catch(function(){});},2000);
+    setTimeout(refreshFleetMap,3000);
+    if(window.location.hash==='#drivers'){
+      const driversBtn=Array.from(document.querySelectorAll('.tbtab')).find(function(b){return b.textContent.trim()==='Drivers';});
+      if(driversBtn) setTab('drivers',driversBtn);
+    }
+  } else {
+    window.location.href='portal.html';
+  }
+  // If no session and no org param: redirected to portal.html, the single sign-in point
+});
 
 // ── GPS FLEET MAP ──
 var fleetMap=null,fleetMarkers=[];
@@ -4214,7 +4238,12 @@ async function geocodeAddress(address){
   if(MARCO_CACHE[cacheKey]) return MARCO_CACHE[cacheKey];
 
   try{
-    const resp=await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(address)+'&key='+GKEY);
+    const SB_ANON='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+    const resp=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/nav-proxy',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
+      body:JSON.stringify({action:'geocode',params:{address}})
+    });
     const data=await resp.json();
     if(data.status==='OK'&&data.results&&data.results[0]){
       const loc=data.results[0].geometry.location;
@@ -5142,53 +5171,6 @@ async function assignSSRoute(routeId){
     toast('Could not assign route','warn');
   }
 }
-
-
-// TACKPATH_OPERATIONAL_INTEGRATION
-﻿// Dispatcher projections are read from committed operations, never message parsing.
-let opsDispatchPoll=null,opsImportBusy=false;
-doLogin=async function(){try{const login=await Ops.ensure('dispatcher');currentOrgId=login.org.id;document.getElementById('loginScreen').style.display='none';document.getElementById('shell').style.display='flex';startClock();await loadJobs();if(opsDispatchPoll)clearInterval(opsDispatchPoll);opsDispatchPoll=setInterval(()=>loadJobs().catch(console.error),4000)}catch(e){toast(e.message)}};
-doLogout=async function(){if(opsDispatchPoll)clearInterval(opsDispatchPoll);await Ops.logout();location.reload()};
-loadJobs=async function(){const s=await Ops.refresh();currentOrgId=s.organization.id;jobs=Ops.jobs().filter(j=>!j.archived);driverRoster=s.drivers;stopDeliveries=s.deliveries.map(d=>{const st=s.stops.find(x=>x.id===d.stop_id);return {...d,job_id:d.route_id,stop_id:d.stop_id,stop_number:st?.sequence,stop_total:s.stops.filter(x=>x.route_id===d.route_id).length,recipient:d.recipient,address:st?.address||''}});try{const locs=await sbGet('driver_locations?order=updated_at.desc&limit=200');driverLastSeen={};driverLastLocation={};for(const l of locs)if(!driverLastSeen[l.driver_name]){driverLastSeen[l.driver_name]=l.updated_at;driverLastLocation[l.driver_name]={lat:Number(l.lat),lng:Number(l.lng)}}}catch(e){console.error(e)}syncSurgeBlocksFromJobs();renderAll();renderOperationalSummary();const ps=document.getElementById('pollStatus');if(ps)ps.textContent=s._offline?'Offline - cached state':'Synchronized';const ring=document.getElementById('pollRing');if(ring)ring.style.display='none'};
-loadDrivers=async function(){await Ops.refresh();driverRoster=Ops.state.drivers;if(typeof renderDrivers==='function')renderDrivers()};
-function renderOperationalSummary(){let el=document.getElementById('opsAccounting');if(!el){el=document.createElement('div');el.id='opsAccounting';el.style.cssText='padding:12px 18px;border-bottom:1px solid #ccd;font:13px system-ui';document.getElementById('shell').prepend(el)}const a=Ops.state.accounting;el.textContent=a.expected+' expected physical pieces · '+a.delivered+' delivered · '+a.returned_or_held+' held/returned · '+a.exceptions+' pending/exceptions · '+a.active+' active · '+(a.expected-a.recorded)+' unexplained'+(a.unknown_quantity_rows?' · '+a.unknown_quantity_rows+' rows with unresolved quantity':'');}
-handleFile=async function(file){if(!file||opsImportBusy)return;opsImportBusy=true;try{await Ops.ensure('dispatcher');const warehouse=Ops.state.warehouses.find(w=>w.id===(localStorage.getItem('tp_warehouse_'+Ops.state.organization.id)||Ops.state.warehouses[0]?.id));if(!warehouse)throw new Error('Configure a physical warehouse before intake');openSmartSortDrawer();updateSmartSortStatus('Recording manifest and allocating physical packages...',5);const result=await Ops.importManifest(await file.text(),warehouse.id);await loadJobs();updateSmartSortStatus('Manifest saved. '+result.state.accounting.recorded+' physical pieces accounted.',100);toast('Manifest processed. Exceptions are retained and recoverable.')}catch(e){toast(e.message+' — any accepted intake remains recoverable')}finally{opsImportBusy=false}};
-parseCSV=async function(text){return handleFile({text:async()=>text})};
-buildAndAutoDispatch=async function(){throw new Error('Use the authoritative manifest intake')};
-buildRoutes=async function(){await Ops.retry();await loadJobs()};
-assignSSRoute=async function(){await loadJobs();toast('Routes are published transactionally by SmartSort')};
-printLabels=async function(routeId){try{await Ops.labels(routeId)}catch(e){toast(e.message)}};
-generateLiveLabels=async function(){try{await Ops.labels()}catch(e){toast(e.message)}};
-assignJobToDriver=async function(jobId){try{const value=document.getElementById('assignDriverSelect').value;const d=Ops.state.drivers.find(d=>d.id===value||d.name===value);if(!d)throw new Error('Select a registered driver');await Ops.command('assign',{route_id:jobId,driver_id:d.id});await loadJobs();openDrawer(jobId)}catch(e){toast(e.message)}};
-broadcastJob=async function(jobId){try{await Ops.command('assign',{route_id:jobId,driver_id:null});await loadJobs()}catch(e){toast(e.message)}};
-surgeRebroadcast=async function(routeId){const block=surgeBlocks.find(b=>b.id===routeId);if(block)await broadcastJob(block.jobId)};
-cancelSpecificStop=async function(jobId,index){try{const stops=Ops.state.stops.filter(s=>s.route_id===jobId).sort((a,b)=>a.sequence-b.sequence);const stop=stops[Number(index)];if(!stop)throw new Error('Stop not found');await Ops.command('cancel_stop',{stop_id:stop.id,reason:'Dispatcher cancellation'});await loadJobs();openDrawer(jobId)}catch(e){toast(e.message)}};
-cancelJob=async function(jobId){try{await Ops.command('cancel_route',{route_id:jobId,reason:'Dispatcher cancellation'});await loadJobs()}catch(e){toast(e.message)}};
-saveStatus=async function(){toast('Route status is derived from pickup, package custody and delivery outcomes.')};
-quickDispatch=async function(id){openDrawer(id)};
-deleteJob=async function(){toast('Operational history is retained. Cancel or archive the route instead.')};
-clearAllJobs=async function(){toast('Operational history cannot be erased from the dispatch board.')};
-archiveJob=async function(id){try{await Ops.command('archive',{route_id:id});await loadJobs();closeDrawer()}catch(e){toast(e.message)}};
-const opsOriginalDrawer=openDrawer;
-openDrawer=function(id){opsOriginalDrawer(id);const route=Ops.state.routes.find(r=>r.id===id);if(!route)return;const root=document.getElementById('drawer');let controls=document.getElementById('opsRouteControls');if(!controls){controls=document.createElement('div');controls.id='opsRouteControls';root.append(controls)}controls.replaceChildren();const labels=document.createElement('button');labels.textContent='Print physical package labels';labels.onclick=()=>printLabels(id);controls.append(labels);for(const d of Ops.state.deliveries.filter(d=>d.route_id===id)){const b=document.createElement('button');b.textContent='View proof for Stop '+Ops.state.stops.find(s=>s.id===d.stop_id)?.sequence;b.onclick=async()=>{try{const link=await Ops.api({action:'proof_url',proof_id:d.proof_id});window.open(link.url,'_blank','noopener')}catch(e){toast(e.message)}};controls.append(b)}};
-renderPipeline=function(){const e=Ops.escape;const groups={pending:jobs.filter(j=>j.status==='pending'),assigned:jobs.filter(j=>j.status==='assigned'),transit:jobs.filter(j=>['in_transit','reconciling'].includes(j.status)),delivered:jobs.filter(j=>j.status==='delivered'),cancelled:jobs.filter(j=>['closed_with_exceptions','cancelled'].includes(j.status))};for(const [key,list] of Object.entries(groups)){const count=document.getElementById('pc-'+key),body=document.getElementById('pp-'+key);if(count)count.textContent=list.length;if(body)body.innerHTML=list.map(j=>{const next=Ops.state.stops.filter(s=>s.route_id===j.id&&s.status==='pending').sort((a,b)=>a.sequence-b.sequence)[0];return '<div class="pcard" onclick="openDrawer(\''+j.id+'\')"><div class="pcard-name">'+e(j.title)+'</div><div class="pcard-route">'+e(j.driver_name||'Unassigned')+' · '+e(j.status)+'</div><div class="pcard-route">'+(next?'Next: '+e(next.address):'Stops resolved')+'</div></div>'}).join('')||'<div class="pipe-empty">None</div>'}};
-addDriver=async function(){try{await Ops.command('register_driver',{name:document.getElementById('newDriverName').value.trim(),phone:document.getElementById('newDriverPhone').value.trim()});document.getElementById('addDriverForm').style.display='none';await renderDriverRoster();toast('Driver registered')}catch(e){toast(e.message)}};
-function opsDispatcherBoot(){doLogin().catch(console.error)}
-
-saveEditDriver=async function(id){try{await Ops.api({action:'manage_driver',driver_id:id,name:document.getElementById('drv-name-'+id).value.trim(),phone:document.getElementById('drv-phone-'+id).value.trim()});await renderDriverRoster();toast('Driver updated')}catch(e){toast(e.message)}};
-deleteDriver=async function(id){try{await Ops.api({action:'manage_driver',driver_id:id,disabled:true});await renderDriverRoster();toast('Driver access disabled; operational history retained')}catch(e){toast(e.message)}};
-renderStopCancelList=function(job){const all=Ops.state.stops.filter(s=>s.route_id===job.id).sort((a,b)=>a.sequence-b.sequence),pending=all.filter(s=>s.status==='pending');return '<div class="dr-field" style="grid-column:1/-1"><div class="df-lbl">Remaining stops</div>'+pending.map((s,i)=>'<div style="padding:10px">'+s.sequence+'. '+Ops.escape(s.recipient)+' — '+Ops.escape(s.address)+(i===0?' · Current':'')+' <button onclick="cancelSpecificStop(\''+job.id+'\','+all.indexOf(s)+')">Cancel</button></div>').join('')+'</div>'};
-const opsRoutePipeline=renderPipeline;
-renderPipeline=function(){opsRoutePipeline();const deliveries=Ops.state.deliveries.filter(d=>jobs.some(j=>j.id===d.route_id));const count=document.getElementById('pc-delivered'),body=document.getElementById('pp-delivered');if(count)count.textContent=deliveries.length;if(body)body.innerHTML=deliveries.map(d=>{const stop=Ops.state.stops.find(s=>s.id===d.stop_id);return '<div class="pcard" onclick="openDrawer(\''+d.route_id+'\')"><div class="pcard-name">Delivered stop '+stop?.sequence+'</div><div>'+Ops.escape(d.recipient)+' · '+Ops.escape(stop?.address)+'</div><small>'+Ops.escape(new Date(d.delivered_at).toLocaleString())+'</small></div>'}).join('')||'<div class="pipe-empty">No delivered stops</div>'};
-openDrawer=function(id){
- const route=Ops.state.routes.find(r=>r.id===id);if(!route)return;const j=route.job,e=Ops.escape;const selection=currentJobId===id?document.getElementById('assignDriverSelect')?.value:'';currentJobId=id;selectedJobId=id;document.getElementById('drTitle').textContent=j.title;const status=document.getElementById('drStatusDisplay');if(status)status.textContent=j.status;const stops=Ops.state.stops.filter(s=>s.route_id===id).sort((a,b)=>a.sequence-b.sequence),next=stops.find(s=>s.status==='pending');
- const fields=document.getElementById('drFields');fields.innerHTML='<div class="dr-field"><div class="df-lbl">Status</div><div class="df-val">'+e(j.status)+'</div></div><div class="dr-field"><div class="df-lbl">Physical pieces</div><div class="df-val">'+j.total_packages+'</div></div><div class="dr-field" style="grid-column:1/-1"><div class="df-lbl">Warehouse pickup</div><div class="df-val">'+e(j.pickup_address)+'</div></div><div class="dr-field" style="grid-column:1/-1"><div class="df-lbl">Next stop</div><div class="df-val">'+e(next?next.sequence+'. '+next.address:'Stops resolved')+'</div></div><div class="dr-field" style="grid-column:1/-1"><div class="df-lbl">Driver</div><div class="df-val">'+e(j.driver_name||'Unassigned')+'</div><select id="assignDriverSelect"><option value="">Choose driver</option>'+Ops.state.drivers.map(d=>'<option value="'+d.id+'">'+e(d.name)+'</option>').join('')+'</select></div>'+renderStopCancelList(j);
- document.getElementById('assignDriverSelect').value=selection||route.driver_id||'';
- const controls=document.createElement('div');controls.style.cssText='grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap';fields.append(controls);const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;controls.append(b)};
- if(['planned','assigned'].includes(route.status)){button('Assign driver',()=>assignJobToDriver(id));button('Broadcast',()=>broadcastJob(id))}if(route.status==='closed')button('Archive',()=>archiveJob(id));else button('Cancel route',()=>cancelJob(id));button('Print physical package labels',()=>printLabels(id));
- for(const d of Ops.state.deliveries.filter(d=>d.route_id===id))button('View proof · Stop '+stops.find(s=>s.id===d.stop_id)?.sequence,async()=>{const win=window.open('','_blank');try{const link=await Ops.api({action:'proof_url',proof_id:d.proof_id});if(win){win.opener=null;win.location.href=link.url}}catch(err){win?.close();toast(err.message)}});
- const mapUrl='https://maps.google.com/maps?q='+encodeURIComponent(next?.address||j.pickup_address)+'&output=embed';if(document.getElementById('drMap').src!==mapUrl)document.getElementById('drMap').src=mapUrl;document.getElementById('drawer').classList.add('open');
-};
 
 </script>
 <!-- RECOVERY PLAN GENERATOR -->
