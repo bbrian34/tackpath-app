@@ -4050,31 +4050,38 @@ function parseCSV(text){
     // Standard column name for a real carrier's own pre-existing barcode.
     // Optional -- not every manifest will have one yet, so its absence
     // never blocks an upload the way the four required columns do.
-    tracking_number:headers.indexOf('tracking_number')
+    tracking_number:headers.indexOf('tracking_number'),
+    route_hint:headers.indexOf('route_hint')
   };
   if(idx.order_id<0||idx.recipient<0||idx.address<0){
     toast('Missing required columns: order_id, recipient, address','warn');return;
   }
   packages=[];
+  const hintsSeen=new Set();
   for(let i=1;i<lines.length;i++){
     const c=parseCSVLine(lines[i]);
     if(!c[idx.address])continue;
+    const hint=idx.route_hint>=0?(c[idx.route_hint]||'').trim():'';
+    if(hint)hintsSeen.add(hint);
     packages.push({
       order_id:c[idx.order_id]||('TP'+String(65780000+i)),
       recipient:c[idx.recipient]||'Unknown',
       address:c[idx.address],
       packages:parseInt(c[idx.packages])||1,
-      tracking_number: idx.tracking_number>=0 ? (c[idx.tracking_number]||null) : null
+      tracking_number: idx.tracking_number>=0 ? (c[idx.tracking_number]||null) : null,
+      route_hint: hint||null
     });
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
-  // Reset route state from any previous upload before auto-dispatching
+  if(hintsSeen.size>=2){
+    ssRouteCountOverride=hintsSeen.size;
+    const rci=document.getElementById('routeCountInput');if(rci)rci.value=hintsSeen.size;
+    const rch=document.getElementById('routeCountHint');if(rch)rch.textContent=hintsSeen.size+' routes (from manifest)';
+  }
   ssRoutes=[];
-  // Open drawer so progress is visible, render the package list, then auto-run
   openSmartSortDrawer();
   renderPackageTable();
-  toast(packages.length+' packages loaded — auto-dispatching now...','ok');
-  // Small delay to let the DOM settle before starting geocoding
+  toast(packages.length+' packages loaded'+(hintsSeen.size>=2?' — '+hintsSeen.size+' routes from manifest':'')+' — auto-dispatching now...','ok');
   setTimeout(buildAndAutoDispatch, 600);
 }
 
@@ -4743,24 +4750,38 @@ async function buildRoutes(){
     }
   }
 
-  // ── STEP 2: CLUSTER COUNT (dispatcher override > geographic spread > package formula) ──
+  // ── STEP 2: GROUP BY route_hint OR CLUSTER GEOGRAPHICALLY ──
+  // When the manifest has a route_hint column, the courier defined their routes.
+  // Group by hint and only optimize sequence within each group.
   const totalPkgCount=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
-  const numRoutes=computeRouteCount(totalPkgCount,geocoded);
   const geoStops=geocoded;
   const noGeoStops=failedAddresses;
-
-  // ── STEP 3: GEOGRAPHIC CLUSTERING ──
-  if(btn){btn.innerHTML='&#9650; Clustering into '+numRoutes+' route'+(numRoutes>1?'s':'')+' <span class="build-badge">SmartSort Clustering</span>';}
-  updateSmartSortStatus('&#9650; Clustering '+geoStops.length+' stops into '+numRoutes+' route'+(numRoutes>1?'s':'')+'...', 60);
-
+  const hintGroups={},hintOrder=[];
+  let hasHints=false;
+  for(const pkg of packages){
+    const h=pkg.route_hint;
+    if(h){hasHints=true;if(!hintGroups[h]){hintGroups[h]=[];hintOrder.push(h);}}
+  }
+  if(hasHints){
+    for(const stop of geoStops){
+      const h=stop.route_hint;
+      if(h&&hintGroups[h])hintGroups[h].push(stop);
+      else if(hintOrder.length)hintGroups[hintOrder[0]].push(stop);
+    }
+  }
   let clusters;
-  if(geoStops.length===0){
-    clusters=[noGeoStops];
-  } else if(numRoutes<=1){
-    clusters=[geoStops];
-  } else {
-    clusters=smartCluster(geoStops,numRoutes);
-    if(noGeoStops.length) clusters[clusters.length-1].push(...noGeoStops);
+  if(hasHints&&hintOrder.length>=2){
+    clusters=hintOrder.map(h=>hintGroups[h]).filter(g=>g.length>0);
+    if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);
+    if(btn){btn.innerHTML='限 Sequencing '+clusters.length+' manifest routes... <span class="build-badge">SmartSort</span>';}
+    updateSmartSortStatus('限 Optimizing sequence within '+clusters.length+' courier-defined routes...',60);
+  }else{
+    const numRoutes=computeRouteCount(totalPkgCount,geocoded);
+    if(btn){btn.innerHTML='限 Clustering into '+numRoutes+' route'+(numRoutes>1?'s':'')+' <span class="build-badge">SmartSort Clustering</span>';}
+    updateSmartSortStatus('限 Clustering '+geoStops.length+' stops into '+numRoutes+' route'+(numRoutes>1?'s':'')+'...',60);
+    if(geoStops.length===0){clusters=[noGeoStops];}
+    else if(numRoutes<=1){clusters=[geoStops];}
+    else{clusters=smartCluster(geoStops,numRoutes);if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);}
   }
 
   // ── STEP 4: SEQUENCE EACH CLUSTER — nearest-neighbor then 2-opt improvement ──
