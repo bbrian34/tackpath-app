@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="operations-client.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>SmartSort — TackPath</title>
@@ -892,6 +893,13 @@ function toggleRouteMap(routeId, btn){
   btn.textContent = 'Hide Map';
   currentMapRouteId = routeId;
 }
+
+// TACKPATH_SMARTSORT_INTEGRATION
+﻿let opsSortBusy=false;
+async function opsSortRefresh(){await Ops.refresh();const s=Ops.state,e=Ops.escape;packages=s.rows.map(row=>({...row.raw,packages:row.expected_pieces||0}));routes=s.routes.map(r=>({id:r.id,stops:r.job.surge_stops||[],total_packages:r.job.total_packages,master_code:r.job.master_code}));document.getElementById('statPkgs').textContent=s.accounting.recorded;document.getElementById('statStops').textContent=s.stops.length;document.getElementById('statRoutes').textContent=routes.length;document.getElementById('emptyState').style.display=routes.length?'none':'flex';document.getElementById('rightSub').textContent=s.accounting.expected+' physical pieces expected · '+s.accounting.exceptions+' pending or exceptions';const grid=document.getElementById('routeGrid');grid.style.display='flex';grid.innerHTML=s.routes.map(r=>'<section class="route-card"><h3>'+e(r.job.title)+'</h3><p>'+e(r.status)+' · '+r.job.total_packages+' physical pieces · '+e(r.job.bin_label||'Awaiting bin')+'</p><p>Pickup: '+e(r.job.pickup_address)+'</p>'+(r.job.surge_stops||[]).map(stop=>'<p>'+stop.stop_number+'. '+e(stop.recipient)+' — '+e(stop.address)+' · '+stop.packages+' pieces</p>').join('')+'<button onclick="Ops.labels(\''+r.id+'\').catch(e=>toast(e.message,\'warn\'))">Print package labels</button><a href="dispatcher.html">Open Dispatcher</a></section>').join('');}
+handleFile=async function(file){if(!file||opsSortBusy)return;opsSortBusy=true;try{await Ops.ensure('dispatcher');const id=localStorage.getItem('tp_warehouse_'+Ops.state.organization.id)||Ops.state.warehouses[0]?.id;if(!id)throw Error('Add a warehouse in Operations before importing');await Ops.importManifest(await file.text(),id);await opsSortRefresh();toast('Manifest recorded; each package is routed or retained with an exception')}catch(e){toast(e.message,'warn')}finally{opsSortBusy=false}};
+parseCSV=async text=>handleFile({text:async()=>text});buildRoutes=async function(){await Ops.retry();await opsSortRefresh()};assignRoute=async function(){location.href='dispatcher.html'};renderRoutes=opsSortRefresh;resetAll=async function(){await opsSortRefresh();toast('Recorded manifests and package history are retained')};loadDemoData=function(){toast('Use a CSV manifest to create tracked physical packages','warn')};
+Ops.ensure('dispatcher').then(opsSortRefresh).catch(e=>toast(e.message,'warn'));
 
 </script>
 </body>

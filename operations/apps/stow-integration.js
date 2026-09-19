@@ -1,0 +1,26 @@
+﻿function opsWarehouseId(){return localStorage.getItem('tp_warehouse_'+Ops.state.organization.id)||Ops.state.warehouses[0]?.id}
+// PathIQ uses acknowledged package custody, never browser counters.
+loadRoutes=async function(){
+ try{await Ops.ensure('warehouse');const state=await Ops.refresh();jobs=Ops.jobs();binMap={};binProgress={};scannedByBin={};
+  for(const bin of state.bins.filter(b=>b.warehouse_id===opsWarehouseId())){if(!bin.route_id)continue;const route=state.routes.find(r=>r.id===bin.route_id);const pieces=state.packages.filter(p=>p.route_id===bin.route_id);binProgress[bin.label]={jobId:bin.route_id,jobTitle:route?.job.title||'Route',total:pieces.length,sorted:pieces.filter(p=>p.state==='stowed'||p.state==='loaded'||p.state==='out_for_delivery'||p.state==='delivered').length};scannedByBin[bin.label]=new Set(pieces.filter(p=>p.state==='stowed').map(p=>p.id));for(const p of pieces)for(const code of p.aliases)binMap[code]={binNum:bin.label,jobId:bin.route_id,packageId:p.id,jobTitle:route?.job.title||'',address:state.stops.find(s=>s.id===p.stop_id)?.address||''}}
+  renderBinsPanel();if(document.getElementById('scReset')?.classList.contains('on'))renderResetBinsPanel();
+ }catch(e){document.getElementById('debugPanel').textContent='Not synchronized: '+e.message;throw e}
+};
+let opsStowBusy=false;
+handleStowScan=async function(code){
+ if(opsStowBusy)return;opsStowBusy=true;const clean=String(code).trim().toUpperCase(),card=document.getElementById('stowResult');card.style.display='flex';
+ try{
+  if(pendingPlacement){const placement=pendingPlacement;await Ops.command('stow',{code:placement.code,bin:clean});pendingPlacement=null;document.getElementById('scanFlipInner')?.classList.remove('flipped');await loadRoutes();playSuccessSound();card.className='result-card success';card.textContent='Placement saved. '+binProgress[placement.binNum]?.sorted+' of '+binProgress[placement.binNum]?.total+' pieces accounted.';return}
+  await loadRoutes();const p=Ops.findPackage(clean);const bin=Ops.state.bins.find(b=>b.route_id===p.route_id);if(!bin)throw new Error('Package is awaiting a bin assignment');if(bin.warehouse_id!==opsWarehouseId())throw new Error('Package belongs to a different warehouse');if(p.state==='stowed')throw new Error('Already stowed in '+bin.label);if(p.state!=='allocated')throw new Error('Package cannot be stowed: '+(p.exception_code||p.state));
+  pendingPlacement={code:p.barcode,packageId:p.id,binNum:bin.label};document.getElementById('flipBinNumber').textContent=bin.label;document.getElementById('scanFlipInner')?.classList.add('flipped');card.style.display='none';
+ }catch(e){playErrorSound();card.className='result-card error';card.textContent=e.message+' — not confirmed.'}finally{opsStowBusy=false}
+};
+loadUnassignedRoutes=async function(){await loadRoutes();unassignedRoutes=jobs.filter(j=>Ops.state.routes.find(r=>r.id===j.id)?.warehouse_id===opsWarehouseId()&&!Ops.state.bins.some(b=>b.route_id===j.id)&&['pending','assigned'].includes(j.status));renderAssignRouteList()};
+confirmBinAssignment=async function(jobId){const card=document.getElementById('assignBinResult');try{await Ops.command('reserve_bin',{route_id:jobId,bin:pendingBinScan});pendingBinScan=null;card.textContent='Bin reservation saved';await loadUnassignedRoutes()}catch(e){card.textContent=e.message;card.className='result-card error'}};
+doResetBin=async function(label){const card=document.getElementById('resetConfirmArea');try{const bin=Ops.state.bins.find(b=>b.label===label);await Ops.command('release_bin',{bin_id:bin.id});await loadRoutes();card.textContent='Empty bin released'}catch(e){card.textContent=e.message}};
+handleReceiveScan=async function(code){const card=document.getElementById('receiveResult');try{await loadRoutes();const p=Ops.findPackage(code);await Ops.command('receive',{code:p.barcode});card.textContent='Receipt saved. Scan to stow.';pendingInduct=null}catch(e){card.textContent=e.message}};
+confirmInduct=async function(){if(!pendingInduct)return;await Ops.command('receive',{code:pendingInduct.code});pendingInduct=null;goTo('stow')};
+// SmartSort is the same server operation in PathIQ and Dispatcher.
+window.openOperationalImport=async function(){try{await Ops.ensure('warehouse');const input=document.createElement('input');input.type='file';input.accept='.csv,text/csv';input.onchange=async()=>{try{const w=Ops.state.warehouses.find(w=>w.id===opsWarehouseId());if(!w)throw new Error('Warehouse is not configured');const result=await Ops.importManifest(await input.files[0].text(),w.id);await loadRoutes();alert('Manifest recorded: '+result.state.accounting.recorded+' pieces; '+result.state.accounting.exceptions+' pending or exceptions.')}catch(e){alert(e.message)}};input.click()}catch(e){alert(e.message)}};
+// Zebra DataWedge emits the same immutable package barcode as FARSET.
+if(window.Capacitor?.Plugins?.ZebraScanner)window.Capacitor.Plugins.ZebraScanner.addListener('scan',data=>{const code=data.value;if(!code)return;if(document.getElementById('scStow').classList.contains('on'))handleStowScan(code);else if(document.getElementById('scReceive').classList.contains('on'))handleReceiveScan(code);else if(document.getElementById('scAssignbins').classList.contains('on'))handleAssignBinScan(code)});

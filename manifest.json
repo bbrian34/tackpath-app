@@ -2,7 +2,7 @@
   "name": "TackPath Driver",
   "short_name": "TackPath",
   "description": "TackPath Driver App - Atlanta Metro Courier Platform",
-  "start_url": "/tackpath-app/driver.html",
+  "start_url": "./driver.html",
   "display": "standalone",
   "background_color": "#f5f7fa",
   "theme_color": "#19b7ef",
@@ -25,5 +25,8 @@
     "geolocation",
     "notifications"
   ],
-  "categories": ["transportation", "logistics"]
+  "categories": [
+    "transportation",
+    "logistics"
+  ]
 }

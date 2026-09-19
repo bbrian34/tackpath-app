@@ -1,13 +1,13 @@
 {
   "name": "tackpath-app-tests",
   "version": "1.0.0",
-  "description": "Permanent regression test suite for TackPath web platform (dispatcher, driver, customer apps)",
+  "description": "Entry point for the authoritative operational regression suite; historical mock tests remain for reference.",
   "main": "index.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "node --test *.test.js"
+    "test": "npm --prefix ../operations test"
   },
   "keywords": [],
   "author": "",

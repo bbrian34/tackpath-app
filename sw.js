@@ -1,22 +1,6 @@
-// TackPath Driver PWA - Network First, No Cache
-const VERSION = 'v3.2';
-
-self.addEventListener('install', e => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys => 
-      Promise.all(keys.map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    fetch(e.request, {cache: 'no-store'}).catch(() => {
-      return caches.match(e.request);
-    })
-  );
-});
+﻿// Cache the operational screens for recovery; never cache API responses or proof uploads.
+const CACHE='tackpath-operations-20260919-1';
+const ASSETS=['./driver.html','./driver-app.html','./dispatcher.html','./dispatcher-white.html','./stow.html','./smartsort.html','./operations-client.js','./operations-panel.js','./labels.html','./jsbarcode.min.js','./manifest.json','./manifest-pathiq.json','./icon-192.png','./icon-512.png'];
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',event=>{const request=event.request,url=new URL(request.url);if(request.method!=='GET'||url.origin!==self.location.origin)return;const allowed=ASSETS.some(asset=>new URL(asset,self.registration.scope).pathname===url.pathname);if(!allowed)return;event.respondWith(fetch(request,{cache:'no-store'}).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)))}return response}).catch(async()=>await caches.match(request)||new Response('This screen is not available offline',{status:503})));});

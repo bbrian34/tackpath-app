@@ -1,0 +1,1 @@
+{"name":"tackpath-operations","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.mjs"},"devDependencies":{"@electric-sql/pglite":"^0.5.8","@playwright/test":"^1.63.0","acorn":"^8.18.0"}}

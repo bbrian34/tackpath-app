@@ -1,0 +1,8 @@
+{
+  "name": "tackpath-platform",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix operations ci",
+    "test": "npm --prefix operations test"
+  }
+}
