@@ -2796,7 +2796,7 @@ function handleArrivedFromNotification(){
 // ── BOOT ──
 
 
-if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
+// Operational service worker is maintained by operations-client.js.
 
 // ── KEYBOARD DETECTION -- push login box above keyboard ──
 if(window.visualViewport){
