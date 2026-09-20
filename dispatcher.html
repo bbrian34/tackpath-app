@@ -4997,7 +4997,7 @@ async function runSmartSortSelfCheck(routes, audit){
   try{
     const sf=await sbGet('bin_shortfall?select=*&limit=5');
     const rows=Array.isArray(sf)?sf:[];
-    add('bin_shortfall reachable',true,rows.length+' rows, no 401');
+    add('bin_shortfall reachable',true,rows.length+' rows returned');
     if(rows.length){
       add('bin_shortfall counts packages',('expected_stops' in rows[0]),
         ('expected_stops' in rows[0])?'expected_packages + expected_stops present'
@@ -5021,6 +5021,10 @@ async function runSmartSortSelfCheck(routes, audit){
 // Renders the self-check result into the SmartSort drawer so the operator
 // sees it without opening a console.
 function renderSelfCheckPanel(checks,pass,audit){
+  // Local escape — renderSelfCheckPanel must never depend on another
+  // helper being defined, since it also runs from the error handler.
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   // Anchor on the route grid; it is always present in the drawer even when
   // empty, so the panel has a reliable insertion point.
   const host=document.getElementById('routeGrid');
@@ -5385,8 +5389,8 @@ async function buildRoutes(){
   }
 
   logAgentMemory('SmartSort','cluster_created',null,null,{
-    total_stops:packages.length,
-    total_packages:totalPkgCount,
+    total_stops:uniqueStops.length,
+    total_packages:packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0),
     clusters_created:ssRoutes.length,
     failed_geocodes:failedAddresses.length,
     route_count_source:ssRouteCountOverride>=1?'dispatcher_override':'auto',
