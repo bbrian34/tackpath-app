@@ -4891,12 +4891,10 @@ async function runSmartSortSelfCheck(routes, audit){
   // ── Read back what was actually persisted ──
   let persisted=[];
   try{
-    const ids=routes.map(r=>r.id);
-    const rows=await sbGet('jobs?select=id,title,bin_label,surge_stops,status&order=created_at.desc&limit=50');
-    const newest=rows.length?new Date(rows[0].created_at||Date.now()).getTime():Date.now();
+    const rows=await sbGet('jobs?select=id,title,bin_label,surge_stops,status,created_at&order=created_at.desc&limit=50');
     persisted=(Array.isArray(rows)?rows:[]).slice(0,routes.length);
   }catch(e){
-    add('Routes readable from database',false,'read failed: '+e.message);
+    add('Routes readable from database',false,'read failed: '+(e&&e.message?e.message:String(e)).slice(0,80));
   }
   if(persisted.length){
     add('Routes persisted and readable',persisted.length===routes.length,
@@ -5023,10 +5021,15 @@ async function runSmartSortSelfCheck(routes, audit){
 // Renders the self-check result into the SmartSort drawer so the operator
 // sees it without opening a console.
 function renderSelfCheckPanel(checks,pass,audit){
-  const host=document.getElementById('routeGrid')||document.getElementById('smartsortDrawer');
-  if(!host)return;
-  const old=document.getElementById('ssSelfCheckPanel');
-  if(old)old.remove();
+  // Anchor on the route grid; it is always present in the drawer even when
+  // empty, so the panel has a reliable insertion point.
+  const host=document.getElementById('routeGrid');
+  if(!host||!host.parentNode){
+    console.log('[SelfCheck] no render host found');
+    return;
+  }
+  const prev=document.getElementById('ssSelfCheckPanel');
+  if(prev)prev.remove();
   const allOk=pass===checks.length;
   const el=document.createElement('div');
   el.id='ssSelfCheckPanel';
@@ -5044,7 +5047,9 @@ function renderSelfCheckPanel(checks,pass,audit){
       '<span style="color:'+(c.ok?'var(--green)':'var(--red)')+';font-weight:800;flex-shrink:0;">'+
       (c.ok?'\u2713':'\u2717')+'</span><span style="color:var(--text);">'+esc(c.name)+
       (c.detail?'<span style="color:var(--muted);"> — '+esc(c.detail)+'</span>':'')+'</span></div>').join('');
+  host.style.display='block';
   host.parentNode.insertBefore(el,host);
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 async function buildAndAutoDispatch(){
@@ -5357,7 +5362,15 @@ async function buildRoutes(){
   // persisted route shape against the real PathIQ resolution logic and
   // shows the operator whether the warehouse can actually sort this plan
   // before anyone touches a package. No manual QA step.
-  setTimeout(()=>{runSmartSortSelfCheck(ssRoutes,audit).catch(e=>console.log('[SelfCheck] error',e));},400);
+  setTimeout(()=>{
+    runSmartSortSelfCheck(ssRoutes,audit).catch(e=>{
+      console.log('[SelfCheck] threw:',e);
+      // A self-check failure must never leave the operator with no answer.
+      renderSelfCheckPanel(
+        [{name:'Self-check ran to completion',ok:false,
+          detail:(e&&e.message?e.message:String(e)).slice(0,120)}],0,audit);
+    });
+  },400);
   if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
 
   const optNote=' (NN+2-opt optimized)';
