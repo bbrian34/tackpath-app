@@ -4351,7 +4351,14 @@ async function refreshAllLiveETAs(){
 // Returns {seconds, meters} for a single leg, or null on failure.
 // distanceMeters is captured here because the Routes API already returns it --
 // no extra API call needed to get real road distance.
+// If nav-proxy is unreachable (not deployed, CORS preflight failure, network
+// down) every call here fails. That must degrade, never hang: one failed
+// probe disables further attempts for this build so SmartSort completes
+// using its distance fallback instead of awaiting dead requests.
+let _navProxyDown=false;
+
 async function getTrafficAwareLegData(originCoords,destCoords){
+  if(_navProxyDown)return null;
   // The dispatcher browser key is restricted to Maps JS + Maps Embed APIs only.
   // Routes API calls from the browser would be rejected with REQUEST_DENIED.
   // All routing goes through the nav-proxy Supabase edge function which holds
@@ -4370,6 +4377,12 @@ async function getTrafficAwareLegData(originCoords,destCoords){
         }
       })
     });
+    if(!resp.ok){
+      _navProxyDown=true;
+      console.log('[SmartSort] nav-proxy unavailable (HTTP '+resp.status+
+        ') — falling back to distance estimate for road cost');
+      return null;
+    }
     const data=await resp.json();
     if(data.routes&&data.routes[0]&&data.routes[0].duration){
       const seconds=parseInt(data.routes[0].duration.replace('s',''));
@@ -4378,6 +4391,10 @@ async function getTrafficAwareLegData(originCoords,destCoords){
     }
     return null;
   }catch(e){
+    // CORS rejection, DNS failure, offline — all land here.
+    _navProxyDown=true;
+    console.log('[SmartSort] nav-proxy unreachable ('+(e.message||e)+
+      ') — falling back to distance estimate for road cost');
     return null;
   }
 }
@@ -4498,19 +4515,31 @@ async function clusterRoadCost(stops){
   }
   const geo=all.filter(s=>s.coords);
   if(geo.length<2){
-    return{totalMin:serviceMin+pkgMin,driveMin:0,serviceMin,pkgMin,roadMiles:0,driveShare:0};
+    return{totalMin:serviceMin+pkgMin,driveMin:0,serviceMin,pkgMin,roadMiles:0,driveShare:0,estimated:false};
   }
   // Sequence first so road legs reflect the order a driver would actually drive
   const seq=nearestNeighborSort(geo);
   const road=await getTrafficAwareRouteData(seq);
-  // getTrafficAwareRouteData adds its own 4 min/stop handling — strip it so
-  // we do not double-count our service time.
-  const driveMin=Math.max(0,(road.totalSeconds - seq.length*4*60)/60);
+  let driveMin=Math.max(0,(road.totalSeconds - seq.length*4*60)/60);
+  let roadMi=road.roadMiles||0;
+  let estimated=false;
+
+  // If the Routes API produced nothing usable (proxy down, every leg failed)
+  // fall back to a distance estimate so the plan is still built and the
+  // operator is told the figures are estimated rather than measured.
+  if(roadMi<=0&&seq.length>1){
+    estimated=true;
+    let straight=0;
+    for(let i=0;i<seq.length-1;i++) straight+=haversineDistance(seq[i].coords,seq[i+1].coords);
+    roadMi=straight*1.35;          // typical road-vs-straight ratio
+    driveMin=(roadMi/24)*60;       // 24 mph effective urban speed
+  }
   const totalMin=driveMin+serviceMin+pkgMin;
   return{
     totalMin,driveMin,serviceMin,pkgMin,
-    roadMiles:road.roadMiles||0,
-    driveShare: totalMin>0 ? driveMin/totalMin : 0
+    roadMiles:roadMi,
+    driveShare: totalMin>0 ? driveMin/totalMin : 0,
+    estimated
   };
 }
 
