@@ -4891,8 +4891,17 @@ async function runSmartSortSelfCheck(routes, audit){
   // ── Read back what was actually persisted ──
   let persisted=[];
   try{
-    const rows=await sbGet('jobs?select=id,title,bin_label,surge_stops,status,created_at&order=created_at.desc&limit=50');
-    persisted=(Array.isArray(rows)?rows:[]).slice(0,routes.length);
+    // Read back only the routes from THIS build, matched by their master
+    // scan codes. Slicing the newest N rows picked up unrelated older jobs
+    // and reported their stop counts as if they were this plan's.
+    const codes=routes.map(r=>r.master_code).filter(Boolean);
+    const orgF=currentOrgId?('&org_id=eq.'+currentOrgId):'';
+    const rows=await sbGet('jobs?select=id,title,bin_label,surge_stops,status,master_code,created_at'+
+      orgF+'&order=created_at.desc&limit=50');
+    const all=Array.isArray(rows)?rows:[];
+    persisted=codes.length
+      ? all.filter(j=>codes.includes(j.master_code))
+      : all.slice(0,routes.length);
   }catch(e){
     add('Routes readable from database',false,'read failed: '+(e&&e.message?e.message:String(e)).slice(0,80));
   }
@@ -5065,10 +5074,24 @@ async function buildAndAutoDispatch(){
   toast('Route built — dispatching to drivers...','ok');
   const routesToAssign=[...ssRoutes];
   console.log('[SmartSort] routesToAssign snapshot: '+routesToAssign.length+' routes');
+  const assignedIds=[];
   for(const route of routesToAssign){
     console.log('[SmartSort] calling assignSSRoute for '+route.id);
     await assignSSRoute(route.id);
+    assignedIds.push(route.id);
     console.log('[SmartSort] after assignSSRoute: ssRoutes.length='+ssRoutes.length);
+  }
+
+  // Every route is now written to Supabase. Verify against what actually
+  // persisted, not against the in-memory plan.
+  const audit=window._ssLastAudit||{expected:0,assigned:0,exceptions:0,duplicates:0,missing:0};
+  try{
+    await runSmartSortSelfCheck(routesToAssign,audit);
+  }catch(e){
+    console.log('[SelfCheck] threw:',e);
+    renderSelfCheckPanel(
+      [{name:'Self-check ran to completion',ok:false,
+        detail:(e&&e.message?e.message:String(e)).slice(0,120)}],0,audit);
   }
   generateLiveLabels(ssRoutes);
 }
@@ -5366,15 +5389,10 @@ async function buildRoutes(){
   // persisted route shape against the real PathIQ resolution logic and
   // shows the operator whether the warehouse can actually sort this plan
   // before anyone touches a package. No manual QA step.
-  setTimeout(()=>{
-    runSmartSortSelfCheck(ssRoutes,audit).catch(e=>{
-      console.log('[SelfCheck] threw:',e);
-      // A self-check failure must never leave the operator with no answer.
-      renderSelfCheckPanel(
-        [{name:'Self-check ran to completion',ok:false,
-          detail:(e&&e.message?e.message:String(e)).slice(0,120)}],0,audit);
-    });
-  },400);
+  // Self-check is NOT run here. buildRoutes only builds the plan in memory;
+  // assignSSRoute writes it to Supabase afterwards. Running the check on a
+  // timer raced the persistence and read stale rows. buildAndAutoDispatch
+  // runs it once every route has actually been written.
   if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
 
   const optNote=' (NN+2-opt optimized)';
