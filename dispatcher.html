@@ -4466,6 +4466,7 @@ function computeRouteCount(totalPackages, geocodedStops){
     Math.max(1, Math.round(totalPackages/20)),  // workload-based count
     geocodedStops.length || 1                    // never more routes than stops
   );
+  console.log('[SmartSort] computeRouteCount: totalPackages='+totalPackages+' geocodedStops='+geocodedStops.length+' => k='+k);
   return k;
 }
 
@@ -4539,12 +4540,16 @@ function smartCluster(stops, k){
   const clusters=Array.from({length:actualK},()=>[]);
   for(let i=0;i<stops.length;i++) clusters[assignments[i]].push(stops[i]);
 
+  console.log('[SmartSort] smartCluster: requested k='+k+' actualK='+actualK+' clusters before equalize='+clusters.filter(c=>c.length>0).length+' sizes='+clusters.map(c=>c.length).join(','));
+
   // Equalize package counts
   const totalPkgs=stops.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
   const targetPkgs=Math.round(totalPkgs/actualK);
   equalizeClusterPackages(clusters,targetPkgs,centroids);
 
-  return clusters.filter(c=>c.length>0);
+  const result=clusters.filter(c=>c.length>0);
+  console.log('[SmartSort] smartCluster: clusters after equalize+filter='+result.length+' sizes='+result.map(c=>c.length).join(','));
+  return result;
 }
 
 // ── WORKLOAD EQUALIZATION ──
@@ -4666,9 +4671,14 @@ async function buildAndAutoDispatch(){
   // geocode → sequence → create job in Supabase → broadcast to drivers
   await buildRoutes();
   if(!ssRoutes||!ssRoutes.length){toast('No routes to dispatch','warn');return;}
+  console.log('[SmartSort] buildAndAutoDispatch: ssRoutes.length='+ssRoutes.length+' ids='+ssRoutes.map(r=>r.id).join(','));
   toast('Route built — dispatching to drivers...','ok');
-  for(const route of [...ssRoutes]){
+  const routesToAssign=[...ssRoutes];
+  console.log('[SmartSort] routesToAssign snapshot: '+routesToAssign.length+' routes');
+  for(const route of routesToAssign){
+    console.log('[SmartSort] calling assignSSRoute for '+route.id);
     await assignSSRoute(route.id);
+    console.log('[SmartSort] after assignSSRoute: ssRoutes.length='+ssRoutes.length);
   }
   generateLiveLabels(ssRoutes);
 }
@@ -4784,6 +4794,8 @@ async function buildRoutes(){
   if(btn){btn.innerHTML='&#9650; Optimizing route sequence... <span class="build-badge">2-opt running</span>';}
   updateSmartSortStatus('&#9650; Optimizing stop sequence (2-opt)...', 72);
 
+  console.log('[SmartSort] buildRoutes: hasHints='+hasHints+' clusters going into optimizer='+clusters.length+' sizes='+clusters.map(c=>c.length).join(','));
+
   const optimizedClusters=clusters.map(cluster=>{
     const geo=cluster.filter(s=>s.coords);
     const noGeo=cluster.filter(s=>!s.coords);
@@ -4822,6 +4834,7 @@ async function buildRoutes(){
     };
   });
 
+  console.log('[SmartSort] ssRoutes built: count='+ssRoutes.length+' stops='+ssRoutes.map(r=>r.stops.length).join(','));
   document.getElementById('statRoutes').textContent=ssRoutes.length;
   renderSSRoutes();
   if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
@@ -5104,9 +5117,11 @@ async function assignSSRoute(routeId){
     });
     if(!resp.ok){
       const err=await resp.text();
+      console.log('[SmartSort] assignSSRoute FAILED: '+route.id+' error='+err.slice(0,120));
       toast('Could not assign: '+err.slice(0,60),'warn');
       return;
     }
+    console.log('[SmartSort] assignSSRoute SUCCESS: '+route.id+' persisted to DB');
     toast('Route '+route.id+' created and broadcast to drivers','ok');
     ssRoutes=ssRoutes.filter(r=>r.id!==routeId);
     renderSSRoutes();
