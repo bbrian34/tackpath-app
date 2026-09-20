@@ -3670,20 +3670,55 @@ async function saveStatus(){
 async function clearAllJobs(){
   if(!confirm('Delete ALL jobs? This cannot be undone.'))return;
   try{
-    const SBU='https://hofijsiphyjpdvujjzfi.supabase.co';
-    const K='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
-    const H={'apikey':K,'Authorization':'Bearer '+K};
     toast('Deleting all jobs...','ok');
-    // Delete all messages first
-    await fetch(SBU+'/rest/v1/messages?job_id=neq.00000000-0000-0000-0000-000000000000',{method:'DELETE',headers:H});
-    // Delete all jobs
-    await fetch(SBU+'/rest/v1/jobs?id=neq.00000000-0000-0000-0000-000000000000',{method:'DELETE',headers:H});
+
+    // Read the jobs actually visible to this org, then delete by explicit id.
+    // The previous filter (id=neq.<zero-uuid>) was rejected by PostgREST with
+    // 400 and the function reported success anyway, so nothing was deleted
+    // and the operator was told it worked.
+    const orgF=currentOrgId?('&org_id=eq.'+currentOrgId):'';
+    const rows=await sbGet('jobs?select=id'+orgF+'&limit=1000');
+    const ids=(Array.isArray(rows)?rows:[]).map(r=>r.id).filter(Boolean);
+
+    if(!ids.length){
+      await loadJobs();
+      toast('No jobs to clear','ok');
+      return;
+    }
+
+    // PostgREST caps URL length, so delete in batches using in.(...)
+    const CHUNK=40;
+    let deleted=0, failed=0;
+    for(let i=0;i<ids.length;i+=CHUNK){
+      const batch=ids.slice(i,i+CHUNK);
+      const list='('+batch.join(',')+')';
+      try{
+        // Messages first — they carry the stop-level delivery records
+        await sbDelete('messages?job_id=in.'+list);
+      }catch(e){ /* messages may already be gone */ }
+      try{
+        await sbDelete('jobs?id=in.'+list+orgF);
+        deleted+=batch.length;
+      }catch(e){
+        failed+=batch.length;
+        console.log('[ClearAll] batch failed:',(e&&e.message?e.message:String(e)).slice(0,120));
+      }
+    }
+
     closeDrawer();
     await loadJobs();
-    toast('All jobs cleared','ok');
+
+    // Verify against the database rather than assuming
+    const after=await sbGet('jobs?select=id'+orgF+'&limit=5');
+    const remaining=(Array.isArray(after)?after:[]).length;
+    if(remaining===0){
+      toast(deleted+' job'+(deleted===1?'':'s')+' cleared','ok');
+    }else{
+      toast('Cleared '+deleted+', but '+remaining+'+ still remain — check permissions','warn');
+    }
   }catch(e){
     console.error('Clear all error:',e);
-    toast('Error clearing jobs','warn');
+    toast('Could not clear jobs: '+(e&&e.message?e.message:'unknown error').slice(0,60),'warn');
   }
 }
 
