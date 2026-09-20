@@ -4454,6 +4454,109 @@ function haversineDistance(a,b){
 // across the metro for 20 packages when two drivers could each get a compact zone.
 let ssRouteCountOverride=0; // 0 = auto; set by dispatcher input
 
+// ════════════════════════════════════════════════════════════════════
+// SMARTSORT WORKLOAD PLANNER
+//
+// Route count is an OUTPUT of optimization, not an input. There is no
+// packages-per-route divisor. The planner estimates the real operational
+// effort of the manifest and finds the smallest number of routes where
+// every route fits inside a realistic driver shift.
+//
+// Effort model per route:
+//   drive time between sequenced stops
+// + fixed service time per stop (park, walk, locate recipient, scan)
+// + per-package handling time
+//
+// 44 packages to 5 nearby businesses = 1 route.
+// 44 packages to 35 spread-out stops  = several routes.
+// The difference emerges from the effort math, not a package count.
+// ════════════════════════════════════════════════════════════════════
+
+// Operational constants — these describe the physical work, not a route quota.
+const SHIFT_MINUTES        = 480;  // 8-hour driver shift
+const SHIFT_TARGET_MINUTES = 420;  // plan to 7h, leaving buffer for reality
+const SERVICE_MIN_PER_STOP = 4;    // park, approach, locate recipient, hand off
+const HANDLING_MIN_PER_PKG = 0.75; // per physical piece at the stop
+const AVG_URBAN_MPH        = 22;   // city driving including lights and turns
+
+// Estimated minutes of work for one cluster of stops, including the
+// drive between them in nearest-neighbor order.
+function clusterEffortMinutes(stops){
+  if(!stops||!stops.length)return 0;
+  let serviceMin=0, pkgMin=0;
+  for(const s of stops){
+    serviceMin += SERVICE_MIN_PER_STOP;
+    pkgMin     += (s.packages||1)*HANDLING_MIN_PER_PKG;
+  }
+  // Drive time: nearest-neighbor path length through the cluster
+  let driveMiles=0;
+  const remaining=stops.slice();
+  let cur=remaining.shift();
+  while(remaining.length){
+    let bi=0,bd=Infinity;
+    for(let i=0;i<remaining.length;i++){
+      const d=haversineDistance(cur.coords,remaining[i].coords);
+      if(d<bd){bd=d;bi=i;}
+    }
+    driveMiles+=bd;
+    cur=remaining.splice(bi,1)[0];
+  }
+  // Road factor: straight-line miles understate real driving by ~30%
+  const driveMin=(driveMiles*1.3/AVG_URBAN_MPH)*60;
+  return serviceMin+pkgMin+driveMin;
+}
+
+// Plan routes by increasing K until every route fits inside a shift.
+// Returns { clusters, explain } — explain is a human-readable rationale.
+function planRoutesByWorkload(stops){
+  if(!stops||!stops.length)return{clusters:[],explain:'no geocoded stops'};
+
+  const totalPkgs=stops.reduce((s,x)=>s+(x.packages||1),0);
+  const singleEffort=clusterEffortMinutes(stops);
+
+  // If the entire manifest fits in one shift, one route is correct.
+  if(singleEffort<=SHIFT_TARGET_MINUTES){
+    return{
+      clusters:[stops],
+      explain:'1 route — total workload '+Math.round(singleEffort)+
+              ' min fits within the '+SHIFT_TARGET_MINUTES+' min target shift ('+
+              stops.length+' stops, '+totalPkgs+' packages)'
+    };
+  }
+
+  // Otherwise increase K until the heaviest route fits, or we run out of stops.
+  const maxK=Math.min(stops.length,40);
+  for(let k=2;k<=maxK;k++){
+    const candidate=smartCluster(stops,k);
+    if(!candidate.length)continue;
+    const efforts=candidate.map(clusterEffortMinutes);
+    const heaviest=Math.max(...efforts);
+    if(heaviest<=SHIFT_TARGET_MINUTES){
+      const detail=candidate.map((c,i)=>
+        'R'+(i+1)+': '+c.length+' stops / '+
+        c.reduce((s,x)=>s+(x.packages||1),0)+' pkgs / '+
+        Math.round(efforts[i])+' min').join(' · ');
+      return{
+        clusters:candidate,
+        explain:k+' routes — single route would be '+Math.round(singleEffort)+
+                ' min (over '+SHIFT_TARGET_MINUTES+' min shift target). '+
+                'At K='+k+' the heaviest route is '+Math.round(heaviest)+' min. '+detail
+      };
+    }
+  }
+
+  // Could not fit inside a shift even at max K — return the best attempt
+  // and say so rather than silently producing an impossible plan.
+  const fallback=smartCluster(stops,Math.min(stops.length,8));
+  const efforts=fallback.map(clusterEffortMinutes);
+  return{
+    clusters:fallback,
+    explain:'WARNING: could not fit all work into '+SHIFT_TARGET_MINUTES+
+            ' min shifts. Best plan is '+fallback.length+' routes, heaviest '+
+            Math.round(Math.max(...efforts))+' min — review driver availability'
+  };
+}
+
 function computeRouteCount(totalPackages, geocodedStops){
   // Dispatcher override takes absolute priority
   if(ssRouteCountOverride>=1) return Math.min(ssRouteCountOverride, geocodedStops.length||1);
@@ -4741,55 +4844,95 @@ async function buildRoutes(){
   const btn=document.getElementById('buildBtn');
   if(btn){btn.disabled=true;btn.innerHTML='&#9650; Geocoding stops... <span class="build-badge">SmartSort running</span>';}
 
-  // ── STEP 1: GEOCODING (batched, parallel within each batch) ──
+  // ── STEP 1: BUILD UNIQUE DELIVERY STOPS ──
+  // A manifest contains physical packages. Multiple packages can go to the
+  // same delivery destination. A stop is a destination, not a package.
+  // Package identity is preserved inside each stop's package list — nothing
+  // is lost by consolidating, and PathIQ still sorts every physical piece.
+  const stopMap=new Map();
+  for(const pkg of packages){
+    const key=(pkg.address||'').trim().toLowerCase().replace(/\s+/g,' ');
+    if(!key)continue;
+    if(!stopMap.has(key)){
+      stopMap.set(key,{
+        address:pkg.address,
+        recipient:pkg.recipient,
+        pkgs:[],
+        packages:0
+      });
+    }
+    const stop=stopMap.get(key);
+    stop.pkgs.push({
+      order_id:pkg.order_id,
+      tracking_number:pkg.tracking_number||null,
+      recipient:pkg.recipient
+    });
+    stop.packages+=(parseInt(pkg.packages)||1);
+  }
+  const uniqueStops=Array.from(stopMap.values());
+  console.log('[SmartSort] stops: '+packages.length+' physical packages consolidated into '+uniqueStops.length+' unique delivery stops');
+
+  // ── STEP 2: GEOCODE EACH UNIQUE STOP ──
   const geocoded=[];
   const failedAddresses=[];
   const BATCH_SIZE=10;
-  for(let i=0;i<packages.length;i+=BATCH_SIZE){
-    const batch=packages.slice(i,i+BATCH_SIZE);
-    const done=Math.min(i+BATCH_SIZE,packages.length);
-    const pct=Math.round((done/packages.length)*50)+5;
-    if(btn){btn.innerHTML='&#9650; Geocoding '+done+' of '+packages.length+'... <span class="build-badge">SmartSort running</span>';}
-    updateSmartSortStatus('&#9650; Geocoding '+done+' of '+packages.length+' addresses...', pct);
-    const results=await Promise.all(batch.map(pkg=>geocodeAddress(pkg.address).then(coords=>({pkg,coords}))));
-    for(const {pkg,coords} of results){
-      if(coords) geocoded.push({...pkg,coords});
-      else failedAddresses.push(pkg);
+  for(let i=0;i<uniqueStops.length;i+=BATCH_SIZE){
+    const batch=uniqueStops.slice(i,i+BATCH_SIZE);
+    const done=Math.min(i+BATCH_SIZE,uniqueStops.length);
+    const pct=Math.round((done/uniqueStops.length)*50)+5;
+    if(btn){btn.innerHTML='&#9650; Geocoding '+done+' of '+uniqueStops.length+' stops... <span class="build-badge">SmartSort running</span>';}
+    updateSmartSortStatus('&#9650; Geocoding '+done+' of '+uniqueStops.length+' delivery stops...', pct);
+    const results=await Promise.all(batch.map(s=>geocodeAddress(s.address).then(coords=>({s,coords}))));
+    for(const {s,coords} of results){
+      if(coords) geocoded.push({...s,coords});
+      else failedAddresses.push(s);
     }
+  }
+  console.log('[SmartSort] geocoding: '+geocoded.length+' succeeded, '+failedAddresses.length+' failed');
+
+  // ── GEOCODE FAILURE GATE ──
+  // Zero usable coordinates means SmartSort has no geographic information.
+  // That is a routing failure, not a reason to build one giant route.
+  if(geocoded.length===0&&uniqueStops.length>0){
+    if(btn){btn.disabled=false;btn.innerHTML='Build Routes';}
+    updateSmartSortStatus('&#9888; Routing blocked — no addresses could be geocoded',0);
+    renderGeocodeFailurePanel(failedAddresses);
+    toast('Routing blocked: none of the '+uniqueStops.length+' addresses could be geocoded. Check the Geocoding API key configuration.','warn');
+    ssRoutes=[];
+    return;
   }
 
-  // ── STEP 2: GROUP BY route_hint OR CLUSTER GEOGRAPHICALLY ──
-  // When the manifest has a route_hint column, the courier defined their routes.
-  // Group by hint and only optimize sequence within each group.
-  const totalPkgCount=packages.reduce((s,p)=>s+(parseInt(p.packages)||1),0);
+  // ── STEP 3: DETERMINE ROUTE COUNT FROM WORKLOAD ──
+  // Route count is an OUTPUT of the optimization, not an arbitrary input.
+  // There is no packages-per-route divisor. SmartSort estimates the total
+  // operational effort of the manifest, then determines the smallest number
+  // of routes where each route fits inside a realistic driver shift.
   const geoStops=geocoded;
   const noGeoStops=failedAddresses;
+
+  // Manifest-declared routes (route_hint) still win when present — the courier
+  // has already made the operational decision and SmartSort only sequences.
   const hintGroups={},hintOrder=[];
   let hasHints=false;
-  for(const pkg of packages){
-    const h=pkg.route_hint;
-    if(h){hasHints=true;if(!hintGroups[h]){hintGroups[h]=[];hintOrder.push(h);}}
+  for(const s of geoStops){
+    const h=s.route_hint;
+    if(h){hasHints=true;if(!hintGroups[h]){hintGroups[h]=[];hintOrder.push(h);}hintGroups[h].push(s);}
   }
-  if(hasHints){
-    for(const stop of geoStops){
-      const h=stop.route_hint;
-      if(h&&hintGroups[h])hintGroups[h].push(stop);
-      else if(hintOrder.length)hintGroups[hintOrder[0]].push(stop);
-    }
-  }
+
   let clusters;
   if(hasHints&&hintOrder.length>=2){
     clusters=hintOrder.map(h=>hintGroups[h]).filter(g=>g.length>0);
     if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);
-    if(btn){btn.innerHTML='限 Sequencing '+clusters.length+' manifest routes... <span class="build-badge">SmartSort</span>';}
-    updateSmartSortStatus('限 Optimizing sequence within '+clusters.length+' courier-defined routes...',60);
+    console.log('[SmartSort] route source: manifest route_hint — '+clusters.length+' routes');
+    if(btn){btn.innerHTML='\u25b2 Sequencing '+clusters.length+' manifest routes... <span class="build-badge">SmartSort</span>';}
+    updateSmartSortStatus('\u25b2 Optimizing sequence within '+clusters.length+' courier-defined routes...',60);
   }else{
-    const numRoutes=computeRouteCount(totalPkgCount,geocoded);
-    if(btn){btn.innerHTML='限 Clustering into '+numRoutes+' route'+(numRoutes>1?'s':'')+' <span class="build-badge">SmartSort Clustering</span>';}
-    updateSmartSortStatus('限 Clustering '+geoStops.length+' stops into '+numRoutes+' route'+(numRoutes>1?'s':'')+'...',60);
-    if(geoStops.length===0){clusters=[noGeoStops];}
-    else if(numRoutes<=1){clusters=[geoStops];}
-    else{clusters=smartCluster(geoStops,numRoutes);if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);}
+    const plan=planRoutesByWorkload(geoStops);
+    clusters=plan.clusters;
+    if(noGeoStops.length&&clusters.length)clusters[clusters.length-1].push(...noGeoStops);
+    console.log('[SmartSort] route source: workload optimization — '+plan.explain);
+    if(btn){btn.innerHTML='\u25b2 Built '+clusters.length+' route'+(clusters.length>1?'s':'')+' <span class="build-badge">SmartSort</span>';}
+    updateSmartSortStatus('\u25b2 Workload optimization produced '+clusters.length+' route'+(clusters.length>1?'s':'')+'...',60);
   }
 
   // ── STEP 4: SEQUENCE EACH CLUSTER — nearest-neighbor then 2-opt improvement ──
@@ -4813,11 +4956,22 @@ async function buildRoutes(){
   ssRoutes=optimizedClusters.map((stops,ri)=>{
     const routeId='RT-'+String(ri+1).padStart(3,'0');
     const masterCode='TP-ROUTE-'+Math.random().toString(36).slice(2,8).toUpperCase();
-    const stopsWithId=stops.map((s,si)=>({
-      ...s,
-      stop_number:si+1,
-      smart_id:s.order_id+'-'+(si+1)
-    }));
+    const stopsWithId=stops.map((s,si)=>{
+      // Package identity is preserved: every physical package that belongs
+      // to this stop carries its own order_id and tracking_number through
+      // into the route, so PathIQ and the Driver can scan each piece.
+      const pkgList=s.pkgs||[{order_id:s.order_id,tracking_number:s.tracking_number||null,recipient:s.recipient}];
+      const primary=pkgList[0]||{};
+      return{
+        ...s,
+        stop_number:si+1,
+        order_id:primary.order_id||s.order_id,
+        tracking_number:primary.tracking_number||s.tracking_number||null,
+        smart_id:(primary.order_id||s.order_id||'STOP')+'-'+(si+1),
+        pkgs:pkgList,
+        packages:s.packages||pkgList.length
+      };
+    });
     const geoSeq=stopsWithId.filter(s=>s.coords);
     let hvMiles=0;
     for(let i=0;i<geoSeq.length-1;i++){
@@ -5094,7 +5248,14 @@ async function assignSSRoute(routeId){
       address: s.address,
       packages: s.packages,
       stop_number: i+1,
-      coords: s.coords||null
+      coords: s.coords||null,
+      // Every physical package at this stop, each with its own identity.
+      // A business receiving 3 packages is ONE stop with THREE scannable
+      // package records — PathIQ sorts all three, the driver scans all three.
+      pkgs: (s.pkgs||[]).map(p=>({
+        order_id: p.order_id,
+        tracking_number: p.tracking_number||null
+      }))
     })),
     master_code: route.master_code,
     total_stops: route.stops.length,
