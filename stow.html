@@ -427,7 +427,7 @@ async function loadRoutes(){
                     : (parseInt(s.packages)||1);
     });
 
-    newProgress[binNum]={total:expectedPkgs||stopList.length||1, sorted:stowedHere, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
+    newProgress[binNum]={total:expectedPkgs||stopList.length||1, stops:stopList.length, sorted:stowedHere, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
 
     stopList.forEach(s=>{
       const dest={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
@@ -492,7 +492,8 @@ function renderBinsPanel(){
       +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
       +(complete
         ? '<span class="staged-badge">&#10003; STAGED &middot; READY FOR PICKUP</span>'
-        : '<span class="bin-progress">'+p.sorted+' of '+p.total+' sorted</span>')
+        : '<span class="bin-progress">'+p.sorted+' of '+p.total+' packages sorted'
+          +(p.stops?' <span style="opacity:.55">('+p.stops+' stops)</span>':'')+'</span>')
       +'</div>';
   }).join('');
 }

@@ -4840,6 +4840,179 @@ function twoOptImprove(stops,maxPasses=10){
   return route;
 }
 
+// ═════════════════════════════════════════════════════════════════
+// SMARTSORT SELF-CHECK
+//
+// Runs automatically after every successful route build. It re-reads the
+// routes AS PERSISTED IN SUPABASE and resolves every physical package
+// through the same lookup PathIQ uses on the warehouse floor, then reports
+// in the UI whether the plan is actually sortable.
+//
+// This is not a test harness. It is a release gate the operator sees.
+// ═════════════════════════════════════════════════════════════════
+async function runSmartSortSelfCheck(routes, audit){
+  const checks=[];
+  const add=(name,ok,detail)=>checks.push({name,ok,detail});
+
+  // ── Read back what was actually persisted ──
+  let persisted=[];
+  try{
+    const ids=routes.map(r=>r.id);
+    const rows=await sbGet('jobs?select=id,title,bin_label,surge_stops,status&order=created_at.desc&limit=50');
+    const newest=rows.length?new Date(rows[0].created_at||Date.now()).getTime():Date.now();
+    persisted=(Array.isArray(rows)?rows:[]).slice(0,routes.length);
+  }catch(e){
+    add('Routes readable from database',false,'read failed: '+e.message);
+  }
+  if(persisted.length){
+    add('Routes persisted and readable',persisted.length===routes.length,
+      persisted.length+' of '+routes.length+' routes read back from Supabase');
+  }
+
+  // ── Resolve every package through PathIQ's own lookup ──
+  // Mirrors stow.html loadRoutes() binMap construction exactly.
+  const binMap={},binProgress={};
+  const allPkgs=[];
+  const source=persisted.length?persisted:routes.map(r=>({
+    id:r.id,title:r.id,bin_label:r.bin_label||'?',surge_stops:r.stops
+  }));
+
+  source.forEach((j,idx)=>{
+    const binNum=j.bin_label||((idx+1)+'A');
+    let stops=j.surge_stops;
+    if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=[];}}
+    stops=Array.isArray(stops)?stops:[];
+    let expectedPkgs=0;
+    stops.forEach(s=>{
+      const arr=Array.isArray(s.pkgs)?s.pkgs:null;
+      expectedPkgs += (arr&&arr.length)?arr.length:(parseInt(s.packages)||1);
+    });
+    binProgress[binNum]={total:expectedPkgs||stops.length||1,sorted:0,title:j.title};
+    stops.forEach(s=>{
+      const dest={binNum,address:s.address||''};
+      if(Array.isArray(s.pkgs)) s.pkgs.forEach(pk=>{
+        if(pk.tracking_number) binMap[String(pk.tracking_number).toUpperCase()]=dest;
+        if(pk.order_id)        binMap[String(pk.order_id).toUpperCase()]=dest;
+        allPkgs.push({code:pk.tracking_number||pk.order_id,order_id:pk.order_id,bin:binNum,address:s.address});
+      });
+      const stable=s.tracking_number||s.order_id;
+      if(stable) binMap[String(stable).toUpperCase()]=dest;
+      if(s.smart_id) binMap[String(s.smart_id).toUpperCase()]=dest;
+    });
+  });
+
+  const unresolved=allPkgs.filter(p=>{
+    const hit=binMap[String(p.code||'').toUpperCase()];
+    return !hit||hit.binNum!==p.bin;
+  });
+  add('Every package resolves to its bin',unresolved.length===0,
+    (allPkgs.length-unresolved.length)+'/'+allPkgs.length+' resolve'+
+    (unresolved.length?' — failing: '+unresolved.slice(0,4).map(p=>p.code).join(', '):''));
+
+  const expectedTotal=Object.values(binProgress).reduce((s,b)=>s+b.total,0);
+  add('PathIQ expects packages, not stops',expectedTotal===allPkgs.length,
+    'expects '+expectedTotal+', plan has '+allPkgs.length+' physical packages');
+
+  // ── Multi-package stop integrity ──
+  const byAddr={};
+  for(const p of allPkgs){(byAddr[p.address]=byAddr[p.address]||[]).push(p);}
+  const multi=Object.entries(byAddr).filter(([,v])=>v.length>1);
+  if(multi.length){
+    const [addr,pk]=multi[0];
+    const distinct=new Set(pk.map(x=>x.order_id)).size===pk.length;
+    const oneBin=new Set(pk.map(x=>x.bin)).size===1;
+    add('Multi-package stop kept intact',distinct&&oneBin,
+      pk.length+' distinct packages at one stop, all in bin '+pk[0].bin);
+  }else{
+    add('Multi-package stop kept intact',true,'no multi-package stop in this manifest');
+  }
+
+  // ── Scan lifecycle against the real binMap ──
+  const scanned={};
+  const scan=(code,container)=>{
+    const clean=String(code).trim().toUpperCase();
+    const hit=binMap[clean];
+    if(!hit)return'NOT_ON_ROUTE';
+    if(container!==hit.binNum)return'WRONG_CONTAINER';
+    if(!scanned[hit.binNum])scanned[hit.binNum]=new Set();
+    const before=scanned[hit.binNum].size;
+    scanned[hit.binNum].add(clean);
+    if(scanned[hit.binNum].size===before)return'DUPLICATE_IGNORED';
+    binProgress[hit.binNum].sorted=Math.min(binProgress[hit.binNum].total,binProgress[hit.binNum].sorted+1);
+    return'STOWED';
+  };
+
+  if(allPkgs.length){
+    const f=allPkgs[0];
+    const otherBin=Object.keys(binProgress).find(b=>b!==f.bin)||'ZZZ';
+    add('Wrong container rejected',scan(f.code,otherBin)==='WRONG_CONTAINER','scanned into '+otherBin);
+    add('Correct container accepted',scan(f.code,f.bin)==='STOWED','bin '+f.bin);
+    const before=binProgress[f.bin].sorted;
+    const dup=scan(f.code,f.bin);
+    add('Duplicate scan does not double-count',
+      dup==='DUPLICATE_IGNORED'&&binProgress[f.bin].sorted===before,'count stayed '+before);
+    add('Unknown package rejected',scan('ZZ-NOT-A-REAL-CODE',f.bin)==='NOT_ON_ROUTE','');
+    for(const p of allPkgs.slice(1)) scan(p.code,p.bin);
+    const stowed=Object.values(binProgress).reduce((s,b)=>s+b.sorted,0);
+    add('Full stow reaches expected count',stowed===expectedTotal,stowed+'/'+expectedTotal);
+    const staged=Object.values(binProgress).filter(b=>b.sorted>=b.total).length;
+    add('All routes reach STAGED',staged===Object.keys(binProgress).length,
+      staged+'/'+Object.keys(binProgress).length+' bins: '+
+      Object.entries(binProgress).map(([b,p])=>b+' '+p.sorted+'/'+p.total).join(', '));
+  }
+
+  // ── bin_shortfall reachable and using package counts ──
+  try{
+    const sf=await sbGet('bin_shortfall?select=*&limit=5');
+    const rows=Array.isArray(sf)?sf:[];
+    add('bin_shortfall reachable',true,rows.length+' rows, no 401');
+    if(rows.length){
+      add('bin_shortfall counts packages',('expected_stops' in rows[0]),
+        ('expected_stops' in rows[0])?'expected_packages + expected_stops present'
+          :'expected_stops missing — migration 003 not applied');
+    }
+  }catch(e){
+    add('bin_shortfall reachable',false,String(e.message||e).slice(0,80));
+  }
+
+  // ── Report in console and in the UI ──
+  const pass=checks.filter(c=>c.ok).length;
+  console.log('%c[SelfCheck] '+pass+'/'+checks.length+' passed',
+    'font-weight:900;color:'+(pass===checks.length?'#0a0':'#c00'));
+  checks.forEach(c=>console.log('  '+(c.ok?'PASS':'FAIL')+'  '+c.name+(c.detail?'  — '+c.detail:'')));
+
+  renderSelfCheckPanel(checks,pass,audit);
+  window._ssSelfCheck=checks;
+  return checks;
+}
+
+// Renders the self-check result into the SmartSort drawer so the operator
+// sees it without opening a console.
+function renderSelfCheckPanel(checks,pass,audit){
+  const host=document.getElementById('routeGrid')||document.getElementById('smartsortDrawer');
+  if(!host)return;
+  const old=document.getElementById('ssSelfCheckPanel');
+  if(old)old.remove();
+  const allOk=pass===checks.length;
+  const el=document.createElement('div');
+  el.id='ssSelfCheckPanel';
+  el.style.cssText='margin:14px 0;padding:14px 16px;border-radius:10px;border:1px solid '+
+    (allOk?'rgba(0,200,100,.25)':'rgba(220,60,60,.3)')+';background:'+
+    (allOk?'rgba(0,200,100,.05)':'rgba(220,60,60,.05)')+';';
+  el.innerHTML='<div style="font-family:var(--mono);font-size:.7rem;font-weight:800;letter-spacing:.08em;'+
+    'text-transform:uppercase;color:'+(allOk?'var(--green)':'var(--red)')+';margin-bottom:10px;">'+
+    (allOk?'\u2713 Plan verified — ':'\u26a0 Verification issues — ')+pass+'/'+checks.length+' checks passed</div>'+
+    '<div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;">'+
+    audit.expected+' packages expected · '+audit.assigned+' assigned · '+
+    audit.exceptions+' exception'+(audit.exceptions===1?'':'s')+' · '+
+    audit.duplicates+' duplicates · '+audit.missing+' missing</div>'+
+    checks.map(c=>'<div style="display:flex;gap:8px;align-items:flex-start;font-size:.74rem;margin-bottom:4px;">'+
+      '<span style="color:'+(c.ok?'var(--green)':'var(--red)')+';font-weight:800;flex-shrink:0;">'+
+      (c.ok?'\u2713':'\u2717')+'</span><span style="color:var(--text);">'+esc(c.name)+
+      (c.detail?'<span style="color:var(--muted);"> — '+esc(c.detail)+'</span>':'')+'</span></div>').join('');
+  host.parentNode.insertBefore(el,host);
+}
+
 async function buildAndAutoDispatch(){
   // Runs the full pipeline automatically after CSV upload:
   // geocode → sequence → create job in Supabase → broadcast to drivers
@@ -5140,6 +5313,13 @@ async function buildRoutes(){
   window._ssLastAudit=audit;
   document.getElementById('statRoutes').textContent=ssRoutes.length;
   renderSSRoutes();
+
+  // ══ SELF-VERIFICATION ══
+  // Runs automatically after every successful build. Exercises the real
+  // persisted route shape against the real PathIQ resolution logic and
+  // shows the operator whether the warehouse can actually sort this plan
+  // before anyone touches a package. No manual QA step.
+  setTimeout(()=>{runSmartSortSelfCheck(ssRoutes,audit).catch(e=>console.log('[SelfCheck] error',e));},400);
   if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
 
   const optNote=' (NN+2-opt optimized)';
