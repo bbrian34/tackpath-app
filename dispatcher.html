@@ -4366,7 +4366,9 @@ async function getTrafficAwareLegData(originCoords,destCoords){
   try{
     const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
     const SB_ANON='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
-    const resp=await fetch(SB_URL+'/functions/v1/nav-proxy',{
+    // The edge function is named nav-proxy in the Supabase dashboard but its
+// deployed slug is smooth-api. The slug is what the URL resolves to.
+    const resp=await fetch(SB_URL+'/functions/v1/smooth-api',{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
       body:JSON.stringify({
