@@ -4176,7 +4176,10 @@ function downloadTemplate(){
 function updateSmartSortStatus(msg, pct){
   const el=document.getElementById('statusMsg');
   const bar=document.getElementById('statusBar');
-  if(el) el.textContent=msg;
+  // Messages contain HTML entities (&#9650; etc). textContent rendered
+  // those as literal text on screen. These strings are built internally,
+  // never from manifest data, so innerHTML is safe here.
+  if(el) el.innerHTML=msg;
   if(bar) bar.style.width=(pct||0)+'%';
 }
 
@@ -5166,8 +5169,8 @@ async function buildRoutes(){
     clusters=hintOrder.map(h=>hintGroups[h]).filter(g=>g.length>0);
     if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);
     console.log('[SmartSort] route source: manifest route_hint — '+clusters.length+' routes');
-    if(btn){btn.innerHTML='\u25b2 Sequencing '+clusters.length+' manifest routes... <span class="build-badge">SmartSort</span>';}
-    updateSmartSortStatus('\u25b2 Optimizing sequence within '+clusters.length+' courier-defined routes...',60);
+    if(btn){btn.innerHTML='▲ Sequencing '+clusters.length+' manifest routes... <span class="build-badge">SmartSort</span>';}
+    updateSmartSortStatus('▲ Optimizing sequence within '+clusters.length+' courier-defined routes...',60);
   }else{
     let plan;
     if(ssRouteCountOverride>=1){
@@ -5203,8 +5206,8 @@ async function buildRoutes(){
     clusters=plan.clusters;
     if(noGeoStops.length&&clusters.length)clusters[clusters.length-1].push(...noGeoStops);
     console.log('[SmartSort] route source: workload optimization — '+plan.explain);
-    if(btn){btn.innerHTML='\u25b2 Built '+clusters.length+' route'+(clusters.length>1?'s':'')+' <span class="build-badge">SmartSort</span>';}
-    updateSmartSortStatus('\u25b2 Workload optimization produced '+clusters.length+' route'+(clusters.length>1?'s':'')+'...',60);
+    if(btn){btn.innerHTML='▲ Built '+clusters.length+' route'+(clusters.length>1?'s':'')+' <span class="build-badge">SmartSort</span>';}
+    updateSmartSortStatus('▲ Workload optimization produced '+clusters.length+' route'+(clusters.length>1?'s':'')+'...',60);
   }
 
   // ── STEP 4: SEQUENCE EACH CLUSTER — nearest-neighbor then 2-opt improvement ──
@@ -5311,6 +5314,10 @@ async function buildRoutes(){
     return;
   }
   window._ssLastAudit=audit;
+  // Progress was left frozen at 72% after 2-opt on the success path —
+  // the bar only ever advanced, never completed.
+  updateSmartSortStatus('✓ SmartSort complete — '+ssRoutes.length+' route'+
+    (ssRoutes.length===1?'':'s')+' built, verifying...', 100);
   document.getElementById('statRoutes').textContent=ssRoutes.length;
   renderSSRoutes();
 
