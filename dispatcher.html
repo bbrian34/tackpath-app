@@ -4899,9 +4899,18 @@ async function runSmartSortSelfCheck(routes, audit){
     const rows=await sbGet('jobs?select=id,title,bin_label,surge_stops,status,master_code,created_at'+
       orgF+'&order=created_at.desc&limit=50');
     const all=Array.isArray(rows)?rows:[];
-    persisted=codes.length
-      ? all.filter(j=>codes.includes(j.master_code))
-      : all.slice(0,routes.length);
+    const matched=codes.length?all.filter(j=>codes.includes(j.master_code)):[];
+    console.log('[SelfCheck] looking for master_codes',codes,
+      '| rows returned',all.length,
+      '| matched',matched.length,
+      '| sample row master_code',all[0]?all[0].master_code:'(none)');
+    // Only fall back if the match genuinely found nothing AND we have rows;
+    // a bad fallback previously verified an unrelated older job.
+    persisted=matched.length?matched:[];
+    if(!persisted.length&&all.length){
+      add('Routes matched by master code',false,
+        'could not match this build\'s routes in the database — verifying nothing');
+    }
   }catch(e){
     add('Routes readable from database',false,'read failed: '+(e&&e.message?e.message:String(e)).slice(0,80));
   }
@@ -4914,9 +4923,19 @@ async function runSmartSortSelfCheck(routes, audit){
   // Mirrors stow.html loadRoutes() binMap construction exactly.
   const binMap={},binProgress={};
   const allPkgs=[];
+  // Verify the PERSISTED routes. If the read found none, fall back to the
+  // in-memory plan so the check still reports something meaningful about
+  // package identity rather than silently verifying an empty set.
   const source=persisted.length?persisted:routes.map(r=>({
-    id:r.id,title:r.id,bin_label:r.bin_label||'?',surge_stops:r.stops
+    id:r.id,title:r.id,bin_label:r.bin_label||'?',
+    surge_stops:(r.stops||[]).map(s=>({
+      order_id:s.order_id,tracking_number:s.tracking_number||null,
+      smart_id:s.smart_id,address:s.address,packages:s.packages,
+      pkgs:(s.pkgs||[]).map(p=>({order_id:p.order_id,tracking_number:p.tracking_number||null}))
+    }))
   }));
+  console.log('[SelfCheck] verifying '+source.length+' route(s), source='+
+    (persisted.length?'database':'in-memory plan'));
 
   source.forEach((j,idx)=>{
     const binNum=j.bin_label||((idx+1)+'A');
