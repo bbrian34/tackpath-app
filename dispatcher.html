@@ -3676,7 +3676,10 @@ async function clearAllJobs(){
     // The previous filter (id=neq.<zero-uuid>) was rejected by PostgREST with
     // 400 and the function reported success anyway, so nothing was deleted
     // and the operator was told it worked.
-    const orgF=currentOrgId?('&org_id=eq.'+currentOrgId):'';
+    // Must match loadJobs() exactly: it shows jobs for this org AND jobs
+    // with a null org_id. Filtering on org_id=eq only read zero rows, so
+    // nothing was deleted while those null-org jobs stayed on screen.
+    const orgF=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
     const rows=await sbGet('jobs?select=id'+orgF+'&limit=1000');
     const ids=(Array.isArray(rows)?rows:[]).map(r=>r.id).filter(Boolean);
 
@@ -3697,7 +3700,10 @@ async function clearAllJobs(){
         await sbDelete('messages?job_id=in.'+list);
       }catch(e){ /* messages may already be gone */ }
       try{
-        await sbDelete('jobs?id=in.'+list+orgF);
+        // Delete by explicit id only — the ids already came from the
+        // org-scoped read above, so re-applying an or= filter here would
+        // just risk a malformed query.
+        await sbDelete('jobs?id=in.'+list);
         deleted+=batch.length;
       }catch(e){
         failed+=batch.length;
@@ -3710,6 +3716,8 @@ async function clearAllJobs(){
 
     // Verify against the database rather than assuming
     const after=await sbGet('jobs?select=id'+orgF+'&limit=5');
+    console.log('[ClearAll] deleted='+deleted+' failed='+failed+' remaining='+
+      (Array.isArray(after)?after.length:'?'));
     const remaining=(Array.isArray(after)?after:[]).length;
     if(remaining===0){
       toast(deleted+' job'+(deleted===1?'':'s')+' cleared','ok');
