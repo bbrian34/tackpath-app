@@ -4456,22 +4456,17 @@ function computeRouteCount(totalPackages, geocodedStops){
   // Dispatcher override takes absolute priority
   if(ssRouteCountOverride>=1) return Math.min(ssRouteCountOverride, geocodedStops.length||1);
 
-  // Package-count formula: 15 packages per route is a realistic urban delivery load
-  const formulaK=Math.min(200,Math.max(1,Math.round(totalPackages/15)));
-
-  // Geographic spread: urban metros like Atlanta span 20-30mi but still need
-  // multiple routes. Lower thresholds for realistic courier operations.
-  if(geocodedStops&&geocodedStops.length>=2){
-    const lats=geocodedStops.map(s=>s.coords.lat);
-    const lngs=geocodedStops.map(s=>s.coords.lng);
-    const corner1={lat:Math.min(...lats),lng:Math.min(...lngs)};
-    const corner2={lat:Math.max(...lats),lng:Math.max(...lngs)};
-    const spreadMiles=haversineDistance(corner1,corner2);
-    // >8mi spread = 2 zones; >18mi = 3 zones; >28mi = 4 zones
-    const spreadK=spreadMiles>28?4:spreadMiles>18?3:spreadMiles>8?2:1;
-    return Math.max(formulaK,spreadK);
-  }
-  return formulaK;
+  // Route count formula based on practical driver workload.
+  // 20 packages per driver per shift is a realistic urban courier load —
+  // accounts for drive time, parking, access, and service time per stop.
+  // This is the only signal needed: k-means clustering already handles
+  // geographic zone separation. A bounding-box diagonal signal was previously
+  // used but failed for dense urban metros where all addresses appear "close".
+  const k=Math.min(
+    Math.max(1, Math.round(totalPackages/20)),  // workload-based count
+    geocodedStops.length || 1                    // never more routes than stops
+  );
+  return k;
 }
 
 // Legacy name kept so nothing else breaks
