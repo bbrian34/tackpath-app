@@ -4482,43 +4482,67 @@ const HANDLING_MIN_PER_PKG = 0.75; // per physical piece at the stop
 // through nav-proxy (getTrafficAwareRouteData). Haversine is used ONLY as a
 // cheap ordering heuristic inside clustering, never as the production travel
 // figure for a route's workload or for deciding how many routes exist.
-async function clusterRoadEffortMinutes(stops){
-  if(!stops||!stops.length)return 0;
-  const geo=stops.filter(s=>s.coords);
+// Measures the REAL cost of serving a set of stops together, using the
+// road network via getTrafficAwareRouteData → nav-proxy → Google Routes API.
+// Returns the breakdown so the planner can reason about drive vs productive
+// time rather than about geography.
+async function clusterRoadCost(stops){
+  const all=stops||[];
   let serviceMin=0,pkgMin=0;
-  for(const s of stops){
+  for(const s of all){
     serviceMin += SERVICE_MIN_PER_STOP;
     pkgMin     += (s.packages||1)*HANDLING_MIN_PER_PKG;
   }
-  if(geo.length<2)return serviceMin+pkgMin;
+  const geo=all.filter(s=>s.coords);
+  if(geo.length<2){
+    return{totalMin:serviceMin+pkgMin,driveMin:0,serviceMin,pkgMin,roadMiles:0,driveShare:0};
+  }
   // Sequence first so road legs reflect the order a driver would actually drive
   const seq=nearestNeighborSort(geo);
   const road=await getTrafficAwareRouteData(seq);
-  // getTrafficAwareRouteData already adds 4 min/stop handling; strip that so
-  // we do not double-count our own service time.
-  const driveMin=(road.totalSeconds - seq.length*4*60)/60;
-  return serviceMin + pkgMin + Math.max(0,driveMin);
+  // getTrafficAwareRouteData adds its own 4 min/stop handling — strip it so
+  // we do not double-count our service time.
+  const driveMin=Math.max(0,(road.totalSeconds - seq.length*4*60)/60);
+  const totalMin=driveMin+serviceMin+pkgMin;
+  return{
+    totalMin,driveMin,serviceMin,pkgMin,
+    roadMiles:road.roadMiles||0,
+    driveShare: totalMin>0 ? driveMin/totalMin : 0
+  };
 }
 
-// ── SHIFT CAPACITY ──
-// A gig driver in an ordinary car works a finite shift. This is a physical
-// constraint of the work, not a route quota — it does not scale with package
-// count and it does not set K. It is the feasibility test that K must satisfy.
-// Dispatcher can override per-org; default reflects a standard delivery block.
-let SS_SHIFT_CAPACITY_MIN = 420; // 7h of on-road work inside an 8h shift
+// Legacy shim — anything still calling the old name gets total minutes.
+async function clusterRoadEffortMinutes(stops){
+  const c=await clusterRoadCost(stops);
+  return c.totalMin;
+}
 
-// ── GEOGRAPHIC COMPACTNESS ──
-// A route that fits the clock can still be operationally wrong. A driver
-// sent across three separate metros has a "feasible" 6-hour route that no
-// courier would ever dispatch. Compactness is a second feasibility test
-// alongside shift capacity, per the gig-delivery requirement that routes be
-// geographically compact with minimal sprawl.
-//
-// Measured as the mean distance of stops from their own route's centroid.
-// This is scale-free: it does not care how many packages or stops there are,
-// only whether the work in one route is geographically coherent.
-const MAX_ROUTE_SPREAD_MILES = 9; // mean radius from centroid
+// ══ OPERATING POLICY ══
+// Block duration is an operating policy of the courier company, not a
+// universal truth. TARGET is what the optimizer prefers; MAX is a hard
+// ceiling only where the operator has set one. A courier running 10-hour
+// blocks or a rural territory changes these; SmartSort does not assume.
+// Stored per-org in localStorage so v1 needs no settings UI or schema change.
+function ssPolicy(){
+  let saved={};
+  try{saved=JSON.parse(localStorage.getItem('tp_ss_policy_'+(currentOrgId||'default'))||'{}');}catch(e){}
+  return{
+    // Preferred block length — the optimizer aims here.
+    targetBlockMin: Number(saved.targetBlockMin)||360,
+    // Hard ceiling — a route longer than this is not dispatchable.
+    maxBlockMin:    Number(saved.maxBlockMin)||480,
+    // Efficiency floor: a route whose drive time dwarfs its productive time
+    // is wandering. Expressed as the share of route minutes spent driving.
+    // This is derived from measured road time, not from geography.
+    maxDriveShare:  Number(saved.maxDriveShare)||0.62
+  };
+}
 
+// ── ROUTE SPREAD ── DIAGNOSTIC ONLY ──
+// Reported so an operator can see the geographic footprint of a block.
+// It does NOT determine route count. A 16-mile corridor on a highway can be
+// an excellent route; an 8-mile radius with bad connectivity can be terrible.
+// Road cost decides, not radius.
 function routeSpreadMiles(stops){
   const geo=(stops||[]).filter(s=>s.coords);
   if(geo.length<2)return 0;
@@ -4528,79 +4552,89 @@ function routeSpreadMiles(stops){
   return geo.reduce((a,s)=>a+haversineDistance(c,s.coords),0)/geo.length;
 }
 
-// A route is operationally feasible only if BOTH tests pass.
-function routeIsFeasible(stops,effortMin){
-  return effortMin<=SS_SHIFT_CAPACITY_MIN && routeSpreadMiles(stops)<=MAX_ROUTE_SPREAD_MILES;
-}
-
-// ── ROUTE PLAN: count emerges from feasibility, never from a divisor ──
-// The planner asks one question repeatedly: "can this workload be driven by
-// K drivers within a shift?" It starts at K=1 and stops at the first K where
-// the answer is yes. Nothing divides package count. Nothing caps by driver
-// count — Dispatcher matches drivers to routes afterward.
 async function planRoutesByWorkload(stops){
   if(!stops||!stops.length)return{clusters:[],explain:'no geocoded stops',perRoute:[]};
 
+  const pol=ssPolicy();
   const totalPkgs=stops.reduce((s,x)=>s+(x.packages||1),0);
 
-  // K=1: does the entire workload fit one driver's shift?
-  const singleEffort=await clusterRoadEffortMinutes(stops);
-  const singleSpread=routeSpreadMiles(stops);
-  if(routeIsFeasible(stops,singleEffort)){
+  // A route is dispatchable when its MEASURED ROAD COST is acceptable:
+  //   • within the operator's maximum block duration (hard ceiling), and
+  //   • not dominated by driving — a block where most of the time is spent
+  //     on the road rather than delivering is wandering, regardless of how
+  //     tight or wide its geographic footprint looks.
+  // Both tests come from the road network. Neither is a geometric rule.
+  const dispatchable=(cost)=>
+    cost.totalMin<=pol.maxBlockMin && cost.driveShare<=pol.maxDriveShare;
+
+  // Quality score for choosing between feasible plans: prefer blocks close to
+  // the target duration with a low drive share.
+  const planScore=(costs)=>{
+    let s=0;
+    for(const c of costs){
+      s += Math.abs(c.totalMin-pol.targetBlockMin)/pol.targetBlockMin;
+      s += c.driveShare*1.5;
+    }
+    return s/costs.length;
+  };
+
+  const describe=(clusters,costs)=>clusters.map((c,i)=>({
+    stops:c.length,
+    pkgs:c.reduce((s,x)=>s+(x.packages||1),0),
+    minutes:Math.round(costs[i].totalMin),
+    driveMin:Math.round(costs[i].driveMin),
+    roadMiles:Number(costs[i].roadMiles.toFixed(1)),
+    driveShare:Number((costs[i].driveShare*100).toFixed(0)),
+    spread:Number(routeSpreadMiles(c).toFixed(1))
+  }));
+
+  const fmt=(pr)=>pr.map((r,i)=>'R'+(i+1)+': '+r.stops+' stops / '+r.pkgs+
+    ' pkgs / '+r.minutes+' min / '+r.roadMiles+' mi / '+r.driveShare+'% drive').join(' \u00b7 ');
+
+  // ── K=1 ──
+  const c1=await clusterRoadCost(stops);
+  if(dispatchable(c1)){
+    const perRoute=describe([stops],[c1]);
     return{
-      clusters:[stops],
-      perRoute:[{stops:stops.length,pkgs:totalPkgs,minutes:Math.round(singleEffort),spread:singleSpread.toFixed(1)}],
-      explain:'1 route — measured road workload '+Math.round(singleEffort)+
-              ' min fits one shift ('+SS_SHIFT_CAPACITY_MIN+' min capacity) and '+
-              'stops are geographically compact ('+singleSpread.toFixed(1)+
-              ' mi mean radius). '+stops.length+' stops, '+totalPkgs+' packages.'
+      clusters:[stops],perRoute,
+      explain:'1 route \u2014 measured road cost '+Math.round(c1.totalMin)+' min ('+
+        Math.round(c1.driveMin)+' min driving, '+c1.roadMiles.toFixed(1)+' road mi, '+
+        (c1.driveShare*100).toFixed(0)+'% of time on the road). Within the '+
+        pol.maxBlockMin+' min maximum block and under the '+
+        (pol.maxDriveShare*100).toFixed(0)+'% drive-share limit. '+
+        stops.length+' stops, '+totalPkgs+' packages.'
     };
   }
 
-  // K>=2: increase until the heaviest route fits a shift.
+  // ── K>=2 ── first dispatchable K wins; among ties the better-scoring plan wins
   const maxK=Math.min(stops.length,40);
   for(let k=2;k<=maxK;k++){
     const candidate=smartCluster(stops,k);
     if(!candidate.length)continue;
-    const efforts=[];
-    for(const c of candidate) efforts.push(await clusterRoadEffortMinutes(c));
-    const spreads=candidate.map(routeSpreadMiles);
-    const heaviest=Math.max(...efforts);
-    const widest=Math.max(...spreads);
-    const allFeasible=candidate.every((c,i)=>routeIsFeasible(c,efforts[i]));
-    if(allFeasible){
-      const perRoute=candidate.map((c,i)=>({
-        stops:c.length,
-        pkgs:c.reduce((s,x)=>s+(x.packages||1),0),
-        minutes:Math.round(efforts[i]),
-        spread:spreads[i].toFixed(1)
-      }));
-      const reason=singleEffort>SS_SHIFT_CAPACITY_MIN
-        ?'one driver would need '+Math.round(singleEffort)+' min (over the '+SS_SHIFT_CAPACITY_MIN+' min shift capacity)'
-        :'a single route would span '+singleSpread.toFixed(1)+' mi mean radius (over the '+MAX_ROUTE_SPREAD_MILES+' mi compactness limit)';
+    const costs=[];
+    for(const c of candidate) costs.push(await clusterRoadCost(c));
+    if(costs.every(dispatchable)){
+      const perRoute=describe(candidate,costs);
+      const why = c1.totalMin>pol.maxBlockMin
+        ? 'a single route measures '+Math.round(c1.totalMin)+' min of road cost, over the '+pol.maxBlockMin+' min maximum block'
+        : 'a single route spends '+(c1.driveShare*100).toFixed(0)+'% of its time driving, over the '+(pol.maxDriveShare*100).toFixed(0)+'% limit \u2014 the stops are not efficiently servable together';
       return{
-        clusters:candidate,
-        perRoute,
-        explain:k+' routes — '+reason+
-                '. K was increased until every route was both within shift and compact: at K='+k+
-                ' the heaviest is '+Math.round(heaviest)+' min and the widest is '+widest.toFixed(1)+' mi. '+
-                perRoute.map((r,i)=>'R'+(i+1)+': '+r.stops+' stops / '+r.pkgs+
-                ' pkgs / '+r.minutes+' min / '+r.spread+' mi').join(' · ')
+        clusters:candidate,perRoute,
+        explain:k+' routes \u2014 '+why+'. K increased until every block was dispatchable by measured road cost. '+
+          'Target block is '+pol.targetBlockMin+' min; plan quality '+planScore(costs).toFixed(2)+'. '+fmt(perRoute)
       };
     }
   }
 
-  // No K within range produced a feasible plan — say so, do not fake it.
-  const fallback=smartCluster(stops,Math.min(stops.length,12));
-  const fEfforts=[];
-  for(const c of fallback) fEfforts.push(await clusterRoadEffortMinutes(c));
+  const fb=smartCluster(stops,Math.min(stops.length,12));
+  const fc=[];
+  for(const c of fb) fc.push(await clusterRoadCost(c));
+  const perRoute=describe(fb,fc);
   return{
-    clusters:fallback,
-    perRoute:fallback.map((c,i)=>({stops:c.length,pkgs:c.reduce((s,x)=>s+(x.packages||1),0),minutes:Math.round(fEfforts[i])})),
-    explain:'INFEASIBLE: no route count up to '+maxK+' fits this workload into '+
-            SS_SHIFT_CAPACITY_MIN+' min shifts. Returning best effort at '+
-            fallback.length+' routes, heaviest '+Math.round(Math.max(...fEfforts))+
-            ' min. Review the manifest or shift capacity.'
+    clusters:fb,perRoute,
+    explain:'INFEASIBLE \u2014 no route count up to '+maxK+' produced blocks within the '+
+      pol.maxBlockMin+' min maximum. Best effort: '+fb.length+' routes, heaviest '+
+      Math.round(Math.max(...fc.map(c=>c.totalMin)))+' min. '+fmt(perRoute)
   };
 }
 
@@ -4967,16 +5001,28 @@ async function buildRoutes(){
       // Dispatcher explicitly set a route count. That is an operator decision
       // and overrides the workload planner — but it is still measured and
       // reported so the operator can see the resulting workload per route.
+      const pol=ssPolicy();
       const k=Math.min(ssRouteCountOverride,geoStops.length||1);
       const forced=k<=1?[geoStops]:smartCluster(geoStops,k);
-      const fe=[];
-      for(const c of forced) fe.push(await clusterRoadEffortMinutes(c));
+      const fc=[];
+      for(const c of forced) fc.push(await clusterRoadCost(c));
+      const heaviest=Math.max(...fc.map(c=>c.totalMin));
       plan={
         clusters:forced,
-        perRoute:forced.map((c,i)=>({stops:c.length,pkgs:c.reduce((s,x)=>s+(x.packages||1),0),minutes:Math.round(fe[i])})),
-        explain:k+' routes — DISPATCHER OVERRIDE. Measured workloads: '+
-          forced.map((c,i)=>'R'+(i+1)+': '+Math.round(fe[i])+' min').join(' · ')+
-          (Math.max(...fe)>SS_SHIFT_CAPACITY_MIN?' ⚠ heaviest route exceeds shift capacity':'')
+        perRoute:forced.map((c,i)=>({
+          stops:c.length,
+          pkgs:c.reduce((s,x)=>s+(x.packages||1),0),
+          minutes:Math.round(fc[i].totalMin),
+          driveMin:Math.round(fc[i].driveMin),
+          roadMiles:Number(fc[i].roadMiles.toFixed(1)),
+          driveShare:Number((fc[i].driveShare*100).toFixed(0)),
+          spread:Number(routeSpreadMiles(c).toFixed(1))
+        })),
+        explain:k+' routes — DISPATCHER OVERRIDE. Measured road cost: '+
+          forced.map((c,i)=>'R'+(i+1)+': '+Math.round(fc[i].totalMin)+' min / '+
+            fc[i].roadMiles.toFixed(1)+' mi').join(' · ')+
+          (heaviest>pol.maxBlockMin?' ⚠ heaviest block '+Math.round(heaviest)+
+            ' min exceeds the '+pol.maxBlockMin+' min maximum':'')
       };
     }else{
       plan=await planRoutesByWorkload(geoStops);

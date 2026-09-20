@@ -414,18 +414,44 @@ async function loadRoutes(){
     // Sorted count comes from the event stream, not from a counter this
     // device happened to increment. Two scanners on the same bin now agree.
     const stowedHere=(scannedByBin[binNum]&&scannedByBin[binNum].size)||0;
-    newProgress[binNum]={total:stopList.length||1, sorted:stowedHere, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
+
+    // ── EXPECTED COUNT IS PACKAGES, NOT STOPS ──
+    // A stop is a delivery destination. A business receiving 5 packages is
+    // ONE stop with FIVE physical packages, and all five must be stowed
+    // before the route can be staged. Counting stops here meant a route
+    // could show "complete" with packages still on the floor.
+    let expectedPkgs=0;
     stopList.forEach(s=>{
-      // A physical package's real, pre-printed identifier (tracking_number
-      // or order_id) is permanent -- it's fixed before the package ever
-      // arrives. smart_id is computed internally from stop position within
-      // a route, which can change every time SmartSort re-clusters. A
-      // stable, real-world barcode can never chase a value that shifts on
-      // every run, so it must win the match, not lose to it.
+      const arr=Array.isArray(s.pkgs)?s.pkgs:null;
+      expectedPkgs += arr&&arr.length ? arr.length
+                    : (parseInt(s.packages)||1);
+    });
+
+    newProgress[binNum]={total:expectedPkgs||stopList.length||1, sorted:stowedHere, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
+
+    stopList.forEach(s=>{
+      const dest={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+
+      // ── INDEX EVERY PHYSICAL PACKAGE AT THIS STOP ──
+      // SmartSort writes a pkgs[] array on each stop carrying every
+      // physical package's own order_id and tracking_number. Each one is
+      // a separate scannable object that must resolve to this bin.
+      // Previously only the stop's primary package was indexed, so the
+      // 2nd through Nth package at a multi-package address scanned as
+      // "not on this route."
+      if(Array.isArray(s.pkgs)){
+        s.pkgs.forEach(pk=>{
+          if(pk.tracking_number) binMap[String(pk.tracking_number).toUpperCase()]=dest;
+          if(pk.order_id)        binMap[String(pk.order_id).toUpperCase()]=dest;
+        });
+      }
+
+      // Stop-level identifiers still resolve, for routes built before
+      // pkgs[] existed and for scanning a stop's primary label.
       const stableCode=s.tracking_number||s.order_id||s.orderId;
-      if(stableCode) binMap[String(stableCode).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+      if(stableCode) binMap[String(stableCode).toUpperCase()]=dest;
       const code=s.smart_id||s.id;
-      if(code) binMap[String(code).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+      if(code) binMap[String(code).toUpperCase()]=dest;
     });
     if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
   });
