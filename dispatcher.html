@@ -4231,10 +4231,12 @@ async function geocodeAddress(address){
       maybeReportMarcoStatus();
       return coords;
     }
+    console.log('[Geocode] FAILED for "'+address+'" status='+data.status+' error='+(data.error_message||'none'));
     MARCO_FAIL_COUNT++;
     maybeReportMarcoStatus();
     return null;
   }catch(e){
+    console.log('[Geocode] EXCEPTION for "'+address+'" err='+e.message);
     MARCO_FAIL_COUNT++;
     maybeReportMarcoStatus();
     return null;
