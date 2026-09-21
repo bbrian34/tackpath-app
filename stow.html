@@ -763,6 +763,18 @@ async function handleStowScan(code){
       playSuccessSound();
       const binNum=pendingPlacement.binNum;
       if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
+      // Never count the same physical package twice.
+      if(scannedByBin[binNum].has(pendingPlacement.code)){
+        pendingPlacement=null;
+        const fi=document.getElementById('scanFlipInner');
+        if(fi) fi.classList.remove('flipped');
+        playErrorSound();
+        card.className='result-card error';
+        card.innerHTML='<div class="result-bin" style="color:var(--orange);">&#9888; ALREADY SCANNED</div>'
+          +'<div class="result-bin-num" style="color:var(--orange);">Bin '+esc(binNum)+'</div>'
+          +'<div class="result-detail">That package was already stowed. Nothing was counted.</div>';
+        return;
+      }
       scannedByBin[binNum].add(pendingPlacement.code);
       stowDetail[pendingPlacement.code]={bin:binNum,actor:ensureWorker(),at:new Date().toISOString()};
       binProgress[binNum].sorted=Math.min(binProgress[binNum].total, binProgress[binNum].sorted+1);
@@ -915,20 +927,29 @@ async function handleStowScan(code){
     return;
   }
 
-  if(!scannedByBin[match.binNum]) scannedByBin[match.binNum]=new Set();
-  if(scannedByBin[match.binNum].has(clean)){
-    // Explain the state rather than merely refusing the scan. The worker
-    // needs to know whether THEY stowed it or someone else did, and when.
+  // ══ ALREADY SCANNED ══
+  // Look in EVERY bin, not just the one this package maps to right now —
+  // right after a bin opens, the route is briefly tracked under a temporary
+  // key, and checking only that key let a repeat scan slip through.
+  const stowedIn=Object.keys(scannedByBin).find(k=>scannedByBin[k]&&scannedByBin[k].has(clean));
+  if(stowedIn){
     const d=stowDetail[clean]||{};
+    const bound=binBindings[match.jobId]||{};
+    const bin=d.bin||stowedIn;
+    const loc=bound.location_code?(' at location '+bound.location_code):'';
     const who=d.actor?(' by '+d.actor):'';
     const when=d.at?(' at '+fmtEventTime(d.at)):'';
-    card.className='result-card';
-    card.innerHTML='<div class="result-bin">Already Stowed</div>'
-      +'<div class="result-bin-num" style="color:var(--orange);">Bin '+(d.bin||match.binNum)+'</div>'
-      +'<div class="result-detail">Stowed'+who+when+'.</div>'
-      +'<div class="result-detail" style="margin-top:4px;color:var(--faint);">Nothing to do. Move to the next package.</div>';
+    playErrorSound();
+    if(navigator.vibrate)navigator.vibrate([120,80,120]);
+    card.className='result-card error';
+    card.style.display='flex';
+    card.innerHTML='<div class="result-bin" style="color:var(--orange);font-size:1rem;">&#9888; ALREADY SCANNED</div>'
+      +'<div class="result-bin-num" style="color:var(--orange);font-size:2rem;">Bin '+esc(bin)+'</div>'
+      +'<div class="result-detail" style="font-weight:700;">This package is already in Bin '+esc(bin)+esc(loc)+'.</div>'
+      +'<div class="result-detail">Stowed'+esc(who)+esc(when)+'. Do not scan it again — move to the next package.</div>';
     return;
   }
+  if(!scannedByBin[match.binNum]) scannedByBin[match.binNum]=new Set();
 
   // ══ Does this package's route have an open bin yet? ══
   // If not, the worker must open one before any package can be stowed.
