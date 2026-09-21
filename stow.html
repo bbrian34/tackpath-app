@@ -754,7 +754,12 @@ async function handleStowScan(code){
   if(pendingPlacement){
     // Bin QR codes encode "BIN:1A". Compare the normalized bin code —
     // comparing the raw scan rejected the correct bin as "Wrong Bin".
-    if(normalizeBinCode(clean)===pendingPlacement.binNum){
+    // Once a bin is bound to a location, the worker can confirm placement
+    // by scanning EITHER the bin's QR or that location's QR.
+    const binMatch = normalizeBinCode(clean)===pendingPlacement.binNum;
+    const locMatch = !!pendingPlacement.location &&
+                     normalizeLocCode(clean)===pendingPlacement.location;
+    if(binMatch||locMatch){
       playSuccessSound();
       const binNum=pendingPlacement.binNum;
       if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
@@ -814,7 +819,10 @@ async function handleStowScan(code){
       // correct bin without needing to re-scan the package.
       playErrorSound();
       card.className='result-card error';
-      card.innerHTML='<div class="result-bin">Wrong Bin</div><div class="result-bin-num error" style="font-size:1.4rem;">Expected Bin '+pendingPlacement.binNum+'</div><div class="result-detail">Scan Bin '+pendingPlacement.binNum+' to confirm, or scan the correct bin now.</div>';
+      const where=pendingPlacement.location
+        ? 'Bin '+pendingPlacement.binNum+' or location '+pendingPlacement.location
+        : 'Bin '+pendingPlacement.binNum;
+      card.innerHTML='<div class="result-bin">Wrong Bin</div><div class="result-bin-num error" style="font-size:1.4rem;">Expected '+where+'</div><div class="result-detail">Scanned: '+esc(clean)+'</div>';
     }
     return;
   }
@@ -940,7 +948,8 @@ async function handleStowScan(code){
   }
 
   // Route has a bin. Use the real bound bin code, not a SmartSort guess.
-  pendingPlacement={binNum:binding.bin_code, code:clean, jobTitle:match.jobTitle};
+  pendingPlacement={binNum:binding.bin_code, location:binding.location_code||null,
+                    code:clean, jobTitle:match.jobTitle};
   const flipBinNumber=document.getElementById('flipBinNumber');
   const flipInner=document.getElementById('scanFlipInner');
   if(flipBinNumber) flipBinNumber.textContent=binding.bin_code;
@@ -1137,6 +1146,10 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Far
     window._zebraAttached = true;
     window.Capacitor.Plugins.ZebraScanner.addListener('scan', function(data){
       const value = data && data.value;
+      const dbg=document.getElementById('debugPanel');
+      if(dbg) dbg.textContent='SCAN RAW: '+JSON.stringify(value)+
+        (pendingPlacement?'  | waiting for bin '+pendingPlacement.binNum+
+          (pendingPlacement.location?' / loc '+pendingPlacement.location:''):'');
       if(!value) return;
       if(document.getElementById('scStow').classList.contains('on')){
         handleStowScan(value);
