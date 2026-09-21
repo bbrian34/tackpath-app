@@ -501,6 +501,14 @@ async function loadRoutes(){
   if(document.getElementById('scReset').classList.contains('on')) renderResetBinsPanel();
 }
 
+// The route list under the scan area. Before the first scan it shows every
+// loaded route. After a scan it shows only the route just scanned into, so
+// the worker sees one answer. "Show all routes" brings the full list back —
+// that is how a worker or lead finds the route still short a package.
+let lastScannedBin=null;
+let showAllRoutes=false;
+function toggleAllRoutes(){ showAllRoutes=!showAllRoutes; renderBinsPanel(); }
+
 function renderBinsPanel(){
   const el=document.getElementById('binsPanel');
   const nums=Object.keys(binProgress);
@@ -508,25 +516,45 @@ function renderBinsPanel(){
     el.innerHTML='<div class="empty-note">No active routes right now. Run SmartSort first.</div>';
     return;
   }
+  const isDone=n=>binProgress[n].sorted>=binProgress[n].total;
+  // Incomplete routes first — those are the ones that need attention
   const sortedNums=[...nums].sort((a,b)=>{
-    const aDone=binProgress[a].sorted>=binProgress[a].total;
-    const bDone=binProgress[b].sorted>=binProgress[b].total;
-    if(aDone!==bDone) return aDone?-1:1;
-    return parseInt(a) - parseInt(b);
+    if(isDone(a)!==isDone(b)) return isDone(a)?1:-1;
+    return String(a).localeCompare(String(b),undefined,{numeric:true});
   });
-  el.innerHTML=sortedNums.map(n=>{
+
+  const focused = lastScannedBin && binProgress[lastScannedBin] && !showAllRoutes;
+  const list = focused ? [lastScannedBin] : sortedNums;
+
+  const rows=list.map(n=>{
     const p=binProgress[n];
-    const complete=p.sorted>=p.total;
+    const complete=isDone(n);
+    const noBin=String(n).startsWith('JOB:');
+    const chip=noBin?'No bin yet':('Bin '+n);
     return '<div class="bin-row '+(complete?'staged-row':'')+'">'
-      +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
+      +'<span><span class="bin-num-chip">'+chip+'</span> '+p.jobTitle+'</span>'
       +(complete
         ? '<span class="staged-badge">&#10003; STAGED &middot; READY FOR PICKUP</span>'
-        : n.startsWith('JOB:')
-          ? '<span class="bin-progress" style="opacity:.6">No bin open &middot; scan a package to open one</span>'
+        : noBin
+          ? '<span class="bin-progress" style="opacity:.6">Scan a package to open a bin</span>'
           : '<span class="bin-progress">'+p.sorted+' of '+p.total+' packages sorted'
             +(p.stops?' <span style="opacity:.55">('+p.stops+' stops)</span>':'')+'</span>')
       +'</div>';
   }).join('');
+
+  // Toggle link appears once a route has been scanned into
+  let toggle='';
+  if(lastScannedBin&&binProgress[lastScannedBin]){
+    const notDone=nums.filter(n=>!isDone(n)).length;
+    toggle='<div style="text-align:center;margin-top:8px;">'
+      +'<a href="#" onclick="toggleAllRoutes();return false;" '
+      +'style="font-size:.8rem;font-weight:700;color:var(--blue);text-decoration:none;">'
+      +(showAllRoutes
+        ? 'Show one route'
+        : 'Show all routes ('+nums.length+(notDone?' · '+notDone+' not complete':'')+')')
+      +'</a></div>';
+  }
+  el.innerHTML=rows+toggle;
 }
 
 // ── ASSIGN BINS ──
@@ -804,6 +832,7 @@ async function handleStowScan(code){
       scannedByBin[binNum].add(pendingPlacement.code);
       stowDetail[pendingPlacement.code]={bin:binNum,actor:ensureWorker(),at:new Date().toISOString()};
       binProgress[binNum].sorted=Math.min(binProgress[binNum].total, binProgress[binNum].sorted+1);
+      lastScannedBin=binNum;
 
       // Durable record. The epoch suffix lets a package be legitimately
       // re-stowed after a bin reset, while still collapsing genuine
@@ -923,6 +952,7 @@ async function handleStowScan(code){
       return;
     }
     const opened={bin:openingBin.binCode,loc:openingBin.locCode,title:openingBin.jobTitle};
+    lastScannedBin=opened.bin;
     // Move this route's progress off its temporary key onto the real bin
     const tmpKey='JOB:'+String(openingBin.jobId).slice(0,8);
     if(binProgress[tmpKey]&&!binProgress[opened.bin]){binProgress[opened.bin]=binProgress[tmpKey];delete binProgress[tmpKey];}
