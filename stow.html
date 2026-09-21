@@ -412,7 +412,11 @@ async function loadRoutes(){
     // Until a worker opens a bin, the route is keyed by its own id so
     // progress is still tracked without inventing a bin number.
     const bound=binBindings[j.id];
-    const binNum=(bound&&bound.bin_code)||j.bin_label||('JOB:'+j.id.slice(0,8));
+    // bin_bindings is the ONLY source of truth for which bin holds a route.
+    // jobs.bin_label is a mirror PathIQ writes for the dispatcher and driver
+    // to read — trusting it here let stale values from before the bin
+    // registry keep routing packages to bins that were never opened.
+    const binNum=(bound&&bound.bin_code)||('JOB:'+j.id.slice(0,8));
     let stops=j.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const stopList=Array.isArray(stops)?stops:[];
@@ -707,6 +711,10 @@ async function persistBinBinding(jobId, binCode, locCode, orgId){
   }
 }
 
+// Scanned values are rendered into innerHTML — escape them.
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 async function handleStowScan(code){
   const clean=code.trim().toUpperCase();
 
@@ -872,7 +880,16 @@ async function handleStowScan(code){
 
   if(!match){
     card.className='result-card error';
-    card.innerHTML='<div class="result-bin">Not Found</div><div class="result-bin-num error" style="font-size:1.4rem;">Unrecognized code</div><div class="result-detail">"'+code+'" does not match any active route or package.</div>';
+    // Say WHY it did not match. "Unrecognized" sends a worker hunting for a
+    // scanner problem when the real cause is usually that the manifest for
+    // this package has not been uploaded, or its route already completed.
+    const routeCount=Object.keys(binProgress).length;
+    const reason = routeCount===0
+      ? 'No active routes are loaded in PathIQ. Upload the manifest in the dispatcher first.'
+      : 'This package is not on any of the '+routeCount+' active route'+(routeCount!==1?'s':'')+'. Check the manifest was uploaded, or set it aside as an exception.';
+    card.innerHTML='<div class="result-bin">Not On Any Route</div>'
+      +'<div class="result-bin-num error" style="font-size:1.25rem;word-break:break-all;">'+esc(clean)+'</div>'
+      +'<div class="result-detail">'+reason+'</div>';
     return;
   }
 
