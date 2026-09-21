@@ -1111,6 +1111,32 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Far
   });
 }
 
+// ── Zebra TC56 / DataWedge bridge ──
+// Same routing as the Farset block above, fed by the ZebraScanner plugin
+// instead. DataWedge is configured with Intent Output -> Broadcast Intent,
+// action com.tackpath.pathiq.SCAN, associated app com.tackpath.pathiq.
+// Retries briefly because the native plugin can register a moment after
+// the page script runs; attaches exactly once.
+(function attachZebra(tries){
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ZebraScanner) {
+    if (window._zebraAttached) return;
+    window._zebraAttached = true;
+    window.Capacitor.Plugins.ZebraScanner.addListener('scan', function(data){
+      const value = data && data.value;
+      if(!value) return;
+      if(document.getElementById('scStow').classList.contains('on')){
+        handleStowScan(value);
+      } else if(document.getElementById('scReceive').classList.contains('on')){
+        handleReceiveScan(value);
+      } else if(document.getElementById('scAssignbins').classList.contains('on')){
+        handleAssignBinScan(value);
+      }
+    });
+    return;
+  }
+  if (tries < 20) setTimeout(function(){ attachZebra(tries+1); }, 500);
+})(0);
+
 </script>
 </body>
 </html>
