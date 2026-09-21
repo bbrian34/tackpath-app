@@ -56,6 +56,8 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 .result-card.success{border-color:var(--green);background:#eef8ef;}
 .result-card.staged{border-color:var(--green);background:#e3f5e6;}
 .result-card.error{border-color:var(--red);background:#fbeceb;}
+.result-card.dupe{border-color:#e69500;background:#fff4dc;}
+.flip-bin-loc{color:#fff;font-size:1rem;font-weight:600;opacity:.75;margin-top:4px;}
 .result-bin{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:700;}
 .result-bin-num{font-size:2.6rem;font-weight:800;color:var(--blue);line-height:1;margin-bottom:8px;}
 .result-bin-num.success{color:var(--green);}
@@ -178,8 +180,9 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
           </svg>
         </div>
         <div class="flip-card-face flip-card-back">
-          <div class="flip-bin-number" id="flipBinNumber">14A</div>
-          <div class="flip-bin-instruction">SCAN BIN QR</div>
+          <div class="flip-bin-number" id="flipBinNumber">BIN</div>
+          <div class="flip-bin-loc" id="flipBinLoc"></div>
+          <div class="flip-bin-instruction" id="flipBinInstr">SCAN BIN QR</div>
         </div>
       </div>
     </div>
@@ -287,6 +290,10 @@ async function logEvent(eventType,opts){
       headers:Object.assign({},H,{'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates,return=minimal'}),
       body:JSON.stringify(body)
     });
+    if(!r.ok){
+      const txt=await r.text().catch(()=>'');
+      console.log('[PathIQ] event write FAILED:',eventType,r.status,txt.slice(0,160));
+    }
     return r.ok;
   }catch(e){
     console.log('event write failed:',eventType,e.message);
@@ -399,8 +406,20 @@ async function loadRoutes(){
   // from the durable event stream, which means it survives a refresh, a
   // process kill, and is shared across every device on the floor.
   const evState=await loadEventState();
-  scannedByBin=evState.stowed||{};
-  stowDetail=evState.detail||{};
+  // Merge, never replace. A stow this device just made may not be in the
+  // events table yet (or the write may have failed). Replacing memory with
+  // the database copy every 5 seconds forgot those stows, which let the
+  // same package be scanned in again and reset the counts.
+  const prevStowed=scannedByBin||{}, prevDetail=stowDetail||{};
+  const nextStowed=evState.stowed||{};
+  Object.keys(prevStowed).forEach(bin=>{
+    // A reset recorded elsewhere wins — do not resurrect cleared packages
+    if(evState.resetEpoch&&evState.resetEpoch[bin]&&evState.resetEpoch[bin]!==resetEpoch[bin])return;
+    if(!nextStowed[bin])nextStowed[bin]=new Set();
+    prevStowed[bin].forEach(c=>nextStowed[bin].add(c));
+  });
+  scannedByBin=nextStowed;
+  stowDetail=Object.assign({},prevDetail,evState.detail||{});
   resetEpoch=evState.resetEpoch||{};
 
   jobs.forEach((j, idx)=>{
@@ -756,6 +775,13 @@ async function handleStowScan(code){
     // comparing the raw scan rejected the correct bin as "Wrong Bin".
     // Once a bin is bound to a location, the worker can confirm placement
     // by scanning EITHER the bin's QR or that location's QR.
+    if(clean===pendingPlacement.code){
+      card.className='result-card';
+      card.innerHTML='<div class="result-bin-num" style="font-size:2rem;">BIN '+esc(pendingPlacement.binNum)+'</div>'
+        +(pendingPlacement.location?'<div class="result-detail" style="opacity:.75;">Location '+esc(pendingPlacement.location)+'</div>':'')
+        +'<div class="result-detail" style="font-weight:700;margin-top:6px;">Already scanned — now scan the bin or location</div>';
+      return;
+    }
     const binMatch = normalizeBinCode(clean)===pendingPlacement.binNum;
     const locMatch = !!pendingPlacement.location &&
                      normalizeLocCode(clean)===pendingPlacement.location;
@@ -769,8 +795,8 @@ async function handleStowScan(code){
         const fi=document.getElementById('scanFlipInner');
         if(fi) fi.classList.remove('flipped');
         playErrorSound();
-        card.className='result-card error';
-        card.innerHTML='<div class="result-bin" style="color:var(--orange);">&#9888; ALREADY SCANNED</div>'
+        card.className='result-card dupe';
+        card.innerHTML='<div class="result-bin" style="color:#b36b00;">&#9888; ALREADY SCANNED</div>'
           +'<div class="result-bin-num" style="color:var(--orange);">Bin '+esc(binNum)+'</div>'
           +'<div class="result-detail">That package was already stowed. Nothing was counted.</div>';
         return;
@@ -839,70 +865,74 @@ async function handleStowScan(code){
     return;
   }
 
-  // ══ OPEN BIN — step A: worker is scanning the bin's own QR ══
-  if(openingBin&&openingBin.phase==='bin'){
-    const binCode=normalizeBinCode(clean);
-    if(!binCode){
-      playErrorSound();
-      card.className='result-card error';
-      card.innerHTML='<div class="result-bin">Unreadable</div><div class="result-detail">That did not scan as a bin label.</div>';
-      return;
-    }
-    if(binCodeInUse(binCode,openingBin.jobId)){
-      playErrorSound();
-      card.className='result-card error';
-      card.innerHTML='<div class="result-bin">Bin In Use</div>'
-        +'<div class="result-bin-num error" style="font-size:1.6rem;">Bin '+binCode+'</div>'
-        +'<div class="result-detail">That bin already holds another route. Scan an empty bin.</div>';
-      return;
-    }
-    openingBin.binCode=binCode;
-    openingBin.phase='location';
-    playSuccessSound();
-    card.className='result-card';
-    card.innerHTML='<div class="result-bin" style="color:var(--blue);">Bin '+binCode+'</div>'
-      +'<div class="result-bin-num" style="font-size:1.9rem;color:var(--blue);">SCAN LOCATION</div>'
-      +'<div class="result-detail">Scan the location QR where this bin is sitting.</div>';
-    return;
-  }
+  // ══ OPEN NEW BIN — collect the bin QR and the location QR ══
+  // The QR type is recognized by its prefix (BIN: or LOC:), so the worker
+  // can scan them in either order and a location can never be saved as a
+  // bin name.
+  if(openingBin){
+    const isLoc=/^(LOC|LOCATION)[:\s-]/i.test(clean);
+    const isBin=/^BIN[:\s-]/i.test(clean);
 
-  // ══ OPEN BIN — step B: worker is scanning the location QR ══
-  if(openingBin&&openingBin.phase==='location'){
-    const locCode=normalizeLocCode(clean);
-    if(!locCode){
+    // A package scanned mid-open: remind, do not lose the open in progress
+    if(!isLoc&&!isBin&&binMap[clean]){
       playErrorSound();
       card.className='result-card error';
-      card.innerHTML='<div class="result-bin">Unreadable</div><div class="result-detail">That did not scan as a location.</div>';
+      card.innerHTML='<div class="result-bin">Finish Opening The Bin</div>'
+        +'<div class="result-detail">Scan '+(!openingBin.binCode?'the BIN QR':'the LOCATION QR')+' first, then scan the package again.</div>';
       return;
     }
-    const ok=await persistBinBinding(openingBin.jobId,openingBin.binCode,locCode,openingBin.orgId);
+
+    if(isLoc||(!isBin&&openingBin.binCode&&!openingBin.locCode)){
+      const loc=normalizeLocCode(clean);
+      if(!loc){playErrorSound();return;}
+      openingBin.locCode=loc;
+    }else{
+      const bin=normalizeBinCode(clean);
+      if(!bin){playErrorSound();return;}
+      if(binCodeInUse(bin,openingBin.jobId)){
+        playErrorSound();
+        card.className='result-card error';
+        card.innerHTML='<div class="result-bin">Bin In Use</div>'
+          +'<div class="result-bin-num error" style="font-size:1.6rem;">BIN '+esc(bin)+'</div>'
+          +'<div class="result-detail">That bin already holds another route. Scan an empty bin.</div>';
+        return;
+      }
+      openingBin.binCode=bin;
+    }
+
+    // Still missing one of the two — prompt for it
+    if(!openingBin.binCode||!openingBin.locCode){
+      playSuccessSound();
+      card.className='result-card';
+      card.innerHTML=(openingBin.binCode
+          ?'<div class="result-bin-num" style="font-size:2rem;color:var(--blue);">BIN '+esc(openingBin.binCode)+'</div>'
+            +'<div class="result-detail" style="font-weight:700;margin-top:6px;">SCAN LOCATION QR</div>'
+          :'<div class="result-detail" style="opacity:.75;">Location '+esc(openingBin.locCode)+'</div>'
+            +'<div class="result-bin-num" style="font-size:1.8rem;color:var(--blue);">SCAN BIN QR</div>');
+      return;
+    }
+
+    // Both scanned — bind the bin to the route
+    const ok=await persistBinBinding(openingBin.jobId,openingBin.binCode,openingBin.locCode,openingBin.orgId);
     if(!ok){
       playErrorSound();
       card.className='result-card error';
       card.innerHTML='<div class="result-bin">Could Not Open Bin</div>'
         +'<div class="result-detail">The binding did not save. Check connection and scan the bin again.</div>';
-      openingBin.phase='bin';
+      openingBin.binCode=null; openingBin.locCode=null;
       return;
     }
-    const opened={bin:openingBin.binCode,loc:locCode,title:openingBin.jobTitle};
-    // Until now this route's progress was tracked under a temporary
-    // JOB:xxxx key. Move it to the real bin immediately so the very next
-    // confirmation scan finds it.
+    const opened={bin:openingBin.binCode,loc:openingBin.locCode,title:openingBin.jobTitle};
+    // Move this route's progress off its temporary key onto the real bin
     const tmpKey='JOB:'+String(openingBin.jobId).slice(0,8);
-    if(binProgress[tmpKey]&&!binProgress[opened.bin]){
-      binProgress[opened.bin]=binProgress[tmpKey];
-      delete binProgress[tmpKey];
-    }
-    if(scannedByBin[tmpKey]&&!scannedByBin[opened.bin]){
-      scannedByBin[opened.bin]=scannedByBin[tmpKey];
-      delete scannedByBin[tmpKey];
-    }
+    if(binProgress[tmpKey]&&!binProgress[opened.bin]){binProgress[opened.bin]=binProgress[tmpKey];delete binProgress[tmpKey];}
+    if(scannedByBin[tmpKey]&&!scannedByBin[opened.bin]){scannedByBin[opened.bin]=scannedByBin[tmpKey];delete scannedByBin[tmpKey];}
     openingBin=null;
     playSuccessSound();
     card.className='result-card staged';
     card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Open</div>'
-      +'<div class="result-bin-num success" style="font-size:2.1rem;">Bin '+opened.bin+'</div>'
-      +'<div class="result-detail">'+opened.title+' &middot; at '+opened.loc+'</div>'
+      +'<div class="result-bin-num success" style="font-size:2.1rem;">BIN '+esc(opened.bin)+'</div>'
+      +'<div class="result-detail" style="opacity:.75;">Location '+esc(opened.loc)+' &middot; '+esc(opened.title)+'</div>'
       +'<div class="result-detail" style="margin-top:6px;color:var(--blue);font-weight:700;">SCAN THE PACKAGE AGAIN</div>';
     renderBinsPanel();
     return;
@@ -941,9 +971,9 @@ async function handleStowScan(code){
     const when=d.at?(' at '+fmtEventTime(d.at)):'';
     playErrorSound();
     if(navigator.vibrate)navigator.vibrate([120,80,120]);
-    card.className='result-card error';
+    card.className='result-card dupe';
     card.style.display='flex';
-    card.innerHTML='<div class="result-bin" style="color:var(--orange);font-size:1rem;">&#9888; ALREADY SCANNED</div>'
+    card.innerHTML='<div class="result-bin" style="color:#b36b00;font-size:1rem;">&#9888; ALREADY SCANNED</div>'
       +'<div class="result-bin-num" style="color:var(--orange);font-size:2rem;">Bin '+esc(bin)+'</div>'
       +'<div class="result-detail" style="font-weight:700;">This package is already in Bin '+esc(bin)+esc(loc)+'.</div>'
       +'<div class="result-detail">Stowed'+esc(who)+esc(when)+'. Do not scan it again — move to the next package.</div>';
@@ -956,7 +986,7 @@ async function handleStowScan(code){
   // This is the first package off the truck for this route.
   const binding=binBindings[match.jobId];
   if(!binding||!binding.bin_code){
-    openingBin={phase:'bin', jobId:match.jobId, jobTitle:match.jobTitle,
+    openingBin={jobId:match.jobId, jobTitle:match.jobTitle, binCode:null, locCode:null,
                 orgId:(binProgress[match.binNum]||{}).orgId||null, pkgCode:clean};
     playSuccessSound();
     card.className='result-card';
@@ -973,7 +1003,11 @@ async function handleStowScan(code){
                     code:clean, jobTitle:match.jobTitle};
   const flipBinNumber=document.getElementById('flipBinNumber');
   const flipInner=document.getElementById('scanFlipInner');
-  if(flipBinNumber) flipBinNumber.textContent=binding.bin_code;
+  if(flipBinNumber) flipBinNumber.textContent='BIN '+binding.bin_code;
+  const flipLoc=document.getElementById('flipBinLoc');
+  if(flipLoc) flipLoc.textContent=binding.location_code?('Location '+binding.location_code):'';
+  const flipInstr=document.getElementById('flipBinInstr');
+  if(flipInstr) flipInstr.textContent=binding.location_code?'SCAN BIN OR LOCATION':'SCAN BIN QR';
   if(flipInner) flipInner.classList.add('flipped');
   // The card itself is the single shared space communicating this step -
   // this second card stays hidden here so nothing duplicates it.
