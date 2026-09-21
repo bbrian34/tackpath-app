@@ -752,7 +752,9 @@ async function handleStowScan(code){
   // This scan is checked against THAT specific pending bin, not looked up
   // as a package at all.
   if(pendingPlacement){
-    if(clean===pendingPlacement.binNum){
+    // Bin QR codes encode "BIN:1A". Compare the normalized bin code —
+    // comparing the raw scan rejected the correct bin as "Wrong Bin".
+    if(normalizeBinCode(clean)===pendingPlacement.binNum){
       playSuccessSound();
       const binNum=pendingPlacement.binNum;
       if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
@@ -863,6 +865,18 @@ async function handleStowScan(code){
       return;
     }
     const opened={bin:openingBin.binCode,loc:locCode,title:openingBin.jobTitle};
+    // Until now this route's progress was tracked under a temporary
+    // JOB:xxxx key. Move it to the real bin immediately so the very next
+    // confirmation scan finds it.
+    const tmpKey='JOB:'+String(openingBin.jobId).slice(0,8);
+    if(binProgress[tmpKey]&&!binProgress[opened.bin]){
+      binProgress[opened.bin]=binProgress[tmpKey];
+      delete binProgress[tmpKey];
+    }
+    if(scannedByBin[tmpKey]&&!scannedByBin[opened.bin]){
+      scannedByBin[opened.bin]=scannedByBin[tmpKey];
+      delete scannedByBin[tmpKey];
+    }
     openingBin=null;
     playSuccessSound();
     card.className='result-card staged';
