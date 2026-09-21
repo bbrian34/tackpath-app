@@ -2685,21 +2685,55 @@ function renderBinShortfallAlerts(shortfalls){
     if(pipeline&&pipeline.parentNode)pipeline.parentNode.insertBefore(el,pipeline);
   }
 
-  el.innerHTML=actionable.map(function(s){
-    const short=(s.expected_packages||0)-(s.stowed_packages||0);
+  // Header so the panel explains what it is rather than reading as an alarm.
+  const started=actionable.filter(s=>(s.stowed_packages||0)>0).length;
+  const waiting=actionable.length-started;
+  const headerBits=[];
+  if(waiting)headerBits.push(waiting+' route'+(waiting!==1?'s':'')+' awaiting stow');
+  if(started)headerBits.push(started+' in progress');
+  const header='<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">'
+    +'<span style="font-family:var(--mono);font-size:0.65rem;font-weight:700;letter-spacing:.12em;'
+    +'text-transform:uppercase;color:var(--muted);">PathIQ Staging</span>'
+    +'<span style="font-size:0.72rem;color:var(--muted);">'+headerBits.join(' · ')+'</span>'
+    +'</div>';
+
+  el.innerHTML=header+actionable.map(function(s){
+    const expected=s.expected_packages||0;
+    const stowed=s.stowed_packages||0;
+    const short=expected-stowed;
     const inProblem=s.in_problem||0;
+
+    // A route that has not started stowing is NOT missing packages — the
+    // warehouse simply hasn't sorted it yet. Only a route that started and
+    // then stalled short of its count is an actual shortfall. Flagging
+    // untouched routes red trained the dispatcher to ignore this panel.
+    const notStarted = stowed===0;
+    const state = notStarted ? 'pending'
+                : inProblem>0 ? 'problem'
+                : 'short';
+
+    const style = state==='pending'
+      ? {bg:'rgba(120,130,145,.07)',border:'rgba(120,130,145,.25)',icon:'&#9679;',
+         iconColor:'var(--muted)',label:'Awaiting stow',labelColor:'var(--muted)'}
+      : state==='problem'
+      ? {bg:'rgba(255,150,30,.08)',border:'rgba(255,150,30,.3)',icon:'&#9888;',
+         iconColor:'var(--orange)',label:short+' package'+(short!==1?'s':'')+' not yet stowed',labelColor:'var(--orange)'}
+      : {bg:'rgba(255,107,94,.08)',border:'rgba(255,107,94,.3)',icon:'&#9888;',
+         iconColor:'var(--red)',label:short+' package'+(short!==1?'s':'')+' short',labelColor:'var(--red)'};
+
     const problemNote=inProblem>0
       ?' <span style="color:var(--orange);">· '+inProblem+' in Problem queue</span>'
       :'';
+
     return '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;'
-      +'background:rgba(255,107,94,.08);border:1px solid rgba(255,107,94,.3);border-radius:8px;">'
-      +'<span style="font-size:1.1rem;">&#9888;</span>'
+      +'background:'+style.bg+';border:1px solid '+style.border+';border-radius:8px;">'
+      +'<span style="font-size:1.1rem;color:'+style.iconColor+';">'+style.icon+'</span>'
       +'<div style="flex:1;">'
       +'<span style="font-weight:700;color:var(--text);">Bin '+(s.bin||'?')+' — '+(s.title||'Route')+'</span>'
-      +'<span style="color:var(--red);font-weight:700;"> · '+short+' package'+(short!==1?'s':'')+' missing</span>'
+      +'<span style="color:'+style.labelColor+';font-weight:700;"> · '+style.label+'</span>'
       +problemNote
       +'<span style="font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-left:8px;">'
-      +s.stowed_packages+' of '+s.expected_packages+' stowed</span>'
+      +stowed+' of '+expected+' stowed</span>'
       +'</div>'
       +'</div>';
   }).join('');
