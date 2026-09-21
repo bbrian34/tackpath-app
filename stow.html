@@ -371,6 +371,8 @@ function goTo(screen){
 }
 
 async function loadRoutes(){
+  // Bindings first — loadRoutes keys progress by the bound bin code.
+  await loadBinBindings();
   let fetchErrorOccurred=false;
   try{
     const r=await fetch(SB+'/rest/v1/jobs?status=in.(pending,assigned,in_transit)&order=created_at.asc&limit=50&apikey='+KEY,{headers:H});
@@ -406,7 +408,11 @@ async function loadRoutes(){
     // here. If one is somehow missing, don't silently skip the whole
     // route, assign a real, usable fallback bin right now based on its
     // position among today's active jobs, so scanning still works.
-    const binNum=j.bin_label || ((idx+1)+'A');
+    // The bin comes from PathIQ's binding, not from the job record.
+    // Until a worker opens a bin, the route is keyed by its own id so
+    // progress is still tracked without inventing a bin number.
+    const bound=binBindings[j.id];
+    const binNum=(bound&&bound.bin_code)||j.bin_label||('JOB:'+j.id.slice(0,8));
     let stops=j.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const stopList=Array.isArray(stops)?stops:[];
@@ -492,8 +498,10 @@ function renderBinsPanel(){
       +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
       +(complete
         ? '<span class="staged-badge">&#10003; STAGED &middot; READY FOR PICKUP</span>'
-        : '<span class="bin-progress">'+p.sorted+' of '+p.total+' packages sorted'
-          +(p.stops?' <span style="opacity:.55">('+p.stops+' stops)</span>':'')+'</span>')
+        : n.startsWith('JOB:')
+          ? '<span class="bin-progress" style="opacity:.6">No bin open &middot; scan a package to open one</span>'
+          : '<span class="bin-progress">'+p.sorted+' of '+p.total+' packages sorted'
+            +(p.stops?' <span style="opacity:.55">('+p.stops+' stops)</span>':'')+'</span>')
       +'</div>';
   }).join('');
 }
@@ -627,7 +635,79 @@ function playErrorSound(){
   }catch(e){ console.log('Error sound failed:', e); }
 }
 
-function handleStowScan(code){
+// ═════════════════════════════════════════════════════════════
+// BIN OPENING
+//
+// SmartSort no longer assigns bins — it cannot know which physical
+// containers are free. The worker discovers the binding during stow:
+//
+//   scan package → route resolved → route has no open bin?
+//     → OPEN BIN → scan bin QR → SCAN LOCATION → scan location QR
+//     → bin is bound to that route → rescan the package to confirm custody
+//
+// After that, every package for the same route goes straight to its bin.
+// A bin stays bound until the driver picks the route up.
+// ═════════════════════════════════════════════════════════════
+
+// jobId -> {bin_code, location_code, state}
+let binBindings={};
+// Set while the worker is walking through OPEN BIN
+// {phase:'bin'|'location', jobId, jobTitle, binCode}
+let openingBin=null;
+
+async function loadBinBindings(){
+  try{
+    const r=await fetch(SB+'/rest/v1/bin_bindings?select=*&state=in.(open,ready)',{headers:H});
+    if(!r.ok)return;
+    const rows=await r.json();
+    binBindings={};
+    (Array.isArray(rows)?rows:[]).forEach(b=>{
+      if(b.job_id)binBindings[b.job_id]={bin_code:b.bin_code,location_code:b.location_code,state:b.state};
+    });
+  }catch(e){}
+}
+
+// A bin QR may encode "BIN:1A" or just "1A". A location QR may encode
+// "LOC:A-07" or "A-07". Strip the prefix either way.
+function normalizeBinCode(s){ return String(s||'').replace(/^BIN[:\s-]*/i,'').split('|')[0].trim().toUpperCase(); }
+function normalizeLocCode(s){ return String(s||'').replace(/^(LOC|LOCATION)[:\s-]*/i,'').split('|')[0].trim().toUpperCase(); }
+
+// Is this code already bound to a DIFFERENT live route?
+function binCodeInUse(binCode, exceptJobId){
+  return Object.entries(binBindings).some(([jid,b])=>
+    b.bin_code===binCode && jid!==exceptJobId && (b.state==='open'||b.state==='ready'));
+}
+
+async function persistBinBinding(jobId, binCode, locCode, orgId){
+  try{
+    const r=await fetch(SB+'/rest/v1/bin_bindings',{
+      method:'POST',
+      headers:Object.assign({},H,{'Content-Type':'application/json','Prefer':'return=representation'}),
+      body:JSON.stringify({
+        org_id:orgId||null, bin_code:binCode, location_code:locCode,
+        job_id:jobId, state:'open', opened_by:ensureWorker()
+      })
+    });
+    if(!r.ok)throw new Error(await r.text());
+    binBindings[jobId]={bin_code:binCode,location_code:locCode,state:'open'};
+    // Mirror onto the job so the dispatcher and driver see the bin too
+    fetch(SB+'/rest/v1/jobs?id=eq.'+jobId,{
+      method:'PATCH',headers:Object.assign({},H,{'Content-Type':'application/json'}),
+      body:JSON.stringify({bin_label:binCode})
+    }).catch(()=>{});
+    logEvent('bin.opened',{
+      org_id:orgId||null, job_id:jobId,
+      payload:{bin:binCode, location:locCode},
+      idem:'binopen:'+jobId+':'+binCode
+    });
+    return true;
+  }catch(e){
+    console.log('[PathIQ] bin binding failed:',(e&&e.message?e.message:String(e)).slice(0,140));
+    return false;
+  }
+}
+
+async function handleStowScan(code){
   const clean=code.trim().toUpperCase();
 
   // ── DIAGNOSTIC: full chain from raw input through lookup result.
@@ -705,6 +785,14 @@ function handleStowScan(code){
             method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
             body:JSON.stringify({staged_at:new Date().toISOString()})
           }).catch(()=>{});
+          // The bin now holds a complete route. It stays bound to that
+          // route — state moves open → ready, and only the driver pickup
+          // releases it. A ready bin cannot be reused for another route.
+          fetch(SB+'/rest/v1/bin_bindings?job_id=eq.'+stagedJobId+'&state=eq.open',{
+            method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
+            body:JSON.stringify({state:'ready',ready_at:new Date().toISOString()})
+          }).then(()=>{ if(binBindings[stagedJobId])binBindings[stagedJobId].state='ready'; })
+            .catch(()=>{});
         }
       } else {
         card.className='result-card success';
@@ -718,6 +806,63 @@ function handleStowScan(code){
       card.className='result-card error';
       card.innerHTML='<div class="result-bin">Wrong Bin</div><div class="result-bin-num error" style="font-size:1.4rem;">Expected Bin '+pendingPlacement.binNum+'</div><div class="result-detail">Scan Bin '+pendingPlacement.binNum+' to confirm, or scan the correct bin now.</div>';
     }
+    return;
+  }
+
+  // ══ OPEN BIN — step A: worker is scanning the bin's own QR ══
+  if(openingBin&&openingBin.phase==='bin'){
+    const binCode=normalizeBinCode(clean);
+    if(!binCode){
+      playErrorSound();
+      card.className='result-card error';
+      card.innerHTML='<div class="result-bin">Unreadable</div><div class="result-detail">That did not scan as a bin label.</div>';
+      return;
+    }
+    if(binCodeInUse(binCode,openingBin.jobId)){
+      playErrorSound();
+      card.className='result-card error';
+      card.innerHTML='<div class="result-bin">Bin In Use</div>'
+        +'<div class="result-bin-num error" style="font-size:1.6rem;">Bin '+binCode+'</div>'
+        +'<div class="result-detail">That bin already holds another route. Scan an empty bin.</div>';
+      return;
+    }
+    openingBin.binCode=binCode;
+    openingBin.phase='location';
+    playSuccessSound();
+    card.className='result-card';
+    card.innerHTML='<div class="result-bin" style="color:var(--blue);">Bin '+binCode+'</div>'
+      +'<div class="result-bin-num" style="font-size:1.9rem;color:var(--blue);">SCAN LOCATION</div>'
+      +'<div class="result-detail">Scan the location QR where this bin is sitting.</div>';
+    return;
+  }
+
+  // ══ OPEN BIN — step B: worker is scanning the location QR ══
+  if(openingBin&&openingBin.phase==='location'){
+    const locCode=normalizeLocCode(clean);
+    if(!locCode){
+      playErrorSound();
+      card.className='result-card error';
+      card.innerHTML='<div class="result-bin">Unreadable</div><div class="result-detail">That did not scan as a location.</div>';
+      return;
+    }
+    const ok=await persistBinBinding(openingBin.jobId,openingBin.binCode,locCode,openingBin.orgId);
+    if(!ok){
+      playErrorSound();
+      card.className='result-card error';
+      card.innerHTML='<div class="result-bin">Could Not Open Bin</div>'
+        +'<div class="result-detail">The binding did not save. Check connection and scan the bin again.</div>';
+      openingBin.phase='bin';
+      return;
+    }
+    const opened={bin:openingBin.binCode,loc:locCode,title:openingBin.jobTitle};
+    openingBin=null;
+    playSuccessSound();
+    card.className='result-card staged';
+    card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Open</div>'
+      +'<div class="result-bin-num success" style="font-size:2.1rem;">Bin '+opened.bin+'</div>'
+      +'<div class="result-detail">'+opened.title+' &middot; at '+opened.loc+'</div>'
+      +'<div class="result-detail" style="margin-top:6px;color:var(--blue);font-weight:700;">SCAN THE PACKAGE AGAIN</div>';
+    renderBinsPanel();
     return;
   }
 
@@ -746,10 +891,28 @@ function handleStowScan(code){
     return;
   }
 
-  pendingPlacement={binNum:match.binNum, code:clean, jobTitle:match.jobTitle};
+  // ══ Does this package's route have an open bin yet? ══
+  // If not, the worker must open one before any package can be stowed.
+  // This is the first package off the truck for this route.
+  const binding=binBindings[match.jobId];
+  if(!binding||!binding.bin_code){
+    openingBin={phase:'bin', jobId:match.jobId, jobTitle:match.jobTitle,
+                orgId:(binProgress[match.binNum]||{}).orgId||null, pkgCode:clean};
+    playSuccessSound();
+    card.className='result-card';
+    card.style.display='flex';
+    card.innerHTML='<div class="result-bin" style="color:var(--blue);">'+match.jobTitle+'</div>'
+      +'<div class="result-bin-num" style="font-size:2.2rem;color:var(--blue);">OPEN BIN</div>'
+      +'<div class="result-detail">No bin is open for this route yet.</div>'
+      +'<div class="result-detail" style="margin-top:6px;font-weight:700;">Scan an empty bin\u2019s QR code.</div>';
+    return;
+  }
+
+  // Route has a bin. Use the real bound bin code, not a SmartSort guess.
+  pendingPlacement={binNum:binding.bin_code, code:clean, jobTitle:match.jobTitle};
   const flipBinNumber=document.getElementById('flipBinNumber');
   const flipInner=document.getElementById('scanFlipInner');
-  if(flipBinNumber) flipBinNumber.textContent=match.binNum;
+  if(flipBinNumber) flipBinNumber.textContent=binding.bin_code;
   if(flipInner) flipInner.classList.add('flipped');
   // The card itself is the single shared space communicating this step -
   // this second card stays hidden here so nothing duplicates it.

@@ -5730,7 +5730,13 @@ async function assignSSRoute(routeId){
 
   const job={
     title:'Surge Route '+route.id,
-    bin_label: (parseInt(route.id.split('-')[1])||0) + 'A',
+    // Bin assignment belongs to PathIQ, not SmartSort. SmartSort does not
+    // know which physical containers are empty, which still hold an earlier
+    // route, or how many the warehouse has. Every manifest previously
+    // restarted at 1A, so two live routes could claim the same bin and
+    // overwrite each other's staging progress. PathIQ binds a real bin to
+    // the route when the worker opens one during stow.
+    bin_label: null,
     job_type:'surge',
     status:'pending',
     org_id: currentOrgId,
