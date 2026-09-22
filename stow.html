@@ -183,6 +183,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
           <div class="flip-bin-number" id="flipBinNumber">BIN</div>
           <div class="flip-bin-loc" id="flipBinLoc"></div>
           <div class="flip-bin-instruction" id="flipBinInstr">SCAN BIN QR</div>
+          <div class="flip-bin-loc" id="flipBinStop" style="margin-top:10px;font-size:1.15rem;font-weight:800;opacity:.95;"></div>
         </div>
       </div>
     </div>
@@ -458,8 +459,9 @@ async function loadRoutes(){
 
     newProgress[binNum]={total:expectedPkgs||stopList.length||1, stops:stopList.length, sorted:stowedHere, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
 
-    stopList.forEach(s=>{
-      const dest={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||''};
+    stopList.forEach((s,si)=>{
+      const dest={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||'',
+                  stopNum:(s.stop_number||si+1)};
 
       // ── INDEX EVERY PHYSICAL PACKAGE AT THIS STOP ──
       // SmartSort writes a pkgs[] array on each stop carrying every
@@ -816,6 +818,7 @@ async function handleStowScan(code){
     if(binMatch||locMatch){
       playSuccessSound();
       const binNum=pendingPlacement.binNum;
+      const stopForCard=pendingPlacement.stopNum||null;
       if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
       // Never count the same physical package twice.
       if(scannedByBin[binNum].has(pendingPlacement.code)){
@@ -878,7 +881,8 @@ async function handleStowScan(code){
         }
       } else {
         card.className='result-card success';
-        card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>';
+        card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>'
+          +(stopForCard?'<div class="result-detail" style="font-weight:800;font-size:1.05rem;margin-top:4px;">STOP '+stopForCard+'</div>':'');
       }
       renderBinsPanel();
     } else {
@@ -1030,7 +1034,9 @@ async function handleStowScan(code){
 
   // Route has a bin. Use the real bound bin code, not a SmartSort guess.
   pendingPlacement={binNum:binding.bin_code, location:binding.location_code||null,
-                    code:clean, jobTitle:match.jobTitle};
+                    code:clean, jobTitle:match.jobTitle, stopNum:match.stopNum||null};
+  const flipStop=document.getElementById('flipBinStop');
+  if(flipStop) flipStop.textContent=match.stopNum?('STOP '+match.stopNum):'';
   const flipBinNumber=document.getElementById('flipBinNumber');
   const flipInner=document.getElementById('scanFlipInner');
   if(flipBinNumber) flipBinNumber.textContent='BIN '+binding.bin_code;
