@@ -532,7 +532,7 @@ function renderBinsPanel(){
     const p=binProgress[n];
     const complete=isDone(n);
     const noBin=String(n).startsWith('JOB:');
-    const chip=noBin?'No bin yet':('Bin '+n);
+    const chip=noBin?'No bin yet':('BIN '+n);
     return '<div class="bin-row '+(complete?'staged-row':'')+'">'
       +'<span><span class="bin-num-chip">'+chip+'</span> '+p.jobTitle+'</span>'
       +(complete
@@ -583,7 +583,7 @@ function renderAssignRouteList(){
     el.innerHTML='<div class="empty-note">No unassigned routes right now.</div>';
     return;
   }
-  el.innerHTML='<div class="bins-panel-lbl">Assign Bin '+pendingBinScan+' to:</div>'
+  el.innerHTML='<div class="bins-panel-lbl">Assign BIN '+pendingBinScan+' to:</div>'
     + unassignedRoutes.map(function(j){
       const stopCount=(j.surge_stops||[]).length || j.total_stops || 0;
       return '<div class="bin-row tappable" onclick="confirmBinAssignment(\''+j.id+'\')">'
@@ -621,7 +621,7 @@ async function confirmBinAssignment(jobId){
     });
     const card=document.getElementById('assignBinResult');
     card.className='result-card success';
-    card.innerHTML='<div class="result-bin">Assigned</div><div class="result-bin-num success">Bin '+pendingBinScan+'</div><div class="result-detail">Ready to scan the next bin</div>';
+    card.innerHTML='<div class="result-bin">Assigned</div><div class="result-bin-num success">BIN '+pendingBinScan+'</div><div class="result-detail">Ready to scan the next bin</div>';
     pendingBinScan=null;
     document.getElementById('assignRouteList').innerHTML='';
     loadUnassignedRoutes();
@@ -828,7 +828,7 @@ async function handleStowScan(code){
         playErrorSound();
         card.className='result-card dupe';
         card.innerHTML='<div class="result-bin" style="color:#b36b00;">&#9888; ALREADY SCANNED</div>'
-          +'<div class="result-bin-num" style="color:var(--orange);">Bin '+esc(binNum)+'</div>'
+          +'<div class="result-bin-num" style="color:var(--orange);">BIN '+esc(binNum)+'</div>'
           +'<div class="result-detail">That package was already stowed. Nothing was counted.</div>';
         return;
       }
@@ -857,7 +857,7 @@ async function handleStowScan(code){
 
       if(justCompleted){
         card.className='result-card staged';
-        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">Bin '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
+        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">BIN '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
         const stagedJobId=binProgress[binNum].jobId;
         logEvent('bin.completed',{
           org_id:binProgress[binNum].orgId,
@@ -881,7 +881,7 @@ async function handleStowScan(code){
         }
       } else {
         card.className='result-card success';
-        card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>'
+        card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">BIN '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>'
           +(stopForCard?'<div class="result-detail" style="font-weight:800;font-size:1.3rem;margin-top:4px;">STOP '+stopForCard+'</div>':'');
       }
       renderBinsPanel();
@@ -891,8 +891,8 @@ async function handleStowScan(code){
       playErrorSound();
       card.className='result-card error';
       const where=pendingPlacement.location
-        ? 'Bin '+pendingPlacement.binNum+' or location '+pendingPlacement.location
-        : 'Bin '+pendingPlacement.binNum;
+        ? 'BIN '+pendingPlacement.binNum+' or location '+pendingPlacement.location
+        : 'BIN '+pendingPlacement.binNum;
       card.innerHTML='<div class="result-bin">Wrong Bin</div><div class="result-bin-num error" style="font-size:1.4rem;">Expected '+where+'</div><div class="result-detail">Scanned: '+esc(clean)+'</div>';
     }
     return;
@@ -1008,8 +1008,8 @@ async function handleStowScan(code){
     card.className='result-card dupe';
     card.style.display='flex';
     card.innerHTML='<div class="result-bin" style="color:#b36b00;font-size:1rem;">&#9888; ALREADY SCANNED</div>'
-      +'<div class="result-bin-num" style="color:var(--orange);font-size:2rem;">Bin '+esc(bin)+'</div>'
-      +'<div class="result-detail" style="font-weight:700;">This package is already in Bin '+esc(bin)+esc(loc)+'.</div>'
+      +'<div class="result-bin-num" style="color:var(--orange);font-size:2rem;">BIN '+esc(bin)+'</div>'
+      +'<div class="result-detail" style="font-weight:700;">This package is already in BIN '+esc(bin)+esc(loc)+'.</div>'
       +'<div class="result-detail">Stowed'+esc(who)+esc(when)+'. Do not scan it again — move to the next package.</div>';
     return;
   }
@@ -1070,14 +1070,14 @@ function handleReceiveScan(code){
 
   pendingInduct={code:clean, binNum:match.binNum, jobTitle:match.jobTitle, address:match.address};
   card.className='result-card success';
-  card.innerHTML='<div class="result-bin">Received</div><div class="result-bin-num success">Bin '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+'</div>';
+  card.innerHTML='<div class="result-bin">Received</div><div class="result-bin-num success">BIN '+match.binNum+'</div><div class="result-detail">'+match.jobTitle+'</div>';
   setTimeout(function(){ goTo('induct'); }, 500);
 }
 
 function renderInductSummary(){
   const el=document.getElementById('inductSummary');
   if(!pendingInduct){ el.innerHTML='<div class="empty-note">No package pending induction.</div>'; return; }
-  el.innerHTML='<div class="result-bin">Pending Induction</div><div class="result-bin-num success">Bin '+pendingInduct.binNum+'</div><div class="result-detail">'+pendingInduct.jobTitle+(pendingInduct.address?' &middot; '+pendingInduct.address:'')+'</div><div class="result-detail" style="margin-top:6px;font-family:\'DM Mono\',monospace;font-size:.7rem;">'+pendingInduct.code+'</div>';
+  el.innerHTML='<div class="result-bin">Pending Induction</div><div class="result-bin-num success">BIN '+pendingInduct.binNum+'</div><div class="result-detail">'+pendingInduct.jobTitle+(pendingInduct.address?' &middot; '+pendingInduct.address:'')+'</div><div class="result-detail" style="margin-top:6px;font-family:\'DM Mono\',monospace;font-size:.7rem;">'+pendingInduct.code+'</div>';
 }
 
 function confirmInduct(){
@@ -1115,7 +1115,7 @@ function renderResetBinsPanel(){
   el.innerHTML='<div class="bins-panel-lbl">Select a bin to reset</div>' + sortedNums.map(function(n){
     const p=binProgress[n];
     return '<div class="bin-row tappable" onclick="askResetConfirm(\''+n+'\')">'
-      +'<span><span class="bin-num-chip">Bin '+n+'</span> '+p.jobTitle+'</span>'
+      +'<span><span class="bin-num-chip">BIN '+n+'</span> '+p.jobTitle+'</span>'
       +'<span class="bin-progress">'+p.sorted+' of '+p.total+' sorted</span>'
       +'</div>';
   }).join('');
@@ -1125,7 +1125,7 @@ function askResetConfirm(binNum){
   const p=binProgress[binNum];
   document.getElementById('resetConfirmArea').innerHTML=
     '<div class="confirm-box">'
-    +'<div class="confirm-title">Reset Bin '+binNum+'?</div>'
+    +'<div class="confirm-title">Reset BIN '+binNum+'?</div>'
     +'<div class="confirm-sub">'+p.sorted+' of '+p.total+' packages currently marked sorted. This clears its progress back to 0 so it can be sorted again from scratch.</div>'
     +'<div class="confirm-row">'
     +'<button class="confirm-btn no" onclick="document.getElementById(\'resetConfirmArea\').innerHTML=\'\'">Cancel</button>'
@@ -1156,7 +1156,7 @@ function doResetBin(binNum){
       body:JSON.stringify({staged_at:null})
     }).catch(function(){});
   }
-  document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
+  document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">BIN '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
   renderResetBinsPanel();
 }
 
