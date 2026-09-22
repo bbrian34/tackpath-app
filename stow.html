@@ -183,7 +183,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
           <div class="flip-bin-number" id="flipBinNumber">BIN</div>
           <div class="flip-bin-loc" id="flipBinLoc"></div>
           <div class="flip-bin-instruction" id="flipBinInstr">SCAN BIN QR</div>
-          <div class="flip-bin-loc" id="flipBinStop" style="margin-top:10px;font-size:1.15rem;font-weight:800;opacity:.95;"></div>
+          <div class="flip-bin-loc" id="flipBinStop" style="margin-top:10px;font-size:1.45rem;font-weight:800;opacity:.95;"></div>
         </div>
       </div>
     </div>
@@ -882,7 +882,7 @@ async function handleStowScan(code){
       } else {
         card.className='result-card success';
         card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">Bin '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>'
-          +(stopForCard?'<div class="result-detail" style="font-weight:800;font-size:1.05rem;margin-top:4px;">STOP '+stopForCard+'</div>':'');
+          +(stopForCard?'<div class="result-detail" style="font-weight:800;font-size:1.3rem;margin-top:4px;">STOP '+stopForCard+'</div>':'');
       }
       renderBinsPanel();
     } else {
