@@ -1255,6 +1255,185 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Far
   if (tries < 20) setTimeout(function(){ attachZebra(tries+1); }, 500);
 })(0);
 
+
+// ════════════════════════════════════════════════════════════════════
+// PATHIQ SECONDARY DISPLAY
+//
+// Self-contained. Nothing above this line was edited to add it.
+//
+// TC56 side: does NOTHING until a display is paired. Once paired, after
+//   each stow scan has fully finished and shown its result, it sends a
+//   copy of what is on screen to the paired display. Fire-and-forget:
+//   the scan never waits on the network.
+//
+// Display side: open stow.html?display in Chrome. It shows a pairing QR.
+//   Scan it once on the TC56's Stow screen. After that the display shows
+//   the TC56's own screen for every scan — same elements, same words,
+//   same colors, including the STOP line. It calculates nothing.
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  var PAIR_KEY='tp_display_channel';
+  var CODE_KEY='tp_display_code';
+  var isDisplay=new URLSearchParams(location.search).has('display');
+
+  function txt(id){ var e=document.getElementById(id); return e?e.textContent:''; }
+
+  // What the TC56 is showing right now
+  function snapshot(){
+    var fi=document.getElementById('scanFlipInner');
+    var card=document.getElementById('stowResult');
+    return {
+      flipped: !!(fi&&fi.classList.contains('flipped')),
+      heading: txt('scanHeading'),
+      bin: txt('flipBinNumber'), loc: txt('flipBinLoc'),
+      instr: txt('flipBinInstr'), stop: txt('flipBinStop'),
+      cardShown: !!(card&&card.style.display!=='none'&&card.innerHTML),
+      cardClass: card?card.className:'result-card',
+      cardHtml: card?card.innerHTML:''
+    };
+  }
+
+  function send(payload){
+    var topic=null;
+    try{ topic=localStorage.getItem(PAIR_KEY); }catch(e){}
+    if(!topic) return;
+    try{
+      fetch(SB+'/realtime/v1/api/broadcast',{
+        method:'POST', keepalive:true,
+        headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({messages:[{topic:topic,event:'scan',payload:payload}]})
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  // ── TC56 SIDE ──────────────────────────────────────────────────────
+  if(!isDisplay && typeof handleStowScan==='function'){
+    var originalStowScan=handleStowScan;
+    handleStowScan=async function(code){
+      var raw=String(code||'').trim().toUpperCase();
+      if(raw.indexOf('PAIR:')===0){ pairWith(raw.slice(5)); return; }
+      await originalStowScan(code);          // existing behavior, unchanged
+      try{ send(snapshot()); }catch(e){}     // then mirror it, if paired
+    };
+  }
+
+  function pairWith(code){
+    var card=document.getElementById('stowResult');
+    if(code==='OFF'){
+      try{ localStorage.removeItem(PAIR_KEY); }catch(e){}
+      if(card){ card.className='result-card'; card.style.display='flex';
+        card.innerHTML='<div class="result-bin">Display Unpaired</div>'
+          +'<div class="result-detail">This scanner no longer sends to a display.</div>'; }
+      return;
+    }
+    if(!/^[A-Z0-9]{4,10}$/.test(code)){
+      if(card){ card.className='result-card error'; card.style.display='flex';
+        card.innerHTML='<div class="result-bin">Not A Pairing Code</div>'; }
+      return;
+    }
+    var topic='pathiq-display-'+code;
+    try{ localStorage.setItem(PAIR_KEY,topic); }catch(e){}
+    if(card){ card.className='result-card staged'; card.style.display='flex';
+      card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Display Paired</div>'
+        +'<div class="result-bin-num success" style="font-size:1.8rem;">'+code+'</div>'
+        +'<div class="result-detail">Scan results will now also show on that display.</div>'; }
+    send({hello:true});
+  }
+
+  // ── DISPLAY SIDE ───────────────────────────────────────────────────
+  if(!isDisplay) return;
+
+  var css=document.createElement('style');
+  css.textContent=
+    'body.piq-display #topBar, body.piq-display #stowInput,'+
+    'body.piq-display #binsPanel, body.piq-display #debugPanel{display:none!important;}'+
+    'body.piq-display .wrap{zoom:1.7;}'+
+    '#piqPair{position:fixed;inset:0;background:#0f1720;color:#fff;display:flex;flex-direction:column;'+
+      'align-items:center;justify-content:center;gap:14px;z-index:9999;font-family:Arial,sans-serif;text-align:center;}'+
+    '#piqPair .qrbox{background:#fff;padding:16px;border-radius:12px;}'+
+    '#piqBadge{position:fixed;right:12px;bottom:10px;font:600 12px Arial,sans-serif;color:#7c8a99;z-index:9998;}';
+  document.head.appendChild(css);
+  document.body.classList.add('piq-display');
+  try{ goTo('stow'); }catch(e){}
+
+  var code=null;
+  try{ code=localStorage.getItem(CODE_KEY); }catch(e){}
+  if(!code){
+    var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; code='';
+    for(var i=0;i<6;i++) code+=A[Math.floor(Math.random()*A.length)];
+    try{ localStorage.setItem(CODE_KEY,code); }catch(e){}
+  }
+  var topic='pathiq-display-'+code;
+
+  var pairEl=document.createElement('div');
+  pairEl.id='piqPair';
+  pairEl.innerHTML='<div style="font-size:1.1rem;letter-spacing:.12em;opacity:.7;">PATHIQ DISPLAY</div>'
+    +'<div class="qrbox"><div id="piqQR"></div></div>'
+    +'<div style="font-size:2.4rem;font-weight:900;letter-spacing:.1em;">'+code+'</div>'
+    +'<div style="font-size:1rem;opacity:.75;max-width:420px;">On the TC56, open <b>Stow</b> and scan this code once.</div>'
+    +'<div id="piqStatus" style="font-size:.85rem;opacity:.55;">Connecting…</div>';
+  document.body.appendChild(pairEl);
+
+  var badge=document.createElement('div');
+  badge.id='piqBadge'; badge.textContent='Display '+code;
+  document.body.appendChild(badge);
+
+  function load(src,cb){
+    var s=document.createElement('script'); s.src=src; s.async=true;
+    s.onload=cb; s.onerror=function(){ var st=document.getElementById('piqStatus');
+      if(st) st.textContent='Could not load '+src.split('/')[2]+' — check internet'; };
+    document.head.appendChild(s);
+  }
+
+  load('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',function(){
+    try{ new QRCode(document.getElementById('piqQR'),{text:'PAIR:'+code,width:240,height:240}); }catch(e){}
+  });
+
+  function apply(p){
+    if(!p) return;
+    if(p.hello){
+      pairEl.style.display='none';
+      var card0=document.getElementById('stowResult');
+      if(card0){ card0.className='result-card staged'; card0.style.display='flex';
+        card0.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Paired</div>'
+          +'<div class="result-detail">Waiting for the first scan…</div>'; }
+      return;
+    }
+    pairEl.style.display='none';
+    var fi=document.getElementById('scanFlipInner');
+    if(fi) fi.classList.toggle('flipped',!!p.flipped);
+    var set=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v||''; };
+    set('scanHeading',p.heading||'Scan package');
+    set('flipBinNumber',p.bin); set('flipBinLoc',p.loc);
+    set('flipBinInstr',p.instr); set('flipBinStop',p.stop);
+    var card=document.getElementById('stowResult');
+    if(card){
+      card.className=p.cardClass||'result-card';
+      card.innerHTML=p.cardHtml||'';
+      card.style.display=p.cardShown?'flex':'none';
+    }
+  }
+
+  load('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',function(){
+    try{
+      var client=window.supabase.createClient(SB,KEY);
+      client.channel(topic)
+        .on('broadcast',{event:'scan'},function(msg){ apply(msg&&msg.payload); })
+        .subscribe(function(status){
+          var st=document.getElementById('piqStatus');
+          if(st) st.textContent=(status==='SUBSCRIBED')?'Ready — waiting for pairing scan':('Connection: '+status);
+          badge.textContent='Display '+code+(status==='SUBSCRIBED'?' · connected':' · reconnecting');
+        });
+    }catch(e){
+      var st=document.getElementById('piqStatus'); if(st) st.textContent='Display error: '+e.message;
+    }
+  });
+
+  // Keep the screen awake all shift
+  function wake(){ try{ if(navigator.wakeLock) navigator.wakeLock.request('screen').catch(function(){}); }catch(e){} }
+  wake();
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') wake(); });
+})();
 </script>
 </body>
 </html>
