@@ -1893,6 +1893,34 @@ async function sendDriverAssignmentSMS(driverName,jobId){
   }catch(e){console.error('Driver SMS error:',e);}
 }
 
+// ── DRIVER PICKER HOLD (added 2026-09-24) ──
+// The dispatcher reloads jobs every 2 s and each reload rebuilds the open drawer,
+// which wiped the driver dropdown (and closed it) before Assign could be clicked.
+// This wraps openDrawer ONLY to skip that automatic same-job rebuild for up to
+// 60 s after the dropdown was touched. Clicking Assign or Broadcast, opening a
+// different job, or 60 s of inactivity releases the hold. Nothing else changes.
+(function(){
+  var holdUntil=0;
+  function touch(e){var t=e.target;if(t&&t.id==='assignDriverSelect')holdUntil=Date.now()+60000;}
+  document.addEventListener('focusin',touch,true);
+  document.addEventListener('change',touch,true);
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('button'):null;
+    if(b&&/assignJobToDriver|broadcastJob/.test(b.getAttribute('onclick')||''))holdUntil=0;
+  },true);
+  var origOpenDrawer=window.openDrawer;
+  if(typeof origOpenDrawer!=='function') return;
+  window.openDrawer=function(id){
+    try{
+      if(id!==currentJobId) holdUntil=0;
+      var sel=document.getElementById('assignDriverSelect');
+      var dr=document.getElementById('drawer');
+      if(Date.now()<holdUntil&&sel&&dr&&dr.classList.contains('open')&&id===currentJobId) return;
+    }catch(e){}
+    return origOpenDrawer.apply(this,arguments);
+  };
+})();
+
 async function assignJobToDriver(jobId){
   const sel=document.getElementById('assignDriverSelect');
   const driverName=sel?sel.value:'';
