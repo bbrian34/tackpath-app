@@ -1864,12 +1864,42 @@ async function populateDriverPicker(){
     sel.innerHTML='<option value="">No drivers available</option>';
   }
 }
+// ── DRIVER ASSIGNMENT SMS (added 2026-09-24) ──
+// Operational driver message only (matches the approved A2P campaign). Additive:
+// runs after the existing assign PATCH, never awaited, never throws, and sends
+// nothing unless ALL of these hold: the job really is assigned to that driver,
+// exactly ONE driver has that name, that driver has sms_consent === true, and
+// the phone is exactly 10 digits. Any doubt = no text.
+async function sendDriverAssignmentSMS(driverName,jobId){
+  try{
+    if(!driverName||!jobId) return;
+    var jr=await fetch(sbUrl('jobs?select=title,driver_name,status&id=eq.'+encodeURIComponent(jobId)),{headers:H});
+    if(!jr.ok) return;
+    var jobs=await jr.json();
+    if(!Array.isArray(jobs)||jobs.length!==1) return;
+    if(jobs[0].driver_name!==driverName||jobs[0].status!=='assigned') return;
+    var dr=await fetch(sbUrl('drivers?select=phone,sms_consent&name=eq.'+encodeURIComponent(driverName)),{headers:H});
+    if(!dr.ok) return;
+    var rows=await dr.json();
+    if(!Array.isArray(rows)||rows.length!==1) return;
+    var digits=String(rows[0].phone||'').replace(/\D/g,'');
+    if(rows[0].sms_consent!==true||digits.length!==10) return;
+    var title=jobs[0].title||'a new route';
+    await fetch(SB_URL+'/functions/v1/send-sms',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({to:'+1'+digits,body:'TackPath: You have been assigned a new route: '+title+'. Open the TackPath driver app for details. Reply STOP to opt out.'})
+    });
+  }catch(e){console.error('Driver SMS error:',e);}
+}
+
 async function assignJobToDriver(jobId){
   const sel=document.getElementById('assignDriverSelect');
   const driverName=sel?sel.value:'';
   if(!driverName){toast('Select a driver first','warn');return;}
   try{
     await fetch(sbUrl('jobs?id=eq.'+jobId),{method:'PATCH',headers:H,body:JSON.stringify({driver_name:driverName,status:'assigned'})});
+    sendDriverAssignmentSMS(driverName,jobId); // added 2026-09-24: driver SMS, non-blocking
     toast('Assigned to '+driverName,'ok');
     openDrawer(jobId);
     loadJobs();
