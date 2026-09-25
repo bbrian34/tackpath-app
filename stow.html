@@ -329,6 +329,10 @@ async function loadEventState(){
         return;
       }
       if(ev.event_type==='package.stowed'&&p.code){
+        // FIX 2026-09-24: this event's job may have been deleted since it was
+        // logged. Only a job we can confirm is still active blocks a re-stow --
+        // the event row itself is never touched, so real history is preserved.
+        if(ev.job_id&&_tpActiveJobIds&&!_tpActiveJobIds.has(ev.job_id))return;
         if(!out.stowed[bin])out.stowed[bin]=new Set();
         out.stowed[bin].add(p.code);
         out.detail[p.code]={bin:bin,actor:ev.actor,at:ev.occurred_at};
@@ -348,6 +352,11 @@ function fmtEventTime(iso){
 }
 
 let jobs=[];
+// FIX 2026-09-24: which job ids are currently real, so a stow event whose
+// job was later deleted (e.g. by Clear All Jobs) stops counting as "already
+// scanned" against a brand-new job reusing the same tracking number. Set in
+// loadRoutes() right after jobs loads, read in loadEventState() below.
+let _tpActiveJobIds=null;
 let binMap={};
 let binProgress={};
 let scannedByBin={};
@@ -406,6 +415,7 @@ async function loadRoutes(){
   // Scan history is no longer thrown away on every poll. It is rebuilt
   // from the durable event stream, which means it survives a refresh, a
   // process kill, and is shared across every device on the floor.
+  _tpActiveJobIds=new Set((Array.isArray(jobs)?jobs:[]).map(function(j){return j.id;}));
   const evState=await loadEventState();
   // Merge, never replace. A stow this device just made may not be in the
   // events table yet (or the write may have failed). Replacing memory with
