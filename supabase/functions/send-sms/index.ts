@@ -10,7 +10,32 @@
 // dispatch notifications). Not built for customer messaging, not built
 // for marketing, since that was never part of what was approved.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve as baseServe } from "https://deno.land/std@0.168.0/http/server.ts";
+
+// ── CORS (added 2026-09-24) ──
+// Browsers send an OPTIONS "preflight" before calling this function from the
+// dispatcher. Without an answer to it the real POST is never sent. Only
+// TackPath's own site origin is allowed. Everything below is unchanged.
+const ALLOWED_ORIGINS = ["https://tackpath.com", "https://www.tackpath.com"];
+function corsFor(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") || "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+function serve(handler: (req: Request) => Promise<Response>) {
+  return baseServe(async (req: Request) => {
+    const cors = corsFor(req);
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+    const res = await handler(req);
+    const headers = new Headers(res.headers);
+    for (const [k, v] of Object.entries(cors)) headers.set(k, v);
+    return new Response(res.body, { status: res.status, headers });
+  });
+}
 
 const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
 const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
