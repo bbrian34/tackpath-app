@@ -335,7 +335,7 @@ async function loadEventState(){
         if(ev.job_id&&_tpActiveJobIds&&!_tpActiveJobIds.has(ev.job_id))return;
         if(!out.stowed[bin])out.stowed[bin]=new Set();
         out.stowed[bin].add(p.code);
-        out.detail[p.code]={bin:bin,actor:ev.actor,at:ev.occurred_at};
+        out.detail[p.code]={bin:bin,actor:ev.actor,at:ev.occurred_at,jobId:ev.job_id};
       }
     });
   }catch(e){ console.log('event state load failed:',e.message); }
@@ -427,7 +427,16 @@ async function loadRoutes(){
     // A reset recorded elsewhere wins — do not resurrect cleared packages
     if(evState.resetEpoch&&evState.resetEpoch[bin]&&evState.resetEpoch[bin]!==resetEpoch[bin])return;
     if(!nextStowed[bin])nextStowed[bin]=new Set();
-    prevStowed[bin].forEach(c=>nextStowed[bin].add(c));
+    prevStowed[bin].forEach(c=>{
+      // FIX 2026-09-24 part 2: this in-memory carry-forward is what actually
+      // kept re-blocking a reused tracking number -- it ran every poll,
+      // independent of the events-table fix above, and never checked whether
+      // the job that made the scan still exists. Same rule as that fix: a code
+      // tied to a job we can confirm is gone is dropped, not carried forward.
+      const jid=prevDetail[c]&&prevDetail[c].jobId;
+      if(jid&&_tpActiveJobIds&&!_tpActiveJobIds.has(jid))return;
+      nextStowed[bin].add(c);
+    });
   });
   scannedByBin=nextStowed;
   stowDetail=Object.assign({},prevDetail,evState.detail||{});
@@ -843,7 +852,7 @@ async function handleStowScan(code){
         return;
       }
       scannedByBin[binNum].add(pendingPlacement.code);
-      stowDetail[pendingPlacement.code]={bin:binNum,actor:ensureWorker(),at:new Date().toISOString()};
+      stowDetail[pendingPlacement.code]={bin:binNum,actor:ensureWorker(),at:new Date().toISOString(),jobId:binProgress[binNum].jobId};
       binProgress[binNum].sorted=Math.min(binProgress[binNum].total, binProgress[binNum].sorted+1);
       lastScannedBin=binNum;
 
