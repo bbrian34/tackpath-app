@@ -5313,6 +5313,473 @@ function generateLiveLabels(routes){
 // requires (a rerun must reconcile with the same identities, not mint new
 // ones). Does not touch stow.html or driver.html -- neither reads piece_id
 // yet, so today's PathIQ/Driver behavior is unaffected by this change.
+// INCREMENT 4 WIRING (2026-09-26): warehouse location. No such concept
+// existed anywhere in the system before this -- pickup_address was only
+// ever borrowed from whichever stop happened to be first. This is a
+// Address (1000 Whitlock Ave, Marietta, GA 30064) chosen by Bryan for
+// testing convenience -- near enough to verify real behavior in person.
+// Replace with the real facility address whenever that differs. Stored
+// the same lightweight way ssPolicy() already stores settings, 
+// ssPolicy() already stores settings, geocoded once and cached so a
+// rebuild doesn't re-geocode it every time.
+const TP_WAREHOUSE_ADDRESS_DEFAULT='1000 Whitlock Ave, Marietta, GA 30064';
+async function getWarehouseLocation(){
+  const key='tp_warehouse_'+(currentOrgId||'default');
+  try{
+    const cached=JSON.parse(localStorage.getItem(key)||'null');
+    if(cached&&cached.lat&&cached.lng)return cached;
+  }catch(e){}
+  const address=(function(){try{return localStorage.getItem('tp_warehouse_address_'+(currentOrgId||'default'))||TP_WAREHOUSE_ADDRESS_DEFAULT;}catch(e){return TP_WAREHOUSE_ADDRESS_DEFAULT;}})();
+  const coords=await geocodeAddress(address);
+  if(!coords)return null;
+  const loc={address,lat:coords.lat,lng:coords.lng};
+  try{localStorage.setItem(key,JSON.stringify(loc));}catch(e){}
+  return loc;
+}
+
+// The real nav-proxy caller for buildRoadMatrix() (Increment 2). Same
+// endpoint/credentials pattern as getTrafficAwareLegData -- this is the
+// ONLY place that actually talks to the network for the matrix.
+async function callRealMatrixAction(origins,destinations){
+  const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
+  const SB_ANON='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+  const resp=await fetch(SB_URL+'/functions/v1/smooth-api',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
+    body:JSON.stringify({action:'matrix',params:{
+      origins:origins.map(p=>({lat:p.lat,lng:p.lng})),
+      destinations:destinations.map(p=>({lat:p.lat,lng:p.lng}))
+    }})
+  });
+  if(!resp.ok)throw new Error('matrix HTTP '+resp.status);
+  const data=await resp.json();
+  if(!Array.isArray(data))throw new Error(data&&data.error&&data.error.message||'matrix call failed');
+  return data;
+}
+
+// Convert Increment 3's index-based routes (0=warehouse, never included in
+// the output) back into the stop-object clusters the rest of buildRoutes()
+// already expects, and read the REAL, matrix-measured drive minutes for
+// this EXACT frozen order -- not a Haversine re-estimate of it, and not
+// the pre-2-opt number from a different sequence. This is what 'the exact
+// plan scored is the exact plan published' means in practice.
+function matrixPlanToClusters(indexRoutes,pointsByIndex,matrix){
+  return indexRoutes.map(idxs=>{
+    const stops=idxs.map(i=>pointsByIndex[i]);
+    let driveSec=0,meters=0,prev=0,usable=true;
+    for(const i of idxs){
+      const c=matrix.get(prev,i);
+      if(c.status!=='ok'){usable=false;break;}
+      driveSec+=c.durationSec; meters+=(c.meters||0); prev=i;
+    }
+    return {stops,driveMinutes:usable?driveSec/60:null,roadMiles:usable?meters/1609.344:null};
+  });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// DIRECTED ROAD MATRIX (added 2026-09-25, Increment 2)
+//
+// Standalone. Not called from buildRoutes()/clusterRoadCost() yet -- this
+// increment only builds and proves the matrix layer itself. Nothing about
+// live SmartSort routing behavior changes until a later increment wires
+// this in.
+//
+// points[0] MUST be the warehouse. Every other point is a geocoded stop.
+// Indices are stable for the lifetime of the returned matrix: they are
+// never reassigned if the route sequence later changes -- only which
+// directed edge gets READ changes, the matrix itself is immutable.
+//
+// A→B and B→A are two separate cells; nothing here assumes symmetry.
+//
+// Classification is based on Google's own two independent fields, per
+// their documentation: `status` (did the computation succeed) and
+// `condition` (was a route actually found, independent of status):
+//   - status not OK                    -> 'unavailable' (retryable)
+//   - status OK, condition NOT_FOUND    -> 'no_route'    (never retried --
+//                                          this is a fact about the road
+//                                          network, not a transient failure)
+//   - status OK, condition ROUTE_EXISTS -> 'ok'
+// A cell that is still 'unavailable' after retries are exhausted is left
+// that way -- NEVER given a fabricated duration or distance.
+// ══════════════════════════════════════════════════════════════════
+const MATRIX_MAX_ELEMENTS_PER_REQUEST=625;
+const MATRIX_MAX_RETRIES=2;
+const MATRIX_RETRY_BACKOFF_MS=[500,1500];
+
+function chunkMatrixRequests(originCount,destCount){
+  // Chunk destinations so each request's element count (origins × dests in
+  // that chunk) stays at or under the cap. Origins are never chunked in v1
+  // since TackPath's expected scale keeps a single origin block under the
+  // cap; destinations are chunked because they can be the larger dimension.
+  const maxDestPerChunk=Math.max(1,Math.floor(MATRIX_MAX_ELEMENTS_PER_REQUEST/Math.max(1,originCount)));
+  const chunks=[];
+  for(let d=0;d<destCount;d+=maxDestPerChunk){
+    chunks.push({destStart:d,destCount:Math.min(maxDestPerChunk,destCount-d)});
+  }
+  return chunks;
+}
+
+function classifyElement(el){
+  const statusOk=!el.status||!el.status.code||el.status.code===0;
+  if(!statusOk)return 'unavailable';
+  if(el.condition==='ROUTE_NOT_FOUND')return 'no_route';
+  if(typeof el.duration==='string'&&typeof el.distanceMeters==='number')return 'ok';
+  // status says OK, condition doesn't say NOT_FOUND, but the fields we need
+  // are missing -- do not guess. Treat as unavailable, not as a free pass.
+  return 'unavailable';
+}
+
+function parseDurationSeconds(d){
+  if(typeof d!=='string')return null;
+  const n=parseInt(d.replace('s',''),10);
+  return isNaN(n)?null:n;
+}
+
+// callMatrixAction(originsChunk, destsChunk) -> raw computeRouteMatrix JSON
+// (an array of elements, or {error}). Injectable so this is fully testable
+// with mocked responses, per the increment's own instruction, and so the
+// real network call lives in exactly one place.
+async function buildRoadMatrix(points, callMatrixAction, opts){
+  opts=opts||{};
+  const maxRetries=opts.maxRetries!=null?opts.maxRetries:MATRIX_MAX_RETRIES;
+  const backoff=opts.backoffMs||MATRIX_RETRY_BACKOFF_MS;
+  const sleep=opts.sleep||(ms=>new Promise(r=>setTimeout(r,ms)));
+
+  const n=points.length;
+  const cells={}; // cells[i+'_'+j] = {status:'ok'|'no_route'|'unavailable', durationSec, meters}
+  const key=(i,j)=>i+'_'+j;
+
+  // Origins and destinations are the SAME point list (every point can be an
+  // origin and a destination) -- this is what "directed matrix over the
+  // warehouse + every stop" means. i===j (a point to itself) is skipped.
+  const destIdx=points.map((_,i)=>i);
+  const chunks=chunkMatrixRequests(n,n);
+
+  for(const chunk of chunks){
+    const destSlice=destIdx.slice(chunk.destStart,chunk.destStart+chunk.destCount);
+    let attempt=0,elements=null,requestFailed=false;
+    while(attempt<=maxRetries){
+      let raw;
+      try{
+        raw=await callMatrixAction(points,destSlice.map(j=>points[j]));
+      }catch(e){
+        raw=null;
+      }
+      if(Array.isArray(raw)){elements=raw;requestFailed=false;break;}
+      requestFailed=true;
+      attempt++;
+      if(attempt<=maxRetries)await sleep(backoff[Math.min(attempt-1,backoff.length-1)]);
+    }
+    if(requestFailed||!elements){
+      // The whole chunk failed even after retries -- every cell in it is
+      // unavailable. Never invented, never defaulted to a plausible number.
+      for(let i=0;i<n;i++)for(const j of destSlice){
+        if(i!==j)cells[key(i,j)]={status:'unavailable',durationSec:null,meters:null};
+      }
+      continue;
+    }
+    for(const el of elements){
+      const i=el.originIndex||0, j=destSlice[el.destinationIndex||0];
+      if(i===j)continue;
+      const cls=classifyElement(el);
+      cells[key(i,j)]={
+        status:cls,
+        durationSec:cls==='ok'?parseDurationSeconds(el.duration):null,
+        meters:cls==='ok'?(el.distanceMeters||0):null
+      };
+    }
+  }
+
+  const computedAt=new Date().toISOString();
+  return {
+    version:'v1-'+computedAt,
+    computedAt,
+    size:n,
+    get(i,j){
+      if(i===j)return{status:'ok',durationSec:0,meters:0};
+      return cells[key(i,j)]||{status:'unavailable',durationSec:null,meters:null};
+    },
+    // For the acceptance-test requirement "every edge actually used by the
+    // final plan must have valid road data": callers check this before
+    // trusting a cell, rather than this function silently making one up.
+    isUsable(i,j){ return this.get(i,j).status==='ok'; }
+  };
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// MATRIX-FIRST CONSTRUCTION AND LOCAL SEARCH (Increment 3, 2026-09-25)
+//
+// Standalone. Not called from buildRoutes() yet. Operates entirely on a
+// pre-built directed matrix (Increment 2's buildRoadMatrix output) --
+// zero network calls happen anywhere in this file.
+//
+// Open-route policy throughout: every route is [warehouse, stop, stop, ...].
+// There is no return-to-warehouse leg, anywhere -- not in construction, not
+// in local search, not in cost, not in the objective.
+//
+// pointIdx 0 is always the warehouse. `stops` below refers to point indices
+// 1..N (never 0). A route is stored as an array of point indices, e.g.
+// [3,7,2] meaning warehouse -> point3 -> point7 -> point2 -> done.
+// ══════════════════════════════════════════════════════════════════
+
+// ── POLICY: named values, nothing scattered as a magic number in the search ──
+function defaultPolicy(){
+  return {
+    targetBlockMin: 360,
+    maxBlockMin: 480,
+    serviceMinPerStop: 4,
+    handlingMinPerPiece: 0.75,
+    loadingMinPerPiece: 0.25,
+    vehicleUseCostMin: 45,      // fixed cost of putting one more route/driver on the road,
+                                 // expressed in the same "minutes" unit as everything else
+                                 // so it can be added directly into one objective number.
+    imbalanceWeight: 1.0
+  };
+}
+
+// ── EDGE COST: the ONLY place that reads the matrix. Returns null (never a
+//    fabricated number) if the edge isn't usable. ──
+function edgeMinutes(matrix,i,j){
+  const c=matrix.get(i,j);
+  if(c.status!=='ok'||c.durationSec==null)return null;
+  return c.durationSec/60;
+}
+
+// ── ROUTE COST: warehouse -> stops[0] -> ... -> stops[last]. No return leg.
+//    Returns null if ANY edge actually used is not usable -- per the
+//    requirement that every edge in the final plan must have valid road
+//    data, an infeasible/unusable edge is never silently dropped or
+//    replaced with a guess. ──
+function routeMinutes(matrix,stops,pieceCountByPoint,policy){
+  if(!stops.length)return {total:0,drive:0,usable:true};
+  let drive=0,prev=0; // 0 = warehouse
+  for(const s of stops){
+    const m=edgeMinutes(matrix,prev,s);
+    if(m==null)return {total:null,drive:null,usable:false};
+    drive+=m; prev=s;
+  }
+  let pieces=0; for(const s of stops)pieces+=(pieceCountByPoint[s]||1);
+  const service=stops.length*policy.serviceMinPerStop;
+  const handling=pieces*policy.handlingMinPerPiece;
+  const loading=pieces*policy.loadingMinPerPiece;
+  return {total:drive+service+handling+loading, drive, usable:true};
+}
+
+// ── OBJECTIVE: the real candidate-selection score, not a diagnostic string.
+//    Lower is better. Infeasible (any route over maxBlockMin, or any route
+//    using an unusable edge) plans are rejected before scoring, never
+//    scored as if they were merely "bad". ──
+function planFeasible(routes,matrix,pieceCountByPoint,policy){
+  for(const r of routes){
+    const c=routeMinutes(matrix,r,pieceCountByPoint,policy);
+    if(!c.usable)return false;
+    if(c.total>policy.maxBlockMin)return false;
+  }
+  return true;
+}
+
+function planScore(routes,matrix,pieceCountByPoint,policy){
+  const totals=routes.map(r=>routeMinutes(matrix,r,pieceCountByPoint,policy).total);
+  const sum=totals.reduce((a,b)=>a+b,0);
+  const mean=sum/Math.max(1,routes.length);
+  const variance=totals.reduce((a,t)=>a+Math.pow(t-mean,2),0)/Math.max(1,routes.length);
+  const vehicleUse=policy.vehicleUseCostMin*routes.length;
+  return sum+vehicleUse+policy.imbalanceWeight*Math.sqrt(variance);
+}
+
+// ── CONSTRUCTION: regret-2 insertion. Every unplaced stop's "regret" is the
+//    gap between its best and second-best insertion cost across every
+//    route/position. The stop with the HIGHEST regret is placed first --
+//    it's the one that gets punished most for being delayed, e.g. a stop
+//    with only one good route to belong to should not wait until that
+//    route is full. Placed at its best position; ties broken by lowest
+//    insertion cost. Fully directed: inserting at the end of a route only
+//    costs the new incoming edge (no return leg to remove/replace). ──
+function insertionCost(matrix,route,pos,point){
+  const prev=pos===0?0:route[pos-1];
+  const next=pos<route.length?route[pos]:null;
+  const inCost=edgeMinutes(matrix,prev,point);
+  if(inCost==null)return null;
+  if(next==null)return inCost; // inserting at the end: one new edge, nothing removed
+  const outCost=edgeMinutes(matrix,point,next);
+  const removed=edgeMinutes(matrix,prev,next);
+  if(outCost==null||removed==null)return null;
+  return inCost+outCost-removed;
+}
+
+// CAPACITY-AWARE insertion (fixed 2026-09-25, same day as first written):
+// confirmed by testing at 64-stop scale that cost-only insertion collapses
+// everything into one route -- once a route holds ANY stop, extending it is
+// almost always cheaper than paying a fresh warehouse->point edge to start
+// an empty sibling route, so nothing ever forces the sibling routes to be
+// used. A candidate that would push a route over maxBlockMin is now
+// excluded from consideration entirely during construction, not just
+// checked afterward -- this is what actually makes the search use all the
+// routes it's given instead of overloading the first one.
+function bestInsertion(matrix,routes,point,pieceCountByPoint,policy){
+  let best=null,second=null;
+  const routeBase=routes.map(r=>routeMinutes(matrix,r,pieceCountByPoint,policy));
+  const pieceMin=(pieceCountByPoint[point]||1)*(policy.handlingMinPerPiece+policy.loadingMinPerPiece)
+    + policy.serviceMinPerStop;
+  for(let ri=0;ri<routes.length;ri++){
+    if(!routeBase[ri].usable)continue;
+    for(let pos=0;pos<=routes[ri].length;pos++){
+      const cost=insertionCost(matrix,routes[ri],pos,point);
+      if(cost==null)continue;
+      if(routeBase[ri].total+cost+pieceMin>policy.maxBlockMin)continue;
+      const cand={ri,pos,cost};
+      if(!best||cost<best.cost){second=best;best=cand;}
+      else if(!second||cost<second.cost){second=cand;}
+    }
+  }
+  return {best,regret:best&&second?second.cost-best.cost:(best?1e9:0)};
+}
+
+function regretInsertionConstruct(stopIndices,matrix,routeCount,pieceCountByPoint,policy){
+  pieceCountByPoint=pieceCountByPoint||{};
+  policy=policy||defaultPolicy();
+  const routes=Array.from({length:routeCount},()=>[]);
+  let remaining=stopIndices.slice();
+  while(remaining.length){
+    let chosen=-1,chosenInfo=null,bestRegret=-Infinity;
+    for(let k=0;k<remaining.length;k++){
+      const info=bestInsertion(matrix,routes,remaining[k],pieceCountByPoint,policy);
+      if(!info.best)continue; // no route can take this stop without busting capacity, or no usable edge exists
+      if(info.regret>bestRegret){bestRegret=info.regret;chosen=k;chosenInfo=info;}
+    }
+    if(chosen===-1)return null; // at least one stop fits in NO route at this route count -> this k is infeasible
+    const point=remaining[chosen];
+    routes[chosenInfo.best.ri].splice(chosenInfo.best.pos,0,point);
+    remaining.splice(chosen,1);
+  }
+  return routes;
+}
+
+// ── LOCAL SEARCH: relocate, swap, Or-opt (short-segment relocation). All
+//    matrix-only, all directed-cost-aware (a move is only taken if it's a
+//    real improvement using the ACTUAL directed edges it introduces, never
+//    a symmetric assumption). Bounded by maxIterations/timeBudgetMs. ──
+function totalPlanMinutes(routes,matrix,pieceCountByPoint,policy){
+  let sum=0;
+  for(const r of routes){
+    const c=routeMinutes(matrix,r,pieceCountByPoint,policy);
+    if(!c.usable)return Infinity;
+    sum+=c.total;
+  }
+  return sum;
+}
+
+function tryRelocate(routes,matrix,pieceCountByPoint,policy,segLen){
+  segLen=segLen||1;
+  const base=totalPlanMinutes(routes,matrix,pieceCountByPoint,policy);
+  for(let ri=0;ri<routes.length;ri++){
+    for(let i=0;i+segLen<=routes[ri].length;i++){
+      const seg=routes[ri].slice(i,i+segLen);
+      const without=routes[ri].slice(0,i).concat(routes[ri].slice(i+segLen));
+      for(let rj=0;rj<routes.length;rj++){
+        const target=rj===ri?without:routes[rj];
+        for(let pos=0;pos<=target.length;pos++){
+          if(rj===ri&&pos>=i&&pos<=i+segLen)continue; // same spot, not a move
+          const candidateTarget=target.slice(0,pos).concat(seg,target.slice(pos));
+          const trial=routes.map((r,idx)=>idx===ri?(idx===rj?candidateTarget:without):(idx===rj?candidateTarget:r));
+          if(ri!==rj)trial[ri]=without;
+          const cost=totalPlanMinutes(trial,matrix,pieceCountByPoint,policy);
+          if(cost<base-0.01&&planFeasible(trial,matrix,pieceCountByPoint,policy))return trial;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function trySwap(routes,matrix,pieceCountByPoint,policy){
+  const base=totalPlanMinutes(routes,matrix,pieceCountByPoint,policy);
+  for(let ri=0;ri<routes.length;ri++){
+    for(let i=0;i<routes[ri].length;i++){
+      for(let rj=ri;rj<routes.length;rj++){
+        for(let j=(rj===ri?i+1:0);j<routes[rj].length;j++){
+          const trial=routes.map(r=>r.slice());
+          const tmp=trial[ri][i]; trial[ri][i]=trial[rj][j]; trial[rj][j]=tmp;
+          const cost=totalPlanMinutes(trial,matrix,pieceCountByPoint,policy);
+          if(cost<base-0.01&&planFeasible(trial,matrix,pieceCountByPoint,policy))return trial;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function localSearch(routes,matrix,pieceCountByPoint,policy,opts){
+  opts=opts||{};
+  const maxIterations=opts.maxIterations||500;
+  const deadline=Date.now()+(opts.timeBudgetMs||4000);
+  let current=routes.map(r=>r.slice());
+  let iterations=0;
+  let improved=true;
+  while(improved&&iterations<maxIterations&&Date.now()<deadline){
+    improved=false;
+    for(const segLen of [1,2,3]){
+      const relocated=tryRelocate(current,matrix,pieceCountByPoint,policy,segLen);
+      iterations++;
+      if(relocated){current=relocated;improved=true;break;}
+    }
+    if(improved)continue;
+    const swapped=trySwap(current,matrix,pieceCountByPoint,policy);
+    iterations++;
+    if(swapped){current=swapped;improved=true;}
+  }
+  return {routes:current,iterations};
+}
+
+// ── TOP LEVEL: try several route counts (unless fixedRouteCount is given --
+//    that's Increment 5's driver-commit workflow feeding in here) and a
+//    couple of different construction seedings, keep the best FEASIBLE
+//    plan found. Timeout means best-feasible-so-far or null -- there is no
+//    third outcome, and never a forced fallback route count. ──
+function buildMatrixFirstPlan(stopIndices,matrix,pieceCountByPoint,policy,opts){
+  opts=opts||{};
+  policy=policy||defaultPolicy();
+  const deadline=Date.now()+(opts.timeBudgetMs||8000);
+  const maxRouteCount=opts.fixedRouteCount?opts.fixedRouteCount:Math.min(stopIndices.length,opts.maxRouteCountSearch||12);
+  const minRouteCount=opts.fixedRouteCount||1;
+
+  let bestPlan=null,bestScore=Infinity;
+  for(let k=minRouteCount;k<=maxRouteCount;k++){
+    if(Date.now()>deadline)break;
+    // Two starting orders: as-given, and farthest-from-warehouse-first --
+    // "several sensible geographic starting solutions" without betting
+    // everything on one arbitrary input order.
+    const seeds=[stopIndices.slice(), stopIndices.slice().sort((a,b)=>{
+      const da=matrix.get(0,a), db=matrix.get(0,b);
+      const va=da.status==='ok'?da.durationSec:-1, vb=db.status==='ok'?db.durationSec:-1;
+      return vb-va;
+    })];
+    for(const seed of seeds){
+      const constructed=regretInsertionConstruct(seed,matrix,k,pieceCountByPoint,policy);
+      if(!constructed)continue; // some stop unreachable at this k -- not this k's problem to force through
+      if(!planFeasible(constructed,matrix,pieceCountByPoint,policy))continue; // fail this k fast, don't burn the shared budget searching it
+      const {routes:improved}=localSearch(constructed,matrix,pieceCountByPoint,policy,
+        {timeBudgetMs:Math.max(500,deadline-Date.now())});
+      // localSearch now preserves feasibility on every accepted move, so
+      // `improved` cannot be infeasible here -- re-checked anyway as a
+      // guard, never trust an invariant silently.
+      if(!planFeasible(improved,matrix,pieceCountByPoint,policy))continue;
+      const score=planScore(improved,matrix,pieceCountByPoint,policy);
+      if(score<bestScore){bestScore=score;bestPlan=improved;}
+    }
+    // If a fixed route count was committed (Increment 5), don't search past it.
+    if(opts.fixedRouteCount)break;
+    // Once we have ANY feasible plan, no reason to keep inflating k forever --
+    // but we still let a couple more k's compete on cost, matching the
+    // approved design's "compare feasible route counts" rather than
+    // stopping at the very first one that merely works.
+    if(bestPlan&&k>=minRouteCount+2)break;
+  }
+  return bestPlan; // null means: no feasible plan found within the time budget. Never a fallback.
+}
+
 function piecesFor(pkg){
   const base=String(pkg.tracking_number||pkg.order_id||'PKG');
   const n=Math.max(1,parseInt(pkg.packages)||1);
@@ -5406,6 +5873,7 @@ async function buildRoutes(){
   }
 
   let clusters;
+  let tpAlreadyFrozen=false; // set true only by the matrix-first path below
   if(hasHints&&hintOrder.length>=2){
     clusters=hintOrder.map(h=>hintGroups[h]).filter(g=>g.length>0);
     if(noGeoStops.length)clusters[clusters.length-1].push(...noGeoStops);
@@ -5442,13 +5910,65 @@ async function buildRoutes(){
             ' min exceeds the '+pol.maxBlockMin+' min maximum':'')
       };
     }else{
-      plan=await planRoutesByWorkload(geoStops);
+      // INCREMENT 3/4 (2026-09-26): matrix-first road-aware construction
+      // and local search replaces planRoutesByWorkload's Haversine
+      // geometry entirely for the auto/workload path. Manifest route_hint
+      // and dispatcher-override groupings above are untouched -- those are
+      // operator decisions this change does not alter -- but every path's
+      // SEQUENCING and cost now comes from this same real road matrix
+      // (see the block right after this one), never from Haversine.
+      if(btn){btn.innerHTML='▲ Building road matrix... <span class="build-badge">SmartSort</span>';}
+      updateSmartSortStatus('▲ Measuring real road cost between every stop...',55);
+      const warehouse=await getWarehouseLocation();
+      if(!warehouse){
+        if(btn){btn.disabled=false;btn.innerHTML='Build Routes';}
+        updateSmartSortStatus('⚠ Routing blocked — the warehouse address could not be geocoded',0);
+        toast('Routing blocked: the warehouse address could not be geocoded. Check the address and try again.','warn');
+        ssRoutes=[]; return;
+      }
+      const tpPoints=[warehouse,...geoStops]; // rich objects, for reconstructing the final stop list
+      // buildRoadMatrix needs bare {lat,lng} points -- a geocoded stop's
+      // coordinates live at s.coords.lat/lng, not at the top level (only
+      // the warehouse object happens to have lat/lng directly). Passing
+      // tpPoints itself here would silently give every stop lat=undefined,
+      // lng=undefined -- confirmed by integration testing, not assumed.
+      const tpMatrixPoints=[{lat:warehouse.lat,lng:warehouse.lng},
+        ...geoStops.map(s=>({lat:s.coords.lat,lng:s.coords.lng}))];
+      const tpPieces={}; geoStops.forEach((s,i)=>{tpPieces[i+1]=s.packages||1;});
+      let tpMatrix;
+      try{
+        tpMatrix=await buildRoadMatrix(tpMatrixPoints,callRealMatrixAction);
+      }catch(e){
+        if(btn){btn.disabled=false;btn.innerHTML='Build Routes';}
+        updateSmartSortStatus('⚠ Routing blocked — could not reach the road-cost service',0);
+        toast('Routing blocked: could not reach the road-cost service ('+(e&&e.message?e.message:e)+'). No plan was built.','warn');
+        ssRoutes=[]; return;
+      }
+      if(btn){btn.innerHTML='▲ Building routes from real road data... <span class="build-badge">SmartSort</span>';}
+      updateSmartSortStatus('▲ Constructing and improving routes against measured road cost...',65);
+      const tpStopIdx=geoStops.map((_,i)=>i+1);
+      const tpPolicySrc=ssPolicy();
+      const tpPolicy=Object.assign(defaultPolicy(),{
+        targetBlockMin:tpPolicySrc.targetBlockMin, maxBlockMin:tpPolicySrc.maxBlockMin
+      });
+      const tpPlanIdx=(ssRouteCountOverride>=1)
+        ? buildMatrixFirstPlan(tpStopIdx,tpMatrix,tpPieces,tpPolicy,{fixedRouteCount:Math.min(ssRouteCountOverride,tpStopIdx.length||1)})
+        : buildMatrixFirstPlan(tpStopIdx,tpMatrix,tpPieces,tpPolicy,{maxRouteCountSearch:16,timeBudgetMs:9000});
+      if(!tpPlanIdx){
+        if(btn){btn.disabled=false;btn.innerHTML='Build Routes';}
+        updateSmartSortStatus('⚠ Routing blocked — no feasible plan found for this manifest',0);
+        toast('Routing blocked: no combination of routes fit within the configured maximum block duration. No fallback plan was built — raise the block-duration policy or split the manifest.','warn');
+        ssRoutes=[]; return;
+      }
+      const tpClusters=matrixPlanToClusters(tpPlanIdx,tpPoints,tpMatrix);
+      clusters=tpClusters.map(c=>c.stops);
+      window._tpLastMatrix=tpMatrix; window._tpLastClusterCost=tpClusters;
+      if(noGeoStops.length&&clusters.length)clusters[clusters.length-1].push(...noGeoStops);
+      console.log('[SmartSort] route source: matrix-first road-aware optimization — '+clusters.length+' routes, sizes='+tpPlanIdx.map(r=>r.length).join(','));
+      if(btn){btn.innerHTML='▲ Built '+clusters.length+' route'+(clusters.length>1?'s':'')+' <span class="build-badge">SmartSort</span>';}
+      updateSmartSortStatus('▲ Road-aware optimization produced '+clusters.length+' route'+(clusters.length>1?'s':'')+'...',70);
+      tpAlreadyFrozen=true;
     }
-    clusters=plan.clusters;
-    if(noGeoStops.length&&clusters.length)clusters[clusters.length-1].push(...noGeoStops);
-    console.log('[SmartSort] route source: workload optimization — '+plan.explain);
-    if(btn){btn.innerHTML='▲ Built '+clusters.length+' route'+(clusters.length>1?'s':'')+' <span class="build-badge">SmartSort</span>';}
-    updateSmartSortStatus('▲ Workload optimization produced '+clusters.length+' route'+(clusters.length>1?'s':'')+'...',60);
   }
 
   // ── STEP 4: SEQUENCE EACH CLUSTER — nearest-neighbor then 2-opt improvement ──
@@ -5461,6 +5981,13 @@ async function buildRoutes(){
     const geo=cluster.filter(s=>s.coords);
     const noGeo=cluster.filter(s=>!s.coords);
     if(geo.length===0)return noGeo;
+    // A matrix-first plan is already in its final, scored, frozen order --
+    // re-sequencing it here with Haversine 2-opt would publish a DIFFERENT
+    // route than the one that was actually measured and validated. This is
+    // the fix for that exact defect. Manifest route_hint and dispatcher-
+    // override groups (tpAlreadyFrozen===false) still sequence here as
+    // before -- not yet upgraded to matrix-based sequencing themselves.
+    if(tpAlreadyFrozen)return [...geo,...noGeo];
     const nn=nearestNeighborSort(geo);
     const opt=twoOptImprove(nn);
     return [...opt,...noGeo];
@@ -5493,14 +6020,31 @@ async function buildRoutes(){
     for(let i=0;i<geoSeq.length-1;i++){
       hvMiles+=haversineDistance(geoSeq[i].coords,geoSeq[i+1].coords);
     }
-    const workloadMin=clusterWorkloadMinutes(stopsWithId);
+    // If this route came from the matrix-first path, the real measured
+    // road cost for THIS EXACT frozen order is already known -- use it.
+    // This is what 'the routes scored are the routes published' means for
+    // the numbers themselves, not just the stop order. Haversine remains
+    // the fallback for manifest route_hint / dispatcher-override routes,
+    // which are not yet sequenced against the real matrix.
+    const tpReal=tpAlreadyFrozen&&window._tpLastClusterCost&&window._tpLastClusterCost[ri];
+    // Real path: real drive minutes (from the matrix, for this EXACT frozen
+    // order) plus the same service/handling/loading terms Increment 3's own
+    // objective uses -- not a mix-and-match with clusterWorkloadMinutes'
+    // unrelated Haversine approximation, which stays as the fallback for
+    // routes that didn't come from the matrix-first path.
+    const workloadMin=(tpReal&&tpReal.driveMinutes!=null)
+      ? tpReal.driveMinutes
+        + stopsWithId.length*defaultPolicy().serviceMinPerStop
+        + stops.reduce((s,p)=>s+(parseInt(p.packages)||1),0)
+          *(defaultPolicy().handlingMinPerPiece+defaultPolicy().loadingMinPerPiece)
+      : clusterWorkloadMinutes(stopsWithId);
     return{
       id:routeId,
       master_code:masterCode,
       stops:stopsWithId,
       total_packages:stops.reduce((s,p)=>s+(parseInt(p.packages)||1),0),
       est_miles:hvMiles.toFixed(1),
-      road_miles:null,
+      road_miles:(tpReal&&tpReal.roadMiles!=null)?tpReal.roadMiles.toFixed(1):null,
       workload_min:Math.round(workloadMin),
       color:SS_COLORS[ri%SS_COLORS.length]
     };
@@ -5578,7 +6122,12 @@ async function buildRoutes(){
   // runs it once every route has actually been written.
   if(btn){btn.disabled=false;btn.innerHTML='&#10003; SmartSort Complete <span class="build-badge">'+ssRoutes.length+' routes</span>';}
 
-  const optNote=' (NN+2-opt optimized)';
+  // Accurate label: only true when the old NN+2-opt Haversine sequencer
+  // actually ran (route_hint / dispatcher-override paths). The matrix-
+  // first path (tpAlreadyFrozen) used real road-cost construction and
+  // local search instead, and should say so, not claim an optimizer that
+  // didn't run.
+  const optNote=tpAlreadyFrozen?' (road-cost optimized)':' (NN+2-opt optimized)';
   if(failedAddresses.length){
     // A toast that says "7 address(es) could not be located" is almost
     // useless. The dispatcher doesn't know which packages are missing from
