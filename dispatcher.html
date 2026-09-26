@@ -3580,6 +3580,18 @@ function openDrawer(id){
       return minsUntil<=0?'<span style="color:var(--orange);">Due now — next poll</span>':'<span style="color:var(--blue);">'+triggerLabel+' · in '+minsUntil+' min for stop '+(tracked.stopIndex+1)+'</span>';
     })()}</div></div>
     <div class="dr-field"><div class="df-lbl">Created</div><div class="df-val" style="font-size:0.846rem;">${j.created_at?new Date(j.created_at).toLocaleString():'—'}</div></div>
+    <div class="dr-field"><div class="df-lbl">Route Distance</div><div class="df-val" style="font-size:0.846rem;">${(()=>{
+      // Reads the persisted, already-measured value only -- never recalculates
+      // on render. distance_miles is written once, at route creation.
+      if(j.distance_miles==null) return '<span style="color:var(--muted);">Not measured</span>';
+      const miles=parseFloat(j.distance_miles).toFixed(1);
+      let durText='';
+      if(j.original_eta_at&&j.created_at){
+        const mins=Math.round((new Date(j.original_eta_at).getTime()-new Date(j.created_at).getTime())/60000);
+        if(mins>0) durText=' · ~'+mins+' min';
+      }
+      return miles+' mi'+durText;
+    })()}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Pickup Address</div><div class="df-val">${drawerPickup}</div></div>
     <div class="dr-field" style="grid-column:1/-1;"><div class="df-lbl">Dropoff Address</div><div class="df-val">${drawerDropoff}</div></div>
     <div class="dr-field" style="grid-column:1/-1;">
@@ -6353,15 +6365,29 @@ async function assignSSRoute(routeId){
   const route=ssRoutes.find(r=>r.id===routeId);
   if(!route){toast('Route not found','warn');return;}
 
-  // Get real traffic-aware ETA AND real road distance in one API call set (batched).
-  // distanceMeters comes free from the same Routes API response we already call for ETA —
-  // no additional API calls needed to get actual road miles.
-  const fallbackMinutes=15 + (parseFloat(route.est_miles)||0)*3 + route.stops.length*5;
-  const routeData=await getTrafficAwareRouteData(route.stops);
-  const estimatedMinutes=routeData.totalSeconds>0 ? (routeData.totalSeconds/60) : fallbackMinutes;
-  const roadMiles=routeData.roadMiles>0 ? routeData.roadMiles : parseFloat(route.est_miles)||0;
-
-  // Update the in-memory route with real road miles for display
+  // PUBLICATION FIX (2026-09-26): a route built by the matrix-first path
+  // already has its road miles and workload minutes measured, scored, and
+  // frozen during construction (route.road_miles / route.workload_min,
+  // set in buildRoutes() Step 5 from the same directed matrix that decided
+  // this route's stop order). Recomputing here via the old one-leg-at-a-
+  // time getTrafficAwareRouteData silently re-derives a DIFFERENT number
+  // for the exact same frozen sequence -- confirmed happening in
+  // production 2026-09-26. The routes scored are the routes published;
+  // that has to include the numbers, not just the stop order.
+  //
+  // Manifest route_hint / dispatcher-override routes are not yet matrix-
+  // sequenced, so they have no such frozen value (route.road_miles is
+  // null for them) -- those keep the original recomputation, unchanged.
+  let roadMiles, estimatedMinutes;
+  if(route.road_miles!=null && route.workload_min!=null){
+    roadMiles=parseFloat(route.road_miles);
+    estimatedMinutes=route.workload_min;
+  }else{
+    const fallbackMinutes=15 + (parseFloat(route.est_miles)||0)*3 + route.stops.length*5;
+    const routeData=await getTrafficAwareRouteData(route.stops);
+    estimatedMinutes=routeData.totalSeconds>0 ? (routeData.totalSeconds/60) : fallbackMinutes;
+    roadMiles=routeData.roadMiles>0 ? routeData.roadMiles : parseFloat(route.est_miles)||0;
+  }
   route.road_miles=roadMiles.toFixed(1);
 
   const job={
