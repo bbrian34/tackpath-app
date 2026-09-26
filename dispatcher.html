@@ -5302,6 +5302,34 @@ function generateLiveLabels(routes){
   };
 }
 
+// INCREMENT 1 (2026-09-25): canonical physical-piece identity.
+// A manifest row's `packages` field is a QUANTITY, not an identity. A row
+// with packages=5 is 5 distinct physical pieces sharing one tracking number.
+// This is the single source of truth for turning one manifest row into its
+// piece ids, used both when building stops and when counting what the
+// accounting gate expects, so the two counts can never disagree.
+// Deterministic (no DB round-trip needed): stable across rebuilds of the
+// same manifest, which the existing packages table's own design doc already
+// requires (a rerun must reconcile with the same identities, not mint new
+// ones). Does not touch stow.html or driver.html -- neither reads piece_id
+// yet, so today's PathIQ/Driver behavior is unaffected by this change.
+function piecesFor(pkg){
+  const base=String(pkg.tracking_number||pkg.order_id||'PKG');
+  const n=Math.max(1,parseInt(pkg.packages)||1);
+  const out=[];
+  for(let i=1;i<=n;i++){
+    out.push({
+      piece_id:base+'#'+i,
+      piece_index:i,
+      pieces_total:n,
+      order_id:pkg.order_id,
+      tracking_number:pkg.tracking_number||null,
+      recipient:pkg.recipient
+    });
+  }
+  return out;
+}
+
 async function buildRoutes(){
   const btn=document.getElementById('buildBtn');
   if(btn){btn.disabled=true;btn.innerHTML='&#9650; Geocoding stops... <span class="build-badge">SmartSort running</span>';}
@@ -5324,11 +5352,7 @@ async function buildRoutes(){
       });
     }
     const stop=stopMap.get(key);
-    stop.pkgs.push({
-      order_id:pkg.order_id,
-      tracking_number:pkg.tracking_number||null,
-      recipient:pkg.recipient
-    });
+    stop.pkgs.push(...piecesFor(pkg));
     stop.packages+=(parseInt(pkg.packages)||1);
   }
   const uniqueStops=Array.from(stopMap.values());
@@ -5488,16 +5512,21 @@ async function buildRoutes(){
   // Expected physical packages must equal packages assigned exactly once to
   // routes, plus explicit unresolved exceptions. No missing packages, no
   // duplicates, no silent drops. If this fails the plan is NOT complete.
-  const expectedIds=new Set(packages.map(p=>p.order_id));
+  const expectedIds=new Set(packages.flatMap(p=>piecesFor(p).map(x=>x.piece_id)));
   const assignedIds=[];
   for(const r of ssRoutes){
     for(const s of r.stops){
-      for(const pk of (s.pkgs||[])) assignedIds.push(pk.order_id);
+      if(!s.coords)continue; // a failed-geocode stop is counted as an
+                              // exception below, never also as assigned --
+                              // it was previously counted as both, which
+                              // broke assigned+exceptions===expected on any
+                              // manifest with even one failed geocode.
+      for(const pk of (s.pkgs||[])) assignedIds.push(pk.piece_id);
     }
   }
   const exceptionIds=new Set();
   for(const f of failedAddresses){
-    for(const pk of (f.pkgs||[])) exceptionIds.add(pk.order_id);
+    for(const pk of (f.pkgs||[])) exceptionIds.add(pk.piece_id);
   }
   const assignedSet=new Set(assignedIds);
   const duplicates=assignedIds.length-assignedSet.size;
