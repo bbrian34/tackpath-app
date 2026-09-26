@@ -86,7 +86,60 @@ serve(async (req) => {
           destination: { location: { latLng: { latitude: dLat, longitude: dLng } } },
           travelMode: "DRIVE",
           routingPreference: "TRAFFIC_AWARE",
-          departureTime: new Date().toISOString(),
+          // A bare "now" can already read as past-tense by the time this
+          // reaches Google, which rejects the whole request outright.
+          // Confirmed broken in production 2026-09-25: every live ETA
+          // refresh was failing with "Timestamp must be set to a future
+          // time." A small forward buffer keeps it safely in the future.
+          departureTime: new Date(Date.now()+60000).toISOString(),
+        }),
+      });
+      const data = await r.json();
+      return new Response(JSON.stringify(data), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── ROAD MATRIX (added 2026-09-25, Increment 2) ──
+    // Purely additive: a new action alongside directions/geocode/routes.
+    // Nothing existing is changed or removed.
+    //
+    // params: { origins:[{lat,lng},...], destinations:[{lat,lng},...] }
+    // Caller (dispatcher.html) is responsible for keeping
+    // origins.length * destinations.length <= 625 per call -- this proxy
+    // makes exactly one computeRouteMatrix request per call, it does not
+    // itself chunk or retry. Chunking/retry/backoff live client-side so
+    // they can be unit-tested with mocked responses.
+    if (action === "matrix") {
+      const { origins, destinations } = params;
+      if (!Array.isArray(origins) || !origins.length) throw new Error("origins required");
+      if (!Array.isArray(destinations) || !destinations.length) throw new Error("destinations required");
+      if (origins.length * destinations.length > 625) {
+        throw new Error("matrix request exceeds 625 elements; chunk before calling");
+      }
+
+      const toWaypoint = (p: any) => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } });
+
+      const r = await fetch("https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": GKEY,
+          // status and condition are BOTH required in the mask -- Google's own
+          // docs warn that every element silently looks OK without "status"
+          // explicitly requested, and "condition" is the only field that
+          // distinguishes a confirmed no-route from a successful computation.
+          "X-Goog-FieldMask": "originIndex,destinationIndex,status,condition,distanceMeters,duration",
+        },
+        body: JSON.stringify({
+          origins: origins.map(toWaypoint),
+          destinations: destinations.map(toWaypoint),
+          travelMode: "DRIVE",
+          routingPreference: "TRAFFIC_AWARE",
+          // A bare "now" can already read as past-tense by the time this
+          // reaches Google, which rejects it outright. A small forward
+          // buffer keeps it safely in the future every time.
+          departureTime: params.departureTime || new Date(Date.now()+60000).toISOString(),
         }),
       });
       const data = await r.json();
