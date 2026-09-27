@@ -6418,7 +6418,10 @@ async function assignSSRoute(routeId){
       // package records — PathIQ sorts all three, the driver scans all three.
       pkgs: (s.pkgs||[]).map(p=>({
         order_id: p.order_id,
-        tracking_number: p.tracking_number||null
+        tracking_number: p.tracking_number||null,
+        piece_id: p.piece_id||null,
+        piece_index: p.piece_index||null,
+        pieces_total: p.pieces_total||null
       }))
     })),
     master_code: route.master_code,
@@ -6432,23 +6435,35 @@ async function assignSSRoute(routeId){
   };
 
   try{
-    const resp=await fetch(SB_URL+'/rest/v1/jobs',{
+    // INCREMENT 4 (2026-09-26): publish through the server-side gate, not
+    // a raw table insert. The gate independently re-validates piece
+    // conservation and checks for pieces already committed to another live
+    // route -- checks the browser cannot be trusted to have gotten right --
+    // and only then writes the row, inside its own transaction. Retrying
+    // the same master_code returns the existing row instead of duplicating.
+    const resp=await fetch(SB_URL+'/rest/v1/rpc/publish_surge_route',{
       method:'POST',
       headers:{
         'apikey':SB_KEY,
         'Authorization':'Bearer '+SB_KEY,
-        'Content-Type':'application/json',
-        'Prefer':'return=representation'
+        'Content-Type':'application/json'
       },
-      body:JSON.stringify(job)
+      body:JSON.stringify({payload:job})
     });
     if(!resp.ok){
       const err=await resp.text();
-      console.log('[SmartSort] assignSSRoute FAILED: '+route.id+' error='+err.slice(0,120));
+      console.log('[SmartSort] assignSSRoute FAILED (transport): '+route.id+' error='+err.slice(0,160));
       toast('Could not assign: '+err.slice(0,60),'warn');
       return;
     }
-    console.log('[SmartSort] assignSSRoute SUCCESS: '+route.id+' persisted to DB');
+    const gateResult=await resp.json();
+    if(!gateResult||gateResult.ok!==true){
+      const reason=gateResult&&gateResult.error?gateResult.error:'publication gate rejected the plan';
+      console.log('[SmartSort] assignSSRoute REJECTED by publication gate: '+route.id+' reason='+reason);
+      toast('Routing blocked: '+reason,'warn');
+      return;
+    }
+    console.log('[SmartSort] assignSSRoute SUCCESS: '+route.id+' persisted to DB'+(gateResult.idempotent?' (idempotent replay)':''));
     toast('Route '+route.id+' created and broadcast to drivers','ok');
     ssRoutes=ssRoutes.filter(r=>r.id!==routeId);
     renderSSRoutes();
