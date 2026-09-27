@@ -5792,21 +5792,27 @@ function buildMatrixFirstPlan(stopIndices,matrix,pieceCountByPoint,policy,opts){
   return bestPlan; // null means: no feasible plan found within the time budget. Never a fallback.
 }
 
-function piecesFor(pkg){
-  const base=String(pkg.tracking_number||pkg.order_id||'PKG');
-  const n=Math.max(1,parseInt(pkg.packages)||1);
-  const out=[];
-  for(let i=1;i<=n;i++){
-    out.push({
-      piece_id:base+'#'+i,
-      piece_index:i,
-      pieces_total:n,
-      order_id:pkg.order_id,
-      tracking_number:pkg.tracking_number||null,
-      recipient:pkg.recipient
-    });
-  }
-  return out;
+// FIX 2026-09-26: TackPath does not print package labels -- a manifest
+// row's tracking_number (or order_id) IS the real, physical, scannable
+// barcode whenever one is supplied. It must be preserved exactly, never
+// replaced with an invented identity. A row's `packages` field is a
+// COUNT of how many times that one real barcode needs to be scanned
+// (three boxes sharing one manifest line, one label), not three separate
+// identities -- inventing '#1'/'#2'/'#3' claimed those were three real,
+// distinct physical barcodes, which for most manifests they are not.
+//
+// One manifest row -> one entity, carrying its real identity plus an
+// explicit required_count. Downstream scanning (PathIQ, the driver app)
+// is what actually turns required_count>1 into a counted-scan flow --
+// that is separate, later work, not this function's job.
+function normalizePackage(pkg){
+  return {
+    piece_id: String(pkg.tracking_number||pkg.order_id||'PKG'),
+    order_id: pkg.order_id,
+    tracking_number: pkg.tracking_number||null,
+    recipient: pkg.recipient,
+    required_count: Math.max(1,parseInt(pkg.packages)||1)
+  };
 }
 
 async function buildRoutes(){
@@ -5831,7 +5837,7 @@ async function buildRoutes(){
       });
     }
     const stop=stopMap.get(key);
-    stop.pkgs.push(...piecesFor(pkg));
+    stop.pkgs.push(normalizePackage(pkg));
     stop.packages+=(parseInt(pkg.packages)||1);
   }
   const uniqueStops=Array.from(stopMap.values());
@@ -6068,8 +6074,11 @@ async function buildRoutes(){
   // Expected physical packages must equal packages assigned exactly once to
   // routes, plus explicit unresolved exceptions. No missing packages, no
   // duplicates, no silent drops. If this fails the plan is NOT complete.
-  const expectedIds=new Set(packages.flatMap(p=>piecesFor(p).map(x=>x.piece_id)));
+  const expectedNorm=packages.map(normalizePackage);
+  const expectedIds=new Set(expectedNorm.map(x=>x.piece_id));
+  const expectedUnits=expectedNorm.reduce((s,x)=>s+x.required_count,0);
   const assignedIds=[];
+  let assignedUnits=0;
   for(const r of ssRoutes){
     for(const s of r.stops){
       if(!s.coords)continue; // a failed-geocode stop is counted as an
@@ -6077,12 +6086,16 @@ async function buildRoutes(){
                               // it was previously counted as both, which
                               // broke assigned+exceptions===expected on any
                               // manifest with even one failed geocode.
-      for(const pk of (s.pkgs||[])) assignedIds.push(pk.piece_id);
+      for(const pk of (s.pkgs||[])){assignedIds.push(pk.piece_id);assignedUnits+=(pk.required_count||1);}
     }
   }
   const exceptionIds=new Set();
+  let exceptionUnits=0;
   for(const f of failedAddresses){
-    for(const pk of (f.pkgs||[])) exceptionIds.add(pk.piece_id);
+    for(const pk of (f.pkgs||[])){
+      if(!exceptionIds.has(pk.piece_id))exceptionUnits+=(pk.required_count||1);
+      exceptionIds.add(pk.piece_id);
+    }
   }
   const assignedSet=new Set(assignedIds);
   const duplicates=assignedIds.length-assignedSet.size;
@@ -6095,15 +6108,23 @@ async function buildRoutes(){
     exceptions:exceptionIds.size,
     duplicates,
     missing:missing.length,
-    unexplained:unexplained.length
+    unexplained:unexplained.length,
+    expectedUnits, assignedUnits, exceptionUnits
   };
   console.log('[SmartSort] PACKAGE ACCOUNTING: expected='+audit.expected+
     ' assigned='+audit.assigned+' exceptions='+audit.exceptions+
     ' duplicates='+audit.duplicates+' missing='+audit.missing+
-    ' unexplained='+audit.unexplained);
+    ' unexplained='+audit.unexplained+
+    ' | physical units expected='+expectedUnits+' assigned='+assignedUnits+' exceptions='+exceptionUnits);
 
+  // Two independent checks: every real barcode appears in exactly one
+  // route or exception (never both, never neither), AND the true physical
+  // unit count (summed via required_count) is fully conserved -- this
+  // second check is what actually catches a quantity silently changing or
+  // getting lost, which row-presence alone cannot detect.
   const accountingOk = duplicates===0 && missing.length===0 && unexplained.length===0
-    && (audit.assigned + audit.exceptions === audit.expected);
+    && (audit.assigned + audit.exceptions === audit.expected)
+    && (assignedUnits + exceptionUnits === expectedUnits);
 
   if(!accountingOk){
     console.log('[SmartSort] ACCOUNTING FAILED',{missing:missing.slice(0,20),unexplained:unexplained.slice(0,20)});
@@ -6413,15 +6434,19 @@ async function assignSSRoute(routeId){
       packages: s.packages,
       stop_number: i+1,
       coords: s.coords||null,
-      // Every physical package at this stop, each with its own identity.
-      // A business receiving 3 packages is ONE stop with THREE scannable
-      // package records — PathIQ sorts all three, the driver scans all three.
+      // Every real, distinct manifest line at this stop. piece_id is the
+      // real, physical, scannable barcode as supplied (tracking_number or
+      // order_id) -- never an invented per-unit id. required_count is how
+      // many times that one barcode needs to be scanned (three boxes
+      // sharing one shipper label, one manifest line, one required_count of
+      // 3), not three separate identities. A business receiving three
+      // DIFFERENT shipper-barcoded packages is three separate manifest
+      // lines, each its own entry here with required_count 1.
       pkgs: (s.pkgs||[]).map(p=>({
         order_id: p.order_id,
         tracking_number: p.tracking_number||null,
         piece_id: p.piece_id||null,
-        piece_index: p.piece_index||null,
-        pieces_total: p.pieces_total||null
+        required_count: p.required_count||1
       }))
     })),
     master_code: route.master_code,
