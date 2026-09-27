@@ -1,1 +1,671 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=stow.html"><title>PathIQ</title></head><body><a href="stow.html">Open PathIQ Stow</a><script>location.replace("stow.html"+location.search+location.hash)</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<link rel="manifest" href="manifest-iq2.json"/>
+<meta name="theme-color" content="#0b6fb0"/>
+<title>IQ2</title>
+<!--
+  IQ2 — inbound operations (receiving + putaway) inside the PathIQ app.
+
+  This page is entered from the IQ2 card on PathIQ's home screen, which
+  already loads iq2.html. It is deliberately self-contained: it shares no
+  code or state with STOW (stow.html). Patterns below (scanner bridge,
+  sounds, result cards) are COPIED from PathIQ so that IQ2 can change
+  without ever touching STOW.
+
+  Inventory rules are enforced by the database (public.iq2_* functions,
+  supabase/schema/005_iq2_inbound.sql). This page only shows a success
+  after the server has confirmed it.
+-->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;700&family=Dancing+Script:wght@700&display=swap');
+:root{
+  --bg:#ffffff; --card:#ffffff; --card2:#f2f4f6; --border:#c8ced4;
+  --text:#111418; --muted:#4a525a; --faint:#767e86;
+  --blue:#0b6fb0; --green:#0a7a2f; --orange:#a85a00; --red:#b3261e;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
+.top{padding:14px 18px;border-bottom:1px solid #e4e8ec;display:flex;align-items:center;gap:12px;min-height:24px;background:#fff;}
+.back-btn{background:none;border:none;color:var(--blue);font-family:'DM Sans',sans-serif;font-weight:700;font-size:1rem;padding:4px 0;cursor:pointer;}
+.top-title{font-weight:800;font-size:1.1rem;flex:1;}
+.wh-chip{font-family:'DM Mono',monospace;font-size:.72rem;font-weight:700;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;}
+.wrap{padding:18px;max-width:520px;margin:0 auto;}
+.screen{display:none;} .screen.on{display:block;}
+.app-header{text-align:center;padding:24px 18px 20px;margin:-18px -18px 18px;background:linear-gradient(135deg,#0b6fb0,#084d7a);box-shadow:0 2px 8px rgba(0,0,0,.12);color:#fff;}
+.brand{font-family:'Montserrat',sans-serif;font-weight:500;font-size:1.8rem;letter-spacing:1px;}
+.brand b{color:#5dd4f4;font-family:'Dancing Script',cursive;font-weight:700;font-size:1.3em;}
+.brand-sub{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85;margin-top:2px;font-weight:700;}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 16px;}
+.big-card{background:#fff;border:1px solid #e4e8ec;border-radius:10px;padding:8px 4px;aspect-ratio:1.2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#111418;font-family:'DM Sans',sans-serif;box-shadow:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.06);cursor:pointer;}
+.big-card svg{width:30px;height:30px;stroke:var(--blue);fill:none;stroke-width:1.8;}
+.big-card:active{transform:translateY(1px);background:#f7f9fa;}
+.big-card-title{font-size:1.15rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;}
+.ctx{background:#fff;border:1px solid #e4e8ec;border-radius:10px;padding:12px 14px;margin-bottom:12px;}
+.ctx-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.ctx-label{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+.ctx-main{font-family:'DM Mono',monospace;font-size:1.25rem;font-weight:800;color:var(--blue);word-break:break-all;}
+.ctx-sub{font-size:.85rem;color:var(--muted);font-weight:600;margin-top:2px;}
+.bar{height:8px;background:var(--card2);border-radius:4px;margin-top:8px;overflow:hidden;}
+.bar>i{display:block;height:100%;background:var(--green);width:0;transition:width .25s;}
+.prompt{margin:0 0 14px;height:150px;perspective:1000px;}
+.prompt-inner{position:relative;width:100%;height:100%;transition:transform .45s;transform-style:preserve-3d;}
+.prompt-inner.flipped{transform:rotateY(180deg);}
+.face{position:absolute;inset:0;border-radius:10px;border:3px solid #111418;display:flex;flex-direction:column;align-items:center;justify-content:center;backface-visibility:hidden;background:#fff;text-align:center;padding:8px;}
+.face.back{transform:rotateY(180deg);background:#22a559;border-color:#22a559;color:#fff;}
+.prompt-text{font-size:1.5rem;font-weight:800;letter-spacing:.02em;}
+.prompt-hint{font-size:.8rem;color:var(--faint);font-weight:600;margin-top:6px;}
+.pend-desc{font-size:1.15rem;font-weight:800;text-transform:uppercase;line-height:1.15;}
+.pend-sku{font-family:'DM Mono',monospace;font-size:.85rem;opacity:.9;margin-top:2px;}
+.pend-qty{font-size:1.9rem;font-weight:800;margin-top:2px;}
+.pend-instr{font-size:.95rem;font-weight:800;letter-spacing:.06em;margin-top:2px;}
+.hidden-scan-input{width:100%;max-width:200px;height:28px;margin:0 auto 10px;display:block;padding:6px;font-size:.8rem;font-family:'DM Mono',monospace;text-align:center;border:none;outline:none;border-radius:6px;background:#e9ecef;color:#e9ecef;caret-color:transparent;}
+.hidden-scan-input::placeholder{color:#e9ecef;}
+.result-card{background:var(--card2);border:3px solid var(--border);border-radius:10px;padding:18px;text-align:center;margin-bottom:14px;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.result-card.success{border-color:var(--green);background:#eef8ef;}
+.result-card.error{border-color:var(--red);background:#fbeceb;}
+.result-card.dupe{border-color:#e69500;background:#fff4dc;}
+.result-card.info{border-color:var(--blue);background:#eaf3fa;}
+.r-head{font-family:'DM Mono',monospace;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px;}
+.success .r-head{color:var(--green);} .error .r-head{color:var(--red);} .dupe .r-head{color:#b36b00;} .info .r-head{color:var(--blue);}
+.r-big{font-size:1.7rem;font-weight:800;line-height:1.1;word-break:break-word;}
+.success .r-big{color:var(--green);} .error .r-big{color:var(--red);} .dupe .r-big{color:var(--orange);}
+.r-line{font-size:.92rem;color:var(--muted);font-weight:700;margin-top:4px;}
+.r-mono{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--faint);word-break:break-all;margin-top:4px;}
+.btn-row{display:flex;gap:10px;margin-bottom:12px;}
+.btn{flex:1;padding:14px;border-radius:8px;font-weight:800;font-size:.95rem;border:2px solid var(--border);font-family:'DM Sans',sans-serif;background:var(--card2);color:var(--text);cursor:pointer;}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.warn{background:var(--orange);border-color:var(--orange);color:#fff;}
+.short-list{margin:8px 0 4px;text-align:left;width:100%;}
+.short-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #eadfc8;font-size:.85rem;font-weight:700;}
+.short-row span:last-child{font-family:'DM Mono',monospace;white-space:nowrap;}
+.contents{width:100%;margin-top:8px;text-align:left;}
+.wh-list .btn{display:block;width:100%;margin-bottom:10px;text-align:left;}
+.empty-note{text-align:center;padding:24px 12px;color:var(--faint);font-size:.9rem;}
+.busy{position:fixed;top:10px;right:12px;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--faint);display:none;}
+.busy.on{display:block;}
+</style>
+</head>
+<body>
+<div class="top" id="topBar">
+  <button class="back-btn" id="backBtn" onclick="iq2Back()">&#8249; PathIQ</button>
+  <span class="top-title" id="topTitle">IQ2</span>
+  <span class="wh-chip" id="whChip" onclick="iq2ChangeWarehouse()" style="display:none;"></span>
+</div>
+<div class="busy" id="busy">sending…</div>
+<div class="wrap">
+
+  <!-- SETUP: choose the warehouse this device works in -->
+  <div class="screen" id="scSetup">
+    <div class="app-header"><div class="brand">IQ<b>2</b></div><div class="brand-sub">Inbound operations</div></div>
+    <div class="result-card info" id="setupCard"><div class="r-head">Warehouse</div><div class="r-line">Loading warehouses…</div></div>
+    <div class="wh-list" id="whList"></div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="scHome">
+    <div class="app-header"><div class="brand">IQ<b>2</b></div><div class="brand-sub">Inbound operations</div></div>
+    <div class="card-grid">
+      <button class="big-card" onclick="iq2Go('receive')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="1"/><path d="M7 13V8h10v5"/><path d="M12 3v7M9 7l3 3 3-3"/></svg>
+        <div class="big-card-title">Receive</div>
+      </button>
+      <button class="big-card" onclick="iq2Go('putaway')">
+        <svg viewBox="0 0 24 24"><path d="M4 21V4h16v17"/><path d="M4 10h16M4 15.5h16"/><path d="M12 7l3 0M9 12.5h6"/></svg>
+        <div class="big-card-title">Putaway</div>
+      </button>
+    </div>
+    <div class="result-card" id="homeResult" style="display:none;margin-top:16px;"></div>
+  </div>
+
+  <!-- RECEIVE -->
+  <div class="screen" id="scReceive">
+    <div class="ctx" id="rxCtx" style="display:none;"></div>
+    <div class="prompt"><div class="prompt-inner"><div class="face">
+      <div class="prompt-text" id="rxPrompt">SCAN PALLET</div>
+      <div class="prompt-hint" id="rxHint">Scan the pallet label to start receiving</div>
+    </div></div></div>
+    <div class="result-card" id="rxResult" style="display:none;"></div>
+    <div class="btn-row" id="rxActions" style="display:none;">
+      <button class="btn" onclick="iq2LeavePallet()">Leave pallet</button>
+      <button class="btn primary" onclick="iq2FinishPallet()">Finish pallet</button>
+    </div>
+  </div>
+
+  <!-- PUTAWAY -->
+  <div class="screen" id="scPutaway">
+    <div class="prompt"><div class="prompt-inner" id="paInner">
+      <div class="face">
+        <div class="prompt-text">SCAN CARTON</div>
+        <div class="prompt-hint">Take a carton off the cart and scan it</div>
+      </div>
+      <div class="face back">
+        <div class="pend-desc" id="paDesc"></div>
+        <div class="pend-sku" id="paSku"></div>
+        <div class="pend-qty" id="paQty"></div>
+        <div class="pend-instr">SCAN LOCATION</div>
+      </div>
+    </div></div>
+    <div class="result-card" id="paResult" style="display:none;"></div>
+    <div class="btn-row" id="paActions" style="display:none;">
+      <button class="btn" onclick="iq2CancelPending()">Cancel carton</button>
+    </div>
+  </div>
+
+  <input type="text" id="iq2Input" class="hidden-scan-input" inputmode="none" autocomplete="off" placeholder="Scan here"/>
+</div>
+
+<script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const RPC_TIMEOUT_MS=12000;
+
+// ════════════════════════════════════════════════════════════════════
+// Identity — same device/worker values PathIQ already stores on this
+// device (same origin, same keys), read here without any STOW code.
+// ════════════════════════════════════════════════════════════════════
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
+function iq2DeviceId(){
+  let d=lsGet('tp_device');
+  if(!d){ d=Date.now().toString(36)+Math.random().toString(36).slice(2,8); lsSet('tp_device',d); }
+  return d;
+}
+function iq2Worker(){
+  let w=lsGet('tp_worker');
+  if(!w&&typeof prompt==='function'){
+    let entered=null; try{ entered=prompt('Your name (so scans are traceable):'); }catch(e){}
+    if(entered&&entered.trim()){ w=entered.trim(); lsSet('tp_worker',w); }
+  }
+  return w||('Device '+iq2DeviceId().slice(0,4).toUpperCase());
+}
+function newIdem(){
+  try{ if(crypto&&crypto.randomUUID) return 'iq2-'+crypto.randomUUID(); }catch(e){}
+  return 'iq2-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+const normCode=v=>String(v==null?'':v).trim().toUpperCase();
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+
+// ════════════════════════════════════════════════════════════════════
+// Server calls. Every inventory decision is made by the database.
+// A result without {ok:...} from the server is never treated as success.
+// ════════════════════════════════════════════════════════════════════
+async function iq2Rpc(fn,args){
+  if(typeof navigator!=='undefined'&&navigator.onLine===false)
+    return {ok:false,code:'NO_CONNECTION',transport:true,sent:false};
+  let ctl=null,timer=null;
+  try{ ctl=new AbortController(); timer=setTimeout(()=>ctl.abort(),RPC_TIMEOUT_MS); }catch(e){}
+  setBusy(true);
+  try{
+    let r;
+    try{
+      r=await fetch(SB+'/rest/v1/rpc/'+fn,{method:'POST',
+        headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+        body:JSON.stringify(args||{}), signal:ctl?ctl.signal:undefined});
+    }catch(e){
+      // The request may or may not have reached the server. Its outcome is
+      // unknown, so it is NOT CONFIRMED -- the retry key makes a re-scan safe.
+      return {ok:false,code:'NOT_CONFIRMED',transport:true,sent:null};
+    }
+    if(!r||!r.ok) return {ok:false,code:'NOT_CONFIRMED',transport:true,sent:true,status:r&&r.status};
+    let j=null; try{ j=await r.json(); }catch(e){}
+    if(!j||typeof j!=='object'||typeof j.ok!=='boolean')
+      return {ok:false,code:'NOT_CONFIRMED',transport:true,sent:true};
+    return j;
+  }finally{ if(timer)clearTimeout(timer); setBusy(false); }
+}
+function setBusy(on){ const b=document.getElementById('busy'); if(b) b.classList.toggle('on',!!on); }
+
+// Retry safety: a write whose outcome is unknown (no/garbled response)
+// keeps its request key. Scanning the same thing again re-sends the SAME
+// key, so the server either records it once or replays the first result.
+const pendingWrites={};   // signature -> idem key, only while unconfirmed
+function writeKey(sig){ return pendingWrites[sig]||(pendingWrites[sig]=newIdem()); }
+function settleWrite(sig,res){ if(!res||!res.transport) delete pendingWrites[sig]; }
+
+// ════════════════════════════════════════════════════════════════════
+// State. Authoritative progress lives in the database; this only
+// remembers WHERE the worker was (mode, pallet, carton in hand) so a
+// refresh or restart puts them back on the same screen.
+// ════════════════════════════════════════════════════════════════════
+const S={ wh:null, mode:'home', pallet:null, confirmClose:null, pending:null };
+function saveState(){
+  lsSet('iq2_state',JSON.stringify({mode:S.mode,
+    pallet:S.pallet?S.pallet.code:null,
+    pending:S.pending?S.pending.code:null}));
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Screens
+// ════════════════════════════════════════════════════════════════════
+const SCREENS={setup:'scSetup',home:'scHome',receive:'scReceive',putaway:'scPutaway'};
+const TITLES={setup:'IQ2',home:'IQ2',receive:'IQ2 · Receive',putaway:'IQ2 · Putaway'};
+function show(mode){
+  S.mode=mode;
+  Object.keys(SCREENS).forEach(m=>document.getElementById(SCREENS[m]).classList.toggle('on',m===mode));
+  document.getElementById('topTitle').textContent=TITLES[mode]||'IQ2';
+  const back=document.getElementById('backBtn');
+  back.innerHTML=(mode==='home'||mode==='setup')?'&#8249; PathIQ':'&#8249; IQ2';
+  const chip=document.getElementById('whChip');
+  chip.style.display=S.wh?'inline-block':'none'; chip.textContent=S.wh||'';
+  saveState();
+  focusInput();
+}
+function iq2Go(mode){
+  if(!S.wh){ show('setup'); return; }
+  if(mode==='receive'){ S.pending=null; renderReceive(); }
+  if(mode==='putaway'){ S.pallet=null; S.confirmClose=null; renderPutaway(); }
+  if(mode==='home'){ S.pallet=null; S.pending=null; S.confirmClose=null; }
+  clearResult('rxResult'); clearResult('paResult'); clearResult('homeResult');
+  show(mode);
+}
+function iq2Back(){
+  if(S.mode==='receive'||S.mode==='putaway'){ iq2Go('home'); return; }
+  iq2BackToPathIQ();
+}
+// Returns to PathIQ. In the Android app PathIQ's page is index.html; on
+// the web it is stow.html. History is used first so PathIQ simply
+// reloads on its home screen, the same as it does today.
+function iq2IsNative(){
+  const C=window.Capacitor;
+  if(!C) return false;
+  try{ if(typeof C.isNativePlatform==='function') return !!C.isNativePlatform(); }catch(e){}
+  return !!(C.platform&&C.platform!=='web');
+}
+function iq2BackToPathIQ(){
+  let fromPathIQ=false;
+  try{ const r=document.referrer?new URL(document.referrer):null;
+       fromPathIQ=!!(r&&r.origin===location.origin&&!/iq2(-admin)?\.html$/i.test(r.pathname)); }catch(e){}
+  if(fromPathIQ&&history.length>1){ history.back(); return; }
+  iq2Navigate(iq2IsNative()?'index.html':'stow.html');
+}
+function iq2Navigate(url){ location.replace(url); }
+
+// ════════════════════════════════════════════════════════════════════
+// Warehouse selection (one-time per device)
+// ════════════════════════════════════════════════════════════════════
+async function loadWarehouses(){
+  const card=document.getElementById('setupCard'), list=document.getElementById('whList');
+  let r;
+  try{
+    const resp=await fetch(SB+'/rest/v1/rpc/iq2_list_warehouses',{method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:'{}'});
+    r=resp.ok?await resp.json():null;
+  }catch(e){ r=null; }
+  if(!Array.isArray(r)){
+    card.className='result-card error';
+    card.innerHTML='<div class="r-head">No connection</div><div class="r-line">Could not load IQ2 warehouses.</div>';
+    list.innerHTML='<button class="btn" onclick="loadWarehouses()">Try again</button>';
+    return;
+  }
+  if(!r.length){
+    card.className='result-card error';
+    card.innerHTML='<div class="r-head">No IQ2 warehouse</div><div class="r-line">An administrator must create one first.</div>';
+    list.innerHTML='';
+    return;
+  }
+  card.className='result-card info';
+  card.innerHTML='<div class="r-head">Which warehouse is this device in?</div><div class="r-line">Tap one, or scan a WH: label.</div>';
+  list.innerHTML=r.map(w=>'<button class="btn" onclick="iq2SetWarehouse(\''+esc(w.code)+'\')"><b>'+esc(w.code)+'</b> &middot; '+esc(w.name)+'</button>').join('');
+  window._iq2Warehouses=r;
+}
+function iq2SetWarehouse(code){
+  S.wh=normCode(code); lsSet('iq2_warehouse',S.wh);
+  iq2Go('home');
+}
+function iq2ChangeWarehouse(){
+  if(S.mode!=='home'&&S.mode!=='setup') return;
+  S.wh=null; lsSet('iq2_warehouse',null); show('setup'); loadWarehouses();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Result cards, sounds
+// ════════════════════════════════════════════════════════════════════
+function clearResult(id){ const c=document.getElementById(id); c.style.display='none'; c.className='result-card'; c.innerHTML=''; }
+function result(id,kind,head,big,lines,mono){
+  const c=document.getElementById(id);
+  c.className='result-card '+kind; c.style.display='flex';
+  c.innerHTML='<div class="r-head">'+head+'</div>'
+    +(big?'<div class="r-big">'+big+'</div>':'')
+    +(lines||[]).filter(Boolean).map(l=>'<div class="r-line">'+l+'</div>').join('')
+    +(mono?'<div class="r-mono">'+esc(mono)+'</div>':'');
+  if(kind==='success'||kind==='info') playSuccessSound(); else playErrorSound();
+  if(kind==='error'||kind==='dupe'){ try{ if(navigator.vibrate) navigator.vibrate([120,80,120]); }catch(e){} }
+}
+let audioCtx=null;
+function getAudioCtx(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function playSuccessSound(){
+  try{ const ctx=getAudioCtx();
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type='square'; o.frequency.value=f;
+      const t=ctx.currentTime+i*.09; g.gain.setValueAtTime(.15,t); g.gain.exponentialRampToValueAtTime(.001,t+.1);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+.1); });
+  }catch(e){}
+}
+function playErrorSound(){
+  try{ const ctx=getAudioCtx(),o=ctx.createOscillator(),g=ctx.createGain(); o.type='sawtooth';
+    o.frequency.setValueAtTime(220,ctx.currentTime); o.frequency.exponentialRampToValueAtTime(110,ctx.currentTime+.35);
+    g.gain.setValueAtTime(.2,ctx.currentTime); g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.4);
+    o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime); o.stop(ctx.currentTime+.4);
+  }catch(e){}
+}
+// Transport failures: say plainly that nothing is counted on this screen.
+//   NO_CONNECTION: the device is offline; nothing was sent, nothing recorded.
+//   NOT_CONFIRMED: sent, but no valid answer came back. Nothing is counted
+//   on this screen; the same scan again is safe (same request key).
+function transportResult(id,res,scanned){
+  if(res.code==='NO_CONNECTION')
+    result(id,'error','No connection','NOTHING RECORDED',['Check Wi-Fi, then scan it again.'],scanned);
+  else
+    result(id,'error','No confirmation','NOT CONFIRMED',
+      ['Nothing is counted on this screen.','Scan the same item again — it will never be counted twice.'],scanned);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// RECEIVE
+//   SCAN PALLET → SCAN CARTON (repeat) → Finish pallet (shortages shown)
+// ════════════════════════════════════════════════════════════════════
+function renderReceive(){
+  const ctx=document.getElementById('rxCtx'), actions=document.getElementById('rxActions');
+  const p=S.pallet;
+  if(!p){
+    ctx.style.display='none'; actions.style.display='none';
+    document.getElementById('rxPrompt').textContent='SCAN PALLET';
+    document.getElementById('rxHint').textContent='Scan the pallet label to start receiving';
+    return;
+  }
+  const pct=p.expected_cartons?Math.round(100*p.received_cartons/p.expected_cartons):0;
+  ctx.style.display='block';
+  ctx.innerHTML='<div class="ctx-row"><span class="ctx-label">Pallet</span><span class="ctx-label">'+esc(p.load_ref)+'</span></div>'
+    +'<div class="ctx-row"><span class="ctx-main">'+esc(p.code)+'</span>'
+    +'<span class="ctx-main" id="rxCount">'+fmt(p.received_cartons)+' / '+fmt(p.expected_cartons)+'</span></div>'
+    +'<div class="ctx-sub">'+fmt(p.received_cartons)+' of '+fmt(p.expected_cartons)+' cartons received &middot; '
+    +fmt(p.received_units)+' of '+fmt(p.expected_units)+' units</div>'
+    +'<div class="bar"><i style="width:'+pct+'%"></i></div>';
+  actions.style.display='flex';
+  document.getElementById('rxPrompt').textContent='SCAN CARTON';
+  document.getElementById('rxHint').textContent='Any order. Another pallet label switches pallets.';
+}
+async function rxOpenPallet(code){
+  const res=await iq2Rpc('iq2_open_pallet',{p_warehouse:S.wh,p_code:code,p_device:iq2DeviceId(),p_actor:lsGet('tp_worker')});
+  if(res.transport){ transportResult('rxResult',res,code); return; }
+  if(res.ok){
+    S.pallet=res.pallet; S.confirmClose=null; saveState(); renderReceive();
+    const p=res.pallet;
+    result('rxResult','info','Pallet '+(p.status==='receiving'?'resumed':'opened'),esc(p.code),
+      [fmt(p.received_cartons)+' / '+fmt(p.expected_cartons)+' CARTONS RECEIVED',
+       fmt(p.lines)+' carton lines &middot; '+fmt(p.skus)+' SKUs &middot; load '+esc(p.load_ref)]);
+    return;
+  }
+  const heads={UNKNOWN_PALLET:'Unknown pallet',PALLET_CLOSED:'Pallet already received / closed',NOT_A_PALLET:'That is a carton',
+               UNKNOWN_WAREHOUSE:'Unknown warehouse'};
+  result('rxResult','error',heads[res.code]||'Not accepted','NOTHING RECEIVED',[esc(res.message)],code);
+}
+async function rxReceive(code){
+  const p=S.pallet;
+  const sig='rx|'+p.id+'|'+normCode(code);
+  const res=await iq2Rpc('iq2_receive_carton',{p_warehouse:S.wh,p_pallet_id:p.id,p_code:code,
+    p_idem:writeKey(sig),p_device:iq2DeviceId(),p_actor:iq2Worker()});
+  settleWrite(sig,res);
+  if(res.transport){ transportResult('rxResult',res,code); return; }
+  if(res.pallet&&res.pallet.id===p.id){ S.pallet=res.pallet; renderReceive(); }
+  if(res.ok){
+    const n=res.carton_index||res.received_cartons;
+    result('rxResult','success','Received &#10003;'+(res.replay?' (confirmed)':''),esc(res.sku),
+      [esc(res.description),
+       '<span style="font-size:1.3rem;color:var(--text);">QTY '+fmt(res.units)+'</span>',
+       'CARTON '+fmt(n)+' OF '+fmt(res.expected_cartons),
+       'PALLET '+fmt(res.pallet.received_cartons)+' OF '+fmt(res.pallet.expected_cartons)
+         +(res.pallet.received_cartons>=res.pallet.expected_cartons?' &middot; ALL RECEIVED':'')],code);
+    return;
+  }
+  if(res.code==='PALLET_SCANNED'&&res.pallet){ await rxOpenPallet(res.pallet.code); return; }
+  const map={
+    UNKNOWN_CARTON:['error','Unknown carton','NOT RECEIVED'],
+    WRONG_PALLET:['error','Wrong pallet','NOT RECEIVED'],
+    ALREADY_RECEIVED:['dupe','Already received','NOT COUNTED'],
+    OVER_RECEIVE:['dupe','Over-receive','NOT COUNTED'],
+    PALLET_CLOSED:['error','Pallet closed','NOTHING RECEIVED']};
+  const m=map[res.code]||['error','Not accepted','NOT RECEIVED'];
+  const lines=[esc(res.message)];
+  if(res.sku) lines.unshift(esc(res.sku)+' &middot; '+fmt(res.received_cartons)+' of '+fmt(res.expected_cartons)+' cartons received');
+  result('rxResult',m[0],m[1],m[2],lines,code);
+}
+async function iq2FinishPallet(confirmShort){
+  if(!S.pallet) return;
+  const res=await iq2Rpc('iq2_close_pallet',{p_warehouse:S.wh,p_pallet_id:S.pallet.id,
+    p_confirm_short:!!confirmShort,p_device:iq2DeviceId(),p_actor:iq2Worker()});
+  if(res.transport){ transportResult('rxResult',res,S.pallet.code); return; }
+  if(res.code==='SHORT_CONFIRM_REQUIRED'){
+    S.confirmClose=res.pallet; S.pallet=res.pallet; renderReceive();
+    const p=res.pallet;
+    const c=document.getElementById('rxResult');
+    c.className='result-card dupe'; c.style.display='flex';
+    c.innerHTML='<div class="r-head">Pallet is short</div>'
+      +'<div class="r-big">'+fmt(p.expected_cartons-p.received_cartons)+' CARTONS MISSING</div>'
+      +'<div class="r-line">'+fmt(p.received_cartons)+' of '+fmt(p.expected_cartons)+' cartons received</div>'
+      +'<div class="short-list">'+p.shortages.map(s=>'<div class="short-row"><span>'+esc(s.sku)+' &middot; '+esc(s.description)
+        +'</span><span>'+fmt(s.received_cartons)+'/'+fmt(s.expected_cartons)+'</span></div>').join('')+'</div>'
+      +'<div class="btn-row" style="width:100%;margin:10px 0 0;">'
+      +'<button class="btn" onclick="iq2KeepReceiving()">Keep receiving</button>'
+      +'<button class="btn warn" onclick="iq2FinishPallet(true)">Close short</button></div>';
+    playErrorSound();
+    return;
+  }
+  if(res.ok){
+    const p=res.pallet;
+    S.pallet=null; S.confirmClose=null; saveState(); renderReceive();
+    const short=res.code==='CLOSED_SHORT';
+    result('rxResult',short?'dupe':'success',short?'Closed short':'Pallet complete &#10003;',esc(p.code),
+      [fmt(p.received_cartons)+' of '+fmt(p.expected_cartons)+' cartons &middot; '+fmt(p.received_units)+' units received',
+       short?'Shortages recorded as exceptions.':'All cartons received.','Scan the next pallet.']);
+    return;
+  }
+  result('rxResult','error','Not closed','PALLET STILL OPEN',[esc(res.message)]);
+}
+function iq2KeepReceiving(){ S.confirmClose=null; clearResult('rxResult'); focusInput(); }
+function iq2LeavePallet(){
+  S.pallet=null; S.confirmClose=null; saveState(); renderReceive();
+  result('rxResult','info','Pallet left open','PROGRESS SAVED',['Scan the pallet again any time to resume.']);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// PUTAWAY
+//   SCAN CARTON → (shows product + QTY) → SCAN LOCATION → recorded → next
+// ════════════════════════════════════════════════════════════════════
+function renderPutaway(){
+  const p=S.pending;
+  document.getElementById('paInner').classList.toggle('flipped',!!p);
+  document.getElementById('paActions').style.display=p?'flex':'none';
+  if(p){
+    document.getElementById('paDesc').textContent=p.description||p.sku;
+    document.getElementById('paSku').textContent=p.sku;
+    document.getElementById('paQty').textContent='QTY '+fmt(p.units);
+  }
+}
+async function paLookup(code,replacing){
+  const res=await iq2Rpc('iq2_putaway_lookup',{p_warehouse:S.wh,p_code:code,p_device:iq2DeviceId(),p_actor:lsGet('tp_worker')});
+  if(res.transport){ transportResult('paResult',res,code); return; }
+  if(res.ok){
+    S.pending={code:code,line_id:res.line_id,sku:res.sku,description:res.description,units:res.units,remaining:res.remaining_cartons};
+    saveState(); renderPutaway();
+    if(replacing) result('paResult','dupe','Carton changed','NOTHING MOVED',['Now holding '+esc(res.sku)+'. Scan its location.'],code);
+    else clearResult('paResult');
+    return;
+  }
+  if(res.code==='LOCATION_SCANNED'&&res.location){
+    const l=res.location;
+    const rows=(l.contents||[]).map(x=>'<div class="short-row"><span>'+esc(x.sku)+' &middot; '+esc(x.description)+'</span><span>'+fmt(x.units)+'</span></div>').join('');
+    const c=document.getElementById('paResult');
+    c.className='result-card info'; c.style.display='flex';
+    c.innerHTML='<div class="r-head">Location '+(l.enabled?'':'(disabled)')+'</div><div class="r-big">'+esc(l.code)+'</div>'
+      +'<div class="r-line">'+fmt(l.total_units)+' units stored &middot; scan a carton first to put away</div>'
+      +(rows?'<div class="contents">'+rows+'</div>':'<div class="r-line">Empty</div>');
+    playSuccessSound();
+    return;
+  }
+  if(replacing){ S.pending=null; saveState(); renderPutaway(); }
+  const map={UNKNOWN_CARTON:['error','Unknown carton'],NOT_RECEIVED:['error','Not received yet'],
+    ALREADY_PUT_AWAY:['dupe','Already put away'],AMBIGUOUS_CARTON:['error','Needs a lead'],PALLET_SCANNED:['error','That is a pallet']};
+  const m=map[res.code]||['error','Not accepted'];
+  result('paResult',m[0],m[1],'NOTHING MOVED',[esc(res.message)],code);
+}
+async function paPutaway(loc){
+  const p=S.pending;
+  if(normCode(loc)===normCode(p.code)){
+    result('paResult','dupe','Same carton','SCAN LOCATION',['This carton is already in hand. Scan the location label.'],loc);
+    return;
+  }
+  const sig='pa|'+normCode(p.code)+'|'+normCode(loc);
+  const res=await iq2Rpc('iq2_putaway',{p_warehouse:S.wh,p_code:p.code,p_location:loc,p_idem:writeKey(sig),
+    p_line_id:p.line_id,p_device:iq2DeviceId(),p_actor:iq2Worker()});
+  settleWrite(sig,res);
+  if(res.transport){ transportResult('paResult',res,loc); return; }
+  if(res.ok){
+    S.pending=null; saveState(); renderPutaway();
+    result('paResult','success','Putaway complete &#10003;'+(res.replay?' (confirmed)':''),
+      fmt(res.units)+' &times; '+esc(res.sku)+'<br>&rarr; '+esc(res.location_code),
+      [esc(res.description),
+       '<span style="font-size:1.25rem;color:var(--text);">'+esc(res.location_code)+' NOW: '+fmt(res.location_sku_units)+'</span>',
+       res.remaining_cartons?fmt(res.remaining_cartons)+' more carton'+(res.remaining_cartons>1?'s':'')+' of this barcode to put away':'']);
+    return;
+  }
+  if(res.code==='CARTON_SCANNED'){ await paLookup(loc,true); return; }
+  if(res.code==='INVALID_LOCATION'||res.code==='LOCATION_DISABLED'){
+    result('paResult','error',res.code==='LOCATION_DISABLED'?'Location disabled':'Invalid location','NOTHING MOVED',
+      [esc(res.message),'Still holding '+esc(p.sku)+' &middot; scan a valid location.'],loc);
+    return;
+  }
+  S.pending=null; saveState(); renderPutaway();
+  const map={ALREADY_PUT_AWAY:['dupe','Already put away'],NOT_RECEIVED:['error','Not received yet'],
+    UNKNOWN_CARTON:['error','Unknown carton'],AMBIGUOUS_CARTON:['error','Needs a lead']};
+  const m=map[res.code]||['error','Not accepted'];
+  result('paResult',m[0],m[1],'NOTHING MOVED',[esc(res.message)],p.code);
+}
+function iq2CancelPending(){
+  S.pending=null; saveState(); renderPutaway();
+  result('paResult','info','Carton released','NOTHING MOVED',['Scan the next carton.']);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// One scan entry point, processed strictly in order. Nothing is dropped
+// while a previous scan is still being confirmed.
+// ════════════════════════════════════════════════════════════════════
+let queue=Promise.resolve();
+// A DataWedge profile set to BOTH broadcast-intent and keystroke output
+// delivers one trigger pull twice, on two channels. That exact case (same
+// value, different channel, within DEDUPE_MS) is collapsed. Repeats on the
+// SAME channel are always processed: five identical shared-barcode cartons
+// scanned quickly are five cartons, never silently dropped.
+let lastScan={v:null,t:0,ch:null};
+const DEDUPE_MS=400;
+function iq2Scan(raw,channel){
+  const v=String(raw==null?'':raw).replace(/[\r\n]+$/,'').trim();
+  if(!v) return queue;
+  const ch=channel||'direct', now=Date.now();
+  if(v===lastScan.v&&ch!==lastScan.ch&&now-lastScan.t<DEDUPE_MS) return queue;
+  lastScan={v:v,t:now,ch:ch};
+  queue=queue.then(()=>handleScan(v)).catch(e=>{
+    console.log('[IQ2] scan failed',e);
+    const id=S.mode==='putaway'?'paResult':'rxResult';
+    result(id,'error','Error','NOTHING RECORDED',['Something went wrong on this device. Scan again.'],v);
+  });
+  return queue;
+}
+async function handleScan(v){
+  if(S.mode==='setup'){
+    const m=/^WH[:\s-]*(.+)$/i.exec(v);
+    const code=normCode(m?m[1]:v);
+    const list=window._iq2Warehouses||[];
+    if(list.some(w=>normCode(w.code)===code)){ iq2SetWarehouse(code); return; }
+    const c=document.getElementById('setupCard');
+    c.className='result-card error'; c.innerHTML='<div class="r-head">Unknown warehouse</div><div class="r-line">'+esc(v)+'</div>';
+    playErrorSound();
+    return;
+  }
+  if(S.mode==='home'){
+    result('homeResult','error','Nothing recorded','CHOOSE RECEIVE OR PUTAWAY',['Tap a mode, then scan.'],v);
+    return;
+  }
+  if(S.mode==='receive'){
+    if(S.confirmClose){ S.confirmClose=null; clearResult('rxResult'); }
+    if(!S.pallet) await rxOpenPallet(v); else await rxReceive(v);
+    return;
+  }
+  if(S.mode==='putaway'){
+    if(!S.pending) await paLookup(v,false); else await paPutaway(v);
+  }
+}
+
+// ── Scanner input: keyboard wedge ──
+const input=document.getElementById('iq2Input');
+input.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){ const v=input.value; input.value=''; iq2Scan(v,'keyboard'); }
+});
+function focusInput(){ try{ input.focus({preventScroll:true}); }catch(e){} }
+document.addEventListener('click',function(e){
+  if(e.target&&e.target.closest&&e.target.closest('button'))
+    setTimeout(focusInput,0);
+  else focusInput();
+});
+
+// ── Scanner input: Zebra TC56 / DataWedge ──
+// Same plugin and DataWedge profile PathIQ uses (Intent Output → Broadcast,
+// action com.tackpath.pathiq.SCAN, app com.tackpath.pathiq). This listener
+// belongs to this page only; STOW's listener is untouched and lives in
+// stow.html. Retries briefly because the plugin can register late.
+(function attachZebra(tries){
+  const C=window.Capacitor;
+  if(C&&C.Plugins&&C.Plugins.ZebraScanner){
+    if(window._iq2ZebraAttached) return;
+    window._iq2ZebraAttached=true;
+    C.Plugins.ZebraScanner.addListener('scan',function(data){ iq2Scan(data&&data.value,'zebra'); });
+    return;
+  }
+  if(tries<20) setTimeout(function(){ attachZebra(tries+1); },500);
+})(0);
+// ── FARSET/ARBOR broadcast scanners (same plugin PathIQ uses) ──
+(function attachFarset(tries){
+  const C=window.Capacitor;
+  if(C&&C.Plugins&&C.Plugins.FarsetScanner){
+    if(window._iq2FarsetAttached) return;
+    window._iq2FarsetAttached=true;
+    C.Plugins.FarsetScanner.addListener('scan',function(data){ iq2Scan(data&&data.value,'farset'); });
+    return;
+  }
+  if(tries<20) setTimeout(function(){ attachFarset(tries+1); },500);
+})(0);
+
+// ════════════════════════════════════════════════════════════════════
+// Start / restore
+// ════════════════════════════════════════════════════════════════════
+async function iq2Start(){
+  const qs=new URLSearchParams(location.search);
+  if(qs.get('wh')) lsSet('iq2_warehouse',normCode(qs.get('wh')));
+  S.wh=lsGet('iq2_warehouse');
+  if(!S.wh){ show('setup'); await loadWarehouses(); return; }
+  let saved={}; try{ saved=JSON.parse(lsGet('iq2_state')||'{}')||{}; }catch(e){}
+  if(saved.mode==='receive'){
+    iq2Go('receive');
+    if(saved.pallet){
+      const res=await iq2Rpc('iq2_open_pallet',{p_warehouse:S.wh,p_code:saved.pallet,p_device:iq2DeviceId(),p_actor:lsGet('tp_worker')});
+      if(res.ok){ S.pallet=res.pallet; saveState(); renderReceive();
+        result('rxResult','info','Pallet resumed',esc(res.pallet.code),
+          [fmt(res.pallet.received_cartons)+' / '+fmt(res.pallet.expected_cartons)+' CARTONS RECEIVED']); }
+      else if(res.transport) transportResult('rxResult',res,saved.pallet);
+      else { saveState(); }
+    }
+  } else if(saved.mode==='putaway'){
+    iq2Go('putaway');
+    if(saved.pending) await paLookup(saved.pending,false);
+  } else {
+    iq2Go('home');
+  }
+}
+window.addEventListener('online',()=>setBusy(false));
+window.iq2Ready=iq2Start();
+</script>
+</body>
+</html>
