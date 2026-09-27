@@ -324,7 +324,7 @@ async function loadEventState(){
         // A reset clears the bin's membership and opens a new epoch, so the
         // same package can legitimately be stowed again without its earlier
         // idempotency key blocking it.
-        out.stowed[bin]=new Set();
+        out.stowed[bin]=new Map();
         out.resetEpoch[bin]=ev.occurred_at;
         return;
       }
@@ -333,9 +333,18 @@ async function loadEventState(){
         // logged. Only a job we can confirm is still active blocks a re-stow --
         // the event row itself is never touched, so real history is preserved.
         if(ev.job_id&&_tpActiveJobIds&&!_tpActiveJobIds.has(ev.job_id))return;
-        if(!out.stowed[bin])out.stowed[bin]=new Set();
-        out.stowed[bin].add(p.code);
-        out.detail[p.code]={bin:bin,actor:ev.actor,at:ev.occurred_at,jobId:ev.job_id};
+        // Multi-piece: one real barcode may need several counted scans
+        // (required_count). Each counted scan carries its unit number;
+        // events written before this carry none and count as unit 1.
+        // Keyed by the piece when the event names one, otherwise by the
+        // scanned code -- aliases are folded onto the piece in loadRoutes
+        // once binMap exists.
+        const key=String(p.piece||p.code).toUpperCase();
+        const unit=parseInt(p.unit)||1;
+        if(!out.stowed[bin])out.stowed[bin]=new Map();
+        if(!out.stowed[bin].has(key))out.stowed[bin].set(key,new Set());
+        out.stowed[bin].get(key).add(unit);
+        out.detail[key]={bin:bin,actor:ev.actor,at:ev.occurred_at,jobId:ev.job_id};
       }
     });
   }catch(e){ console.log('event state load failed:',e.message); }
@@ -359,6 +368,10 @@ let jobs=[];
 let _tpActiveJobIds=null;
 let binMap={};
 let binProgress={};
+// bin -> Map(pieceKey -> Set of unit numbers stowed). A piece is one real
+// barcode (tracking_number / order_id are aliases of the same piece) that
+// needs required_count counted scans. Unit numbers are counting and
+// idempotency mechanics only, never a package identity.
 let scannedByBin={};
 let pendingPlacement=null;
 let exceptionLog=[];
@@ -426,8 +439,8 @@ async function loadRoutes(){
   Object.keys(prevStowed).forEach(bin=>{
     // A reset recorded elsewhere wins — do not resurrect cleared packages
     if(evState.resetEpoch&&evState.resetEpoch[bin]&&evState.resetEpoch[bin]!==resetEpoch[bin])return;
-    if(!nextStowed[bin])nextStowed[bin]=new Set();
-    prevStowed[bin].forEach(c=>{
+    if(!nextStowed[bin])nextStowed[bin]=new Map();
+    prevStowed[bin].forEach((units,c)=>{
       // FIX 2026-09-24 part 2: this in-memory carry-forward is what actually
       // kept re-blocking a reused tracking number -- it ran every poll,
       // independent of the events-table fix above, and never checked whether
@@ -435,7 +448,8 @@ async function loadRoutes(){
       // tied to a job we can confirm is gone is dropped, not carried forward.
       const jid=prevDetail[c]&&prevDetail[c].jobId;
       if(jid&&_tpActiveJobIds&&!_tpActiveJobIds.has(jid))return;
-      nextStowed[bin].add(c);
+      if(!nextStowed[bin].has(c))nextStowed[bin].set(c,new Set());
+      units.forEach(u=>nextStowed[bin].get(c).add(u));
     });
   });
   scannedByBin=nextStowed;
@@ -459,24 +473,24 @@ async function loadRoutes(){
     let stops=j.surge_stops;
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const stopList=Array.isArray(stops)?stops:[];
-    const already=binProgress[binNum];
-    // Sorted count comes from the event stream, not from a counter this
-    // device happened to increment. Two scanners on the same bin now agree.
-    const stowedHere=(scannedByBin[binNum]&&scannedByBin[binNum].size)||0;
 
     // ── EXPECTED COUNT IS PACKAGES, NOT STOPS ──
     // A stop is a delivery destination. A business receiving 5 packages is
     // ONE stop with FIVE physical packages, and all five must be stowed
     // before the route can be staged. Counting stops here meant a route
     // could show "complete" with packages still on the floor.
+    // A pkgs[] entry is one real barcode that may stand for several
+    // physical packages sharing it (required_count), so the expected
+    // count sums required_count, not array entries.
     let expectedPkgs=0;
     stopList.forEach(s=>{
       const arr=Array.isArray(s.pkgs)?s.pkgs:null;
-      expectedPkgs += arr&&arr.length ? arr.length
+      expectedPkgs += arr&&arr.length ? arr.reduce((n,pk)=>n+pkgRequiredCount(pk),0)
                     : (parseInt(s.packages)||1);
     });
 
-    newProgress[binNum]={total:expectedPkgs||stopList.length||1, stops:stopList.length, sorted:stowedHere, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
+    // sorted is filled in below, once binMap exists to fold aliases.
+    newProgress[binNum]={total:expectedPkgs||stopList.length||1, stops:stopList.length, sorted:0, jobTitle:j.title||'Untitled Route', jobId:j.id, orgId:j.org_id||null};
 
     stopList.forEach((s,si)=>{
       const dest={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:s.address||'',
@@ -489,22 +503,56 @@ async function loadRoutes(){
       // Previously only the stop's primary package was indexed, so the
       // 2nd through Nth package at a multi-package address scanned as
       // "not on this route."
+      // tracking_number and order_id are aliases of ONE piece: both keys
+      // share one entry carrying the piece key and its required_count, so
+      // either alias feeds the same counter.
       if(Array.isArray(s.pkgs)){
         s.pkgs.forEach(pk=>{
-          if(pk.tracking_number) binMap[String(pk.tracking_number).toUpperCase()]=dest;
-          if(pk.order_id)        binMap[String(pk.order_id).toUpperCase()]=dest;
+          const tn=pk.tracking_number?String(pk.tracking_number).toUpperCase():null;
+          const oi=pk.order_id?String(pk.order_id).toUpperCase():null;
+          const pieceKey=tn||oi;
+          if(!pieceKey)return;
+          const prev=binMap[pieceKey];
+          let pd;
+          if(prev&&prev.pieceKey===pieceKey&&prev.jobId===j.id){
+            // Same real barcode listed twice on this route: one piece,
+            // its required counts add up.
+            pd=prev; pd.required+=pkgRequiredCount(pk);
+          }else{
+            pd=Object.assign({},dest,{pieceKey, required:pkgRequiredCount(pk)});
+          }
+          if(tn) binMap[tn]=pd;
+          if(oi) binMap[oi]=pd;
         });
       }
 
       // Stop-level identifiers still resolve, for routes built before
-      // pkgs[] existed and for scanning a stop's primary label.
+      // pkgs[] existed and for scanning a stop's primary label. A code
+      // already indexed as a piece above keeps its piece entry.
       const stableCode=s.tracking_number||s.order_id||s.orderId;
-      if(stableCode) binMap[String(stableCode).toUpperCase()]=dest;
+      if(stableCode){
+        const sk=String(stableCode).toUpperCase();
+        if(!(binMap[sk]&&binMap[sk].pieceKey&&binMap[sk].jobId===j.id)) binMap[sk]=dest;
+      }
       const code=s.smart_id||s.id;
       if(code) binMap[String(code).toUpperCase()]=dest;
     });
     if(j.id) binMap[j.id.slice(0,8).toUpperCase()]={binNum, jobId:j.id, jobTitle:j.title||'Untitled Route', address:'', isRouteLevel:true};
   });
+  // Fold every stowed key onto its piece (an older event may name the
+  // order_id alias), then derive sorted counts. Sorted comes from the
+  // event stream, not from a counter this device happened to increment.
+  Object.keys(scannedByBin).forEach(bin=>{
+    const folded=new Map();
+    scannedByBin[bin].forEach((units,k)=>{
+      const pk=pieceKeyFor(k);
+      if(!folded.has(pk))folded.set(pk,new Set());
+      units.forEach(u=>folded.get(pk).add(u));
+      if(pk!==k&&stowDetail[k]&&!stowDetail[pk])stowDetail[pk]=stowDetail[k];
+    });
+    scannedByBin[bin]=folded;
+  });
+  Object.keys(newProgress).forEach(bin=>{ newProgress[bin].sorted=binSortedCount(bin); });
   binProgress=newProgress;
 
   // ── DIAGNOSTIC: confirm binMap actually built correctly, and whether
@@ -779,6 +827,32 @@ async function persistBinBinding(jobId, binCode, locCode, orgId){
   }
 }
 
+// ── Multi-piece counting helpers ──
+// A piece is one real barcode. required_count is how many physical
+// packages share it and so how many counted scans it needs. Codes that are
+// not a pkgs[] piece (stop-level smart_id, route-level code) count as
+// their own piece of 1, exactly as before.
+function pkgRequiredCount(pk){ return Math.max(1,parseInt(pk&&pk.required_count)||1); }
+function pieceKeyFor(code){ const d=binMap[code]; return (d&&d.pieceKey)||code; }
+function pieceRequired(pk){ const d=binMap[pk]; return (d&&d.pieceKey===pk&&d.required)||1; }
+function binSortedCount(bin){
+  const m=scannedByBin[bin]; let n=0;
+  if(m) m.forEach((u,pk)=>{ n+=Math.min(u.size,pieceRequired(pk)); });
+  return n;
+}
+// Units of this piece stowed anywhere -- every bin, since right after a
+// bin opens the route is briefly tracked under a temporary key.
+function pieceStowed(pk){
+  let count=0, bin=null; const used=new Set();
+  Object.keys(scannedByBin).forEach(b=>{
+    const u=scannedByBin[b]&&scannedByBin[b].get(pk);
+    if(u&&u.size){ u.forEach(x=>used.add(x)); if(!bin)bin=b; }
+  });
+  count=Math.min(used.size,pieceRequired(pk));
+  let next=1; while(used.has(next))next++;
+  return {count, bin, nextUnit:next};
+}
+
 // Scanned values are rendered into innerHTML — escape them.
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -824,7 +898,7 @@ async function handleStowScan(code){
     // comparing the raw scan rejected the correct bin as "Wrong Bin".
     // Once a bin is bound to a location, the worker can confirm placement
     // by scanning EITHER the bin's QR or that location's QR.
-    if(clean===pendingPlacement.code){
+    if(clean===pendingPlacement.code||pieceKeyFor(clean)===pendingPlacement.pieceKey){
       card.className='result-card';
       card.innerHTML='<div class="result-bin-num" style="font-size:2rem;">BIN '+esc(pendingPlacement.binNum)+'</div>'
         +(pendingPlacement.location?'<div class="result-detail" style="opacity:.75;">Location '+esc(pendingPlacement.location)+'</div>':'')
@@ -838,9 +912,12 @@ async function handleStowScan(code){
       playSuccessSound();
       const binNum=pendingPlacement.binNum;
       const stopForCard=pendingPlacement.stopNum||null;
-      if(!scannedByBin[binNum]) scannedByBin[binNum]=new Set();
-      // Never count the same physical package twice.
-      if(scannedByBin[binNum].has(pendingPlacement.code)){
+      if(!scannedByBin[binNum]) scannedByBin[binNum]=new Map();
+      const pk=pendingPlacement.pieceKey, req=pendingPlacement.required;
+      const had=pieceStowed(pk);
+      // Never count the same physical package twice -- a piece takes
+      // exactly required_count counted scans, whichever alias is scanned.
+      if(had.count>=req){
         pendingPlacement=null;
         const fi=document.getElementById('scanFlipInner');
         if(fi) fi.classList.remove('flipped');
@@ -848,22 +925,32 @@ async function handleStowScan(code){
         card.className='result-card dupe';
         card.innerHTML='<div class="result-bin" style="color:#b36b00;">&#9888; ALREADY SCANNED</div>'
           +'<div class="result-bin-num" style="color:var(--orange);">BIN '+esc(binNum)+'</div>'
-          +'<div class="result-detail">That package was already stowed. Nothing was counted.</div>';
+          +'<div class="result-detail">That package was already stowed'+(req>1?' ('+req+' of '+req+')':'')+'. Nothing was counted.</div>';
         return;
       }
-      scannedByBin[binNum].add(pendingPlacement.code);
-      stowDetail[pendingPlacement.code]={bin:binNum,actor:ensureWorker(),at:new Date().toISOString(),jobId:binProgress[binNum].jobId};
+      const unit=had.nextUnit;
+      if(!scannedByBin[binNum].has(pk)) scannedByBin[binNum].set(pk,new Set());
+      scannedByBin[binNum].get(pk).add(unit);
+      stowDetail[pk]={bin:binNum,actor:ensureWorker(),at:new Date().toISOString(),jobId:binProgress[binNum].jobId};
       binProgress[binNum].sorted=Math.min(binProgress[binNum].total, binProgress[binNum].sorted+1);
       lastScannedBin=binNum;
+      const pieceLine=req>1
+        ?'<div class="result-detail" style="font-weight:800;">'+esc(pk)+' &middot; '+(had.count+1)+' of '+req+(had.count+1>=req?' COMPLETE':'')+'</div>'
+        :'';
 
       // Durable record. The epoch suffix lets a package be legitimately
       // re-stowed after a bin reset, while still collapsing genuine
       // duplicates (repeat broadcast, double tap, retry) into one event.
+      // Unit 1 keeps the original key; later units of a multi-piece
+      // barcode add ':u<n>' purely so each counted scan is its own event.
       logEvent('package.stowed',{
         org_id:binProgress[binNum].orgId,
         job_id:binProgress[binNum].jobId,
-        payload:{bin:binNum, code:pendingPlacement.code, route:pendingPlacement.jobTitle},
-        idem:'stow:'+binProgress[binNum].jobId+':'+pendingPlacement.code+':'+(resetEpoch[binNum]||'r0')
+        payload:{bin:binNum, code:pendingPlacement.code, route:pendingPlacement.jobTitle,
+                 piece:pk, unit:unit, required_count:req},
+        idem:unit===1
+          ?'stow:'+binProgress[binNum].jobId+':'+pendingPlacement.code+':'+(resetEpoch[binNum]||'r0')
+          :'stow:'+binProgress[binNum].jobId+':'+pk+':'+(resetEpoch[binNum]||'r0')+':u'+unit
       });
       const justCompleted=binProgress[binNum].sorted>=binProgress[binNum].total;
       const jobTitle=pendingPlacement.jobTitle;
@@ -876,7 +963,7 @@ async function handleStowScan(code){
 
       if(justCompleted){
         card.className='result-card staged';
-        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">BIN '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>';
+        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">BIN '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>'+pieceLine;
         const stagedJobId=binProgress[binNum].jobId;
         logEvent('bin.completed',{
           org_id:binProgress[binNum].orgId,
@@ -901,6 +988,7 @@ async function handleStowScan(code){
       } else {
         card.className='result-card success';
         card.innerHTML='<div class="result-bin">&#10003; Confirmed</div><div class="result-bin-num success">BIN '+binNum+'</div><div class="result-detail">'+binProgress[binNum].sorted+' of '+binProgress[binNum].total+' sorted</div>'
+          +pieceLine
           +(stopForCard?'<div class="result-detail" style="font-weight:800;font-size:1.3rem;margin-top:4px;">STOP '+stopForCard+'</div>':'');
       }
       renderBinsPanel();
@@ -1014,9 +1102,14 @@ async function handleStowScan(code){
   // Look in EVERY bin, not just the one this package maps to right now —
   // right after a bin opens, the route is briefly tracked under a temporary
   // key, and checking only that key let a repeat scan slip through.
-  const stowedIn=Object.keys(scannedByBin).find(k=>scannedByBin[k]&&scannedByBin[k].has(clean));
+  // A multi-piece barcode is only "already scanned" once all of its
+  // required_count units are stowed; either alias counts against the
+  // same piece.
+  const pieceKey=pieceKeyFor(clean), pieceReq=pieceRequired(pieceKey);
+  const pieceHad=pieceStowed(pieceKey);
+  const stowedIn=pieceHad.count>=pieceReq?pieceHad.bin:null;
   if(stowedIn){
-    const d=stowDetail[clean]||{};
+    const d=stowDetail[pieceKey]||{};
     const bound=binBindings[match.jobId]||{};
     const bin=d.bin||stowedIn;
     const loc=bound.location_code?(' at location '+bound.location_code):'';
@@ -1029,10 +1122,11 @@ async function handleStowScan(code){
     card.innerHTML='<div class="result-bin" style="color:#b36b00;font-size:1rem;">&#9888; ALREADY SCANNED</div>'
       +'<div class="result-bin-num" style="color:var(--orange);font-size:2rem;">BIN '+esc(bin)+'</div>'
       +'<div class="result-detail" style="font-weight:700;">This package is already in BIN '+esc(bin)+esc(loc)+'.</div>'
+      +(pieceReq>1?'<div class="result-detail" style="font-weight:700;">All '+pieceReq+' of '+pieceReq+' already stowed.</div>':'')
       +'<div class="result-detail">Stowed'+esc(who)+esc(when)+'. Do not scan it again — move to the next package.</div>';
     return;
   }
-  if(!scannedByBin[match.binNum]) scannedByBin[match.binNum]=new Set();
+  if(!scannedByBin[match.binNum]) scannedByBin[match.binNum]=new Map();
 
   // ══ Does this package's route have an open bin yet? ══
   // If not, the worker must open one before any package can be stowed.
@@ -1053,9 +1147,11 @@ async function handleStowScan(code){
 
   // Route has a bin. Use the real bound bin code, not a SmartSort guess.
   pendingPlacement={binNum:binding.bin_code, location:binding.location_code||null,
-                    code:clean, jobTitle:match.jobTitle, stopNum:match.stopNum||null};
+                    code:clean, jobTitle:match.jobTitle, stopNum:match.stopNum||null,
+                    pieceKey:pieceKey, required:pieceReq};
   const flipStop=document.getElementById('flipBinStop');
-  if(flipStop) flipStop.textContent=match.stopNum?('STOP '+match.stopNum):'';
+  if(flipStop) flipStop.textContent=(match.stopNum?('STOP '+match.stopNum):'')
+    +(pieceReq>1?((match.stopNum?' \u00b7 ':'')+'PKG '+(pieceHad.count+1)+' OF '+pieceReq):'');
   const flipBinNumber=document.getElementById('flipBinNumber');
   const flipInner=document.getElementById('scanFlipInner');
   if(flipBinNumber) flipBinNumber.textContent='BIN '+binding.bin_code;
