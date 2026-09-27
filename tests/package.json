@@ -7,7 +7,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "npm --prefix ../operations test"
+    "test": "npm --prefix ../operations test",
+    "test:iq2": "node --test iq2-db.test.mjs iq2-ui.test.mjs iq2-admin.test.mjs iq2-concurrency.test.mjs stow.test.js"
   },
   "keywords": [],
   "author": "",

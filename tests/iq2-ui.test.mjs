@@ -229,6 +229,19 @@ test('refresh/restart mid-pallet resumes from the database, not browser memory',
   } finally { b.close(); }
 });
 
+test('restart while offline keeps the remembered pallet for the next start', async () => {
+  const env = await setup();
+  const storage = STORE();
+  const a = boot({ ...env, storage });
+  await a.ready(); a.w.iq2Go('receive'); await a.scan('PLT-0002'); a.close();
+  const b = boot({ ...env, storage });
+  b.net.mode = 'offline';
+  await b.ready(); b.close();
+  assert.equal(JSON.parse(storage.iq2_state).pallet, 'PLT-0002');
+  const c = boot({ ...env, storage });
+  try { await c.ready(); assert.match(c.text('rxCtx'), /PLT-0002/); } finally { c.close(); }
+});
+
 // ── transport failures ─────────────────────────────────────────────────
 test('offline: NO CONNECTION · NOTHING RECORDED, and nothing is recorded', async () => {
   const env = await setup();

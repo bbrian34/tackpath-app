@@ -654,7 +654,11 @@ async function iq2Start(){
       if(res.ok){ S.pallet=res.pallet; saveState(); renderReceive();
         result('rxResult','info','Pallet resumed',esc(res.pallet.code),
           [fmt(res.pallet.received_cartons)+' / '+fmt(res.pallet.expected_cartons)+' CARTONS RECEIVED']); }
-      else if(res.transport) transportResult('rxResult',res,saved.pallet);
+      else if(res.transport){
+        // Keep remembering the pallet so the next start can resume it.
+        lsSet('iq2_state',JSON.stringify({mode:'receive',pallet:saved.pallet,pending:null}));
+        transportResult('rxResult',res,saved.pallet);
+      }
       else { saveState(); }
     }
   } else if(saved.mode==='putaway'){

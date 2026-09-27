@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>IQ2 Office</title>
+<!--
+  IQ2 back office (desktop). Imports inbound manifests/ASNs and the
+  permanent location registry, and shows receiving progress, inventory by
+  location, the movement ledger, exceptions and the ledger audit.
+  Every write goes through the admin-key-protected public.iq2_admin_*
+  database functions, which re-validate everything. Not used by STOW and
+  not needed inside the PathIQ APK.
+-->
+<style>
+:root{--text:#111418;--muted:#4a525a;--faint:#767e86;--border:#d6dbe0;--card2:#f2f4f6;--blue:#0b6fb0;--green:#0a7a2f;--orange:#a85a00;--red:#b3261e;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f4;color:var(--text);font-size:14px;}
+header{background:linear-gradient(135deg,#0b6fb0,#084d7a);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+header h1{font-size:1.2rem;font-weight:800;letter-spacing:.02em;}
+header .sp{flex:1;}
+header input,header select,header button{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid #9cc3e0;}
+header button{background:#fff;color:var(--blue);font-weight:700;cursor:pointer;}
+main{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px;}
+section{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;}
+section h2{font-size:1rem;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+button.b{font:inherit;padding:8px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card2);cursor:pointer;font-weight:700;}
+button.b.primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+button.b:disabled{opacity:.45;cursor:not-allowed;}
+.msg{padding:10px 12px;border-radius:8px;margin:8px 0;font-weight:600;}
+.msg.ok{background:#eef8ef;border:1px solid #9fd3a9;color:var(--green);}
+.msg.err{background:#fbeceb;border:1px solid #efb1ad;color:var(--red);}
+.msg.warn{background:#fff4dc;border:1px solid #f0cf8a;color:var(--orange);}
+.msg ul{margin:6px 0 0 18px;font-weight:500;}
+table{width:100%;border-collapse:collapse;font-size:.85rem;}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #edf0f2;vertical-align:top;}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:800;text-transform:uppercase;}
+.pill.open{background:#eaf3fa;color:var(--blue);} .pill.receiving{background:#fff4dc;color:var(--orange);} .pill.closed{background:#eef8ef;color:var(--green);}
+.pill.bad{background:#fbeceb;color:var(--red);} .pill.good{background:#eef8ef;color:var(--green);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media (max-width:860px){.grid2{grid-template-columns:1fr;}}
+.scroll{max-height:360px;overflow:auto;}
+.hint{color:var(--faint);font-size:.8rem;}
+</style>
+</head>
+<body>
+<header>
+  <h1>IQ2 Office</h1>
+  <label>Admin key <input type="password" id="adminKey" autocomplete="off" size="16"/></label>
+  <label>Warehouse <select id="whSelect"></select></label>
+  <button id="refreshBtn" onclick="refreshAll()">Refresh</button>
+  <span class="sp"></span>
+  <span id="auditBadge"></span>
+</header>
+<main>
+  <section id="whSection">
+    <h2>Warehouse</h2>
+    <div class="row">
+      <input id="newWhCode" placeholder="CODE e.g. MAIN" size="12"/>
+      <input id="newWhName" placeholder="Name e.g. Main DC" size="24"/>
+      <button class="b" onclick="createWarehouse()">Create / rename</button>
+    </div>
+    <div id="whMsg"></div>
+  </section>
+
+  <section>
+    <h2>Import inbound manifest / ASN (CSV)</h2>
+    <div class="hint">Required columns: load reference, pallet barcode, carton barcode, SKU, units per carton, cartons expected. Description optional.
+      One row per carton barcode per pallet. A uniquely-labelled carton is simply a row with 1 carton.
+      <a href="#" onclick="downloadTemplate('manifest');return false;">Download template</a></div>
+    <div class="row" style="margin-top:10px;">
+      <input type="file" id="manifestFile" accept=".csv,text/csv"/>
+      <button class="b primary" id="importBtn" disabled onclick="importManifest()">Import manifest</button>
+    </div>
+    <div id="manifestPreview"></div>
+  </section>
+
+  <section>
+    <h2>Permanent storage locations</h2>
+    <div class="hint">CSV columns: code (e.g. LOC:B-4 or B-4), aisle, bay, shelf, enabled. Re-importing updates existing locations.
+      <a href="#" onclick="downloadTemplate('locations');return false;">Download template</a></div>
+    <div class="row" style="margin-top:10px;">
+      <input type="file" id="locationsFile" accept=".csv,text/csv"/>
+      <button class="b primary" id="locBtn" disabled onclick="importLocations()">Save locations</button>
+    </div>
+    <div id="locPreview"></div>
+    <div class="scroll" id="locTable"></div>
+  </section>
+
+  <section>
+    <h2>Inbound pallets</h2>
+    <div class="scroll" id="palletTable"></div>
+  </section>
+
+  <div class="grid2">
+    <section><h2>Inventory by location</h2><div class="scroll" id="invTable"></div></section>
+    <section><h2>Received, awaiting putaway</h2><div class="scroll" id="awaitTable"></div></section>
+  </div>
+
+  <section><h2>Movement ledger <span class="hint">(append-only)</span></h2><div class="scroll" id="mvTable"></div></section>
+  <section><h2>Exceptions</h2><div class="scroll" id="exTable"></div></section>
+</main>
+
+<script src="iq2-manifest.js"></script>
+<script>
+const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+const when=t=>{ try{ return new Date(t).toLocaleString(); }catch(e){ return t||''; } };
+function ssGet(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } }
+function ssSet(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} }
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+const keyInput=document.getElementById('adminKey');
+keyInput.value=ssGet('iq2_admin_key')||'';           // session only, never localStorage
+keyInput.addEventListener('change',()=>{ ssSet('iq2_admin_key',keyInput.value); refreshAll(); });
+const adminKey=()=>keyInput.value;
+const wh=()=>document.getElementById('whSelect').value;
+
+async function rpc(fn,args){
+  try{
+    const r=await fetch(SB+'/rest/v1/rpc/'+fn,{method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(args||{})});
+    const j=await r.json().catch(()=>null);
+    if(!r.ok) return {ok:false,code:'SERVER_ERROR',message:(j&&j.message)||('HTTP '+r.status)};
+    return j;
+  }catch(e){ return {ok:false,code:'NO_CONNECTION',message:'No connection. Nothing was changed.'}; }
+}
+function msg(el,kind,text,items){
+  document.getElementById(el).innerHTML='<div class="msg '+kind+'">'+text
+    +(items&&items.length?'<ul>'+items.map(i=>'<li>'+i+'</li>').join('')+'</ul>':'')+'</div>';
+}
+const errItems=list=>(list||[]).map(e=>(e.row?'Row '+e.row+' · ':'')+esc(e.field||'')+': '+esc(e.message));
+
+// ── warehouses ──
+async function loadWarehouses(){
+  const list=await rpc('iq2_list_warehouses',{});
+  const sel=document.getElementById('whSelect');
+  const keep=sel.value||lsGet('iq2_admin_wh');
+  sel.innerHTML=Array.isArray(list)&&list.length
+    ? list.map(w=>'<option value="'+esc(w.code)+'">'+esc(w.code)+' · '+esc(w.name)+'</option>').join('')
+    : '<option value="">(none yet)</option>';
+  if(keep&&Array.isArray(list)&&list.some(w=>w.code===keep)) sel.value=keep;
+}
+document.getElementById('whSelect').addEventListener('change',()=>{ lsSet('iq2_admin_wh',wh()); refreshReport(); });
+async function createWarehouse(){
+  const r=await rpc('iq2_admin_create_warehouse',{p_key:adminKey(),p_code:document.getElementById('newWhCode').value,
+    p_name:document.getElementById('newWhName').value});
+  if(r&&r.ok){ msg('whMsg','ok','Warehouse '+esc(r.warehouse)+' saved.'); await loadWarehouses();
+    document.getElementById('whSelect').value=r.warehouse; lsSet('iq2_admin_wh',r.warehouse); await refreshReport(); }
+  else msg('whMsg','err',esc((r&&r.message)||'Not saved.'));
+}
+
+// ── manifest import ──
+let manifestParsed=null, manifestName='';
+document.getElementById('manifestFile').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  manifestName=f.name; previewManifest(await f.text());
+});
+function previewManifest(text){
+  manifestParsed=IQ2Manifest.parseManifest(text);
+  const p=manifestParsed, btn=document.getElementById('importBtn');
+  btn.disabled=!!p.errors.length||!p.rows.length;
+  if(p.errors.length){
+    msg('manifestPreview','err','This file has '+p.errors.length+' problem(s). Fix them and choose the file again. Nothing has been imported.',errItems(p.errors));
+    return;
+  }
+  const s=p.summary;
+  document.getElementById('manifestPreview').innerHTML='<div class="msg ok">Ready to import: '+fmt(s.rows)+' rows · '+fmt(s.loads)+' load(s) · '
+    +fmt(s.pallets)+' pallet(s) · '+fmt(s.skus)+' SKUs · '+fmt(s.cartons)+' cartons · '+fmt(s.units)+' units</div>'
+    +'<div class="scroll"><table><tr><th>Row</th><th>Load</th><th>Pallet</th><th>Carton barcode</th><th>SKU</th><th>Description</th><th class="n">Units/carton</th><th class="n">Cartons</th><th class="n">Units</th></tr>'
+    +p.rows.map(r=>'<tr><td>'+r.row+'</td><td>'+esc(r.load_ref)+'</td><td class="mono">'+esc(r.pallet)+'</td><td class="mono">'+esc(r.carton_barcode)
+      +'</td><td>'+esc(r.sku)+'</td><td>'+esc(r.description)+'</td><td class="n">'+fmt(r.units_per_carton)+'</td><td class="n">'+fmt(r.cartons)
+      +'</td><td class="n">'+fmt(r.units_per_carton*r.cartons)+'</td></tr>').join('')+'</table></div>';
+}
+async function importManifest(){
+  if(!manifestParsed||manifestParsed.errors.length) return;
+  const btn=document.getElementById('importBtn'); btn.disabled=true;
+  const r=await rpc('iq2_admin_import_manifest',{p_key:adminKey(),p_warehouse:wh(),p_source_name:manifestName,
+    p_rows:manifestParsed.rows,p_actor:'IQ2 Office'});
+  if(r&&r.ok){
+    msg('manifestPreview','ok','Imported: '+fmt(r.pallets)+' pallet(s), '+fmt(r.lines)+' carton lines, '+fmt(r.expected_cartons)
+      +' cartons, '+fmt(r.expected_units)+' units expected.',(r.warnings||[]).map(w=>'Warning · '+esc(w.message)));
+    manifestParsed=null; document.getElementById('manifestFile').value='';
+    await refreshReport();
+  } else {
+    msg('manifestPreview','err',esc((r&&r.message)||'Not imported.')+' Nothing was imported.',errItems(r&&r.errors));
+    btn.disabled=false;
+  }
+}
+
+// ── locations ──
+let locParsed=null;
+document.getElementById('locationsFile').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  previewLocations(await f.text());
+});
+function previewLocations(text){
+  locParsed=IQ2Manifest.parseLocations(text);
+  document.getElementById('locBtn').disabled=!!locParsed.errors.length||!locParsed.rows.length;
+  if(locParsed.errors.length) msg('locPreview','err','This file has '+locParsed.errors.length+' problem(s). Nothing has been saved.',errItems(locParsed.errors));
+  else msg('locPreview','ok','Ready to save '+fmt(locParsed.rows.length)+' location(s).');
+}
+async function importLocations(){
+  if(!locParsed||locParsed.errors.length) return;
+  const r=await rpc('iq2_admin_import_locations',{p_key:adminKey(),p_warehouse:wh(),p_rows:locParsed.rows});
+  if(r&&r.ok){ msg('locPreview','ok','Saved '+fmt(r.locations)+' location(s).'); locParsed=null; document.getElementById('locationsFile').value=''; await refreshReport(); }
+  else msg('locPreview','err',esc((r&&r.message)||'Not saved.'),errItems(r&&r.errors));
+}
+async function setLocation(code,enabled){
+  const r=await rpc('iq2_admin_set_location_enabled',{p_key:adminKey(),p_warehouse:wh(),p_location:code,p_enabled:enabled});
+  if(!r||!r.ok) msg('locPreview','err',esc((r&&r.message)||'Not changed.'));
+  await refreshReport();
+}
+
+// ── report ──
+function table(el,head,rows,empty){
+  document.getElementById(el).innerHTML=rows.length
+    ? '<table><tr>'+head.map(h=>'<th'+(h.n?' class="n"':'')+'>'+h.t+'</th>').join('')+'</tr>'+rows.join('')+'</table>'
+    : '<div class="hint">'+(empty||'Nothing yet.')+'</div>';
+}
+async function refreshReport(){
+  if(!wh()) return;
+  const r=await rpc('iq2_admin_report',{p_key:adminKey(),p_warehouse:wh()});
+  const badge=document.getElementById('auditBadge');
+  if(!r||!r.ok){
+    badge.innerHTML='<span class="pill bad">'+esc((r&&r.code)==='NOT_AUTHORIZED'?'Enter admin key':(r&&r.message)||'Unavailable')+'</span>';
+    return;
+  }
+  const bad=r.audit.inventory.length+r.audit.lines.length;
+  badge.innerHTML=bad?'<span class="pill bad">Ledger audit: '+bad+' mismatch(es)</span>':'<span class="pill good">Ledger audit: balanced</span>';
+  table('palletTable',[{t:'Pallet'},{t:'Load'},{t:'Status'},{t:'Cartons',n:1},{t:'Units',n:1},{t:'Short'}],
+    r.pallets.map(p=>'<tr><td class="mono">'+esc(p.code)+'</td><td>'+esc(p.load_ref)+'</td><td><span class="pill '+esc(p.status)+'">'+esc(p.status)+'</span></td>'
+      +'<td class="n">'+fmt(p.received_cartons)+' / '+fmt(p.expected_cartons)+'</td><td class="n">'+fmt(p.received_units)+' / '+fmt(p.expected_units)+'</td>'
+      +'<td>'+(p.shortages.length?p.shortages.map(s=>esc(s.sku)+' '+s.received_cartons+'/'+s.expected_cartons).join('<br>'):'—')+'</td></tr>'),
+    'No manifests imported yet.');
+  table('invTable',[{t:'Location'},{t:'SKU'},{t:'Description'},{t:'Units',n:1},{t:'Cartons',n:1}],
+    r.inventory.map(i=>'<tr><td class="mono">'+esc(i.location)+'</td><td>'+esc(i.sku)+'</td><td>'+esc(i.description)+'</td><td class="n">'+fmt(i.units)+'</td><td class="n">'+fmt(i.cartons)+'</td></tr>'),
+    'Nothing put away yet.');
+  table('awaitTable',[{t:'Pallet'},{t:'Carton barcode'},{t:'SKU'},{t:'Cartons',n:1},{t:'Units',n:1}],
+    r.awaiting_putaway.map(a=>'<tr><td class="mono">'+esc(a.pallet)+'</td><td class="mono">'+esc(a.carton_code)+'</td><td>'+esc(a.sku)+'</td><td class="n">'+fmt(a.cartons)+'</td><td class="n">'+fmt(a.units)+'</td></tr>'),
+    'Nothing waiting.');
+  table('locTable',[{t:'Location'},{t:'Aisle'},{t:'Bay'},{t:'Shelf'},{t:'Status'},{t:''}],
+    r.locations.map(l=>'<tr><td class="mono">'+esc(l.code)+'</td><td>'+esc(l.aisle)+'</td><td>'+esc(l.bay)+'</td><td>'+esc(l.shelf)+'</td>'
+      +'<td>'+(l.enabled?'<span class="pill good">enabled</span>':'<span class="pill bad">disabled</span>')+'</td>'
+      +'<td><button class="b" onclick="setLocation(\''+esc(l.code)+'\','+(!l.enabled)+')">'+(l.enabled?'Disable':'Enable')+'</button></td></tr>'),
+    'No locations registered yet.');
+  table('mvTable',[{t:'#'},{t:'When'},{t:'Kind'},{t:'Scanned'},{t:'SKU'},{t:'Cartons',n:1},{t:'Units',n:1},{t:'Pallet / load'},{t:'Location'},{t:'Who / device'}],
+    r.movements.map(m=>'<tr><td>'+m.id+'</td><td>'+esc(when(m.occurred_at))+'</td><td>'+esc(m.kind)+'</td><td class="mono">'+esc(m.scanned_code)+'</td><td>'+esc(m.sku)
+      +'</td><td class="n">'+fmt(m.cartons)+'</td><td class="n">'+fmt(m.units)+'</td><td>'+esc(m.pallet_code)+' · '+esc(m.load_ref)+'</td><td class="mono">'+esc(m.location||'—')
+      +'</td><td>'+esc(m.actor)+' · '+esc(m.device_id)+'</td></tr>'),
+    'No movements yet.');
+  table('exTable',[{t:'#'},{t:'When'},{t:'Kind'},{t:'Scanned'},{t:'Pallet'},{t:'Detail'},{t:'Who / device'}],
+    r.exceptions.map(x=>'<tr><td>'+x.id+'</td><td>'+esc(when(x.occurred_at))+'</td><td>'+esc(x.kind)+'</td><td class="mono">'+esc(x.scanned_code)+'</td><td>'+esc(x.pallet_code||'—')
+      +'</td><td>'+esc(x.detail)+'</td><td>'+esc(x.actor)+' · '+esc(x.device_id)+'</td></tr>'),
+    'No exceptions.');
+}
+async function refreshAll(){ await loadWarehouses(); await refreshReport(); }
+
+function downloadTemplate(kind){
+  const csv=kind==='manifest'
+    ? 'Load Reference,Pallet Barcode,Carton Barcode,SKU,Description,Units Per Carton,Cartons Expected\nLOAD-1001,PLT-0001,00012345600000000011,WALLET-BLK,"Men\'s Wallet, Black",100,1\nLOAD-1001,PLT-0001,10012345678902,CASE-IP15-CLR,Phone Case iPhone 15 Clear,40,5\n'
+    : 'code,aisle,bay,shelf,enabled\nLOC:A-5-1,A-5,1,1,true\nLOC:B-4,A-5,4,2,true\n';
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=kind==='manifest'?'iq2-manifest-template.csv':'iq2-locations-template.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+window.iq2AdminReady=refreshAll();
+</script>
+</body>
+</html>

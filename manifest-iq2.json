@@ -1,7 +1,7 @@
 {
   "name": "IQ2 by TackPath",
   "short_name": "IQ2",
-  "description": "TackPath IQ2 - Cart-based last-mile operating model",
+  "description": "TackPath IQ2 - Inbound receiving and putaway",
   "start_url": "/iq2.html",
   "scope": "/",
   "display": "standalone",
