@@ -1,0 +1,9 @@
+Load Reference,Pallet Barcode,Carton Barcode,SKU,Description,Units Per Carton,Cartons Expected
+LOAD-9,PLT-9001,AAA111,SKU-A,Widget A,10,2
+LOAD-9,PLT-9001,AAA111,SKU-A,Widget A,10,1
+LOAD-9,PLT-9001,BBB222,SKU-B,Widget B,0,3
+LOAD-9,PLT-9001,CCC333,SKU-C,Widget C,5,two
+LOAD-10,PLT-9001,DDD444,SKU-D,Widget D,5,1
+LOAD-9,PLT-9002,AAA111,SKU-Z,Widget Z,10,1
+LOAD-9,PLT-9002,EEE555,SKU-A,Widget A (renamed),10,1
+LOAD-9,,FFF666,SKU-F,Widget F,1,1

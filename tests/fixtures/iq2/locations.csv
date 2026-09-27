@@ -1,0 +1,7 @@
+code,aisle,bay,shelf,enabled
+LOC:A-5-1,A-5,1,1,true
+LOC:A-5-2,A-5,2,1,true
+LOC:A-5-3,A-5,3,1,true
+LOC:B-4,A-5,4,2,true
+LOC:B-5,A-5,5,2,true
+LOC:C-1,C,1,1,false
