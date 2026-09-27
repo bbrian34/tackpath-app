@@ -1536,7 +1536,11 @@ function realPackageTotal(){
 }
 
 function handleLoadingScan(barcode){
-  const match=surgeStops.find(s=>barcode===s.order_id||barcode.startsWith(s.order_id)||s.order_id.startsWith(barcode));
+  // FIX 2026-09-26: confirmed unsafe prefix match -- if one order_id is a
+      // prefix of another (e.g. "AB1" and "AB12"), scanning either package
+      // could match the WRONG stop. order_id is a real, exact identifier;
+      // there is no legitimate case where a partial match is correct.
+      const match=surgeStops.find(s=>barcode===s.order_id);
   const lastScanEl=document.getElementById('loadPkgLastScan');
 
   if(!match){
@@ -2076,7 +2080,11 @@ function processScan(barcode){
 
   // Check if scanned TP belongs to surge route
   if(isSurgeJob&&surgeStops.length>0){
-    const match=surgeStops.find(s=>barcode===s.order_id||barcode.startsWith(s.order_id)||s.order_id.startsWith(barcode));
+    // FIX 2026-09-26: confirmed unsafe prefix match -- if one order_id is a
+      // prefix of another (e.g. "AB1" and "AB12"), scanning either package
+      // could match the WRONG stop. order_id is a real, exact identifier;
+      // there is no legitimate case where a partial match is correct.
+      const match=surgeStops.find(s=>barcode===s.order_id);
     if(match){
       stopCamera();
       showSurgeRouteMap();
