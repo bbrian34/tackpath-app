@@ -5271,8 +5271,30 @@ function renderSelfCheckPanel(checks,pass,audit){
 async function buildAndAutoDispatch(){
   // Runs the full pipeline automatically after CSV upload:
   // geocode → sequence → create job in Supabase → broadcast to drivers
-  await buildRoutes();
-  if(!ssRoutes||!ssRoutes.length){toast('No routes to dispatch','warn');return;}
+
+  // FIX 2026-10-01: open the labels window NOW, before the first await.
+  // Browsers only allow window.open() for a few seconds after the user's
+  // gesture (here: choosing the CSV file). Opening it at the end, after
+  // routing, the publication RPC per route and the self-check, routinely
+  // took longer than that and the popup was blocked. The window is filled
+  // by generateLiveLabels() once the routes exist, or closed if nothing
+  // is dispatched.
+  let labelWin=null;
+  try{
+    labelWin=window.open('', '_blank');
+    if(labelWin){
+      labelWin.document.write('<!DOCTYPE html><html><head><title>Live Labels</title></head>'
+        +'<body style="font-family:Arial;text-align:center;padding:40px;">'
+        +'<h2>Building routes&hellip;</h2><p>Labels will appear here as soon as SmartSort finishes dispatching.</p></body></html>');
+      labelWin.document.close();
+    }
+  }catch(e){ labelWin=null; }
+  const discardLabelWin=function(){ try{ if(labelWin&&!labelWin.closed)labelWin.close(); }catch(e){} };
+
+  try{
+    await buildRoutes();
+  }catch(e){ discardLabelWin(); throw e; }
+  if(!ssRoutes||!ssRoutes.length){discardLabelWin();toast('No routes to dispatch','warn');return;}
 
   // INCREMENT 5 (2026-09-26): 1 driver = 1 route, non-negotiable. If a
   // driver count was committed, the number of routes actually built must
@@ -5292,6 +5314,7 @@ async function buildAndAutoDispatch(){
     updateSmartSortStatus('⚠ Routing blocked — committed driver count does not match',0);
     toast('Routing blocked: '+reason,'warn');
     ssRoutes=[];
+    discardLabelWin();
     return;
   }
 
@@ -5300,12 +5323,14 @@ async function buildAndAutoDispatch(){
   const routesToAssign=[...ssRoutes];
   console.log('[SmartSort] routesToAssign snapshot: '+routesToAssign.length+' routes');
   const assignedIds=[];
-  for(const route of routesToAssign){
-    console.log('[SmartSort] calling assignSSRoute for '+route.id);
-    await assignSSRoute(route.id);
-    assignedIds.push(route.id);
-    console.log('[SmartSort] after assignSSRoute: ssRoutes.length='+ssRoutes.length);
-  }
+  try{
+    for(const route of routesToAssign){
+      console.log('[SmartSort] calling assignSSRoute for '+route.id);
+      await assignSSRoute(route.id);
+      assignedIds.push(route.id);
+      console.log('[SmartSort] after assignSSRoute: ssRoutes.length='+ssRoutes.length);
+    }
+  }catch(e){ discardLabelWin(); throw e; }
 
   // Every route is now written to Supabase. Verify against what actually
   // persisted, not against the in-memory plan.
@@ -5318,7 +5343,7 @@ async function buildAndAutoDispatch(){
       [{name:'Self-check ran to completion',ok:false,
         detail:(e&&e.message?e.message:String(e)).slice(0,120)}],0,audit);
   }
-  generateLiveLabels(ssRoutes);
+  generateLiveLabels(ssRoutes, labelWin);
 }
 
 // Generates real, scannable barcodes and QR codes directly from whatever
@@ -5326,8 +5351,13 @@ async function buildAndAutoDispatch(){
 // package, the real bin_label for every route, computed the exact same
 // way assignSSRoute itself computes it. No separate, disconnected step,
 // no risk of a printed label ever drifting out of sync with real data.
-function generateLiveLabels(routes){
-  const win=window.open('', '_blank');
+function generateLiveLabels(routes, preOpenedWin){
+  // Write into the window buildAndAutoDispatch() opened while the user's
+  // gesture was still valid. Only if there is none (blocked, or closed by
+  // the user meanwhile) try opening one here, as before.
+  let win=null;
+  try{ if(preOpenedWin&&!preOpenedWin.closed)win=preOpenedWin; }catch(e){}
+  if(!win)win=window.open('', '_blank');
   if(!win){toast('Please allow popups to view labels','warn');return;}
 
   let bodyHtml='<button onclick="window.print()" style="display:block;margin:0 auto 20px;padding:10px 24px;font-size:0.9rem;font-weight:700;background:#19b7ef;color:#fff;border:none;border-radius:8px;cursor:pointer;">Print This Page</button>';
