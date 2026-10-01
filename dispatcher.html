@@ -5078,7 +5078,7 @@ async function runSmartSortSelfCheck(routes, audit){
     surge_stops:(r.stops||[]).map(s=>({
       order_id:s.order_id,tracking_number:s.tracking_number||null,
       smart_id:s.smart_id,address:s.address,packages:s.packages,
-      pkgs:(s.pkgs||[]).map(p=>({order_id:p.order_id,tracking_number:p.tracking_number||null}))
+      pkgs:(s.pkgs||[]).map(p=>({order_id:p.order_id,tracking_number:p.tracking_number||null,required_count:p.required_count||1}))
     }))
   }));
   console.log('[SelfCheck] verifying '+source.length+' route(s), source='+
@@ -5092,19 +5092,40 @@ async function runSmartSortSelfCheck(routes, audit){
     let expectedPkgs=0;
     stops.forEach(s=>{
       const arr=Array.isArray(s.pkgs)?s.pkgs:null;
-      expectedPkgs += (arr&&arr.length)?arr.length:(parseInt(s.packages)||1);
+      // FIX 2026-10-01: this was an exact copy of the pre-fix PathIQ bug --
+      // arr.length counts distinct real barcodes, not physical units. A
+      // shared barcode with required_count 3 was silently reported as 1,
+      // and because allPkgs.length below made the SAME mistake, the self-
+      // check compared two equally wrong numbers and called it a pass.
+      expectedPkgs += (arr&&arr.length)?arr.reduce((s2,p)=>s2+(parseInt(p.required_count)||1),0):(parseInt(s.packages)||1);
     });
     binProgress[binNum]={total:expectedPkgs||stops.length||1,sorted:0,title:j.title};
     stops.forEach(s=>{
       const dest={binNum,address:s.address||''};
       if(Array.isArray(s.pkgs)) s.pkgs.forEach(pk=>{
-        if(pk.tracking_number) binMap[String(pk.tracking_number).toUpperCase()]=dest;
-        if(pk.order_id)        binMap[String(pk.order_id).toUpperCase()]=dest;
-        allPkgs.push({code:pk.tracking_number||pk.order_id,order_id:pk.order_id,bin:binNum,address:s.address});
+        // required_count travels with the binMap entry, same as the real
+        // stow.html fix, so the scan() simulation below can be genuinely
+        // count-aware instead of assuming one scan per real barcode.
+        const pkgDest=Object.assign({},dest,{required_count:parseInt(pk.required_count)||1});
+        if(pk.tracking_number) binMap[String(pk.tracking_number).toUpperCase()]=pkgDest;
+        if(pk.order_id)        binMap[String(pk.order_id).toUpperCase()]=pkgDest;
+        allPkgs.push({code:pk.tracking_number||pk.order_id,order_id:pk.order_id,bin:binNum,address:s.address,required_count:pkgDest.required_count});
       });
+      // FIX 2026-10-01: these stop-level fallback keys were overwriting
+      // the per-package entry (and its required_count) set just above,
+      // whenever the stop's own tracking_number happened to match the
+      // package's -- the common case. Same guard as the real, deployed
+      // stow.html fix: only fall back when this key isn't ALREADY a
+      // required_count-aware package entry.
       const stable=s.tracking_number||s.order_id;
-      if(stable) binMap[String(stable).toUpperCase()]=dest;
-      if(s.smart_id) binMap[String(s.smart_id).toUpperCase()]=dest;
+      if(stable){
+        const sk=String(stable).toUpperCase();
+        if(!(binMap[sk]&&binMap[sk].required_count!=null)) binMap[sk]=dest;
+      }
+      if(s.smart_id){
+        const ck=String(s.smart_id).toUpperCase();
+        if(!(binMap[ck]&&binMap[ck].required_count!=null)) binMap[ck]=dest;
+      }
     });
   });
 
@@ -5117,8 +5138,11 @@ async function runSmartSortSelfCheck(routes, audit){
     (unresolved.length?' — failing: '+unresolved.slice(0,4).map(p=>p.code).join(', '):''));
 
   const expectedTotal=Object.values(binProgress).reduce((s,b)=>s+b.total,0);
-  add('PathIQ expects packages, not stops',expectedTotal===allPkgs.length,
-    'expects '+expectedTotal+', plan has '+allPkgs.length+' physical packages');
+  // Compare against the REAL physical-unit total (summed required_count),
+  // not allPkgs.length -- the same class of fix as PathIQ's expectedPkgs.
+  const totalPhysicalUnits=allPkgs.reduce((s,p)=>s+(p.required_count||1),0);
+  add('PathIQ expects packages, not stops',expectedTotal===totalPhysicalUnits,
+    'expects '+expectedTotal+', plan has '+totalPhysicalUnits+' physical packages');
 
   // ── Multi-package stop integrity ──
   const byAddr={};
@@ -5136,15 +5160,20 @@ async function runSmartSortSelfCheck(routes, audit){
 
   // ── Scan lifecycle against the real binMap ──
   const scanned={};
+  // FIX 2026-10-01: Set-based presence made every 2nd scan of a shared
+  // barcode look like a duplicate, even when required_count>1 says it
+  // legitimately isn't yet. Count per code, same model as the real
+  // stow.html fix, so this simulation actually matches deployed behavior.
   const scan=(code,container)=>{
     const clean=String(code).trim().toUpperCase();
     const hit=binMap[clean];
     if(!hit)return'NOT_ON_ROUTE';
     if(container!==hit.binNum)return'WRONG_CONTAINER';
-    if(!scanned[hit.binNum])scanned[hit.binNum]=new Set();
-    const before=scanned[hit.binNum].size;
-    scanned[hit.binNum].add(clean);
-    if(scanned[hit.binNum].size===before)return'DUPLICATE_IGNORED';
+    if(!scanned[hit.binNum])scanned[hit.binNum]=new Map();
+    const required=hit.required_count||1;
+    const have=scanned[hit.binNum].get(clean)||0;
+    if(have>=required)return'DUPLICATE_IGNORED';
+    scanned[hit.binNum].set(clean,have+1);
     binProgress[hit.binNum].sorted=Math.min(binProgress[hit.binNum].total,binProgress[hit.binNum].sorted+1);
     return'STOWED';
   };
@@ -5153,13 +5182,21 @@ async function runSmartSortSelfCheck(routes, audit){
     const f=allPkgs[0];
     const otherBin=Object.keys(binProgress).find(b=>b!==f.bin)||'ZZZ';
     add('Wrong container rejected',scan(f.code,otherBin)==='WRONG_CONTAINER','scanned into '+otherBin);
-    add('Correct container accepted',scan(f.code,f.bin)==='STOWED','bin '+f.bin);
+    // Legitimately satisfy f's FULL required_count first -- for a normal
+    // required_count:1 package this is exactly the original single scan;
+    // for a shared barcode it correctly exercises 1-of-N through N-of-N
+    // instead of flagging a real 2nd scan as a false duplicate.
+    let lastResult;
+    for(let i=0;i<f.required_count;i++) lastResult=scan(f.code,f.bin);
+    add('Correct container accepted',lastResult==='STOWED','bin '+f.bin);
     const before=binProgress[f.bin].sorted;
-    const dup=scan(f.code,f.bin);
+    const dup=scan(f.code,f.bin); // now genuinely past required_count
     add('Duplicate scan does not double-count',
       dup==='DUPLICATE_IGNORED'&&binProgress[f.bin].sorted===before,'count stayed '+before);
     add('Unknown package rejected',scan('ZZ-NOT-A-REAL-CODE',f.bin)==='NOT_ON_ROUTE','');
-    for(const p of allPkgs.slice(1)) scan(p.code,p.bin);
+    for(const p of allPkgs.slice(1)){
+      for(let i=0;i<p.required_count;i++) scan(p.code,p.bin);
+    }
     const stowed=Object.values(binProgress).reduce((s,b)=>s+b.sorted,0);
     add('Full stow reaches expected count',stowed===expectedTotal,stowed+'/'+expectedTotal);
     const staged=Object.values(binProgress).filter(b=>b.sorted>=b.total).length;
