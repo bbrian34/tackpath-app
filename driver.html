@@ -1498,7 +1498,8 @@ function handleBinScan(code){
 // ── PACKAGE LOADING VERIFICATION ──
 // A real, per-package gate between accepting a route and starting
 // deliveries. Uses the real surgeStops data already populated in
-// acceptOffer() - the total is surgeStops.length, never guessed.
+// acceptOffer() - the total is the sum of required_count across every
+// real barcode in each stop's pkgs[], never guessed.
 // Reuses the existing, unmodified scan screen and camera entirely -
 // only a visible overlay and the scan routing above are new.
 let loadedCounts=new Map();
@@ -1528,48 +1529,97 @@ function cancelPackageScan(){
   showRouteAcceptedScreen();
 }
 
+// ── MULTI-PIECE LOADING (mirrors PathIQ stow.html, commit 0d2cc2e) ──
+// A stop's pkgs[] holds one entry per REAL barcode. order_id and
+// tracking_number are aliases of that one piece, and required_count is
+// how many physical packages share that barcode (3 boxes, one label).
+// loadedCounts maps pieceKey -> units confirmed. Unit counts are counting
+// mechanics only, never a package identity -- no #1/#2/#3 is invented.
+// Matching stays exact: no prefix or partial match, ever.
+function pkgRequiredCount(pk){ return Math.max(1,parseInt(pk&&pk.required_count)||1); }
+function buildLoadingPieces(){
+  const byAlias=new Map();   // exact barcode -> piece
+  const pieces=new Map();    // pieceKey -> {key, required, stopNum}
+  (surgeStops||[]).forEach(function(s,si){
+    const stopNum=si+1;
+    const add=function(tn,oi,required){
+      tn=tn?String(tn):null; oi=oi?String(oi):null;
+      const key=tn||oi;
+      if(!key)return;
+      let piece=pieces.get(key);
+      if(piece){ piece.required+=required; }   // same real barcode listed twice: counts add
+      else{ piece={key:key,required:required,stopNum:stopNum}; pieces.set(key,piece); }
+      if(tn&&!byAlias.has(tn))byAlias.set(tn,piece);
+      if(oi&&!byAlias.has(oi))byAlias.set(oi,piece);
+    };
+    if(Array.isArray(s.pkgs)&&s.pkgs.length){
+      s.pkgs.forEach(function(pk){ add(pk.tracking_number,pk.order_id,pkgRequiredCount(pk)); });
+      // The stop's own order_id/tracking_number is its first package's
+      // (dispatcher.html), so it already resolves through the aliases above.
+    }else{
+      // Stops without pkgs[] (sprint pickup/dropoff, older routes): one
+      // barcode, one package -- exactly as before.
+      add(s.tracking_number,s.order_id,1);
+    }
+  });
+  return {byAlias:byAlias,pieces:pieces};
+}
+function loadedUnits(){
+  const idx=buildLoadingPieces();
+  let n=0;
+  idx.pieces.forEach(function(p){ n+=Math.min(loadedCounts.get(p.key)||0,p.required); });
+  return n;
+}
+
 function realPackageTotal(){
-  // One barcode identity exists per stop, confirmed against the real
-  // data model - this is the true, scannable package count, not a
-  // manifest quantity that has no corresponding physical barcode.
-  return surgeStops.length;
+  // Physical packages on the route: the sum of required_count across
+  // every real barcode, not the number of stops or pkgs[] entries.
+  let n=0;
+  buildLoadingPieces().pieces.forEach(function(p){ n+=p.required; });
+  return n;
 }
 
 function handleLoadingScan(barcode){
-  // FIX 2026-09-26: confirmed unsafe prefix match -- if one order_id is a
-      // prefix of another (e.g. "AB1" and "AB12"), scanning either package
-      // could match the WRONG stop. order_id is a real, exact identifier;
-      // there is no legitimate case where a partial match is correct.
-      const match=surgeStops.find(s=>barcode===s.order_id);
+  // FIX 2026-09-26 kept: exact identifiers only. A prefix match let
+  // "AB1" and "AB12" resolve to the wrong package.
+  const piece=buildLoadingPieces().byAlias.get(String(barcode));
   const lastScanEl=document.getElementById('loadPkgLastScan');
 
-  if(!match){
+  if(!piece){
     lastScanEl.innerHTML='<div style="color:#ff6b6b;font-weight:900;font-size:1.1rem;">WRONG PACKAGE</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">NOT ON THIS ROUTE</div>';
     return;
   }
 
-  if(loadedCounts.has(match.order_id)){
-    // This barcode's one real, physical identity is already accounted
-    // for - camera stays on, driver keeps scanning.
-    lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">PACKAGE ALREADY VERIFIED</div>';
+  const have=loadedCounts.get(piece.key)||0;
+  if(have>=piece.required){
+    // Every physical package carrying this barcode is accounted for -
+    // camera stays on, driver keeps scanning.
+    lastScanEl.innerHTML='<div style="color:#fff;font-weight:900;font-size:1.1rem;">PACKAGE ALREADY VERIFIED</div>'
+      +(piece.required>1?'<div style="color:#fff;opacity:.8;font-size:.85rem;margin-top:2px;">ALL '+piece.required+' OF '+piece.required+' SCANNED</div>':'');
     return;
   }
 
-  loadedCounts.set(match.order_id, 1);
-  const stopNum=surgeStops.indexOf(match)+1;
+  const now=have+1;
+  loadedCounts.set(piece.key, now);
   // Only a genuine, correct match reaches here - camera turns off and
-  // the driver must explicitly tap OK before it resumes.
+  // the driver must explicitly tap OK before it resumes. For a shared
+  // barcode this is also what stops one box from being counted twice:
+  // the camera would otherwise re-read the same label every 300ms.
   stopCamera();
   window._loadingPackages=false;
+  const multi=piece.required>1;
   lastScanEl.innerHTML='<div style="color:#4ade80;font-weight:900;font-size:1.3rem;">&#10003; PACKAGE VERIFIED</div>'
-    +'<div style="color:#fff;font-weight:900;font-size:1.9rem;margin-top:6px;">STOP '+stopNum+'</div>'
+    +'<div style="color:#fff;font-weight:900;font-size:1.9rem;margin-top:6px;">STOP '+piece.stopNum+'</div>'
+    +(multi?'<div id="loadPkgPiece" style="color:#fff;font-weight:900;font-size:1.25rem;margin-top:4px;">'+now+' OF '+piece.required
+      +(now>=piece.required?' &middot; COMPLETE':'')+'</div>'
+      +(now<piece.required?'<div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:2px;">SCAN THE NEXT BOX WITH THIS LABEL</div>':''):'')
     +'<button onclick="resumePackageScanning()" style="margin-top:14px;padding:12px 32px;border-radius:12px;background:#fff;color:#111;font-weight:900;font-size:1rem;border:none;cursor:pointer;">OK</button>';
   updateLoadingUI();
 }
 
 function resumePackageScanning(){
   const total=realPackageTotal();
-  const loaded=loadedCounts.size;
+  const loaded=loadedUnits();
   if(loaded>=total && total>0){
     showPickupCompleteScreen();
     return;
@@ -1581,7 +1631,7 @@ function resumePackageScanning(){
 
 function updateLoadingUI(){
   const total=realPackageTotal();
-  const loaded=loadedCounts.size;
+  const loaded=loadedUnits();
   document.getElementById('loadPkgCount').textContent=loaded+' of '+total+' packages scanned';
 }
 
