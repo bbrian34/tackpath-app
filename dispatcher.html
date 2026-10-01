@@ -5236,6 +5236,28 @@ async function buildAndAutoDispatch(){
   // geocode → sequence → create job in Supabase → broadcast to drivers
   await buildRoutes();
   if(!ssRoutes||!ssRoutes.length){toast('No routes to dispatch','warn');return;}
+
+  // INCREMENT 5 (2026-09-26): 1 driver = 1 route, non-negotiable. If a
+  // driver count was committed, the number of routes actually built must
+  // equal it EXACTLY before anything is dispatched -- not fewer, not more.
+  // This is a hard, all-or-nothing gate: if even one route is short of the
+  // commitment, NOTHING dispatches, rather than partially sending out
+  // whatever happened to build. If no count was committed
+  // (ssRouteCountOverride===0), SmartSort's automatic route-count behavior
+  // is completely unchanged -- this check simply does not apply.
+  if(ssRouteCountOverride>=1 && ssRoutes.length!==ssRouteCountOverride){
+    const reason='Committed '+ssRouteCountOverride+' driver'+(ssRouteCountOverride===1?'':'s')+
+      ', but SmartSort built '+ssRoutes.length+' route'+(ssRoutes.length===1?'':'s')+
+      ' -- the committed count and the built route count must match exactly. Nothing was dispatched.';
+    console.log('[SmartSort] DISPATCH BLOCKED (driver-count mismatch): '+reason);
+    const btn2=document.getElementById('buildBtn');
+    if(btn2){btn2.disabled=false;btn2.innerHTML='Build Routes';}
+    updateSmartSortStatus('⚠ Routing blocked — committed driver count does not match',0);
+    toast('Routing blocked: '+reason,'warn');
+    ssRoutes=[];
+    return;
+  }
+
   console.log('[SmartSort] buildAndAutoDispatch: ssRoutes.length='+ssRoutes.length+' ids='+ssRoutes.map(r=>r.id).join(','));
   toast('Route built — dispatching to drivers...','ok');
   const routesToAssign=[...ssRoutes];
