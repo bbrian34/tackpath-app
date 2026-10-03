@@ -18,6 +18,9 @@ deployed, or merged. Bryan applies everything after review, in the order below.
 | Proof of delivery | Public bucket, overwritable | Private bucket. Upload only by the assigned driver (`pod` function); dispatch opens a 1-hour signed link ("View proof of delivery" on delivered cards). |
 | Tracking | id **prefix** search; whole route (every customer's name and address) returned for a tracking number | Exact id / exact tracking number only; only that customer's stop; live location only while assigned/in transit; one rating after delivery. |
 | Shopify webhook | No signature check | Rejects anything not signed with `SHOPIFY_API_SECRET`. |
+| Shopify connect | Any page could link any store to any company (`org_id` in the link) | The dispatcher starts it with its company session; the OAuth state (company + store + 15-minute expiry) is signed with `SHOPIFY_API_SECRET`; the callback also checks Shopify's own signature and the store name. |
+| Other edge functions | `smooth-api`, `nav-proxy` (Google key), `smartsort`, `sponge`, `swarm-watch` (service role) answered anyone | Each requires a live TackPath session (company or driver as appropriate) or, for scheduled `swarm-watch`, the `CRON_SECRET` header. `smartsort` takes the company from the session, never from the request. |
+| Driver login screen | Google / Apple buttons that did nothing; old logo on driver.html | Hidden (`<div id="socialSignIn" hidden>`, restore in Stage B); driver.html shows the new symbol. |
 | Committed Anthropic API key | In `owl.html`, `tackpathone.html`, `guide.html` (public since 2026-07-12) | Removed from the files on this branch. **It must be revoked** (see below) — removing it from the files does not un-publish it. |
 
 Also: unapproved applicants (`driversignup.html` → `pending_approval`) cannot sign in until a
@@ -50,23 +53,63 @@ dispatcher clicks **Approve** in the Drivers tab; removing a driver signs them o
    `select tp_sec.admin_set_org_code('tackpath-review', '…');`. Create a short demo route in the
    tackpath-review dispatcher. Put +1 (404) 555-0199 and the code in the Play/App Store review notes.
 5. **Edge functions** (secrets `SERVICE_ROLE_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
-   `SHOPIFY_API_SECRET` must be set):
+   `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET` must be set; if `swarm-watch` runs on a schedule, also
+   `supabase secrets set CRON_SECRET=<long random string>` and add the header
+   `x-tp-cron-secret: <that string>` to the scheduled call — the snapshot's `12_cron` row shows it):
    ```
    supabase functions deploy send-sms --no-verify-jwt
    supabase functions deploy driver-login --no-verify-jwt
    supabase functions deploy pod --no-verify-jwt
    supabase functions deploy shopify-webhook --no-verify-jwt
+   supabase functions deploy shopify-oauth --no-verify-jwt
+   supabase functions deploy smooth-api --no-verify-jwt
+   supabase functions deploy nav-proxy --no-verify-jwt
+   supabase functions deploy smartsort --no-verify-jwt
+   supabase functions deploy sponge --no-verify-jwt
+   supabase functions deploy swarm-watch --no-verify-jwt
    ```
    (They check the TackPath session themselves; the publishable key is not a JWT.) From this moment
-   the SMS relay is closed. Assignment texts resume when step 6 is live.
+   the SMS relay and the Google/Shopify/AI functions are closed to strangers. Assignment texts,
+   dispatcher routing/ETA (smooth-api) and the driver app's address lookup resume when steps 6 and 7
+   are live (the old pages and app do not send a session), so deploy step 5 together with step 6.
 6. **Web pages** — merge tackpath-app `claude/security-hardening` into `main` (GitHub Pages deploys it).
    Everyone signs in again once (dispatchers with company + code, drivers with a texted code).
 7. **Driver app** — merge tackpath-driver `claude/security-hardening`, build a new version
    (bump versionCode), upload to Play closed testing, and wait until every tester has updated.
-   Old app builds keep working until step 9, then stop.
-8. **Check every flow** with the anon key still open (checklist below).
-9. **Migration 20 (lockdown)** — SQL Editor: paste `20_lockdown.sql`, Run.
-10. **Check again**, plus confirm the anon key is closed:
+   Old app builds keep working until step 10, then stop.
+8. **PathIQ on the Zebra TC56** (its own copy of stow.html in `C:\Users\bbald\Downloads\pathiq-app`,
+   not in git). The current APK keeps working until step 10, then cannot load routes. Rebuild it now:
+   ```powershell
+   cd C:\Users\bbald\Downloads\pathiq-app
+   copy www\index.html www\index.before-security.html            # backup
+   # 1. Does your copy have local edits the repo does not have?
+   curl.exe -o stow-old.html https://raw.githubusercontent.com/bbrian34/tackpath-app/4d42cd6/stow.html
+   fc.exe /N stow-old.html www\index.html                          # "no differences" = safe to replace
+   # 2. Take the new page (from main, after step 6)
+   curl.exe -o www\index.html https://raw.githubusercontent.com/bbrian34/tackpath-app/main/stow.html
+   #    (re-apply any local edits that fc showed in step 1)
+   npx cap sync android
+   cd android; .\gradlew assembleDebug
+   adb install -r app\build\outputs\apk\debug\app-debug.apk
+   ```
+   On the TC56: open PathIQ → the new **PathIQ sign-in** screen → company + company code (once per
+   device). Stow one test package to confirm.
+
+   What is different in the APK copy (no edits to the file itself):
+   - **Sign-in per device.** The app's storage is separate from tackpath.com, so each TC56 signs in
+     once. Changing a company code (`tp_sec.admin_set_org_code`) signs every device out; sign in again.
+     To sign a device out: Android Settings → Apps → PathIQ → Storage → Clear data.
+   - **Scanner input during sign-in.** If DataWedge Keystroke output is on, a scan while the sign-in
+     screen is open types into the field. Sign in before scanning. The page's ZebraScanner /
+     FarsetScanner plugin hooks are unchanged.
+   - **Network.** The page calls only the database API (`/rest/v1/rpc/tp_org…`) and the realtime
+     broadcast, which accept the app's `https://localhost` origin; it calls no edge functions, so no
+     CORS change is needed.
+   - **IQ2 button.** It opens `iq2.html`, which is not in the APK (it was not before either); on the
+     web it redirects to stow.html. Unchanged.
+9. **Check every flow** with the anon key still open (checklist below), on the TC56 too.
+10. **Migration 20 (lockdown)** — SQL Editor: paste `20_lockdown.sql`, Run.
+11. **Check again**, plus confirm the anon key is closed:
     ```
     curl "https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?select=id&limit=1" -H "apikey: sb_publishable_…"
     ```
@@ -75,12 +118,13 @@ dispatcher clicks **Approve** in the Drivers tab; removing a driver signs them o
 Flow checklist: dispatcher sign-in, board, assign (driver gets the text), broadcast, cancel stop,
 archive, Clear Board, drivers add/edit/approve/remove, SmartSort publish, fleet page; driver sign-in
 (code arrives), offers, accept, start, stops, delivery scan gate, proof photo, deliver, messages,
-Ruby; PathIQ sign-in, bin open, stow, reset; portal sign-in; customer order → confirm; track.html
+Ruby, address lookup while navigating; PathIQ sign-in (web and TC56), bin open, stow, reset; Shopify
+connect; portal sign-in; customer order → confirm; track.html
 and tracking.html links; driver application → Approve → sign-in; dispatcher "View proof of delivery".
 
 ## Rollback
 
-- **Something breaks after step 9:** SQL Editor → `20_lockdown.rollback.sql`. Restores exactly the
+- **Something breaks after step 10:** SQL Editor → `20_lockdown.rollback.sql`. Restores exactly the
   grants, policies, RLS flags, default privileges and pod bucket setting from before 9 (tested:
   production snapshot before 20 and after 20 + rollback are identical, except that a function whose
   ACL was the implicit default comes back as the equivalent explicit grant). Pages and app keep
@@ -102,14 +146,18 @@ then the migrations on top:
   the review company; service-only RPCs not callable by anon/authenticated.
 - `lockdown.test.mjs` (5): anon/authenticated cannot SELECT/INSERT/UPDATE/DELETE any table or view or
   call other functions; future tables not auto-granted; pod private; all flows still work; exact rollback.
-- `edge.test.mjs` (7): relay closed (`{to, body}` refused, nothing sent), only the fixed text to the
+- `edge.test.mjs` (10): relay closed (`{to, body}` refused, nothing sent), only the fixed text to the
   assigned consenting driver of the caller's company, rate limits, driver-login, pod upload/view rules,
-  Shopify HMAC, CORS.
-- `pages.test.mjs` (9): the real pages in jsdom against that database — driver sign-in by texted code,
-  dispatcher, PathIQ, portal, customer, track, tracking, fleet, signup — with **zero** direct table or
-  storage requests.
+  Shopify webhook HMAC, CORS; the session guard (who passes, who gets 401, cron secret only where set)
+  and that each of smooth-api, nav-proxy, smartsort, sponge, swarm-watch runs it before any work;
+  Shopify OAuth: a store links only to the company that started it (forged, tampered, expired,
+  other-store and unsigned callbacks refused).
+- `pages.test.mjs` (10): the real pages in jsdom against that database — driver sign-in by texted code,
+  dispatcher (incl. the Google proxy and Shopify connect carrying the session), PathIQ, portal,
+  customer, track, tracking, fleet, signup — with **zero** direct table or storage requests.
+- `tests/driver-login-ui.test.js` (2): no dead sign-in button is visible; driver.html shows the new symbol.
 
-tackpath-driver: `cd tests && node --test` (31, including `security.test.js`).
+tackpath-driver: `cd tests && node --test` (33, including `security.test.js` and `login-ui.test.js`).
 
 ## Decisions made (please confirm)
 
@@ -123,16 +171,12 @@ tackpath-driver: `cd tests && node --test` (31, including `security.test.js`).
    (which never worked) was removed.
 5. **Pending applicants cannot sign in** until approved (new Approve button).
 6. **`tracking.html`** now receives only the customer's own stop (it used to receive the whole route).
-7. **Retired pages** lose database access at step 9 as agreed: owl, brain, crm, smartsort, de, zelurco,
+7. **Retired pages** lose database access at step 10 as agreed: owl, brain, crm, smartsort, de, zelurco,
    dispatcher-white(-preview), dispatcher-mobile, driver-app, fleet-cards, symphony(.trial), tackpathone,
    policy-engine(-recovery), index-white, guide.
 
 ## Still open (outside this change)
 
-- `swarm-watch`, `sponge`, `smartsort`, `nav-proxy`, `smooth-api` accept unauthenticated calls with the
-  service role or the Google server key (quota/cost abuse, like the SMS relay). Next step: require a
-  `tp_org` / `tp_driver` session in each (same pattern as `pod`).
-- `shopify-oauth` uses the bare org id as OAuth `state`: sign it (HMAC with `SHOPIFY_API_SECRET`).
 - Browser-side Geocoding REST calls (dispatcher, track, tracking) do not work with a referrer-restricted
   key; move them to `nav-proxy`.
 - No per-IP rate limiting (the database cannot see client IPs); per-number, per-company and global
