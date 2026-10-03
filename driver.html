@@ -729,6 +729,19 @@ button,a,input,textarea{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- DELIVERY SCAN OVERLAY -- every package for the current stop must be
+     scanned (or recorded as label-damaged) before proof of delivery opens -->
+<div id="dlvScanOverlay" style="display:none;position:absolute;inset:0;z-index:50;pointer-events:none;">
+  <div style="position:absolute;top:0;left:0;right:0;max-height:72%;overflow-y:auto;padding:22px 18px;background:rgba(0,0,0,.86);text-align:center;pointer-events:auto;">
+    <button onclick="cancelDeliveryScan()" style="position:absolute;top:16px;left:14px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:.85rem;font-weight:700;cursor:pointer;">&#8592; BACK</button>
+    <div id="dlvScanHeading" style="font-size:1.2rem;font-weight:900;color:#fff;">SCAN PACKAGE FOR STOP 1</div>
+    <div id="dlvScanRecipient" style="font-size:.85rem;font-weight:600;color:#fff;opacity:.8;margin-top:4px;"></div>
+    <div id="dlvScanResult" style="margin-top:10px;min-height:56px;"></div>
+    <div id="dlvScanCount" style="font-size:1.05rem;font-weight:900;color:#fff;margin-top:6px;">0 of 0 packages scanned</div>
+    <div id="dlvScanList" style="margin-top:10px;text-align:left;"></div>
+  </div>
+</div>
+
 <div class="screen" id="scSurgeMap">
   <div style="position:absolute;inset:0;background:#f5f7fa;display:flex;flex-direction:column;">
     <!-- Header -->
@@ -1375,6 +1388,7 @@ async function acceptOffer(){
 
   currentJob.status='assigned';
   loadedCounts=new Map();
+  deliveryScans=new Map();deliveryDamaged=new Map();window._deliveryScan=null;
   scannedPackages=[];
   // Detect Surge job -- parse surge_stops if it came back as a string
   let surgeSt=currentJob.surge_stops;
@@ -2025,7 +2039,7 @@ Current job: ${JSON.stringify(jobCtx)}. Driver: ${driver?.name}.
     if(t.includes('pickup')||t.includes('arrived at pickup')){arrivedAtPickup();if(isVoice)speak('Got it, marked arrived at pickup.');}
     else if(t.includes('got')||t.includes('have package')||t.includes('collected')){startDelivery();if(isVoice)speak('Package confirmed, heading out.');}
     else if(t.includes('dropoff')||t.includes('arrived at drop')){arrivedAtDropoff();if(isVoice)speak('Got it, marked arrived at dropoff.');}
-    else if(t.includes('delivered')||t.includes('done')){showScreen('scPOD');if(isVoice)speak('Opening proof of delivery.');}
+    else if(t.includes('delivered')||t.includes('done')){openPODForCurrentJob();if(isVoice)speak('Opening proof of delivery.');}
     else if(t.includes('nobody home')){
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'INCIDENT: Nobody home.'}).catch(()=>{});
       toast('Incident reported','warn');
@@ -2045,7 +2059,7 @@ async function execRubyAction(cmd,transcript,isVoice){
     case 'arrived_pickup':arrivedAtPickup();if(isVoice)speak('Got it, marked arrived at pickup.');break;
     case 'got_package':startDelivery();if(isVoice)speak('Package confirmed, heading out.');break;
     case 'arrived_dropoff':arrivedAtDropoff();if(isVoice)speak('Got it, marked arrived at dropoff.');break;
-    case 'open_pod':setTimeout(()=>showScreen('scPOD'),300);if(isVoice)speak('Opening proof of delivery.');break;
+    case 'open_pod':setTimeout(()=>openPODForCurrentJob(),300);if(isVoice)speak('Opening proof of delivery.');break;
     case 'create_incident':
       if(currentJob)sbPost('messages',{job_id:currentJob.id,sender:driver?.name||'Driver',sender_role:'driver',body:'INCIDENT ['+(cmd.incident_type||'OTHER').toUpperCase()+']: '+(cmd.incident_detail||transcript)}).catch(()=>{});
       toast('Incident reported to dispatch','warn');if(isVoice)speak('Got it, I let dispatch know.');break;
@@ -2113,9 +2127,15 @@ function processScan(barcode){
     return;
   }
 
-  // ── SURGE DROPOFF SCAN -- driver scanning package at delivery address ──
+  // ── DELIVERY SCAN -- every package for the current stop (gate above) ──
+  // The old _sdScanMode path accepted ANY barcode; it now enters the gate.
+  if(window._deliveryScan){
+    handleDeliveryScan(barcode);
+    return;
+  }
   if(window._sdScanMode){
-    sdScanConfirmed();
+    window._sdScanMode=false;
+    startDeliveryScan();
     return;
   }
 
@@ -2211,17 +2231,15 @@ function sdAtStop(){
 }
 
 function sdScanPackage(){
-  // Open camera to scan package at delivery address
-  // When scan matches a TP in current stop -- show Delivered button
-  window._sdScanMode=true;
-  openScanner();
+  // Scan the packages for this stop (delivery scan gate).
+  startDeliveryScan();
 }
 
 function sdScanConfirmed(){
   window._sdScanMode=false;
   stopCamera();
   document.getElementById('sdScanBtn').style.display='none';
-  // Go straight to POD -- no intermediate button
+  // Gated: opens proof of delivery only once every package is accounted for.
   openSurgePOD();
 }
 
@@ -2481,6 +2499,10 @@ async function submitPOD(){
   const recipient=document.getElementById('podRecipient').value.trim();
   if(!recipient){toast('Enter recipient name','warn');return;}
   if(podTab==='photo'&&!podPhotoData){toast('Take a photo first','warn');return;}
+  // A manifest route is delivered stop by stop. Reaching this screen without
+  // the per-stop flag (e.g. Ruby's shortcut) must not mark the whole job
+  // delivered -- route it through the stop gate instead.
+  if(dsIsManifestRoute()&&!window._surgePODMode){ openSurgePOD(); return; }
   const btn=document.getElementById('podSubmitBtn');if(btn){btn.textContent='Submitting...';btn.disabled=true;}
   // Surge mode -- confirm this stop and move to next
   if(window._surgePODMode){
@@ -2635,8 +2657,175 @@ function surgeArrived(idx,total){
     </button>`;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// DELIVERY SCAN GATE (2026-10-02)
+// On a manifest (surge) route, proof of delivery for a stop opens only
+// after EVERY package for that stop is accounted for: each real barcode
+// in the stop's pkgs[] scanned required_count times, or a unit recorded
+// as label-damaged (picked from the stop's own list, reported to
+// dispatch). Matching mirrors pickup loading exactly: exact barcode only,
+// order_id and tracking_number are aliases of one piece, no prefix match.
+// On-demand (sprint) jobs are not manifest routes and are unaffected.
+// The camera stops after each counted unit and waits for NEXT, so one
+// box held in view cannot count more than once.
+// ══════════════════════════════════════════════════════════════════
+function dsEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+let deliveryScans=new Map();   // 'stopIndex|pieceKey' -> units accounted for
+let deliveryDamaged=new Map(); // 'stopIndex|pieceKey' -> units recorded label-damaged
+function dsIsManifestRoute(){ return !!(currentJob&&currentJob.job_type==='surge'&&isSurgeJob&&surgeStops&&surgeStops.length); }
+function dsStopPieces(si){
+  const s=surgeStops&&surgeStops[si];
+  const pieces=new Map();
+  if(!s)return [];
+  const add=function(tn,oi,required){
+    tn=tn?String(tn):null; oi=oi?String(oi):null;
+    const key=tn||oi;
+    if(!key)return;
+    const p=pieces.get(key);
+    if(p){ p.required+=required; if(oi&&p.aliases.indexOf(oi)<0)p.aliases.push(oi); return; }
+    pieces.set(key,{key:key,required:required,aliases:[tn,oi].filter(Boolean)});
+  };
+  if(Array.isArray(s.pkgs)&&s.pkgs.length) s.pkgs.forEach(function(pk){ add(pk.tracking_number,pk.order_id,pkgRequiredCount(pk)); });
+  else add(s.tracking_number,s.order_id,1);
+  return Array.from(pieces.values());
+}
+function dsIsRequired(si){ return dsIsManifestRoute()&&dsStopPieces(si).length>0; }
+function dsUnits(si,key){ return deliveryScans.get(si+'|'+key)||0; }
+function dsProgress(si){
+  let done=0,total=0;
+  dsStopPieces(si).forEach(function(p){ total+=p.required; done+=Math.min(dsUnits(si,p.key),p.required); });
+  return {done:done,total:total};
+}
+function dsStopDone(si){ const pr=dsProgress(si); return pr.total>0&&pr.done>=pr.total; }
+function dsStopsFor(code){
+  const out=[];
+  (surgeStops||[]).forEach(function(s,i){ if(dsStopPieces(i).some(function(p){return p.aliases.indexOf(code)>=0;}))out.push(i); });
+  return out;
+}
+
+function startDeliveryScan(){
+  const si=currentSurgeStop;
+  window._sdScanMode=false;
+  window._deliveryScan={stop:si,paused:false};
+  window._surgePODMode=false;
+  document.getElementById('dlvScanResult').innerHTML='';
+  document.getElementById('dlvScanOverlay').style.display='block';
+  hideLegacyScanControls();
+  renderDeliveryScan();
+  showScreen('scScan');
+  startCamera();
+}
+function renderDeliveryScan(){
+  const st=window._deliveryScan; if(!st)return;
+  const si=st.stop, s=surgeStops[si]||{};
+  document.getElementById('dlvScanHeading').textContent='SCAN PACKAGE FOR STOP '+(si+1);
+  document.getElementById('dlvScanRecipient').textContent=(s.recipient||'')+(s.address?' · '+s.address:'');
+  const pr=dsProgress(si);
+  document.getElementById('dlvScanCount').textContent=pr.done+' of '+pr.total+' package'+(pr.total!==1?'s':'')+' scanned';
+  document.getElementById('dlvScanList').innerHTML=dsStopPieces(si).map(function(p){
+    const have=Math.min(dsUnits(si,p.key),p.required), done=have>=p.required;
+    const dmg=deliveryDamaged.get(si+'|'+p.key)||0;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.12);">'
+      +'<div style="flex:1;min-width:0;"><div style="font-family:var(--mono);font-size:.8rem;font-weight:800;color:'+(done?'#4ade80':'#fff')+';word-break:break-all;">'+dsEsc(p.key)+'</div>'
+      +'<div style="font-size:.72rem;color:rgba(255,255,255,.65);">'+have+' of '+p.required+(dmg?' &middot; '+dmg+' label damaged':'')+'</div></div>'
+      +(done?'<div style="color:#4ade80;font-weight:900;">&#10003;</div>'
+        :'<button onclick="dsLabelDamaged('+dsEsc(JSON.stringify(p.key))+')" style="flex-shrink:0;padding:7px 10px;border-radius:8px;background:rgba(255,150,30,.18);border:1px solid rgba(255,150,30,.5);color:#ffb35c;font-size:.72rem;font-weight:800;cursor:pointer;">Label damaged</button>')
+      +'</div>';
+  }).join('');
+}
+function dsShowNextStep(html){
+  const si=window._deliveryScan.stop;
+  const all=dsStopDone(si);
+  document.getElementById('dlvScanResult').innerHTML=html
+    +(all?'<div style="color:#4ade80;font-weight:900;font-size:1rem;margin-top:8px;">&#10003; ALL PACKAGES FOR STOP '+(si+1)+' ACCOUNTED FOR</div>'
+        +'<button id="dlvProceedBtn" onclick="finishDeliveryScan()" style="margin-top:10px;padding:12px 24px;border-radius:12px;background:#4ade80;color:#04220f;font-weight:900;font-size:1rem;border:none;cursor:pointer;">PROOF OF DELIVERY &#8250;</button>'
+      :(window._deliveryScan.paused?'<button id="dlvNextBtn" onclick="resumeDeliveryScan()" style="margin-top:10px;padding:12px 32px;border-radius:12px;background:#fff;color:#111;font-weight:900;font-size:1rem;border:none;cursor:pointer;">NEXT</button>':''));
+}
+function handleDeliveryScan(barcode){
+  const st=window._deliveryScan; if(!st)return;
+  const si=st.stop, code=String(barcode);
+  if(st.paused){
+    dsShowNextStep('<div style="color:#fff;font-weight:800;">Tap NEXT to scan the next package</div>');
+    return;
+  }
+  const piece=dsStopPieces(si).find(function(p){ return p.aliases.indexOf(code)>=0; });
+  if(!piece){
+    const others=dsStopsFor(code);
+    dsShowNextStep(others.length
+      ?'<div style="color:#ff6b6b;font-weight:900;font-size:1.05rem;">WRONG STOP</div><div style="color:#fff;font-size:.9rem;margin-top:2px;">This package is for Stop '+(others[0]+1)+', not Stop '+(si+1)+'</div>'
+      :'<div style="color:#ff6b6b;font-weight:900;font-size:1.05rem;">NOT ON THIS ROUTE</div><div style="color:#fff;opacity:.8;font-size:.8rem;margin-top:2px;">'+dsEsc(code)+'</div>');
+    return;
+  }
+  const have=dsUnits(si,piece.key);
+  if(have>=piece.required){
+    dsShowNextStep('<div style="color:#fff;font-weight:900;">PACKAGE ALREADY SCANNED</div>'
+      +(piece.required>1?'<div style="color:#fff;opacity:.8;font-size:.85rem;">ALL '+piece.required+' OF '+piece.required+' SCANNED</div>':''));
+    return;
+  }
+  const now=have+1;
+  deliveryScans.set(si+'|'+piece.key,now);
+  stopCamera();
+  st.paused=true;
+  dsShowNextStep('<div style="color:#4ade80;font-weight:900;font-size:1.2rem;">&#10003; PACKAGE SCANNED</div>'
+    +(piece.required>1?'<div style="color:#fff;font-weight:900;font-size:1.1rem;margin-top:2px;">'+now+' OF '+piece.required+(now>=piece.required?' &middot; COMPLETE':'')+'</div>':''));
+  renderDeliveryScan();
+}
+function resumeDeliveryScan(){
+  const st=window._deliveryScan; if(!st)return;
+  st.paused=false;
+  document.getElementById('dlvScanResult').innerHTML='';
+  startCamera();
+}
+// Label damaged: one unit of a package from THIS stop's own list. It is
+// reported to dispatch and counts for that unit only; it never opens
+// proof of delivery or closes the stop by itself.
+function dsLabelDamaged(key){
+  const st=window._deliveryScan; if(!st)return;
+  const si=st.stop, piece=dsStopPieces(si).find(function(p){return p.key===key;});
+  if(!piece)return;
+  const have=dsUnits(si,key);
+  if(have>=piece.required)return;
+  const unit=have+1;
+  if(typeof confirm==='function'&&!confirm('Record a damaged label for package '+key+(piece.required>1?' (box '+unit+' of '+piece.required+')':'')+'?\nDispatch will be notified.'))return;
+  deliveryScans.set(si+'|'+key,unit);
+  deliveryDamaged.set(si+'|'+key,(deliveryDamaged.get(si+'|'+key)||0)+1);
+  const s=surgeStops[si]||{}, at=new Date().toISOString();
+  if(currentJob&&currentJob.id){
+    sbPost('messages',{job_id:currentJob.id,sender:driver?driver.name:'Driver',sender_role:'driver',
+      body:'INCIDENT [LABEL_DAMAGED]: '+(driver?driver.name:'Driver')+' · Stop '+(si+1)+' of '+surgeStops.length
+        +(s.address?' ('+s.address+')':'')+' · package '+key+(piece.required>1?' box '+unit+' of '+piece.required:'')
+        +' recorded without a scan (label damaged) · '+at}).catch(function(){});
+  }
+  dsShowNextStep('<div style="color:#ffb35c;font-weight:900;font-size:1.05rem;">LABEL DAMAGED RECORDED</div>'
+    +'<div style="color:#fff;opacity:.85;font-size:.85rem;margin-top:2px;">'+dsEsc(key)+(piece.required>1?' · '+unit+' OF '+piece.required:'')+' · dispatch notified</div>');
+  renderDeliveryScan();
+}
+function finishDeliveryScan(){
+  const st=window._deliveryScan; if(!st)return;
+  if(!dsStopDone(st.stop))return;
+  window._deliveryScan=null;
+  document.getElementById('dlvScanOverlay').style.display='none';
+  stopCamera();restoreLegacyScanControls();
+  openSurgePOD();
+}
+function cancelDeliveryScan(){
+  // Progress for this stop is kept; scanning resumes where it left off.
+  window._deliveryScan=null;
+  document.getElementById('dlvScanOverlay').style.display='none';
+  stopCamera();restoreLegacyScanControls();
+  showScreen('scSurgeDelivery');
+}
+// Ruby's "delivered"/"done": on a manifest route this goes through the
+// same gate instead of opening the job-level POD screen directly.
+function openPODForCurrentJob(){
+  if(dsIsManifestRoute()){ openSurgePOD(); return; }
+  showScreen('scPOD');
+}
+
 function openSurgePOD(){
   // Open POD for this stop -- signature or photo required before next stop
+  // DELIVERY SCAN GATE: every package for this stop first.
+  if(dsIsRequired(currentSurgeStop)&&!dsStopDone(currentSurgeStop)){ startDeliveryScan(); return; }
   const stop=surgeStops[currentSurgeStop];
   // Pre-fill recipient
   const recEl=document.getElementById('podRecipient');
@@ -2655,6 +2844,14 @@ function confirmSurgeStop(pod){
   const total=surgeStops.length;
   const stop=surgeStops[currentSurgeStop];
   pod=pod||{};
+
+  // DELIVERY SCAN GATE, second check: a stop is never closed with any of
+  // its packages unaccounted for, whatever path led here.
+  if(dsIsRequired(currentSurgeStop)&&!dsStopDone(currentSurgeStop)){
+    toast('Scan every package for this stop first','warn');
+    startDeliveryScan();
+    return;
+  }
 
   // Safety guard -- block confirming if previous non-cancelled stops haven't been completed
   const nonCancelledBefore=surgeStops.slice(0,currentSurgeStop).filter(s=>!s.cancelled).length;
@@ -2675,6 +2872,8 @@ function confirmSurgeStop(pod){
         address:stop.address||'',
         order_id:stop.smart_id||stop.order_id||'',
         delivered_at:new Date().toISOString(),
+        packages_verified:dsIsRequired(currentSurgeStop)?dsProgress(currentSurgeStop).done:null,
+        label_damaged_units:dsStopPieces(currentSurgeStop).reduce(function(n,p){return n+(deliveryDamaged.get(currentSurgeStop+'|'+p.key)||0);},0),
         signed_by:pod.recipient||'',
         pod_kind:pod.pod_kind||null,
         pod_url:pod.pod_url||null,
