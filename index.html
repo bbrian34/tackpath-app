@@ -1,142 +1,34 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="TackPath brings route planning, PathIQ warehouse scanning, driver workflows, and dispatch visibility into one logistics software platform.">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>TackPath</title>
   <meta name="theme-color" content="#010e21">
-  <meta property="og:type" content="website"><meta property="og:url" content="https://tackpath.com/">
-  <meta property="og:title" content="TackPath | Warehouse, routes, drivers, dispatch.">
-  <meta property="og:description" content="Courier operations software: manifest route planning, PathIQ warehouse scanning, the TackPath Driver app, dispatch, and Shopify order intake.">
-  <meta property="og:image" content="https://tackpath.com/tackpath-video-poster-v2.png"><meta name="twitter:card" content="summary_large_image">
-  <title>TackPath | Warehouse, routes, drivers, dispatch.</title>
-  <link rel="icon" href="logo.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
   <style>
-    .hero { position: relative; }
-    .hero-copy, .hero-visual { position: relative; z-index: 2; }
-    .hero-connection { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
-    .hero-connection .route-base { fill: none; stroke: #244963; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 7 10; opacity: .9; }
-    .hero-connection .route-glow { fill: none; stroke: #19b7ef; stroke-width: 5; stroke-linecap: round; opacity: .22; filter: blur(5px); }
-    .hero-connection .route-pulse { fill: #8af0ce; filter: drop-shadow(0 0 7px #8af0ce); }
-    @keyframes route-drift { to { stroke-dashoffset: -68; } }
-    .hero-connection .route-base { animation: route-drift 2.8s linear infinite; }
-    @media (max-width: 700px) { .hero-connection { display: none; } }
-    .journey-showcase { position: relative; overflow: hidden; background: #071828; border-block: 1px solid #19394f; }
-    .journey-intro { display: flex; align-items: end; justify-content: space-between; gap: 48px; margin-bottom: 34px; }
-    .journey-intro h2 { color: #f2f6fc; font-size: clamp(42px, 5vw, 72px); line-height: .98; letter-spacing: -3px; margin-top: 18px; }
-    .journey-intro > p:last-child { max-width: 330px; color: #b7cad8; font-size: 15px; line-height: 1.75; }
-    .journey-accent { color: #66bfff; }
-    .journey-stage { position: relative; padding: 8px 0 0; }
-    .journey-stage svg { display: block; width: 100%; height: auto; overflow: visible; }
-    .journey-grid path { fill: none; stroke: #1a4058; stroke-width: 1; opacity: .56; }
-    .journey-route-shadow { fill: none; stroke: #0d2a40; stroke-width: 20; stroke-linecap: round; opacity: .9; }
-    .journey-route-line { fill: none; stroke: url(#journey-route); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 14 12; animation: journey-dash 2.8s linear infinite; }
-    .journey-node circle { fill: #102b43; stroke: #66bfff; stroke-width: 3; }
-    .journey-node path { fill: none; stroke: #f2f6fc; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
-    .journey-node-mint circle { stroke: #8af0ce; }
-    .journey-node-destination circle { fill: #123e4a; stroke: #8af0ce; animation: destination-pulse 2.4s ease-in-out infinite; }
-    .journey-node-destination path { fill: none; stroke: #8af0ce; stroke-width: 3; }
-    .node-number { fill: #8af0ce; font: 700 20px 'DM Sans', sans-serif; }
-    .journey-label { fill: #f2f6fc; font: 700 18px 'DM Sans', sans-serif; letter-spacing: 1.2px; text-anchor: middle; }
-    .journey-bin rect { fill: #102b43; stroke: #8af0ce; stroke-width: 2; }
-    .journey-bin text { fill: #8af0ce; font: 700 15px 'DM Sans', sans-serif; letter-spacing: 1px; }
-    .journey-street path { fill: none; stroke: #315d76; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 9 12; animation: journey-dash 4s linear infinite reverse; }
-    .journey-pulse { fill: #8af0ce; filter: url(#journey-glow); }
-    .journey-pulse-second { fill: #66bfff; }
-    .journey-package { fill: #66bfff; stroke: #f2f6fc; stroke-width: 2; filter: url(#journey-glow); }
-    .journey-caption { display: flex; align-items: center; gap: 14px; margin-top: -6px; color: #91aec0; font: 700 11px 'Courier New', monospace; letter-spacing: 1.8px; }
-    .journey-caption i { flex: 1; height: 1px; background: #31556c; }
-    @keyframes journey-dash { to { stroke-dashoffset: -52; } }
-    @keyframes destination-pulse { 0%,100% { filter: drop-shadow(0 0 0 #8af0ce); } 50% { filter: drop-shadow(0 0 14px #8af0ce); } }
-    @media (max-width: 700px) { .journey-intro { display: block; } .journey-intro > p:last-child { margin-top: 22px; } .journey-intro h2 { font-size: 48px; } .journey-stage { overflow-x: auto; padding-bottom: 8px; } .journey-stage svg { min-width: 760px; width: 150%; max-width: none; } .journey-caption { min-width: 760px; width: 150%; } }
-    .hero-film::-webkit-media-controls,
-    .hero-film::-webkit-media-controls-enclosure,
-    .hero-film::-webkit-media-controls-panel { display: none !important; }
+    @font-face{font-family:'TackPath Montserrat';font-style:normal;font-weight:500;font-display:block;src:url('tackpath-montserrat-500.ttf')}
+    html,body{height:100%;margin:0}
+    body{background:#010e21;color:#eef4ff;display:flex;flex-direction:column;
+      padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);box-sizing:border-box}
+    main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+    .lockup{display:flex;align-items:center;gap:clamp(18px,4.2vw,56px)}
+    .lockup img{height:clamp(52px,9vw,124px);width:auto;display:block}
+    .wordmark{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;white-space:pre;line-height:1;
+      font-size:clamp(26px,5.6vw,78px);letter-spacing:.06em}
+    .wordmark span:first-child{color:#fff}.wordmark span:last-child{color:#19b7ef}
+    footer{display:flex;justify-content:center;gap:22px;padding:20px 20px 26px;
+      font:400 12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+    footer a{color:#6f8aa3;text-decoration:none}footer a:hover{color:#c8d7e6}
   </style>
 </head>
 <body>
-<a class="skip" href="#main">Skip to content</a>
-<header class="header"><div class="container nav">
-  <a class="brand" href="#" aria-label="TackPath home"><img class="brand-symbol" src="logo.svg" alt="" width="30" height="35">
-    <div class="nav-wordmark" style="font-size:1.0625rem;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div></a>
-  <button class="menu-toggle" aria-expanded="false" aria-controls="navigation" aria-label="Open navigation"><span></span><span></span></button>
-  <nav id="navigation" aria-label="Main navigation"><a href="#platform">Platform</a><a href="#solutions">Solutions</a><a href="#workflow">How it works</a><a href="#shopify">Shopify</a><a href="#plans">Pricing</a><a href="driversignup.html">Drivers</a><a href="portal.html">Sign in</a><button class="button button-small" data-demo>Let’s talk <span>↗</span></button></nav>
-</div></header>
-<main id="main">
-<section class="hero container">
-  <svg class="hero-connection" viewBox="0 0 1000 520" aria-hidden="true" focusable="false">
-    <path class="route-glow" d="M392 222 C470 185 512 255 575 224 S680 178 748 214"></path>
-    <path class="route-base" d="M392 222 C470 185 512 255 575 224 S680 178 748 214"></path>
-    <circle class="route-pulse" r="6" cx="392" cy="222">
-      <animateMotion dur="3.8s" repeatCount="indefinite" path="M0 0 C78 -37 120 33 183 2 S288 -44 356 -8"></animateMotion>
-    </circle>
-    <circle cx="748" cy="214" r="5" fill="#19b7ef"></circle>
-  </svg>
-  <div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> THE LOGISTICS OPERATIONS PLATFORM</p>
-    <h1>Every moving part.<br>One clear <span class="serif">path.</span></h1>
-    <p class="hero-description">Turn delivery manifests into routes. Guide packages into the right bins. Give drivers a clear workflow and dispatchers a view of the work ahead.</p>
-    <div class="button-row"><button class="button" data-demo>See TackPath in action <span>↗</span></button><a class="text-link" href="#overview">Watch the overview <span>↓</span></a></div>
-    <div class="hero-note"><span class="small-route">↳</span> Built for the warehouse, the road, and the dispatch desk.</div>
-  </div>
-  <div class="hero-visual" id="operations-preview">
-    <div class="operations-window operations-film-window"><div class="window-top"><span class="app-mark"><img src="logo.svg" alt="" width="23" height="23"></span><strong>Operations overview</strong></div><video class="hero-film" autoplay muted loop playsinline preload="metadata" poster="tackpath-video-poster-v2.png" aria-label="TackPath operations concept film" aria-describedby="video-description"><source src="tackpath-overview-v2.mp4" type="video/mp4"><source src="tackpath-overview-v2.webm" type="video/webm"></video><button class="preview-toggle" type="button" hidden aria-hidden="true"></button></div>
-  </div>
-</section>
-<div class="audience-bar"><div class="container"><span>BUILT AROUND YOUR OPERATION</span><p>Courier companies</p><i>+</i><p>Last-mile delivery</p><i>+</i><p>3PL operators</p><i>+</i><p>Dispatch teams</p></div></div>
-<section class="section container" id="platform">
-  <div class="section-heading"><div><p class="eyebrow">THE BIG PICTURE. THE SMALL DETAILS.</p><h2>Your operation,<br>working <span class="serif">together.</span></h2></div><p>The manifest, the warehouse floor, and the delivery route belong in the same conversation. TackPath gives each team tools for its part of the work.</p></div>
-  <div class="capability-grid">
-    <article class="feature feature-dispatch"><div class="feature-top"><span class="line-icon">↗</span><span class="feature-number">01 / SMARTSORT</span></div><h3>A manifest in.<br>A route plan out.</h3><p>Import a CSV manifest. SmartSort groups addresses geographically and sequences the stops, with road-distance and traffic-aware estimates to support planning.</p><div class="dispatch-mini"><div><span class="mini-check">✓</span><span><b>Manifest imported</b><small>Addresses ready to plan</small></span><span class="mini-time">09:41</span></div><div><span class="mini-check">✓</span><span><b>Stops grouped</b><small>Routes taking shape</small></span><span class="mini-time">09:43</span></div><div><span class="mini-check">↗</span><span><b>Route created</b><small>Ready for warehouse sorting</small></span><span class="mini-time live">Active</span></div></div></article>
-    <article class="feature feature-routing"><div class="feature-top"><span class="line-icon">⌁</span><span class="feature-number">02 / PATHIQ</span></div><h3>Scan the package.<br>Find its place.</h3><p>PathIQ matches package barcodes to route bins. Scan the package, see its destination, then scan the bin to confirm placement, with clear feedback when the bin is wrong.</p><div class="routing-mini" aria-hidden="true"><svg viewBox="0 0 330 130"><path d="M28 95H105V35H226V89H300" fill="none" stroke="#c9dce8" stroke-width="24" stroke-linejoin="round"/><path d="M28 95H105V35H226V89H300" fill="none" stroke="#0879a6" stroke-width="3" stroke-dasharray="5 5"/><circle cx="28" cy="95" r="9" fill="#071828"/><circle cx="105" cy="35" r="12" fill="#a9e4f8"/><circle cx="226" cy="35" r="12" fill="#a9e4f8"/><circle cx="300" cy="89" r="9" fill="#071828"/><text x="105" y="39" text-anchor="middle" font-size="11">1</text><text x="226" y="39" text-anchor="middle" font-size="11">2</text></svg><span>PACKAGE SCAN. BIN CONFIRMATION.</span></div></article>
-    <article class="feature feature-track"><div class="feature-top"><span class="line-icon">◎</span><span class="feature-number">03 / DISPATCHER</span></div><h3>See the route.<br>Work the exceptions.</h3><p>See job status, driver location updates, and reported stop completions. Review late or unassigned work, coordinate assignments, and message drivers from the dispatch desk.</p><div class="tracking-mini"><div class="radar"><span></span><i></i><b>↗</b></div><div><span class="status-dot"></span> Fleet GPS<strong>Location updates.<br>Operational context.</strong></div></div></article>
-  </div>
-  <div class="platform-footnote"><span>Practical tools for planning, scanning, and coordinating delivery work.</span><a class="text-link" href="#workflow">Follow a delivery <span>↗</span></a></div>
-</section>
-<section class="section container" id="services"><span id="offerings"></span>
-  <div class="section-heading"><div><p class="eyebrow">TWO WAYS TO DELIVER</p><h2>One delivery.<br>Or a whole <span class="serif">route.</span></h2></div><p>Run on-demand deliveries and multi-stop routes from the same dispatch desk, with the same drivers and the same view of the day.</p></div>
-  <div class="capability-grid two">
-    <article class="feature feature-dispatch"><div class="feature-top"><span class="line-icon">→</span><span class="feature-number">SLING / ON DEMAND</span></div><h3>One pickup.<br>One dropoff.</h3><p>For same-day, point-to-point work. A delivery request comes in from your customer portal or a connected Shopify store, lands on the dispatch board, and goes to a driver.</p><div class="dispatch-mini"><div><span class="mini-check">✓</span><span><b>Request received</b><small>Customer portal or Shopify</small></span></div><div><span class="mini-check">✓</span><span><b>On the dispatch board</b><small>Ready to assign</small></span></div><div><span class="mini-check">↗</span><span><b>Driver delivers</b><small>Status follows the job</small></span></div></div></article>
-    <article class="feature feature-routing"><div class="feature-top"><span class="line-icon">⌁</span><span class="feature-number">SURGE / MULTI-STOP</span></div><h3>Many stops.<br>One clear route.</h3><p>For block routes. Upload a manifest and SmartSort builds road-aware routes, one per driver you commit. PathIQ sorts the packages, then drivers scan, load, and work the route stop by stop.</p><div class="dispatch-mini"><div><span class="mini-check">✓</span><span><b>Manifest uploaded</b><small>A CSV file</small></span></div><div><span class="mini-check">✓</span><span><b>One route per driver</b><small>Built by SmartSort</small></span></div><div><span class="mini-check">↗</span><span><b>Sorted and loaded</b><small>PathIQ, then the Driver app</small></span></div></div></article>
-  </div>
-</section>
-<section class="journey-showcase section container" id="overview" aria-label="TackPath product overview">
-  <div class="journey-stage overview-film" aria-label="TackPath product overview">
-    <video autoplay muted loop playsinline preload="metadata" poster="tackpath-promo-poster.png" aria-label="TackPath: From manifest to last mile">
-      <source src="tackpath-promo-22s.mp4" type="video/mp4"><source src="tackpath-promo-22s.webm" type="video/webm">
-      Your browser does not support embedded video. <a href="tackpath-promo-22s.mp4">Watch the TackPath promo</a>.
-    </video>
-  </div>
-</section>
-
-<section class="solutions-section" id="solutions"><div class="container section">
-  <div class="section-heading"><div><p class="eyebrow">THREE WORKSPACES. ONE OPERATION.</p><h2>The right tools.<br>For each <span class="serif">team.</span></h2></div><p>Warehouse teams place packages. Drivers run the route. Dispatchers coordinate the day. Explore the workspace built around each role.</p></div>
-  <div class="solution-tabs" role="tablist" aria-label="Delivery solutions"><button id="tab-sling" role="tab" aria-selected="true" aria-controls="solution-panel" data-solution="sling"><span>01</span> Warehouse <b>PathIQ &rarr;</b></button><button id="tab-surge" role="tab" aria-selected="false" aria-controls="solution-panel" tabindex="-1" data-solution="surge"><span>02</span> On the road <b>Driver &rarr;</b></button><button id="tab-symphony" role="tab" aria-selected="false" aria-controls="solution-panel" tabindex="-1" data-solution="symphony"><span>03</span> Operations <b>Dispatcher &rarr;</b></button></div>
-  <div class="solution-panel" id="solution-panel" role="tabpanel" aria-labelledby="tab-sling" tabindex="0"><div class="solution-copy"><p class="eyebrow" id="solution-label">PATHIQ / WAREHOUSE WORKSPACE</p><h3 id="solution-title">A clear destination.<br>For every scan.</h3><p id="solution-description">Give the warehouse floor a focused scanning workflow. PathIQ reads package identifiers from the route manifest, shows the assigned bin, and checks the bin scan before counting placement.</p><ul id="solution-points"><li>Barcode-to-bin guidance</li><li>Package and bin scan sequence</li><li>Wrong-bin and duplicate-scan feedback</li></ul><button class="text-link" data-demo id="solution-cta">Explore PathIQ <span>↗</span></button></div><div class="solution-illustration"><div class="journey-heading"><span id="journey-label">FROM PACKAGE IDENTIFIER TO ROUTE BIN</span><span class="pill">PathIQ</span></div><div class="journey"><div class="journey-point"><span>▦</span><small id="journey-start">Package scan</small></div><div class="journey-line"><i></i><b>↗</b><i></i></div><div class="journey-point destination"><span>⌂</span><small id="journey-end">Route bin</small></div></div><div class="journey-card"><span class="mini-check">✓</span><div><strong id="journey-card-title">Clear instructions at the point of work.</strong><p id="journey-card-text">Scan package · Find bin · Confirm placement</p></div></div><span class="illustration-label">WORKFLOW ILLUSTRATION</span></div></div>
-</div></section>
-<section class="section container workflow" id="workflow"><span id="how"></span><div class="section-heading"><div><p class="eyebrow">FROM MANIFEST TO LAST STOP</p><h2>The last mile has a lot<br>of moving <span class="serif">parts.</span></h2></div><p>Plan the route, sort the work, prepare the driver, and follow delivery progress. Each stage gives the next team a clearer starting point.</p></div><div class="steps"><article><span class="step-num">01</span><h3>Bring in the work.</h3><p>Import delivery addresses and package details. Build geographically grouped, sequenced routes.</p><span class="step-tag">MANIFEST & ROUTES</span></article><article><span class="step-num">02</span><h3>Put it in place.</h3><p>Use PathIQ to match a package to its route bin and confirm the placement with a second scan.</p><span class="step-tag">SCAN & STOW</span></article><article><span class="step-num">03</span><h3>Prepare to move.</h3><p>Drivers work through bin and package checks, confirm pickup, then open navigation for the next stop.</p><span class="step-tag">LOAD & NAVIGATE</span></article><article><span class="step-num">04</span><h3>Follow the day.</h3><p>Review reported stop completions and location updates. Keep assignments and exceptions in view.</p><span class="step-tag">DELIVERY & VISIBILITY</span></article></div></section>
-<section class="section container" id="shopify"><span id="ecommerce"></span>
-  <div class="section-heading"><div><p class="eyebrow">FOR LOCAL SELLERS</p><h2>Local sellers are still<br>shipping in <span class="serif">days.</span></h2></div><p>Local retailers lose customers to three-day shipping. Connect their Shopify store to your TackPath dispatch board, and each new order arrives as a same-day delivery job, ready for a driver.</p></div>
-  <div class="solution-panel">
-    <div class="solution-copy"><p class="eyebrow">SHOPIFY / ORDER INTAKE</p><h3>Every order.<br>On your board.</h3><p>Link the store once from your dispatch desk. After that, new orders arrive on their own with the delivery address already mapped. No manual entry. No missed orders.</p><ul><li>One connection, nothing for the retailer to maintain</li><li>Split shipments become separate jobs</li><li>Repeat notifications never create duplicates</li></ul><button class="text-link" data-demo>Talk to us about Shopify <span>↗</span></button></div>
-    <div class="solution-illustration"><div class="journey-heading"><span>FROM SHOPIFY ORDER TO DISPATCH BOARD</span><span class="pill">Shopify</span></div><div class="journey"><div class="journey-point"><span>▦</span><small>Shopify order</small></div><div class="journey-line"><i></i><b>↗</b><i></i></div><div class="journey-point destination"><span>⌂</span><small>Dispatch</small></div></div><div class="journey-card"><span class="mini-check">✓</span><div><strong>A same-day job, address mapped.</strong><p>Order placed · Job created · Ready for a driver</p></div></div><span class="illustration-label">ORDER INTAKE ILLUSTRATION</span></div>
-  </div>
-</section>
-<section class="section container workflow" id="customers"><div class="section-heading"><div><p class="eyebrow">FOR THE BUSINESSES YOU DELIVER FOR</p><h2>Keep your customers<br>in the <span class="serif">loop.</span></h2></div><p>The businesses you deliver for can request deliveries and follow them without calling your dispatch desk.</p></div><div class="steps steps-3"><article><h3>Customer portal.</h3><p>Your clients request deliveries and check their status in one place.</p><span class="step-tag">REQUEST AND STATUS</span></article><article><h3>Live tracking link.</h3><p>A tracking page that refreshes every 15 seconds while a delivery is on the way.</p><span class="step-tag">LIVE TRACKING</span></article><article><h3>Your brand.</h3><p>Lotus adds white label branding, so what your clients see carries your name.</p><span class="step-tag">WHITE LABEL</span></article></div></section>
-<section class="managed container" id="managed"><span id="agents"></span><div class="managed-copy"><p class="eyebrow">OPERATIONAL VISIBILITY</p><h2>See what changed.<br>Decide what comes next.<br><span class="serif">Keep the day moving.</span></h2><p>A late route. An unassigned job. A driver whose location has gone quiet. TackPath brings those signals into the dispatch view, with route progress and estimated arrival times to help your team respond.</p><button class="button button-lime" data-demo>Explore dispatch visibility <span>↗</span></button></div><div class="managed-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div><div class="orbit-center"><img src="logo.svg" alt="" width="70" height="53"></div><span class="orbit-label label-dispatch">↗ &nbsp; Dispatch</span><span class="orbit-label label-drivers">◎ &nbsp; Drivers</span><span class="orbit-label label-operations">▦ &nbsp; Operations</span><div class="art-caption">THE CONTEXT BEHIND THE NEXT DECISION.</div></div></section>
-<section class="section container" id="plans">
-  <div class="section-heading"><div><p class="eyebrow">PLANS</p><h2>Start small.<br>Run <span class="serif">big.</span></h2></div><p>From a single-driver operation to a fully managed dispatch desk. Every plan includes the TackPath Driver app and GPS tracking.</p></div>
-  <div class="capability-grid">
-    <article class="feature feature-dispatch"><div class="feature-top"><span class="feature-number">ENTRY / UP TO 3 DRIVERS</span></div><h3>Bloom</h3><p>For courier teams running their first organized routes.</p><div class="dispatch-mini"><div><span class="mini-check">✓</span><span><b>Sling and Surge</b><small>On-demand and multi-stop routes</small></span></div><div><span class="mini-check">✓</span><span><b>Customer portal</b><small>Requests and live tracking</small></span></div><div><span class="mini-check">✓</span><span><b>TackPath Driver app</b><small>GPS tracking included</small></span></div></div></article>
-    <article class="feature feature-routing"><div class="feature-top"><span class="feature-number">GROWTH / UNLIMITED DRIVERS</span></div><h3>Ascend</h3><p>For operations scaling up their daily volume.</p><div class="dispatch-mini"><div><span class="mini-check">✓</span><span><b>Unlimited drivers</b><small>Plus priority support</small></span></div><div><span class="mini-check">✓</span><span><b>SmartSort</b><small>Pre-sort and barcode scanning</small></span></div><div><span class="mini-check">✓</span><span><b>Fleet map and OWL</b><small>Live GPS map, revenue intelligence</small></span></div></div></article>
-    <article class="feature feature-track"><div class="feature-top"><span class="feature-number">FULLY MANAGED / CUSTOM</span></div><h3>Lotus</h3><p>TackPath's team runs your dispatch, end to end.</p><div class="dispatch-mini"><div><span class="mini-check">✓</span><span><b>Dispatch run for you</b><small>By the TackPath team, end to end</small></span></div><div><span class="mini-check">✓</span><span><b>White label branding</b><small>Your name on what clients see</small></span></div><div><span class="mini-check">✓</span><span><b>24/7 monitoring</b><small>With priority support</small></span></div></div></article>
-  </div>
-  <div class="platform-footnote"><span>Lotus pricing is scoped to your delivery volume and requirements.</span><a class="text-link" href="pricing.html">Compare plans <span>↗</span></a></div>
-</section>
-<section class="section container faq-section"><div><p class="eyebrow">A FEW PRACTICAL QUESTIONS</p><h2>Let’s make<br>it <span class="serif">clear.</span></h2><a class="text-link" href="mailto:hello@tackpath.com">Ask us something else <span>↗</span></a></div><div class="faq-list"><details open><summary>What is TackPath?<span>+</span></summary><p>TackPath is logistics operations software for teams managing warehouse sorting and last-mile delivery. It combines manifest-based route planning, PathIQ scanning, a driver workflow, and a Dispatcher workspace for assignments, location updates, and delivery progress.</p></details><details><summary>Does TackPath work with Shopify?<span>+</span></summary><p>Yes. Connect a retailer's Shopify store from your dispatch desk once, and new orders arrive on your dispatch board as same-day delivery jobs, with the address already mapped.</p></details><details><summary>How do drivers join?<span>+</span></summary><p>Drivers in the Atlanta metro can apply on the <a href="driversignup.html">Drive for TackPath</a> page. Working drivers use the TackPath Driver app for their routes.</p></details><details><summary>How does TackPath plan routes?<span>+</span></summary><p>Import a CSV with order IDs, recipients, addresses, and package quantities. SmartSort groups stops geographically and improves their sequence. Traffic-aware estimates help with planning; your team remains responsible for checking addresses, capacity, and delivery requirements.</p></details><details><summary>Who is it built for?<span>+</span></summary><p>TackPath is built for courier companies and the teams running delivery operations. If you manage last-mile or 3PL delivery work, we can walk through your workflow and discuss whether the platform fits.</p></details><details><summary>What does PathIQ do in the warehouse?<span>+</span></summary><p>PathIQ looks up a scanned package against active route manifests, displays its destination bin, and asks the operator to scan that bin to confirm placement. It is a focused route-sorting workflow; discuss your receiving, inventory, and warehouse requirements during a walkthrough.</p></details><details><summary>How do we get started?<span>+</span></summary><p>Request a walkthrough or email <a href="mailto:hello@tackpath.com">hello@tackpath.com</a>. Tell us about your delivery operation so we can focus the conversation on the workflows that matter to your team.</p></details></div></section>
-<section class="closing" id="cta"><div class="container"><div><p class="eyebrow">YOUR NEXT MOVE</p><h2>Your operation.<br>A clearer <span class="serif">next move.</span></h2></div><div><p>Bring your manifest, your warehouse workflow, and your delivery challenges. See where TackPath fits.</p><button class="button" data-demo>See TackPath in action <span>↗</span></button></div></div></section>
-</main>
-<footer class="container footer"><div class="footer-top"><a class="brand" href="#" aria-label="TackPath home"><img class="brand-symbol" src="logo.svg" alt="" width="30" height="35">
-    <div class="nav-wordmark" style="font-size:1.0625rem;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div></a><p>From warehouse floor to dispatch desk.</p><a href="mailto:hello@tackpath.com">hello@tackpath.com ↗</a></div><div class="footer-bottom"><span>© 2026 TackPath · Atlanta, GA. All rights reserved.</span><nav aria-label="Footer navigation"><a href="#plans">Pricing</a><a href="driversignup.html">Drivers</a><a href="portal.html">Sign in</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="#">Back to top ↑</a></nav></div></footer>
-<dialog id="demo-dialog" aria-labelledby="demo-title"><button class="dialog-close" aria-label="Close demo request">×</button><p class="eyebrow">LET’S TALK TACKPATH</p><h2 id="demo-title">Your operation.<br>A clearer <span class="serif">path.</span></h2><p>Tell us a little about your business. We’ll prepare an email you can review and send to the TackPath team.</p><p>Prefer to email us directly? <a class="text-link" href="mailto:hello@tackpath.com">hello@tackpath.com <span>↗</span></a></p><form id="demo-form"><label>Your name<input name="name" autocomplete="name" required placeholder="Alex Morgan" maxlength="100"></label><label>Work email<input name="email" type="email" autocomplete="email" required placeholder="alex@company.com" maxlength="150"></label><label>Company<input name="company" autocomplete="organization" required placeholder="Company name" maxlength="150"></label><label>What are you interested in?<select name="interest"><option>Platform walkthrough</option><option>PathIQ - warehouse scanning</option><option>Driver - delivery workflow</option><option>Dispatcher - operations visibility</option><option>Shopify - local seller deliveries</option><option>Plans and pricing</option></select></label><label class="full-width">Tell us about your operation <span>(optional)</span><textarea name="message" rows="3" placeholder="Your delivery workflow, team, and what you want to improve." maxlength="2000"></textarea></label><button class="button full-width" type="submit">Prepare demo request <span>↗</span></button></form><div id="email-ready" hidden><p>Your request is ready. Open it in your email app, or copy it into an email to <strong>hello@tackpath.com</strong>.</p><div class="button-row"><a class="button" id="send-email" href="mailto:hello@tackpath.com">Open email app ↗</a><button class="text-link" id="copy-email">Copy request</button></div><textarea id="email-text" readonly aria-label="Prepared demo request" rows="7"></textarea><p id="copy-status" aria-live="polite"></p></div><small class="form-note">This form does not submit or store your information. Sending happens in your email app.</small></dialog>
-<script src="app.js"></script>
-<script src="operations.js"></script>
-</body></html>
+  <main>
+    <h1 class="lockup" aria-label="TackPath" style="margin:0;font-weight:inherit">
+      <img src="logo.svg" alt="">
+      <span class="wordmark" aria-hidden="true"><span>T Ʌ C K </span><span>P Ʌ T H</span></span>
+    </h1>
+  </main>
+  <footer><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a></footer>
+</body>
+</html>
