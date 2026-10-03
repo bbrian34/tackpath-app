@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Drive for TackPath — Atlanta Metro Delivery Routes</title>
+<title>Drive for TackPath | Atlanta Metro Delivery Routes</title>
 <meta name="description" content="TackPath connects independent contract drivers with reliable, tightly-clustered delivery routes across Atlanta metro. Consistent routes, weekly pay, real support."/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
@@ -86,19 +86,20 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:20px 2
 footer{padding:32px 24px;text-align:center;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border);}
 footer a{color:var(--blue);margin:0 8px;}
 </style>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 </head>
 <body>
 
 <nav>
   <a href="index.html" class="nav-logo">
-    <svg width="16" height="27" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tpg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs><rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpg)"/><rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpg)" opacity=".75"/><rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpg)" opacity=".5"/></svg>
+    <img src="logo.svg" alt="" width="20" height="23">
     <div class="nav-wordmark"><span style="color:#fff;">T Ʌ C K </span><span style="color:var(--blue);">P Ʌ T H</span></div>
   </a>
   <a href="driver.html" class="nav-back">Already a driver? Sign in →</a>
 </nav>
 
 <section class="hero">
-  <div class="hero-eyebrow">Now recruiting — Atlanta Metro</div>
+  <div class="hero-eyebrow">Now recruiting · Atlanta Metro</div>
   <h1>Drive routes that make<br/><span>sense</span>, not chaos.</h1>
   <p class="hero-sub">TackPath clusters every route into a tight, walkable zone before a driver ever sees it. No crisscrossing the metro for scattered stops. No guessing your pay.</p>
   <a href="#apply" class="hero-cta">Apply to Drive</a>
@@ -119,11 +120,11 @@ footer a{color:var(--blue);margin:0 8px;}
   <div class="panel">
     <h2 class="perk">Why Drivers Choose TackPath</h2>
     <ul>
-      <li><span class="ico">📍</span>Geographically tight routes — less driving, more delivering</li>
+      <li><span class="ico">📍</span>Geographically tight routes: less driving, more delivering</li>
       <li><span class="ico">⚖️</span>Equal package loads across every driver on a route</li>
       <li><span class="ico">🔔</span>Real-time route updates and support, not silence</li>
       <li><span class="ico">🗺️</span>Turn-by-turn navigation built into the app</li>
-      <li><span class="ico">💵</span>Independent contractor — work on your own terms</li>
+      <li><span class="ico">💵</span>Independent contractor: work on your own terms</li>
     </ul>
   </div>
 </div>
@@ -140,7 +141,7 @@ footer a{color:var(--blue);margin:0 8px;}
   </div>
   <div class="step">
     <div class="step-num">3</div>
-    <div class="step-body"><h3>Accept routes, get moving</h3><p>Open the driver app, accept an available route in your zone, and go — sequenced stops, live navigation, real-time support built in.</p></div>
+    <div class="step-body"><h3>Accept routes, get moving</h3><p>Open the driver app, accept an available route in your zone, and go: sequenced stops, live navigation, real-time support built in.</p></div>
   </div>
 </div>
 
@@ -236,7 +237,7 @@ async function submitApplication(){
   try{
     const existing=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&limit=1');
     if(existing&&existing.length){
-      toast('An application with this number already exists — sign in instead','warn');
+      toast('An application with this number already exists. Sign in instead.','warn');
       btn.disabled=false;btn.textContent='Submit Application';
       setTimeout(()=>{window.location.href='driver.html';},1800);
       return;
@@ -259,7 +260,7 @@ async function submitApplication(){
     setTimeout(()=>{window.location.href='driver.html';},2200);
   }catch(e){
     console.error('Application error:',e);
-    toast('Something went wrong — please try again','warn');
+    toast('Something went wrong. Please try again.','warn');
     btn.disabled=false;btn.textContent='Submit Application';
   }
 }
