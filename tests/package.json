@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "jsdom": "^30.0.0"
   }
 }
