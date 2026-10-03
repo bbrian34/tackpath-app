@@ -13,7 +13,7 @@
 --       tp_customer, tp_track, tp_driver_signup
 --     and service-role-only RPCs for the edge functions:
 --       tp_svc_driver_code (driver-login), tp_svc_assignment_sms (send-sms),
---       tp_svc_pod (pod)
+--       tp_svc_pod (pod), tp_svc_session (every other edge function)
 --
 -- Migration 20 (lockdown) is what removes the anon key's direct access.
 -- Apply this file first, deploy the edge functions and pages, check every
@@ -992,6 +992,19 @@ begin
   end if;
 end $$;
 
+-- Other edge functions (smooth-api, nav-proxy, smartsort, sponge,
+-- swarm-watch): is this a live TackPath session, and of which kind?
+create function public.tp_svc_session(p_token text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare s tp_sec.sessions;
+begin
+  select * into s from tp_sec.sessions where token_hash = tp_sec.sha256_hex(p_token);
+  if not found or s.revoked_at is not null or s.expires_at < now() then
+    return jsonb_build_object('ok', false);
+  end if;
+  return jsonb_build_object('ok', true, 'kind', s.kind, 'org_id', s.org_key, 'driver_name', s.driver_name);
+end $$;
+
 -- ── 11. WHO MAY CALL WHAT ────────────────────────────────────────────────
 -- Supabase's default privileges grant EXECUTE on every new function to anon
 -- and authenticated, so revoking from PUBLIC alone is not enough.
@@ -1002,13 +1015,14 @@ revoke all on all sequences in schema tp_sec from public, anon, authenticated;
 revoke all on function public.tp_org_lookup(text), public.tp_org_sign_in(text,text), public.tp_sign_out(text),
   public.tp_org(text,text,jsonb), public.tp_driver_sign_in(text,text), public.tp_driver(text,text,jsonb),
   public.tp_customer(text,jsonb), public.tp_track(text,jsonb), public.tp_driver_signup(jsonb),
-  public.tp_svc_driver_code(text), public.tp_svc_assignment_sms(text,text), public.tp_svc_pod(text,text,text)
+  public.tp_svc_driver_code(text), public.tp_svc_assignment_sms(text,text), public.tp_svc_pod(text,text,text),
+  public.tp_svc_session(text)
   from public, anon, authenticated;
 grant execute on function public.tp_org_lookup(text), public.tp_org_sign_in(text,text), public.tp_sign_out(text),
   public.tp_org(text,text,jsonb), public.tp_driver_sign_in(text,text), public.tp_driver(text,text,jsonb),
   public.tp_customer(text,jsonb), public.tp_track(text,jsonb), public.tp_driver_signup(jsonb)
   to anon, authenticated, service_role;
 grant execute on function public.tp_svc_driver_code(text), public.tp_svc_assignment_sms(text,text),
-  public.tp_svc_pod(text,text,text) to service_role;
+  public.tp_svc_pod(text,text,text), public.tp_svc_session(text) to service_role;
 
 commit;

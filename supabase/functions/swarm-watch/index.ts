@@ -3,6 +3,7 @@
 // Combines SmartTrack (Todd) exception detection + Swarm Coordinator (Brain) pattern analysis
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { guardRequest, serviceRpc } from "../_shared/tp_security.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Server-side key is read from the function secret, never committed.
@@ -18,8 +19,16 @@ const corsHeaders = {
 
 const LATE_TOLERANCE_MIN = 20;
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // Security hardening 2026-10: only company sessions, or the scheduler with the x-tp-cron-secret header (CRON_SECRET) may call this.
+  const guard = await guardRequest(req, {
+    rpc: serviceRpc("https://hofijsiphyjpdvujjzfi.supabase.co", Deno.env.get("SERVICE_ROLE_KEY") || ""),
+    cronSecret: Deno.env.get("CRON_SECRET") || "",
+  }, { kinds: ["org"], cors: corsHeaders });
+  if (guard.response) return guard.response;
+  req = guard.req;
 
   const supabase = createClient(SB_URL, SB_KEY);
   const results = { exceptions_flagged: 0, patterns_detected: 0, errors: [] as string[] };

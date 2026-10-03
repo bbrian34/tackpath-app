@@ -8,14 +8,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { freshDb, rpc, ORG_A } from './fixture.mjs';
-import { handleSendSms, handleDriverLogin, handlePod } from '../../supabase/functions/_shared/tp_security.js';
+import { handleSendSms, handleDriverLogin, handlePod, guardRequest, handleShopifyStart } from '../../supabase/functions/_shared/tp_security.js';
 
 const require = createRequire(import.meta.url);
 const { loadApp, wait } = require('../helpers.js');
 
 async function backend() {
   const db = await freshDb({ migrate: ['10_sessions_and_rpcs.sql', '20_lockdown.sql'] });
-  const texts = []; const direct = []; const files = {};
+  const texts = []; const direct = []; const files = {}; const proxied = [];
   const svc = { rpc: async (fn, args) => { try { return { data: await rpc(db, fn, args, 'service_role') }; } catch (e) { return { error: { message: e.message } }; } } };
   const deps = {
     ...svc,
@@ -37,6 +37,17 @@ async function backend() {
     }
     m = url.match(/\/functions\/v1\/([a-z-]+)/);
     if (m) {
+      if (m[1] === 'smooth-api') {   // guarded Google proxy: answer only a signed-in caller
+        const g = await guardRequest(new Request('https://x/smooth-api', { method: 'POST', body }), deps, { kinds: ['org', 'driver'] });
+        if (g.response) return json(401, { error: 'Sign in required' });
+        proxied.push(JSON.parse(await g.req.text()).action);
+        return json(200, { status: 'OK', results: [{ geometry: { location: { lat: 1, lng: 2 } } }], routes: [], rows: [] });
+      }
+      if (m[1] === 'shopify-oauth') {
+        const out = await handleShopifyStart(new Request('https://x/shopify-oauth', { method: 'POST', body }),
+          { ...deps, shopifySecret: 'secret', shopifyApiKey: 'k', scopes: 'read_orders', redirectUri: 'https://x/cb' });
+        return json(out.status, out.body);
+      }
       const h = { 'send-sms': handleSendSms, 'driver-login': handleDriverLogin, pod: handlePod }[m[1]];
       if (!h) return json(200, {});
       const out = await h(new Request('https://x/' + m[1], { method: 'POST', body }), deps);
@@ -48,7 +59,7 @@ async function backend() {
     }
     return json(200, []);
   };
-  return { db, texts, direct, files, handler };
+  return { db, texts, direct, files, proxied, handler };
 }
 
 const job = async (db, o = {}) => (await db.query(
@@ -270,4 +281,26 @@ test('fleet.html and driversignup.html work through the RPCs', async () => {
     assert.equal(d && d.status, 'pending_approval');
     assert.deepEqual(be.direct, []);
   } finally { su.cleanup(); }
+});
+
+test('dispatcher.html: the Google proxy and the Shopify connection carry the company session', async () => {
+  const be = await backend();
+  const t = (await rpc(be.db, 'tp_org_sign_in', { p_slug: 'quickhaul', p_code: 'qh-portal-2026' })).token;
+  const app = loadApp('dispatcher.html', { fetchHandler: be.handler,
+    initialStorage: { tp_dispatch_org: JSON.stringify({ id: ORG_A, slug: 'quickhaul', name: 'Quick Haul', token: t }) } });
+  const w = app.dom.window;
+  w.google = { maps: { Map: function () {}, Marker: function () {}, SymbolPath: { CIRCLE: 0 } } };
+  const popup = { location: { href: null }, close() { this.closed = true; } };
+  w.open = () => popup;
+  w.prompt = () => 'Acme-Store.myshopify.com';
+  try {
+    await wait(200);
+    await w.eval(`callRealMatrixAction([{lat:1,lng:2}],[{lat:3,lng:4}])`).catch(() => {});
+    await w.eval(`getTrafficAwareLegData({lat:1,lng:2},{lat:3,lng:4})`).catch(() => {});
+    assert.deepEqual(be.proxied, ['matrix', 'routes'], 'both proxy calls accepted (they carry the session)');
+    w.eval('connectShopify()');
+    await wait(200);
+    assert.match(String(popup.location.href), /^https:\/\/acme-store\.myshopify\.com\/admin\/oauth\/authorize\?.*state=/);
+    assert.ok(!popup.closed);
+  } finally { app.cleanup(); }
 });

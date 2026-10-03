@@ -137,3 +137,106 @@ test('CORS allows tackpath.com and the driver app WebView only', () => {
   }
   assert.equal(corsFor('https://evil.example')['Access-Control-Allow-Origin'], 'https://tackpath.com');
 });
+
+// ── Session guard for smooth-api, nav-proxy, smartsort, sponge, swarm-watch ──
+import fs from 'node:fs';
+import { guardRequest, handleShopifyStart, checkShopifyCallback, signOAuthState, verifyOAuthState } from '../../supabase/functions/_shared/tp_security.js';
+
+test('guard: company or driver sessions pass where allowed; anything else gets 401 and no work is done', async () => {
+  const e = await env();
+  const org = await e.org();
+  const issued = await rpc(e.db, 'tp_svc_driver_code', { p_phone: '4045551234' }, 'service_role');
+  const drv = (await rpc(e.db, 'tp_driver_sign_in', { p_phone: '4045551234', p_code: issued.code })).token;
+  const req = (body, headers = {}) => new Request('https://x/fn', { method: 'POST', headers, body: JSON.stringify(body) });
+  const pass = async (body, opts, headers) => {
+    const g = await guardRequest(req(body, headers), e.deps, opts);
+    if (g.response) return g.response.status;
+    assert.deepEqual(JSON.parse(await g.req.text()), body, 'the function can still read the body');
+    return g.session.kind;
+  };
+  assert.equal(await pass({ session: org, action: 'routes' }), 'org');
+  assert.equal(await pass({ session: drv, action: 'geocode' }), 'driver');
+  assert.equal(await pass({ action: 'x' }, {}, { 'x-tp-session': org }), 'org', 'header works too');
+  assert.equal(await pass({ session: drv }, { kinds: ['org'] }), 401, 'driver session refused where only companies may call');
+  for (const body of [{}, { session: '' }, { session: 'f'.repeat(64) }, { session: 'x'.repeat(500) }]) {
+    assert.equal(await pass(body), 401, JSON.stringify(body).slice(0, 40));
+  }
+  await rpc(e.db, 'tp_sign_out', { p_token: org });
+  assert.equal(await pass({ session: org }), 401, 'signed-out session refused');
+  // scheduler secret: only when the function is configured with one
+  assert.equal(await pass({}, { kinds: ['org'] }, { 'x-tp-cron-secret': 'cron-123' }), 401);
+  const withCron = { ...e.deps, cronSecret: 'cron-123' };
+  const g = await guardRequest(req({}, { 'x-tp-cron-secret': 'cron-123' }), withCron, { kinds: ['org'] });
+  assert.equal(g.session.kind, 'cron');
+  const bad = await guardRequest(req({}, { 'x-tp-cron-secret': 'cron-124' }), withCron, { kinds: ['org'] });
+  assert.equal(bad.response.status, 401);
+  // tp_svc_session is not callable with the public key
+  assert.match(String(await rpc(e.db, 'tp_svc_session', { p_token: org }, 'anon').catch((x) => x.message)), /permission denied/);
+});
+
+test('every remaining edge function checks the session before doing anything', () => {
+  const fn = (n) => fs.readFileSync(new URL('../../supabase/functions/' + n + '/index.ts', import.meta.url), 'utf8');
+  const want = { 'smooth-api': '["org", "driver"]', 'nav-proxy': '["org", "driver"]', smartsort: '["org"]', sponge: '["org"]', 'swarm-watch': '["org"]' };
+  for (const [name, kinds] of Object.entries(want)) {
+    const src = fn(name);
+    const opt = src.indexOf('req.method === "OPTIONS"');
+    const guard = src.indexOf('await guardRequest(req,');
+    const deny = src.indexOf('if (guard.response) return guard.response;');
+    assert.ok(opt > 0 && guard > opt && deny > guard, name + ': guard right after the CORS preflight');
+    const after = src.slice(deny);
+    const firstWork = Math.min(...['req.json()', 'createClient(', 'fetch('].map((k) => { const i = src.indexOf(k, opt); return i < 0 ? Infinity : i; }));
+    assert.ok(firstWork > deny, name + ': no work before the guard');
+    assert.ok(src.slice(guard, deny).includes(`kinds: ${kinds}`), name + ' allows ' + kinds);
+    assert.equal(src.includes('CRON_SECRET'), name === 'swarm-watch', name + ': scheduler secret only for swarm-watch');
+    assert.ok(after.length > 0);
+  }
+  assert.doesNotMatch(fn('smartsort'), /const \{[^}]*org_id[^}]*\} = await req\.json\(\)/, 'smartsort never takes the company from the body');
+  assert.match(fn('smartsort'), /const org_id = guard\.session\.kind === "org" \? guard\.session\.org_id : null;/);
+});
+
+// ── Shopify OAuth signed state ──
+const SECRET = 'shpss_app_secret';
+const shopifyQuery = (params) => {
+  const msg = Object.keys(params).sort().map((k) => `${k}=${params[k]}`).join('&');
+  const hmac = crypto.createHmac('sha256', SECRET).update(msg).digest('hex');
+  return new URL('https://x/shopify-oauth?' + new URLSearchParams({ ...params, hmac }).toString());
+};
+
+test('Shopify: a store can only be linked to the company that started the connection', async () => {
+  const e = await env();
+  const deps = { ...e.deps, now: () => Date.now(), shopifySecret: SECRET, shopifyApiKey: 'apikey1', scopes: 'read_orders', redirectUri: 'https://x/shopify-oauth' };
+  const tok = await e.org();
+  const start = await handleShopifyStart(new Request('https://x', { method: 'POST', body: JSON.stringify({ action: 'start', session: tok, shop: 'Acme-Store.myshopify.com' }) }), deps);
+  assert.equal(start.status, 200);
+  const authUrl = new URL(start.body.url);
+  assert.equal(authUrl.host, 'acme-store.myshopify.com');
+  const state = authUrl.searchParams.get('state');
+  // callback from Shopify for that shop and state -> linked to Quick Haul (the company that started it)
+  const ok = await checkShopifyCallback(shopifyQuery({ code: 'c1', shop: 'acme-store.myshopify.com', state, timestamp: '1700000000' }), deps);
+  assert.deepEqual(ok, { org: ORG_A, shop: 'acme-store.myshopify.com' });
+  // the same state for a different shop
+  assert.ok((await checkShopifyCallback(shopifyQuery({ code: 'c1', shop: 'other.myshopify.com', state, timestamp: '1' }), deps)).error);
+  // forged / tampered / unsigned states, and the old "state = org_id" form
+  const [payload, sig] = state.split('.');
+  const forged = Buffer.from(JSON.stringify({ org: ORG_B, shop: 'acme-store.myshopify.com', exp: 9999999999, n: 'x' })).toString('base64url');
+  for (const st of [forged + '.' + sig, payload + '.' + sig.slice(0, -2) + 'AA', ORG_B, '', payload]) {
+    assert.ok((await checkShopifyCallback(shopifyQuery({ code: 'c1', shop: 'acme-store.myshopify.com', state: st, timestamp: '1' }), deps)).error, st.slice(0, 30));
+  }
+  // a callback whose query was not signed by Shopify
+  const unsigned = new URL('https://x/shopify-oauth?' + new URLSearchParams({ code: 'c1', shop: 'acme-store.myshopify.com', state, hmac: 'a'.repeat(64) }));
+  assert.equal((await checkShopifyCallback(unsigned, deps)).error, 'Invalid Shopify signature');
+  // expired after 15 minutes
+  const old = await signOAuthState({ org: ORG_A, shop: 'acme-store.myshopify.com', now: Date.now() - 16 * 60 * 1000 }, SECRET);
+  assert.ok((await checkShopifyCallback(shopifyQuery({ code: 'c1', shop: 'acme-store.myshopify.com', state: old, timestamp: '1' }), deps)).error);
+  assert.equal(await verifyOAuthState(state, 'another-secret', { shop: 'acme-store.myshopify.com' }), null);
+  // starting needs a company session and a real store name
+  const st = (body) => handleShopifyStart(new Request('https://x', { method: 'POST', body: JSON.stringify(body) }), deps).then((r) => r.status);
+  assert.equal(await st({ action: 'start', shop: 'acme-store.myshopify.com' }), 401);
+  assert.equal(await st({ action: 'start', session: 'f'.repeat(64), shop: 'acme-store.myshopify.com' }), 401);
+  assert.equal(await st({ action: 'start', session: tok, shop: 'evil.example.com' }), 400);
+  assert.equal(await st({ action: 'start', session: tok, shop: 'a.myshopify.com.evil.com' }), 400);
+  // the function no longer starts from a bare GET link with org_id
+  const src = fs.readFileSync(new URL('../../supabase/functions/shopify-oauth/index.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /searchParams\.get\("org_id"\)/);
+  assert.match(src, /org_id: checked\.org,/);
+});

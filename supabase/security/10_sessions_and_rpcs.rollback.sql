@@ -27,6 +27,7 @@ drop function if exists public.tp_driver_signup(jsonb);
 drop function if exists public.tp_svc_driver_code(text);
 drop function if exists public.tp_svc_assignment_sms(text, text);
 drop function if exists public.tp_svc_pod(text, text, text);
+drop function if exists public.tp_svc_session(text);
 drop schema if exists tp_sec cascade;
 
 commit;

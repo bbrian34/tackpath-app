@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkShopifyCallback, handleShopifyStart, serviceRpc } from "../_shared/tp_security.js";
 
 const SB_URL = "https://hofijsiphyjpdvujjzfi.supabase.co";
 const SB_KEY = Deno.env.get("SERVICE_ROLE_KEY") || "";
@@ -16,30 +17,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Security hardening 2026-10: a shop can only be linked to the company that
+// started the flow. The dispatcher POSTs {action:"start", session, shop};
+// the state sent to Shopify carries that company, the shop and a 15-minute
+// expiry, signed with SHOPIFY_API_SECRET. The callback checks Shopify's own
+// query signature, the shop name and the state before linking anything.
+const OAUTH = {
+  rpc: serviceRpc(SB_URL, SB_KEY),
+  shopifySecret: SHOPIFY_API_SECRET,
+  shopifyApiKey: SHOPIFY_API_KEY,
+  scopes: SCOPES,
+  redirectUri: APP_URL,
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const url = new URL(req.url);
   const shop = url.searchParams.get("shop");
   const code = url.searchParams.get("code");
-  const orgId = url.searchParams.get("org_id");
 
   try {
-    // Step 1: No code yet -- redirect merchant to Shopify's authorization screen
+    // Step 1: the dispatcher asks for the Shopify authorization link
+    if (req.method === "POST") {
+      const out = await handleShopifyStart(req, OAUTH);
+      return new Response(JSON.stringify(out.body), { status: out.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     if (shop && !code) {
-      if (!shop.endsWith(".myshopify.com")) {
-        return new Response("Invalid shop domain", { status: 400, headers: corsHeaders });
-      }
-      const state = orgId || "";
-      const installUrl =
-        `https://${shop}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}` +
-        `&scope=${SCOPES}&redirect_uri=${encodeURIComponent(APP_URL)}` +
-        `&state=${encodeURIComponent(state)}`;
-      return Response.redirect(installUrl, 302);
+      return new Response("Start the Shopify connection from the TackPath dispatcher.", { status: 400, headers: corsHeaders });
     }
 
     // Step 2: Callback with authorization code -- exchange for a permanent access token
     if (shop && code) {
+      const checked = await checkShopifyCallback(url, OAUTH);
+      if (checked.error) return new Response(checked.error, { status: 403, headers: corsHeaders });
       const tokenResp = await fetch(`https://${shop}/admin/oauth/access_token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,7 +66,6 @@ serve(async (req) => {
         return new Response("Token exchange failed", { status: 400, headers: corsHeaders });
       }
 
-      const state = url.searchParams.get("state") || null;
       const supabase = createClient(SB_URL, SB_KEY);
 
       await supabase.from("shopify_connections").upsert(
@@ -63,7 +73,7 @@ serve(async (req) => {
           shop_domain: shop,
           access_token: tokenData.access_token,
           scope: tokenData.scope,
-          org_id: state || null,
+          org_id: checked.org,
           active: true,
         },
         { onConflict: "shop_domain" }

@@ -150,6 +150,108 @@ export async function verifyShopifyHmac(rawBody, headerValue, secret) {
   return diff === 0;
 }
 
+// ── Session guard for the other edge functions ────────────────────────────
+// smooth-api, nav-proxy, smartsort, sponge and swarm-watch run with the
+// service role or the Google server key, so they must not answer strangers.
+// A request passes with a live TackPath session of an allowed kind, sent as
+// body.session (JSON body) or the x-tp-session header, or, for scheduled
+// jobs, with the x-tp-cron-secret header matching the CRON_SECRET secret.
+// Returns {req, session} (req can be read again) or {response} (401).
+export async function guardRequest(req, deps, { kinds = ['org', 'driver'], cors = {} } = {}) {
+  const raw = req.method === 'GET' || req.method === 'HEAD' ? '' : await req.text();
+  const rebuilt = () => new Request(req.url, { method: req.method, headers: req.headers, body: raw || undefined });
+  const cron = req.headers.get('x-tp-cron-secret') || '';
+  if (deps.cronSecret && cron && timingSafeEqual(cron, deps.cronSecret)) {
+    return { req: rebuilt(), session: { kind: 'cron' } };
+  }
+  let token = req.headers.get('x-tp-session') || '';
+  if (!token && raw) { try { const b = JSON.parse(raw); if (b && typeof b.session === 'string') token = b.session; } catch { /* not JSON */ } }
+  if (token && token.length <= 200) {
+    const r = await deps.rpc('tp_svc_session', { p_token: token });
+    if (r.data && r.data.ok === true && kinds.includes(r.data.kind)) return { req: rebuilt(), session: r.data };
+  }
+  return { response: new Response(JSON.stringify({ error: 'Sign in required' }),
+    { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } }) };
+}
+
+export function timingSafeEqual(a, b) {
+  const x = new TextEncoder().encode(String(a)), y = new TextEncoder().encode(String(b));
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] || 0) ^ (y[i] || 0);
+  return diff === 0;
+}
+
+// ── Shopify OAuth: signed state ───────────────────────────────────────────
+// A shop can only be linked to the company that started the flow: the
+// dispatcher starts it with its company session, and the state carries that
+// company, the shop and an expiry, signed with the Shopify app secret. The
+// callback also checks Shopify's own signature on the query string.
+const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64url = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+async function hmacBytes(secret, text) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(text)));
+}
+export const isShopDomain = (shop) => typeof shop === 'string' && /^[a-z0-9][a-z0-9-]{0,60}\.myshopify\.com$/.test(shop);
+
+export async function signOAuthState({ org, shop, ttlSeconds = 900, now = Date.now() }, secret) {
+  if (!secret) throw new Error('SHOPIFY_API_SECRET is not set');
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
+  const payload = b64url(new TextEncoder().encode(JSON.stringify({ org, shop, exp: Math.floor(now / 1000) + ttlSeconds, n: b64url(nonce) })));
+  return payload + '.' + b64url(await hmacBytes(secret, payload));
+}
+
+export async function verifyOAuthState(state, secret, { shop, now = Date.now() } = {}) {
+  if (!secret || typeof state !== 'string' || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(state)) return null;
+  const [payload, sig] = state.split('.');
+  if (!timingSafeEqual(b64url(await hmacBytes(secret, payload)), sig)) return null;
+  let data;
+  try { data = JSON.parse(new TextDecoder().decode(unb64url(payload))); } catch { return null; }
+  if (!data || typeof data.org !== 'string' || !data.org || data.exp < Math.floor(now / 1000)) return null;
+  if (shop !== undefined && data.shop !== shop) return null;
+  return data;
+}
+
+// Shopify signs the OAuth callback query: hex HMAC-SHA256 of the other
+// parameters sorted by name, joined as k=v&k=v.
+export async function verifyShopifyQueryHmac(searchParams, secret) {
+  const given = searchParams.get('hmac') || '';
+  if (!secret || !/^[0-9a-f]{64}$/i.test(given)) return false;
+  const msg = [...searchParams.entries()].filter(([k]) => k !== 'hmac' && k !== 'signature')
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([k, v]) => `${k}=${v}`).join('&');
+  const hex = [...(await hmacBytes(secret, msg))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return timingSafeEqual(hex, given.toLowerCase());
+}
+
+// POST {action:'start', session, shop} from the dispatcher -> {url}
+export async function handleShopifyStart(req, deps) {
+  const { body, error } = await readJson(req);
+  if (error) return error;
+  if (body.action !== 'start') return json(400, { error: 'Start the Shopify connection from the TackPath dispatcher' });
+  const shop = String(body.shop || '').trim().toLowerCase();
+  if (!isShopDomain(shop)) return json(400, { error: 'Enter your store as name.myshopify.com' });
+  if (!isStr(body.session, 200)) return json(401, { error: 'Please sign in again' });
+  const r = await deps.rpc('tp_svc_session', { p_token: body.session });
+  if (!r.data || r.data.ok !== true || r.data.kind !== 'org' || !r.data.org_id) return json(401, { error: 'Please sign in again' });
+  const state = await signOAuthState({ org: r.data.org_id, shop, now: deps.now ? deps.now() : Date.now() }, deps.shopifySecret);
+  const url = `https://${shop}/admin/oauth/authorize?client_id=${encodeURIComponent(deps.shopifyApiKey)}`
+    + `&scope=${encodeURIComponent(deps.scopes)}&redirect_uri=${encodeURIComponent(deps.redirectUri)}`
+    + `&state=${encodeURIComponent(state)}`;
+  return json(200, { url });
+}
+
+// GET callback ?code&shop&state&hmac&timestamp -> {org, shop} or {error}
+export async function checkShopifyCallback(url, deps) {
+  const q = url.searchParams;
+  const shop = q.get('shop') || '';
+  if (!isShopDomain(shop)) return { error: 'Invalid shop' };
+  if (!(await verifyShopifyQueryHmac(q, deps.shopifySecret))) return { error: 'Invalid Shopify signature' };
+  const st = await verifyOAuthState(q.get('state') || '', deps.shopifySecret, { shop, now: deps.now ? deps.now() : Date.now() });
+  if (!st) return { error: 'This link has expired or was not started from your TackPath account. Start again from the dispatcher.' };
+  return { org: st.org, shop };
+}
+
 // ── Deno wiring helpers (used by the index.ts files) ─────────────────────
 export function serviceRpc(sbUrl, serviceKey, fetchImpl = fetch) {
   return async (fn, args) => {

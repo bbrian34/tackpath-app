@@ -2554,9 +2554,23 @@ async function checkShopifyConnection(){
 function connectShopify(){
   const shopDomain=prompt('Enter your Shopify store domain (e.g. yourstore.myshopify.com):');
   if(!shopDomain)return;
-  const cleanDomain=shopDomain.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
-  const installUrl='https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/shopify-oauth?shop='+encodeURIComponent(cleanDomain)+'&org_id='+encodeURIComponent(currentOrgId||'');
-  window.open(installUrl,'_blank');
+  const cleanDomain=shopDomain.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  // Security hardening 2026-10: the link is issued by the server for THIS
+  // company's session (signed state), so a store can only be linked to the
+  // company that started the connection. The window opens now, while the
+  // click still counts as a user action, and is pointed at Shopify after.
+  const win=window.open('about:blank','_blank');
+  const s=tpSession();
+  if(!s){if(win)win.close();tpSessionLost();return;}
+  tpRealFetch(SB_URL+'/functions/v1/shopify-oauth',{method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+    body:JSON.stringify({action:'start',session:s.token,shop:cleanDomain})})
+    .then(r=>r.json().then(d=>({ok:r.ok,d})))
+    .then(({ok,d})=>{
+      if(!ok||!d.url)throw new Error(d&&d.error||'Could not start the Shopify connection');
+      if(win)win.location.href=d.url;else window.location.href=d.url;
+    })
+    .catch(e=>{if(win)win.close();toast(e.message,'warn');});
 }
 
 async function loadJobs(){
@@ -4618,6 +4632,7 @@ async function getTrafficAwareLegData(originCoords,destCoords){
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
       body:JSON.stringify({
+        session:(tpSession()||{}).token,   // smooth-api needs a company session (2026-10)
         action:'routes',
         params:{
           origin:originCoords.lat+','+originCoords.lng,
@@ -5546,7 +5561,7 @@ async function callRealMatrixAction(origins,destinations){
   const resp=await fetch(SB_URL+'/functions/v1/smooth-api',{
     method:'POST',
     headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
-    body:JSON.stringify({action:'matrix',params:{
+    body:JSON.stringify({session:(tpSession()||{}).token,action:'matrix',params:{
       origins:origins.map(p=>({lat:p.lat,lng:p.lng})),
       destinations:destinations.map(p=>({lat:p.lat,lng:p.lng}))
     }})
