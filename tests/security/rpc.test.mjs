@@ -334,3 +334,16 @@ test('driver application: creates a pending driver who cannot sign in until appr
   assert.equal((await rpc(db, 'tp_driver_signup', { p_args: { name: 'Again', phone: '4705553333' } })).exists, true);
   assert.equal((await rpc(db, 'tp_svc_driver_code', { p_phone: '4705553333' }, 'service_role')).reason, 'not_approved');
 });
+
+test('review account seed (30) creates the review company and driver once; the fixed code then works', async () => {
+  const { db } = await setup();
+  await db.exec(`delete from public.drivers where phone = '4045550199'; delete from public.organizations where slug = 'tackpath-review';`);
+  const { sqlFile } = await import('./fixture.mjs');
+  await db.exec(sqlFile('30_review_account.sql'));
+  await db.exec(sqlFile('30_review_account.sql'));   // safe to run twice
+  assert.equal((await db.query(`select count(*)::int n from public.drivers where phone = '4045550199'`)).rows[0].n, 1);
+  await db.query(`select tp_sec.admin_set_demo_code('135790')`);
+  const r = await rpc(db, 'tp_driver_sign_in', { p_phone: '+1 (404) 555-0199', p_code: '135790' });
+  assert.equal(r.ok, true);
+  assert.equal(r.driver.name, 'App Review Driver');
+});

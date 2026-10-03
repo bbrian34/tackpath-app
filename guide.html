@@ -1275,7 +1275,7 @@ const observer=new IntersectionObserver(entries=>{
   });
 },{threshold:0.3});
 sections.forEach(s=>observer.observe(s));
-var ANT_ASK = ['sk-ant-api03-ekMGJHorvQ_CWJxUyKatJH','XdpLkBxQziMLcNycmAAoFxpghfEtsjVFAb3gyx9D9H46b5lT18qBXbqPPO213eTA-mqkG9gAA'].join('');
+var ANT_ASK=''; // REMOVED 2026-10 (security hardening): an Anthropic API key was committed here and must be revoked. AI calls must go through a server-side function.
 
 var TACKPATH_KB = 'TackPath is a courier dispatch platform with these components: ' +
 'Dispatcher Portal (dispatcher.html): manage jobs, view job list, open job drawer by clicking a job, contact drivers, notify customers, delete jobs via red Delete Job button at bottom of job drawer. ' +

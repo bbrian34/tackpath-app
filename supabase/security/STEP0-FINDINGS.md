@@ -71,15 +71,23 @@ Run `00_production_snapshot.sql` (read-only) in the Supabase SQL editor and send
 
 ## Committed secrets (names and locations only)
 
-Full history of both repos was scanned (clones unshallowed) for Supabase secret/service keys, JWTs,
-Twilio, GitHub, Shopify, AWS, Stripe, Slack tokens and private keys: **none found**.
+Full history of both repos was scanned (clones unshallowed), including keys split across string
+concatenations and `[...].join('')`.
 
-Found, all of a kind that ships to the client and must be protected by restrictions, not secrecy:
+- **Anthropic API key — REAL SECRET, must be revoked.** One key, identical in `owl.html`,
+  `tackpathone.html` and `guide.html` (tackpath-app), committed since 2026-07-12 and published on the
+  website. Removed from the files on `claude/security-hardening`; revoking it is what protects you.
+  (The first pass missed it because it is split into two strings joined at runtime.)
+- No Supabase secret/service keys, JWTs, Twilio, GitHub, Shopify, AWS, Stripe or Slack tokens, and no
+  private keys.
+
+Client-side keys (must be protected by restrictions, not secrecy):
 
 - Google API keys (3 distinct):
-  - tackpath-app: `driver.html`, `smartsort.html` (key A); `driver-app.html` (key B); key C (the Firebase Android key) only in history.
-  - tackpath-driver: `www/index.html` and its Android copy (key B); `android/app/google-services.json` (Firebase Android key C); key A only in history.
-  Check in Google Cloud Console that each is restricted (HTTP referrer `tackpath.com` for the web keys,
-  Android package + signing SHA-1 for the app/Firebase keys) and limited to the APIs it needs.
+  - key A: `dispatcher.html`, `driver.html`, `track.html`, `tracking.html` (split strings), plus the
+    retired `smartsort.html`, `dispatcher-white*.html`;
+  - key B: tackpath-driver `www/index.html` and its Android copy, plus the retired `driver-app.html`;
+  - key C: tackpath-driver `android/app/google-services.json` (Firebase Android key).
+  Restrictions to set: see README.md, "Google API keys".
 - Supabase publishable key in 42 places (tackpath-app) and 2 (tackpath-driver): public by design;
-  security must come from RLS/RPCs.
+  security comes from the RPCs and the lockdown.

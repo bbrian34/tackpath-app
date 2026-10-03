@@ -1911,7 +1911,7 @@ async function renderDriverRoster(){
   listEl.innerHTML=driverRoster.map(d=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;" id="drv-row-${d.id}">
       <div id="drv-display-${d.id}" style="flex:1;">
-        <div style="font-weight:700;font-size:1.077rem;">${d.name}</div>
+        <div style="font-weight:700;font-size:1.077rem;">${d.name}${d.status==='pending_approval'?' <span style="color:var(--orange);font-size:0.8rem;font-weight:600;">· Applied, waiting for approval</span>':''}</div>
         <div style="font-size:0.923rem;color:var(--muted);font-family:var(--mono);">${d.phone}</div>
       </div>
       <div id="drv-edit-${d.id}" style="display:none;flex:1;gap:8px;">
@@ -1919,12 +1919,23 @@ async function renderDriverRoster(){
         <input type="text" id="drv-phone-${d.id}" value="${d.phone}" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);"/>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
+        ${d.status==='pending_approval'?`<button onclick="approveDriver('${d.id}')" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(83,255,136,.3);background:rgba(83,255,136,.08);color:#53ff88;font-size:0.8rem;cursor:pointer;">Approve</button>`:''}
         <button onclick="startEditDriver('${d.id}')" id="drv-editbtn-${d.id}" style="padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:0.8rem;cursor:pointer;">Edit</button>
         <button onclick="saveEditDriver('${d.id}')" id="drv-savebtn-${d.id}" style="display:none;padding:6px 12px;border-radius:7px;border:1px solid rgba(83,255,136,.3);background:rgba(83,255,136,.08);color:#53ff88;font-size:0.8rem;cursor:pointer;">Save</button>
         <button onclick="deleteDriver('${d.id}','${d.name}')" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.8rem;cursor:pointer;">Delete</button>
       </div>
     </div>
   `).join('');
+}
+
+// Drivers who applied through driversignup.html cannot sign in until approved
+// (security hardening 2026-10).
+async function approveDriver(id){
+  try{
+    await tpOrg('driver_approve',{id:id});
+    toast('Driver approved — they can sign in now','ok');
+    renderDriverRoster();
+  }catch(e){toast('Could not approve: '+e.message.slice(0,60),'warn');}
 }
 
 function startEditDriver(id){
