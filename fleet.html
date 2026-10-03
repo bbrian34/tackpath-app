@@ -236,12 +236,29 @@ const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
 let jobs=[],driverLocs={},perfLoaded=false;
 
+// ── SECURED DATA (security hardening 2026-10) ──
+// Fleet reads through the company session the dispatcher signed in with
+// (tp_org); without one it sends you to the dispatcher sign-in.
+function tpSession(){
+  try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
+}
+function tpSignInAgain(){localStorage.removeItem('tp_dispatch_org');window.location.href='dispatcher.html';}
+async function tpOrg(action,args){
+  const s=tpSession();
+  if(!s){tpSignInAgain();throw new Error('TP_AUTH');}
+  const r=await fetch(SB+'/rest/v1/rpc/tp_org',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+    body:JSON.stringify({p_token:s.token,p_action:action,p_args:args||{}})});
+  const t=await r.text();
+  if(!r.ok){if(/TP_AUTH/.test(t))tpSignInAgain();throw new Error(t);}
+  return t?JSON.parse(t):null;
+}
+
 // ── DATA ─────────────────────────────────────────────────────────────
 async function load(){
   try{
     const [jr,lr]=await Promise.all([
-      fetch(SB+'/rest/v1/jobs?status=in.(assigned,in_transit,delivered)&order=created_at.desc&limit=200&apikey='+KEY,{headers:H}).then(r=>r.json()),
-      fetch(SB+'/rest/v1/driver_locations?order=updated_at.desc&limit=200&apikey='+KEY,{headers:H}).then(r=>r.json())
+      tpOrg('jobs',{statuses:['assigned','in_transit','delivered'],limit:200}),
+      tpOrg('locations',{limit:200})
     ]);
     jobs=Array.isArray(jr)?jr:[];
     // Keep only the most recent GPS fix per driver
@@ -412,8 +429,7 @@ function setTab(name,btn){
 async function loadPerformance(){
   let driftRecords=[];
   try{
-    const r=await fetch(SB+'/rest/v1/messages?sender_role=eq.dispatcher&order=created_at.desc&limit=1000&apikey='+KEY,{headers:H});
-    const msgs=await r.json();
+    const msgs=await tpOrg('messages',{sender_role:'dispatcher',limit:1000});
     driftRecords=(Array.isArray(msgs)?msgs:[])
       .filter(m=>m.body&&m.body.startsWith('STOP_DRIFT::'))
       .map(m=>{try{return JSON.parse(m.body.replace('STOP_DRIFT::',''));}catch(e){return null;}})

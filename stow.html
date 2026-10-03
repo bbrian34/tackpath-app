@@ -226,6 +226,57 @@ const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
 const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
 
+// ── SECURED DATA (security hardening 2026-10) ──
+// PathIQ reads and writes through the company session (tp_org) instead of the
+// tables. The same company sign-in as the dispatcher; one sign-in per device.
+// tpOrgResp answers like fetch() (ok / status / json / text), so the code
+// below keeps its existing success and failure handling.
+function tpSession(){
+  try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
+}
+function tpFakeResp(status,text){return {ok:false,status:status,json:async()=>({message:text}),text:async()=>text};}
+async function tpOrgResp(action,args){
+  const s=tpSession();
+  if(!s){tpShowSignIn();return tpFakeResp(401,'TP_AUTH: please sign in');}
+  const r=await fetch(SB+'/rest/v1/rpc/tp_org',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+    body:JSON.stringify({p_token:s.token,p_action:action,p_args:args||{}})});
+  if(!r.ok){
+    const t=await r.text();
+    if(/TP_AUTH/.test(t)){localStorage.removeItem('tp_dispatch_org');tpShowSignIn();}
+    return tpFakeResp(r.status,t);
+  }
+  return r;
+}
+function tpShowSignIn(){
+  if(document.getElementById('tpSignIn'))return;
+  const d=document.createElement('div');
+  d.id='tpSignIn';
+  d.setAttribute('style','position:fixed;inset:0;z-index:9999;background:#010e21;display:flex;align-items:center;justify-content:center;padding:24px;');
+  d.innerHTML='<div style="width:100%;max-width:340px;color:#fff;font-family:inherit;">'
+    +'<div style="font-size:1.3rem;font-weight:800;margin-bottom:6px;">PathIQ sign-in</div>'
+    +'<div style="opacity:.7;font-size:.9rem;margin-bottom:16px;">Enter your company and company code.</div>'
+    +'<input id="tpSiSlug" placeholder="Company (e.g. quickhaul)" autocapitalize="off" style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #234;background:#0b1a2e;color:#fff;font-size:1rem;box-sizing:border-box;">'
+    +'<input id="tpSiCode" type="password" placeholder="Company code" style="width:100%;padding:12px;margin-bottom:12px;border-radius:8px;border:1px solid #234;background:#0b1a2e;color:#fff;font-size:1rem;box-sizing:border-box;">'
+    +'<button id="tpSiBtn" style="width:100%;padding:13px;border:0;border-radius:8px;background:#19b7ef;color:#fff;font-weight:800;font-size:1rem;">Sign in</button>'
+    +'<div id="tpSiErr" style="color:#ff6b6b;margin-top:10px;display:none;"></div></div>';
+  document.body.appendChild(d);
+  document.getElementById('tpSiBtn').onclick=tpDoSignIn;
+  document.getElementById('tpSiCode').onkeydown=function(e){if(e.key==='Enter')tpDoSignIn();};
+}
+async function tpDoSignIn(){
+  const err=document.getElementById('tpSiErr');
+  err.style.display='none';
+  try{
+    const r=await fetch(SB+'/rest/v1/rpc/tp_org_sign_in',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+      body:JSON.stringify({p_slug:document.getElementById('tpSiSlug').value.trim(),p_code:document.getElementById('tpSiCode').value})});
+    const res=await r.json();
+    if(!r.ok||!res||!res.ok)throw new Error(res&&/TP_RATE/.test(res.error||'')?'Too many attempts. Try again in 15 minutes.':'Company or code not recognised.');
+    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:res.org.id,slug:res.org.slug,name:res.org.name,token:res.token}));
+    location.reload();
+  }catch(e){err.textContent=e.message;err.style.display='block';}
+}
+if(!tpSession())setTimeout(tpShowSignIn,0);
+
 // ════════════════════════════════════════════════════════════════════
 // OPERATIONAL MEMORY
 //
@@ -286,11 +337,7 @@ async function logEvent(eventType,opts){
       idempotency_key:opts.idem||null,
       occurred_at:new Date().toISOString()
     };
-    const r=await fetch(SB+'/rest/v1/events?on_conflict=idempotency_key',{
-      method:'POST',
-      headers:Object.assign({},H,{'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates,return=minimal'}),
-      body:JSON.stringify(body)
-    });
+    const r=await tpOrgResp('log_event',body);
     if(!r.ok){
       const txt=await r.text().catch(()=>'');
       console.log('[PathIQ] event write FAILED:',eventType,r.status,txt.slice(0,160));
@@ -309,10 +356,7 @@ async function loadEventState(){
   const out={stowed:{},resetEpoch:{},detail:{}};
   try{
     const dayStart=new Date(); dayStart.setHours(0,0,0,0);
-    const url=SB+'/rest/v1/events?event_type=in.(package.stowed,bin.reset)'
-      +'&occurred_at=gte.'+encodeURIComponent(dayStart.toISOString())
-      +'&order=occurred_at.asc&limit=5000&apikey='+KEY;
-    const r=await fetch(url,{headers:H});
+    const r=await tpOrgResp('events',{types:['package.stowed','bin.reset'],since:dayStart.toISOString(),limit:5000});
     if(!r.ok)return out;
     const rows=await r.json();
     if(!Array.isArray(rows))return out;
@@ -405,7 +449,7 @@ async function loadRoutes(){
   await loadBinBindings();
   let fetchErrorOccurred=false;
   try{
-    const r=await fetch(SB+'/rest/v1/jobs?status=in.(pending,assigned,in_transit)&order=created_at.asc&limit=50&apikey='+KEY,{headers:H});
+    const r=await tpOrgResp('jobs',{statuses:['pending','assigned','in_transit'],order:'asc',limit:50});
     jobs=await r.json();
     if(!Array.isArray(jobs)){
       fetchErrorOccurred=true;
@@ -636,7 +680,7 @@ let pendingBinScan=null;
 
 async function loadUnassignedRoutes(){
   try{
-    const r=await fetch(SB+'/rest/v1/jobs?bin_label=is.null&status=in.(pending,assigned,in_transit)&order=created_at.asc&apikey='+KEY,{headers:H});
+    const r=await tpOrgResp('jobs',{unbinned:true,statuses:['pending','assigned','in_transit'],order:'asc',limit:2000});
     unassignedRoutes=await r.json();
     if(!Array.isArray(unassignedRoutes)) unassignedRoutes=[];
   }catch(e){ unassignedRoutes=[]; }
@@ -681,11 +725,8 @@ function handleAssignBinScan(code){
 
 async function confirmBinAssignment(jobId){
   try{
-    await fetch(SB+'/rest/v1/jobs?id=eq.'+jobId,{
-      method:'PATCH',
-      headers:Object.assign({},H,{'Content-Type':'application/json'}),
-      body:JSON.stringify({bin_label:pendingBinScan})
-    });
+    const ar=await tpOrgResp('set_bin_label',{id:jobId,bin_label:pendingBinScan});
+    if(!ar.ok)throw new Error((await ar.text()).slice(0,120));
     const card=document.getElementById('assignBinResult');
     card.className='result-card success';
     card.innerHTML='<div class="result-bin">Assigned</div><div class="result-bin-num success">BIN '+pendingBinScan+'</div><div class="result-detail">Ready to scan the next bin</div>';
@@ -777,7 +818,7 @@ let openingBin=null;
 
 async function loadBinBindings(){
   try{
-    const r=await fetch(SB+'/rest/v1/bin_bindings?select=*&state=in.(open,ready)',{headers:H});
+    const r=await tpOrgResp('bindings',{});
     if(!r.ok)return;
     const rows=await r.json();
     binBindings={};
@@ -800,21 +841,13 @@ function binCodeInUse(binCode, exceptJobId){
 
 async function persistBinBinding(jobId, binCode, locCode, orgId){
   try{
-    const r=await fetch(SB+'/rest/v1/bin_bindings',{
-      method:'POST',
-      headers:Object.assign({},H,{'Content-Type':'application/json','Prefer':'return=representation'}),
-      body:JSON.stringify({
-        org_id:orgId||null, bin_code:binCode, location_code:locCode,
-        job_id:jobId, state:'open', opened_by:ensureWorker()
-      })
+    const r=await tpOrgResp('open_binding',{
+      id:jobId, bin_code:binCode, location_code:locCode, opened_by:ensureWorker()
     });
     if(!r.ok)throw new Error(await r.text());
     binBindings[jobId]={bin_code:binCode,location_code:locCode,state:'open'};
     // Mirror onto the job so the dispatcher and driver see the bin too
-    fetch(SB+'/rest/v1/jobs?id=eq.'+jobId,{
-      method:'PATCH',headers:Object.assign({},H,{'Content-Type':'application/json'}),
-      body:JSON.stringify({bin_label:binCode})
-    }).catch(()=>{});
+    tpOrgResp('set_bin_label',{id:jobId,bin_label:binCode}).catch(()=>{});
     logEvent('bin.opened',{
       org_id:orgId||null, job_id:jobId,
       payload:{bin:binCode, location:locCode},
@@ -972,17 +1005,11 @@ async function handleStowScan(code){
           idem:'bincomplete:'+stagedJobId+':'+(resetEpoch[binNum]||'r0')
         });
         if(stagedJobId){
-          fetch(SB+'/rest/v1/jobs?id=eq.'+stagedJobId,{
-            method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
-            body:JSON.stringify({staged_at:new Date().toISOString()})
-          }).catch(()=>{});
+          tpOrgResp('set_staged',{id:stagedJobId,staged:true}).catch(()=>{});
           // The bin now holds a complete route. It stays bound to that
           // route — state moves open → ready, and only the driver pickup
           // releases it. A ready bin cannot be reused for another route.
-          fetch(SB+'/rest/v1/bin_bindings?job_id=eq.'+stagedJobId+'&state=eq.open',{
-            method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
-            body:JSON.stringify({state:'ready',ready_at:new Date().toISOString()})
-          }).then(()=>{ if(binBindings[stagedJobId])binBindings[stagedJobId].state='ready'; })
+          tpOrgResp('binding_ready',{id:stagedJobId}).then(()=>{ if(binBindings[stagedJobId])binBindings[stagedJobId].state='ready'; })
             .catch(()=>{});
         }
       } else {
@@ -1266,10 +1293,7 @@ function doResetBin(binNum){
     idem:'binreset:'+(info.jobId||binNum)+':'+now
   });
   if(info.jobId){
-    fetch(SB+'/rest/v1/jobs?id=eq.'+info.jobId,{
-      method:'PATCH', headers:Object.assign({},H,{'Content-Type':'application/json'}),
-      body:JSON.stringify({staged_at:null})
-    }).catch(function(){});
+    tpOrgResp('set_staged',{id:info.jobId,staged:false}).catch(function(){});
   }
   document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">BIN '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
   renderResetBinsPanel();

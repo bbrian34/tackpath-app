@@ -219,11 +219,13 @@ const SB_KEY = 'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const GKEY   = 'AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDS' + 'NszCZk8';
 
 // ── HELPERS ──
-async function sbGet(path) {
-  const url = SB_URL + '/rest/v1/' + path +
-    (path.includes('?') ? '&' : '?') + 'apikey=' + SB_KEY;
-  const r = await fetch(url, {
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+// Security hardening 2026-10: tracking goes through one server-side function
+// (tp_track) instead of reading the jobs and driver_locations tables.
+async function tpTrack(action, args) {
+  const r = await fetch(SB_URL + '/rest/v1/rpc/tp_track', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_action: action, p_args: args || {} })
   });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
@@ -301,18 +303,13 @@ async function lookupTracking(rawTn) {
   // PostgREST JSONB containment: find jobs where surge_stops contains
   // an element with this tracking_number.
   // Note: Supabase REST uses 'cs' (contains) for JSONB arrays.
-  const encoded = encodeURIComponent(JSON.stringify([{ tracking_number: tn }]));
-  const rows = await sbGet(
-    'jobs?surge_stops=cs.' + encoded +
-    '&select=' + TRACKING_COLS +
-    '&limit=1'
-  );
-
-  if (!rows || !rows.length) {
+  // Security hardening 2026-10: the server returns this tracking number's
+  // route with ONLY this customer's stop in surge_stops (other customers on
+  // the same route are no longer sent to the browser).
+  const job = await tpTrack('stop', { tracking_number: tn });
+  if (!job) {
     throw new Error('NO_MATCH');
   }
-
-  const job = rows[0];
 
   // Parse surge_stops if it came back as a string (Supabase sometimes does this)
   let stops = job.surge_stops;
@@ -341,11 +338,7 @@ async function lookupTracking(rawTn) {
 // ── DRIVER GPS ──
 async function fetchDriverGps(jobId) {
   try {
-    const rows = await sbGet(
-      'driver_locations?job_id=eq.' + jobId +
-      '&order=updated_at.desc&limit=1&select=lat,lng,updated_at'
-    );
-    return rows && rows.length ? rows[0] : null;
+    return await tpTrack('location', { id: jobId });
   } catch(e) { return null; }
 }
 

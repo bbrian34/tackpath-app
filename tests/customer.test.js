@@ -1,14 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { loadApp, wait } = require('./helpers');
+const { loadApp, wait, rpcCall, jsonResp } = require('./helpers');
 
 test('customer.html: estimated_delivery_at matches the real calculated currentEta at posting time', async () => {
   let lastPostedJob = null;
   const { dom, cleanup } = loadApp('customer.html', {
     fetchHandler: async (url, opts) => {
-      if (url.includes('/jobs') && opts && opts.method === 'POST') {
-        lastPostedJob = JSON.parse(opts.body);
-        return { ok: true, json: async () => ([{ ...lastPostedJob, id: 'job1' }]) };
+      const c = rpcCall(url, opts);
+      if (c && c.fn === 'tp_customer' && c.action === 'create_order') {
+        lastPostedJob = c.args;
+        return jsonResp({ job: { ...lastPostedJob, id: 'job1', status: 'routing' }, order_token: 'order-token' });
       }
     },
   });

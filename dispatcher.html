@@ -1040,7 +1040,7 @@ body::after{content:'';position:fixed;inset:0;
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
             <button onclick="triggerCSVUpload()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
-<button onclick="clearAllJobs()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#128465; Clear All Jobs</button>
+<button onclick="clearAllJobs()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#128465; Clear Board</button>
 <a href="fleet.html" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;text-decoration:none;">&#9783; FleetView</a>
           </div>
           <div style="overflow-x:auto;">
@@ -1463,7 +1463,7 @@ body::after{content:'';position:fixed;inset:0;
     <button class="dra dra-ghost" onclick="toast('Customer notification sent')">&#128226; Notify Customer</button>
   </div>
   <div style="margin-top:7px;">
-    <button class="dra dra-d" style="width:100%;" onclick="deleteJob()">&#128465; Delete Job</button>
+    <button class="dra dra-d" style="width:100%;" onclick="deleteJob()">&#128465; Archive Job</button>
   </div>
 </div>
 
@@ -1620,6 +1620,140 @@ const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
 
+// ══════════════════════════════════════════════════════════════════════
+// SECURED DATA LAYER (security hardening 2026-10)
+// The public key can no longer read or write tables. Every request this page
+// makes to /rest/v1/<table> (and the publish_surge_route RPC) is answered by
+// the server-side company gateway tp_org, using the session from the company
+// sign-in. The server decides what this company may see and change. A
+// request shape that is not mapped below fails loudly instead of reaching a
+// table. Deleting is replaced by archiving; messages are kept.
+// ══════════════════════════════════════════════════════════════════════
+function tpSession(){
+  try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
+}
+const tpRealFetch=window.fetch.bind(window);
+function tpResp(status,data){
+  const text=typeof data==='string'?data:JSON.stringify(data);
+  return {ok:status>=200&&status<300,status:status,json:async()=>JSON.parse(text),text:async()=>text};
+}
+async function tpRpc(fn,args){
+  const r=await tpRealFetch(SB_URL+'/rest/v1/rpc/'+fn,{method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(args||{})});
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok){const m=(d&&d.message)||t||('HTTP '+r.status);if(/TP_AUTH/.test(m))tpSessionLost();throw new Error(m);}
+  return d;
+}
+async function tpOrg(action,args){
+  const s=tpSession();
+  if(!s){tpSessionLost();throw new Error('TP_AUTH: please sign in');}
+  return tpRpc('tp_org',{p_token:s.token,p_action:action,p_args:args||{}});
+}
+let tpLostShown=false;
+function tpSessionLost(){
+  if(tpLostShown)return;tpLostShown=true;
+  try{if(typeof doLogout==='function')doLogout();}catch(e){}
+  const err=document.getElementById('loginError');
+  if(err){err.textContent='Please sign in with your company code.';err.style.display='block';}
+  setTimeout(()=>{tpLostShown=false;},2000);
+}
+// PostgREST filter value -> plain value(s)
+function tpVal(v){return decodeURIComponent(v);}
+function tpList(v){return tpVal(v).replace(/^in\.\(/,'').replace(/\)$/,'').split(',').map(x=>x.replace(/^"|"$/g,'')).filter(Boolean);}
+function tpQuery(qs){
+  const q={};
+  new URLSearchParams(qs||'').forEach((v,k)=>{if(k!=='apikey'&&k!=='select')q[k]=v;});
+  return q;
+}
+function tpCommon(q,a){
+  if(q.order)a.order=/\.asc$/.test(q.order)?'asc':'desc';
+  if(q.limit)a.limit=parseInt(q.limit,10);
+  return a;
+}
+async function tpTable(method,table,q,body){
+  const a={};
+  const eq=(k)=>q[k]&&q[k].startsWith('eq.')?tpVal(q[k].slice(3)):null;
+  const gte=(k)=>q[k]&&q[k].startsWith('gte.')?tpVal(q[k].slice(4)):null;
+  if(method==='GET'){
+    if(table==='jobs'){
+      if(eq('id'))a.ids=[eq('id')];
+      if(q.id&&q.id.startsWith('in.'))a.ids=tpList(q.id);
+      if(gte('created_at'))a.since=gte('created_at');
+      if(eq('source'))a.source=eq('source');
+      if(q.status&&q.status.startsWith('in.'))a.statuses=tpList(q.status);
+      if(eq('status'))a.statuses=[eq('status')];
+      return tpOrg('jobs',tpCommon(q,a));   // org_id filters are applied by the server session
+    }
+    if(table==='drivers'){
+      let rows=await tpOrg('drivers');
+      if(eq('name'))rows=rows.filter(d=>d.name===eq('name'));
+      if(eq('id'))rows=rows.filter(d=>String(d.id)===eq('id'));
+      return rows;
+    }
+    if(table==='messages'){
+      if(eq('job_id'))a.job_id=eq('job_id');
+      if(eq('sender_role'))a.sender_role=eq('sender_role');
+      if(gte('created_at'))a.since=gte('created_at');
+      return tpOrg('messages',tpCommon(q,a));
+    }
+    if(table==='agent_memory'){
+      if(eq('agent_name'))a.agent_name=eq('agent_name');
+      if(eq('event_type'))a.event_type=eq('event_type');
+      if(gte('created_at'))a.since=gte('created_at');
+      return tpOrg('agent_memory',tpCommon(q,a));
+    }
+    if(table==='driver_locations')return tpOrg('locations',tpCommon(q,a));
+    if(table==='bin_shortfall'){const r=await tpOrg('bin_shortfall');return q.limit?r.slice(0,+q.limit):r;}
+    if(table==='shopify_connections'){const r=await tpOrg('shopify_connection');return q.limit?r.slice(0,+q.limit):r;}
+  }
+  if(method==='PATCH'){
+    if(table==='jobs'&&eq('id'))return tpOrg('update_job',{id:eq('id'),patch:body||{}});
+    if(table==='drivers'&&eq('id'))return tpOrg('driver_update',{id:eq('id'),name:body&&body.name,phone:body&&body.phone});
+  }
+  if(method==='DELETE'){
+    if(table==='jobs'&&(eq('id')||q.id))return tpOrg('archive_jobs',{ids:eq('id')?[eq('id')]:tpList(q.id)});
+    if(table==='messages')return [];                       // messages are kept for the record
+    if(table==='drivers'&&eq('id'))return tpOrg('driver_remove',{id:eq('id')});
+  }
+  if(method==='POST'){
+    if(table==='messages'){const r=await tpOrg('post_message',body||{});return [r];}
+    if(table==='drivers'){const r=await tpOrg('driver_add',body||{});return [r];}
+    if(table==='agent_memory'){const r=await tpOrg('agent_memory_insert',body||{});return [r];}
+  }
+  throw new Error('TP_UNMAPPED: '+method+' '+table+' '+JSON.stringify(q));
+}
+window.fetch=async function(input,opts){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  const m=url.match(/\/rest\/v1\/(rpc\/publish_surge_route|[a-z_]+)(?:\?([^#]*))?$/);
+  if(!m||!url.startsWith(SB_URL))return tpRealFetch(input,opts);
+  const method=((opts&&opts.method)||'GET').toUpperCase();
+  let body=null;try{body=opts&&opts.body?JSON.parse(opts.body):null;}catch(e){}
+  try{
+    if(m[1]==='rpc/publish_surge_route')return tpResp(200,await tpOrg('publish_route',{payload:body&&body.payload}));
+    return tpResp(200,await tpTable(method,m[1],tpQuery(m[2]),body));
+  }catch(e){
+    if(/TP_UNMAPPED/.test(e.message))console.error('[TackPath] '+e.message);
+    return tpResp(/TP_AUTH/.test(e.message)?401:400,{message:e.message});
+  }
+};
+// Proof of delivery: private files, opened through a 1-hour signed link.
+async function tpViewPod(jobId,pathOrUrl){
+  const s=tpSession();if(!s){tpSessionLost();return;}
+  let path=String(pathOrUrl||'');
+  const pub=path.indexOf('/object/public/pod/');
+  if(pub>=0)path=decodeURIComponent(path.slice(pub+'/object/public/pod/'.length));
+  try{
+    const r=await tpRealFetch(SB_URL+'/functions/v1/pod',{method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'sign',session:s.token,job_id:jobId,path:path})});
+    const d=await r.json();
+    if(!r.ok||!d.url)throw new Error(d.error||'Proof not available');
+    window.open(d.url,'_blank');
+  }catch(e){if(typeof toast==='function')toast('Proof not available: '+e.message,'warn');}
+}
+
+
 // ── ORGANIZATION RESOLUTION ──
 // A dispatcher's own org is resolved from ?org=slug on their URL, so they only ever
 // see their own company's jobs. Example: dispatcher.html?org=quickhaul
@@ -1629,12 +1763,14 @@ async function resolveOrgFromUrl(){
   const slug=params.get('org');
   if(!slug)return;
   try{
-    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(slug)),{headers:H});
-    const rows=await r.json();
-    if(rows&&rows[0])currentOrgId=rows[0].id;
+    const org=await tpRpc('tp_org_lookup',{p_slug:slug});
+    if(org)currentOrgId=org.id;
+    const ci=document.getElementById('loginOrgCode');
+    if(ci&&!ci.value)ci.value=slug;
   }catch(e){}
 }
 const orgReady=resolveOrgFromUrl();
+async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbDelete(p){const r=await fetch(sbUrl(p),{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());return true;}
@@ -1669,14 +1805,15 @@ async function doLogin(){
   if(!code)return;
   errEl.style.display='none';
   try{
-    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(code)),{headers:H});
-    const rows=await r.json();
-    if(!rows||!rows[0]){
+    const passEl=document.getElementById('loginOrgPassword');
+    const res=await tpRpc('tp_org_sign_in',{p_slug:code,p_code:passEl?passEl.value:''});
+    if(!res||!res.ok){
+      errEl.textContent=res&&/TP_RATE/.test(res.error||'')?'Too many attempts. Try again in 15 minutes.':'Company code or password not recognized.';
       errEl.style.display='block';
       return;
     }
-    currentOrgId=rows[0].id;
-    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:rows[0].id,slug:rows[0].slug,name:rows[0].name}));
+    currentOrgId=res.org.id;
+    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:res.org.id,slug:res.org.slug,name:res.org.name,token:res.token}));
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('shell').style.display='flex';
     startClock();loadJobs();if(typeof loadDrivers==='function')loadDrivers();
@@ -1695,6 +1832,8 @@ async function doLogin(){
 }
 function doLogout(){
   if(dispatchPollId){clearInterval(dispatchPollId);dispatchPollId=null;}
+  const tpS=tpSession();
+  if(tpS)tpRpc('tp_sign_out',{p_token:tpS.token}).catch(()=>{});
   localStorage.removeItem('tp_dispatch_org');
   currentOrgId=null;
   jobs=[];
@@ -1871,24 +2010,18 @@ async function populateDriverPicker(){
 // exactly ONE driver has that name, that driver has sms_consent === true, and
 // the phone is exactly 10 digits. Any doubt = no text.
 async function sendDriverAssignmentSMS(driverName,jobId){
+  // Security hardening 2026-10: the server decides everything. send-sms takes
+  // only this company's session and the job id; the database checks the job
+  // is assigned to exactly one consenting driver of this company, applies the
+  // rate limits and builds the fixed message. Nothing is sent otherwise.
   try{
     if(!driverName||!jobId) return;
-    var jr=await fetch(sbUrl('jobs?select=title,driver_name,status&id=eq.'+encodeURIComponent(jobId)),{headers:H});
-    if(!jr.ok) return;
-    var jobs=await jr.json();
-    if(!Array.isArray(jobs)||jobs.length!==1) return;
-    if(jobs[0].driver_name!==driverName||jobs[0].status!=='assigned') return;
-    var dr=await fetch(sbUrl('drivers?select=phone,sms_consent&name=eq.'+encodeURIComponent(driverName)),{headers:H});
-    if(!dr.ok) return;
-    var rows=await dr.json();
-    if(!Array.isArray(rows)||rows.length!==1) return;
-    var digits=String(rows[0].phone||'').replace(/\D/g,'');
-    if(rows[0].sms_consent!==true||digits.length!==10) return;
-    var title=jobs[0].title||'a new route';
-    await fetch(SB_URL+'/functions/v1/send-sms',{
+    const s=tpSession();
+    if(!s) return;
+    await tpRealFetch(SB_URL+'/functions/v1/send-sms',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
-      body:JSON.stringify({to:'+1'+digits,body:'TackPath: You have been assigned a new route: '+title+'. Open the TackPath driver app for details. Reply STOP to opt out.'})
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({session:s.token,job_id:jobId})
     });
   }catch(e){console.error('Driver SMS error:',e);}
 }
@@ -2892,7 +3025,8 @@ function renderPipeline(){
       stopLabel:'Stop '+sd.stop_number+' of '+sd.stop_total,
       detail:(sd.recipient?sd.recipient+' · ':'')+sd.address,
       age:sd.delivered_at?timeAgo(sd.delivered_at):'',
-      shortId:sd.job_id?sd.job_id.slice(0,8):'—'
+      shortId:sd.job_id?sd.job_id.slice(0,8):'—',
+      podRef:sd.pod_path||sd.pod_url||null
     });
   });
 
@@ -2928,6 +3062,7 @@ function renderPipeline(){
           <div class="pcard-name">${e.title}</div>
           <div class="pcard-route" style="font-size:0.769rem;">${e.detail}</div>
           <div class="pcard-age">${e.age}</div>
+          ${e.podRef?`<div class="pcard-age" style="color:var(--blue);cursor:pointer;" data-job="${e.jobId}" data-pod="${String(e.podRef).replace(/"/g,'&quot;')}" onclick="event.stopPropagation();tpViewPod(this.dataset.job,this.dataset.pod)">View proof of delivery</div>`:''}
         </div>`).join('');
     }
   }
@@ -3772,61 +3907,30 @@ async function saveStatus(){
 }
 
 async function clearAllJobs(){
-  if(!confirm('Delete ALL jobs? This cannot be undone.'))return;
+  // Security hardening 2026-10: jobs are archived, never deleted (deleting is
+  // no longer possible with the public key). Archived jobs leave the board
+  // and stay in the Archive tab and in delivery history.
+  if(!confirm('Clear ALL jobs from the board? They move to the Archive.'))return;
   try{
-    toast('Deleting all jobs...','ok');
-
-    // Read the jobs actually visible to this org, then delete by explicit id.
-    // The previous filter (id=neq.<zero-uuid>) was rejected by PostgREST with
-    // 400 and the function reported success anyway, so nothing was deleted
-    // and the operator was told it worked.
-    // Must match loadJobs() exactly: it shows jobs for this org AND jobs
-    // with a null org_id. Filtering on org_id=eq only read zero rows, so
-    // nothing was deleted while those null-org jobs stayed on screen.
-    const orgF=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
-    const rows=await sbGet('jobs?select=id'+orgF+'&limit=1000');
-    const ids=(Array.isArray(rows)?rows:[]).map(r=>r.id).filter(Boolean);
-
+    toast('Clearing the board...','ok');
+    const rows=await sbGet('jobs?select=id,archived&limit=2000');
+    const ids=(Array.isArray(rows)?rows:[]).filter(r=>r.archived!==true).map(r=>r.id).filter(Boolean);
     if(!ids.length){
       await loadJobs();
       toast('No jobs to clear','ok');
       return;
     }
-
-    // PostgREST caps URL length, so delete in batches using in.(...)
-    const CHUNK=40;
-    let deleted=0, failed=0;
-    for(let i=0;i<ids.length;i+=CHUNK){
-      const batch=ids.slice(i,i+CHUNK);
-      const list='('+batch.join(',')+')';
-      try{
-        // Messages first — they carry the stop-level delivery records
-        await sbDelete('messages?job_id=in.'+list);
-      }catch(e){ /* messages may already be gone */ }
-      try{
-        // Delete by explicit id only — the ids already came from the
-        // org-scoped read above, so re-applying an or= filter here would
-        // just risk a malformed query.
-        await sbDelete('jobs?id=in.'+list);
-        deleted+=batch.length;
-      }catch(e){
-        failed+=batch.length;
-        console.log('[ClearAll] batch failed:',(e&&e.message?e.message:String(e)).slice(0,120));
-      }
-    }
-
+    const res=await tpOrg('archive_jobs',{ids:ids});
     closeDrawer();
     await loadJobs();
-
     // Verify against the database rather than assuming
-    const after=await sbGet('jobs?select=id'+orgF+'&limit=5');
-    console.log('[ClearAll] deleted='+deleted+' failed='+failed+' remaining='+
-      (Array.isArray(after)?after.length:'?'));
-    const remaining=(Array.isArray(after)?after:[]).length;
+    const after=await sbGet('jobs?select=id,archived&limit=2000');
+    const remaining=(Array.isArray(after)?after:[]).filter(r=>r.archived!==true).length;
+    console.log('[ClearAll] archived='+(res&&res.archived)+' remaining='+remaining);
     if(remaining===0){
-      toast(deleted+' job'+(deleted===1?'':'s')+' cleared','ok');
+      toast(ids.length+' job'+(ids.length===1?'':'s')+' cleared','ok');
     }else{
-      toast('Cleared '+deleted+', but '+remaining+'+ still remain — check permissions','warn');
+      toast('Cleared '+((res&&res.archived)||0)+', but '+remaining+' still remain','warn');
     }
   }catch(e){
     console.error('Clear all error:',e);
@@ -3835,22 +3939,14 @@ async function clearAllJobs(){
 }
 
 async function deleteJob(){
+  // Archived instead of deleted (security hardening 2026-10).
   if(!currentJobId)return;
-  if(!confirm('Delete this job permanently?'))return;
+  if(!confirm('Remove this job from the board? It moves to the Archive.'))return;
   try{
-    // Delete messages first (foreign key constraint)
-    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages?job_id=eq.'+currentJobId,{
-      method:'DELETE',
-      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
-    });
-    // Then delete the job
-    const r=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?id=eq.'+currentJobId,{
-      method:'DELETE',
-      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
-    });
-    if(r.ok){toast('Job deleted');closeDrawer();loadJobs();}
-    else{const e=await r.text();toast('Delete failed: '+e.slice(0,50));}
-  }catch(e){toast('Delete failed: '+e.message);console.error(e);}
+    const r=await tpOrg('archive_jobs',{ids:[currentJobId]});
+    if(r&&r.archived){toast('Job archived');closeDrawer();loadJobs();}
+    else{toast('Could not archive this job','warn');}
+  }catch(e){toast('Archive failed: '+e.message);console.error(e);}
 }
 
 async function quickDispatch(id,status){
@@ -4041,12 +4137,13 @@ if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgen
 // ── AUTO LOGIN + POLLING ──
 window.addEventListener('load',async function(){
   await orgReady; // resolves currentOrgId from ?org= URL param if present
-  let sessionOrg=null;
-  try{ sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null'); }catch(e){}
+  // Signed in = a server session for this company (security hardening 2026-10).
+  // ?org= only pre-fills the company on the sign-in screen.
+  let sessionOrg=tpSession();
+  if(sessionOrg && currentOrgId && sessionOrg.id!==currentOrgId) sessionOrg=null;
 
-  if(currentOrgId || sessionOrg){
-    if(!currentOrgId && sessionOrg) currentOrgId=sessionOrg.id;
-    if(sessionOrg) localStorage.setItem('tp_dispatch_org',JSON.stringify(sessionOrg.id===currentOrgId?sessionOrg:{id:currentOrgId}));
+  if(sessionOrg){
+    currentOrgId=sessionOrg.id;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('shell').style.display='flex';
     startClock();
@@ -4120,17 +4217,8 @@ setInterval(refreshFleetMap,10000);
 setInterval(function(){refreshAllLiveETAs().catch(function(){});},30000);
 
 
-// ── TWILIO SMS ──
-async function sendSMS(type, phone, jobId, jobTitle){
-  if(!phone) return;
-  try{
-    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/send-sms',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
-      body:JSON.stringify({type, phone, job_id:jobId, job_title:jobTitle})
-    });
-  }catch(e){console.error('SMS error:',e);}
-}
+// (A second, unused SMS helper that sent {type, phone} was removed: send-sms
+// only sends the driver assignment text now. Security hardening 2026-10.)
 
 // ── SMARTSORT INTEGRATION ──
 const DEMO_PACKAGES = [

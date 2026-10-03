@@ -195,13 +195,6 @@ footer a{color:var(--blue);margin:0 8px;}
 <script>
 const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
 const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
-const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
-
-async function sbGet(path){
-  const r=await fetch(SB+'/rest/v1/'+path,{headers:H});
-  if(!r.ok)throw new Error(await r.text());
-  return r.json();
-}
 
 function toast(msg,type){
   const el=document.getElementById('toast');
@@ -235,26 +228,21 @@ async function submitApplication(){
   btn.disabled=true;btn.textContent='Submitting...';
 
   try{
-    const existing=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&limit=1');
-    if(existing&&existing.length){
+    // Security hardening 2026-10: one server-side call validates the
+    // application, creates the driver as pending_approval and rate-limits.
+    const r=await fetch(SB+'/rest/v1/rpc/tp_driver_signup',{
+      method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({p_args:{name:name,phone:phone,date_of_birth:dob,vehicle:vehicle||null,sms_consent:consentOk}})
+    });
+    const res=await r.json().catch(()=>null);
+    if(!r.ok)throw new Error((res&&res.message)||('HTTP '+r.status));
+    if(res&&res.exists){
       toast('An application with this number already exists. Sign in instead.','warn');
       btn.disabled=false;btn.textContent='Submit Application';
       setTimeout(()=>{window.location.href='driver.html';},1800);
       return;
     }
-
-    await fetch(SB+'/rest/v1/drivers',{
-      method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({
-        name:name,
-        phone:phone,
-        date_of_birth:dob,
-        vehicle:vehicle||null,
-        sms_consent:consentOk,
-        status:'pending_approval'
-      })
-    });
 
     toast('Application submitted! A dispatcher will review and reach out.','ok');
     setTimeout(()=>{window.location.href='driver.html';},2200);

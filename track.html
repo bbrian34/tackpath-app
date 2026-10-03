@@ -124,18 +124,18 @@ const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 // Google Maps API key — same key already used in dispatcher.html
 const GKEY='AIzaSyCZOSWrBATtsPI9KX76ZLzjMeDS'+'NszCZk8';
 
-function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
-async function sbGet(p){
-  const r=await fetch(sbUrl(p),{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+// ── SECURED TRACKING (security hardening 2026-10) ──
+// One server-side function answers tracking questions: the exact tracking id
+// only (no prefix search), tracking columns only, the driver's position only
+// while the delivery is under way, and one rating after delivery.
+async function tpTrack(action,args){
+  const r=await fetch(SB_URL+'/rest/v1/rpc/tp_track',{method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({p_action:action,p_args:args||{}})});
   if(!r.ok)throw new Error(await r.text());
   return r.json();
 }
-async function sbPatch(p,b){
-  const r=await fetch(sbUrl(p),{method:'PATCH',
-    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body:JSON.stringify(b)});
-  if(!r.ok)throw new Error(await r.text());
-}
+async function tpTrackJobs(id){const j=await tpTrack('job',{id:id});return j?[j]:[];}
 
 const params=new URLSearchParams(window.location.search);
 const jobParam=params.get('job')||params.get('id')||params.get('tp');
@@ -280,9 +280,7 @@ function updateDriverMarker(lat,lng,stale){
 // Returns {lat, lng, updated_at} or null.
 async function fetchDriverGps(jobId){
   try{
-    const rows=await sbGet('driver_locations?job_id=eq.'+jobId+'&order=updated_at.desc&limit=1&select=lat,lng,updated_at');
-    if(rows&&rows.length)return rows[0];
-    return null;
+    return await tpTrack('location',{id:jobId});
   }catch(e){return null;}
 }
 
@@ -454,7 +452,7 @@ function setCustRating(n){
   deliveryRating=n;
   document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));
   if(currentJob){
-    sbPatch('jobs?id=eq.'+currentJob.id,{driver_rating:n}).then(()=>{
+    tpTrack('rate',{id:currentJob.id,rating:n}).then(()=>{
       const t=document.getElementById('ratingThanks');
       if(t)t.style.display='block';
     }).catch(()=>{});
@@ -476,10 +474,7 @@ async function loadJob(){
   }
 
   try{
-    let jobs=await sbGet('jobs?id=eq.'+jobParam+'&select='+SAFE_COLUMNS);
-    if(!jobs.length){
-      jobs=await sbGet('jobs?id=like.'+jobParam+'%25&select='+SAFE_COLUMNS+'&limit=1');
-    }
+    const jobs=await tpTrackJobs(jobParam);
     if(!jobs.length){
       document.getElementById('content').innerHTML=`
         <div class="error-card">
@@ -532,7 +527,7 @@ if(!jobParam){
       return;
     }
     try{
-      const jobs=await sbGet('jobs?id=eq.'+currentJob.id+'&select='+SAFE_COLUMNS);
+      const jobs=await tpTrackJobs(currentJob.id);
       if(jobs&&jobs.length){
         const updated=jobs[0];
         const statusChanged=updated.status!==currentJob.status;

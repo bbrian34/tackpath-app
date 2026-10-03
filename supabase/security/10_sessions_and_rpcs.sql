@@ -371,9 +371,11 @@ begin
          and (a->'ids' is null or j.id::text = any(array(select jsonb_array_elements_text(a->'ids'))))
          and (a->>'source' is null or to_jsonb(j.*)->>'source' = a->>'source')
          and (coalesce((a->>'unbinned')::boolean, false) = false or j.bin_label is null)
-       order by j.created_at desc limit lim) x;
-    if a->>'order' = 'asc' then
-      select coalesce(jsonb_agg(e order by e->>'created_at'), '[]') into res from jsonb_array_elements(res) e;
+       order by case when a->>'order' = 'asc' then j.created_at end asc,
+                case when coalesce(a->>'order','desc') <> 'asc' then j.created_at end desc
+       limit lim) x;
+    if a->>'order' = 'asc' then   -- oldest first (PathIQ), limit applied to the oldest rows
+      select coalesce(jsonb_agg(e order by (e->>'created_at')::timestamptz), '[]') into res from jsonb_array_elements(res) e;
     end if;
     return res;
 

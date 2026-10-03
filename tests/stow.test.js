@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { loadApp, wait } = require('./helpers');
+const { loadApp, wait, rpcCall, jsonResp } = require('./helpers');
 
 // PathIQ multi-piece scanning. A pkgs[] entry is one real barcode;
 // required_count is how many physical packages share it.
@@ -26,22 +26,16 @@ function makeJob() {
 function boot({ events = [] } = {}) {
   const posted = [];
   const app = loadApp('stow.html', {
-    initialStorage: { tp_worker: 'Tester' },
+    initialStorage: { tp_worker: 'Tester',
+      tp_dispatch_org: JSON.stringify({ id: 'org-1', slug: 'acme', name: 'Acme', token: 'org-session' }) },
     fetchHandler: async (url, opts) => {
-      if (url.includes('/rest/v1/events') && opts && opts.method === 'POST') {
-        posted.push(JSON.parse(opts.body));
-        return { ok: true, json: async () => ([]), text: async () => '' };
-      }
-      if (url.includes('/rest/v1/events')) return { ok: true, json: async () => events };
-      if (url.includes('/rest/v1/bin_bindings')) {
-        if (opts && opts.method) return { ok: true, json: async () => ([]) };
-        return { ok: true, json: async () => ([{ job_id: JOB_ID, bin_code: '1A', location_code: 'A-01', state: 'open' }]) };
-      }
-      if (url.includes('/rest/v1/jobs')) {
-        if (opts && opts.method) return { ok: true, json: async () => ([]) };
-        return { ok: true, json: async () => ([makeJob()]) };
-      }
-      return undefined;
+      const c = rpcCall(url, opts);
+      if (!c || c.fn !== 'tp_org') return undefined;
+      if (c.action === 'log_event') { posted.push(c.args); return jsonResp({ id: posted.length }); }
+      if (c.action === 'events') return jsonResp(events);
+      if (c.action === 'bindings') return jsonResp([{ job_id: JOB_ID, bin_code: '1A', location_code: 'A-01', state: 'open' }]);
+      if (c.action === 'jobs') return jsonResp([makeJob()]);
+      return jsonResp([]);
     },
   });
   return { ...app, posted };

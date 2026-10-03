@@ -516,27 +516,36 @@ nav{position:fixed;top:0;left:0;right:0;z-index:999;height:60px;
 <script>
 const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
-const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
-function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
-async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
+// ── SECURED ORDERS (security hardening 2026-10) ──
+// Orders go through one server-side function (tp_customer). Creating an
+// order returns an order token; only a browser holding that token can read,
+// confirm, cancel or message the order.
+async function tpRpc(fn,args){
+  const r=await fetch(SB_URL+'/rest/v1/rpc/'+fn,{method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(args||{})});
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok)throw new Error((d&&d.message)||t||('HTTP '+r.status));
+  return d;
+}
+let currentOrderToken=null;
+function tpOrder(action,args){
+  return tpRpc('tp_customer',{p_action:action,p_args:Object.assign({id:currentJobId,order_token:currentOrderToken},args||{})});
+}
 
 // ── ORGANIZATION RESOLUTION ──
 // Reads ?org=slug from the URL so every order gets tagged to the right courier company.
 // Example: customer.html?org=quickhaul
 let currentOrgId=null;
+const currentOrgSlug=new URLSearchParams(window.location.search).get('org');
 async function resolveOrgFromUrl(){
-  const params=new URLSearchParams(window.location.search);
-  const slug=params.get('org');
-  if(!slug)return;
+  if(!currentOrgSlug)return;
   try{
-    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(slug)),{headers:H});
-    const rows=await r.json();
-    if(rows&&rows[0])currentOrgId=rows[0].id;
+    const org=await tpRpc('tp_org_lookup',{p_slug:currentOrgSlug});
+    if(org)currentOrgId=org.id;
   }catch(e){}
 }
 resolveOrgFromUrl();
-async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
-async function sbGet(p){const r=await fetch(sbUrl(p),{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});if(!r.ok)throw new Error(await r.text());return r.json();}
 
 // STATE
 let currentUser=null, selectedPri='standard', currentJobId=null, currentSignalId=null;
@@ -744,24 +753,20 @@ async function requestQuote(){
 
   // Create job in Supabase with status 'routing'
   try{
-    const created=await sbPost('jobs',{
+    const res=await tpRpc('tp_customer',{p_action:'create_order',p_args:{
+      org_slug:currentOrgSlug||null,
       title:recipient+' — '+pickupCity+' to '+deliveryCity,
       pickup_address:pickupAddr+', '+pickupCity,
       dropoff_address:deliveryAddr+', '+deliveryCity,
-      status:'routing',
       price:currentPrice,
       distance_miles:distMiles,
       route_summary:routeSummary,
-      customer_confirmed:false,
-      org_id:currentOrgId,
       estimated_delivery_at:new Date(Date.now()+currentEta*60000).toISOString()
-    });
+    }});
+    const created=res&&res.job?[res.job]:[];
     if(created&&created[0]){
       currentJobId=created[0].id;
-      // Send tracking SMS to customer -- only if opted in
-      const custPhone = document.getElementById('custPhone')?.value||'';
-      const smsConsent = document.getElementById('smsConsent')?.checked||false;
-      if(custPhone && smsConsent) sendSMS('customer_order', custPhone, currentJobId, created[0].title);
+      currentOrderToken=res.order_token;
       // Start polling immediately so we catch all status changes
       startPolling();
     }
@@ -873,10 +878,7 @@ function logCommEvent(status, driverName) {
   if (section) section.style.display = 'block';
   // Write to Supabase messages table for dispatcher visibility
   if (currentJobId) {
-    sbPost('messages', {
-      job_id: currentJobId,
-      sender: 'CommAgent',
-      sender_role: 'agent',
+    tpOrder('post_message', {
       body: msg.title + ': ' + body
     }).catch(() => {});
   }
@@ -905,9 +907,8 @@ function renderCommLog() {
 async function checkStatus(){
   if(!currentJobId) return;
   try{
-    const jobs=await sbGet('jobs?id=eq.'+currentJobId+'&select=*');
-    if(!jobs||!jobs.length) return;
-    const job=jobs[0];
+    const job=await tpOrder('get');
+    if(!job) return;
     const s=job.status;
     if(s===lastStatus) return;
     lastStatus=s;
@@ -974,7 +975,7 @@ async function customerConfirm(){
   if(currentJobId){
     try{
       // NOW set to pending — driver gets notified for the first time
-      await sbPatch('jobs?id=eq.'+currentJobId,{status:'pending',customer_confirmed:true});
+      await tpOrder('confirm');
     }catch(e){console.error(e);}
   }
   // Polling already running from job creation
@@ -983,7 +984,7 @@ async function customerConfirm(){
 async function cancelOrder(){
   hideModal();
   if(currentJobId){
-    try{await sbPatch('jobs?id=eq.'+currentJobId,{status:'cancelled'});}catch(e){}
+    try{await tpOrder('cancel');}catch(e){}
   }
   clearInterval(pollInterval);
   document.getElementById('statusSection').style.display='none';
@@ -1084,17 +1085,9 @@ const saved=localStorage.getItem('tp_customer');
 if(saved){currentUser=JSON.parse(saved);showPortal();}
 window.addEventListener('load',function(){doLogin();});
 
-// ── TWILIO SMS ──
-async function sendSMS(type, phone, jobId, jobTitle){
-  if(!phone) return;
-  try{
-    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/send-sms',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY},
-      body:JSON.stringify({type, phone, job_id:jobId, job_title:jobTitle})
-    });
-  }catch(e){console.error('SMS error:',e);}
-}
+// Customer order SMS was never delivered (send-sms rejected this request
+// shape) and send-sms now only sends driver-assignment texts, so the call
+// was removed (security hardening 2026-10).
 
 </script>
 </body>

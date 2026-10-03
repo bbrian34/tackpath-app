@@ -931,6 +931,112 @@ const sbGet=async p=>{const r=await fetch(sbu(p),{headers:GH});if(!r.ok)throw Er
 const sbPatch=async(p,b)=>{const r=await fetch(sbu(p),{method:'PATCH',headers:PH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
 const sbPost=async(p,b)=>{const r=await fetch(sbu(p),{method:'POST',headers:PH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
 
+// ══════════════════════════════════════════════════════════════════════
+// SECURED DATA LAYER (security hardening 2026-10)
+// Sign-in uses a real one-time code texted by the driver-login function and
+// checked by the server; the result is a driver session (driver.token).
+// The public key can no longer read or write tables: every /rest/v1/<table>
+// request this app makes is answered by the server-side driver gateway
+// tp_driver, which only lets a driver see open offers and their own routes
+// and change only their own route. Proof-of-delivery photos go to a private
+// bucket through the pod function. A request shape that is not mapped below
+// fails loudly instead of reaching a table.
+// ══════════════════════════════════════════════════════════════════════
+const tpRealFetch=window.fetch.bind(window);
+function tpResp(status,data){
+  const text=typeof data==='string'?data:JSON.stringify(data);
+  return {ok:status>=200&&status<300,status:status,json:async()=>JSON.parse(text),text:async()=>text};
+}
+async function tpRpc(fn,args){
+  const r=await tpRealFetch(SB+'/rest/v1/rpc/'+fn,{method:'POST',
+    headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(args||{})});
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok){const m=(d&&d.message)||t||('HTTP '+r.status);if(/TP_AUTH/.test(m))tpSessionLost();throw new Error(m);}
+  return d;
+}
+function tpToken(){return driver&&driver.token?driver.token:null;}
+async function tpDriver(action,args){
+  if(!tpToken()){tpSessionLost();throw new Error('TP_AUTH: please sign in');}
+  return tpRpc('tp_driver',{p_token:tpToken(),p_action:action,p_args:args||{}});
+}
+let tpLost=false;
+function tpSessionLost(){
+  if(tpLost)return;tpLost=true;
+  try{localStorage.removeItem('tp_drv');}catch(e){}
+  try{if(typeof toast==='function')toast('Please sign in again','warn');}catch(e){}
+  setTimeout(()=>location.reload(),1200);
+}
+function tpVal(v){return decodeURIComponent(v);}
+function tpList(v){return tpVal(v).replace(/^in\.\(/,'').replace(/\)$/,'').split(',').filter(Boolean);}
+async function tpTable(method,table,qs,body){
+  const q={};new URLSearchParams(qs||'').forEach((v,k)=>{if(k!=='apikey'&&k!=='select')q[k]=v;});
+  const eq=(k)=>q[k]&&q[k].startsWith('eq.')?tpVal(q[k].slice(3)):null;
+  const a={};
+  if(q.order)a.order=/\.asc$/.test(q.order)?'asc':'desc';
+  if(q.limit)a.limit=parseInt(q.limit,10);
+  if(method==='GET'){
+    if(table==='jobs'){
+      if(eq('id')){
+        try{const j=await tpDriver('job',{id:eq('id')});return j?[j]:[];}
+        catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+      }
+      if(q.status&&q.status.startsWith('in.'))a.statuses=tpList(q.status);
+      if(eq('status'))a.statuses=[eq('status')];
+      if(eq('job_type'))a.job_type=eq('job_type');
+      if(q.or&&/job_type\.neq\.surge/.test(q.or))a.job_type='not_surge';
+      if(eq('driver_name'))a.mine=true;
+      return tpDriver('jobs',a);
+    }
+    if(table==='messages'&&eq('job_id')){
+      a.job_id=eq('job_id');
+      if(eq('sender_role'))a.sender_role=eq('sender_role');
+      if(!a.order)a.order='asc';
+      try{return await tpDriver('messages',a);}catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+    }
+    if(table==='bin_bindings'&&eq('job_id')){
+      try{return await tpDriver('bin_binding',{job_id:eq('job_id')});}catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+    }
+  }
+  if(method==='PATCH'&&table==='jobs'&&eq('id')){
+    if(eq('status')==='pending'&&body&&body.status==='assigned')return tpDriver('claim',{id:eq('id')});
+    try{return await tpDriver('update_job',{id:eq('id'),patch:body||{}});}
+    catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+  }
+  if(method==='POST'){
+    if(table==='messages'){const r=await tpDriver('post_message',{job_id:body&&body.job_id,body:body&&body.body,sender:body&&body.sender});return [r];}
+    if(table==='driver_locations'){await tpDriver('location',{job_id:body&&body.job_id,lat:body&&body.lat,lng:body&&body.lng,accuracy:body&&body.accuracy,speed:body&&body.speed});return [];}
+    if(table==='driver_fcm_tokens'){await tpDriver('fcm_token',{token:body&&body.token});return [];}
+  }
+  throw new Error('TP_UNMAPPED: '+method+' '+table+' '+JSON.stringify(q));
+}
+window.fetch=async function(input,opts){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  const m=url.match(/^[^?]*\/rest\/v1\/([a-z_]+)(?:\?([^#]*))?$/);
+  if(!m||!url.startsWith(SB)||m[1]==='rpc')return tpRealFetch(input,opts);
+  const method=((opts&&opts.method)||'GET').toUpperCase();
+  let body=null;try{body=opts&&opts.body?JSON.parse(opts.body):null;}catch(e){}
+  try{return tpResp(200,await tpTable(method,m[1],m[2],body));}
+  catch(e){
+    if(/TP_UNMAPPED/.test(e.message))console.error('[TackPath] '+e.message);
+    return tpResp(/TP_AUTH/.test(e.message)?401:(/TP_DENIED/.test(e.message)?403:400),{message:e.message});
+  }
+};
+// Proof of delivery -> private bucket. Returns the stored path (dispatch
+// opens it through a signed link), or null so the caller queues a retry.
+async function tpPodUpload(jobId,stop,kind,dataUrl){
+  if(!tpToken())return null;
+  const mime=((String(dataUrl).match(/^data:([^;,]+)/)||[])[1])||'image/png';
+  const r=await tpRealFetch(SB+'/functions/v1/pod',{method:'POST',
+    headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({action:'upload',session:tpToken(),job_id:String(jobId),stop:parseInt(stop,10)||1,
+      kind:kind==='photo'?'photo':'signature',content_type:mime==='image/jpg'?'image/jpeg':mime,data:String(dataUrl)})});
+  if(r.status===401){tpSessionLost();return null;}
+  if(!r.ok)return null;
+  const d=await r.json();
+  return d&&d.path?d.path:null;
+}
+
 // ── STATE ──
 let driver=null,currentJob=null,pendingJob=null;
 let rejectedIds=new Set(),pollInterval=null,offerTimerInt=null,offerAlertInt=null;
@@ -1080,10 +1186,18 @@ function showPhoneInput(){
 async function requestCode(){
   const raw=document.getElementById('loginPhone').value.trim();
   if(!raw){toast('Enter your mobile number','warn');return;}
-  const phone=raw.replace(/\D/g,'');
+  const phone=raw.replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
+  if(phone.length!==10){toast('Enter a 10-digit mobile number','warn');return;}
   pendingPhone=phone;
-  pendingCode='000000';
-  document.getElementById('loginCodeHint').textContent='Enter any 6-digit code';
+  pendingCode=null;
+  // A real one-time code, texted by the server (security hardening 2026-10).
+  try{
+    const r=await tpRealFetch(SB+'/functions/v1/driver-login',{method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({phone:phone})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+  }catch(e){toast('Could not send a code. Check your connection and try again.','warn');return;}
+  document.getElementById('loginCodeHint').textContent='Enter the 6-digit code we texted to ('+phone.slice(0,3)+') '+phone.slice(3,6)+'-'+phone.slice(6);
   document.getElementById('loginPhasePhone').style.display='none';
   document.getElementById('loginPhaseCode').style.display='block';
   document.getElementById('loginCode').focus();
@@ -1091,22 +1205,23 @@ async function requestCode(){
 async function verifyCode(){
   const entered=(document.getElementById('loginCode').value||'').trim().replace(/\D/g,'');
   if(entered.length!==6){toast('Enter a 6-digit code','warn');return;}
-  const phone=pendingPhone||'0000000000';
-  let realName='Driver';
-  try{
-    const matches=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&limit=1');
-    if(matches&&matches.length&&matches[0].name){
-      realName=matches[0].name;
-    }
-  }catch(e){
-    // If the lookup fails for any reason, fall back to the generic placeholder
-    // rather than blocking login entirely
+  if(!pendingPhone){toast('Enter your mobile number first','warn');return;}
+  let res=null;
+  try{res=await tpRpc('tp_driver_sign_in',{p_phone:pendingPhone,p_code:entered});}
+  catch(e){toast('Could not sign in. Check your connection and try again.','warn');return;}
+  if(!res||!res.ok){
+    const err=(res&&res.error)||'';
+    toast(/TP_RATE/.test(err)?'Too many attempts. Try again later.':(/approved/.test(err)?'This number is not an approved TackPath driver yet.':'Wrong or expired code'),'warn');
+    return;
   }
-  driver={id:'drv-'+phone,phone:phone,name:realName,email:'',first:realName.split(' ')[0]||realName};
+  const realName=(res.driver&&res.driver.name)||'Driver';
+  const phone=(res.driver&&res.driver.phone)||pendingPhone;
+  driver={id:'drv-'+phone,phone:phone,name:realName,email:'',first:realName.split(' ')[0]||realName,
+          token:res.token,driver_id:res.driver&&res.driver.id};
   localStorage.setItem('tp_drv',JSON.stringify(driver));
   unlockSpeech();initApp();
 }
-function doLogout(){if(!confirm('Sign out?'))return;localStorage.removeItem('tp_drv');location.reload();}
+function doLogout(){if(!confirm('Sign out?'))return;const t=tpToken();if(t)tpRpc('tp_driver',{p_token:t,p_action:'sign_out',p_args:{}}).catch(()=>{});localStorage.removeItem('tp_drv');location.reload();}
 document.getElementById('loginPhone').addEventListener('keydown',e=>{if(e.key==='Enter')requestCode();});
 document.getElementById('loginCode').addEventListener('keydown',e=>{if(e.key==='Enter')verifyCode();});
 
@@ -2405,16 +2520,9 @@ function dataUrlToBlob(dataUrl){
 // Never throws -- a failed upload must not trap a driver at a doorstep.
 async function uploadPOD(jobId,stopNumber,kind,dataUrl){
   try{
-    const ext=kind==='photo'?'jpg':'png';
-    const path=jobId+'/stop-'+stopNumber+'-'+kind+'-'+Date.now()+'.'+ext;
-    const blob=dataUrlToBlob(dataUrl);
-    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
-      method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
-      body:blob
-    });
-    if(!r.ok)throw new Error('storage '+r.status);
-    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+    const p=await tpPodUpload(jobId,stopNumber,kind,dataUrl);
+    if(!p)throw new Error('pod upload failed');
+    return p;
   }catch(e){
     console.log('POD upload failed, queued for retry:',e.message);
     queuePOD(jobId,stopNumber,kind,dataUrl);
@@ -2455,16 +2563,7 @@ async function flushPODQueue(){
 // loop can never grow the queue it is trying to drain.
 async function uploadPODRaw(item){
   try{
-    const ext=item.kind==='photo'?'jpg':'png';
-    const path=item.jobId+'/stop-'+item.stopNumber+'-'+item.kind+'-'+Date.now()+'.'+ext;
-    const blob=dataUrlToBlob(item.dataUrl);
-    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
-      method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
-      body:blob
-    });
-    if(!r.ok)return null;
-    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+    return await tpPodUpload(item.jobId,item.stopNumber!=null?item.stopNumber:item.stopNum,item.kind,item.dataUrl);
   }catch(e){ return null; }
 }
 
@@ -3340,7 +3439,11 @@ function handleArrivedFromNotification(){
 
 // ── BOOT ──
 const saved=localStorage.getItem('tp_drv');
-if(saved){driver=JSON.parse(saved);initApp();}
+if(saved){
+  // Only a server-issued session counts as signed in (security hardening 2026-10).
+  let d=null;try{d=JSON.parse(saved);}catch(e){}
+  if(d&&d.token){driver=d;initApp();}else{localStorage.removeItem('tp_drv');}
+}
 if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
 
 // ── KEYBOARD DETECTION -- push login box above keyboard ──

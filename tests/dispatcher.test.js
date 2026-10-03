@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { loadApp, wait } = require('./helpers');
+const { loadApp, wait, legacyRest } = require('./helpers');
 
 function buildMockBackend() {
   const mockOrgs = [{ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }];
@@ -52,7 +52,7 @@ test('dispatcher.html: manual login starts live polling so new jobs appear witho
     return undefined;
   };
 
-  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler: legacyRest(fetchHandler) });
   try {
     dom.window.google = { maps: { Map: function(){}, Marker: function(){}, SymbolPath: { CIRCLE: 0 } } };
     dom.window.document.getElementById('loginOrgCode').value = 'demo';
@@ -94,7 +94,7 @@ test('dispatcher.html: clicking View on a completed job never mutates its status
     return undefined;
   };
 
-  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler: legacyRest(fetchHandler) });
   try {
     dom.window.document.getElementById('loginOrgCode').value = 'demo';
     await dom.window.doLogin();
@@ -138,7 +138,7 @@ test('dispatcher.html: SmartPath shows the current active stop for a multi-stop 
     return undefined;
   };
 
-  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler: legacyRest(fetchHandler) });
   try {
     dom.window.document.getElementById('loginOrgCode').value = 'demo';
     await dom.window.doLogin();
@@ -165,8 +165,8 @@ test('dispatcher.html: #drivers hash deep link opens the Drivers tab automatical
 
   const restoredApp = loadApp('dispatcher.html', {
     url: 'https://tackpath.com/dispatcher.html#drivers',
-    initialStorage: { tp_dispatch_org: JSON.stringify({ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company' }) },
-    fetchHandler,
+    initialStorage: { tp_dispatch_org: JSON.stringify({ id: 'org-demo-uuid', slug: 'demo', name: 'Demo Company', token: 'test-session' }) },
+    fetchHandler: legacyRest(fetchHandler),
   });
   restoredApp.dom.window.google = { maps: { Map: function(){}, Marker: function(){}, SymbolPath: { CIRCLE: 0 } } };
   try {
@@ -179,7 +179,7 @@ test('dispatcher.html: #drivers hash deep link opens the Drivers tab automatical
     restoredApp.cleanup();
   }
 
-  const freshApp = loadApp('dispatcher.html', { url: 'https://tackpath.com/dispatcher.html#drivers', fetchHandler });
+  const freshApp = loadApp('dispatcher.html', { url: 'https://tackpath.com/dispatcher.html#drivers', fetchHandler: legacyRest(fetchHandler) });
   freshApp.dom.window.google = { maps: { Map: function(){}, Marker: function(){}, SymbolPath: { CIRCLE: 0 } } };
   try {
     await wait(300);
@@ -209,7 +209,7 @@ test('dispatcher.html: a job with no org_id (e.g. from SmartSort) still shows up
     return undefined;
   };
 
-  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler: legacyRest(fetchHandler) });
   try {
     dom.window.document.getElementById('loginOrgCode').value = 'demo';
     await dom.window.doLogin();
@@ -254,7 +254,7 @@ test('dispatcher.html: Sprint-tab exceptions panel correctly detects Late, Unass
     return undefined;
   };
 
-  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler: legacyRest(fetchHandler) });
   try {
     dom.window.document.getElementById('loginOrgCode').value = 'demo';
     await dom.window.doLogin();
@@ -279,7 +279,7 @@ test('dispatcher.html: Sprint-tab exceptions panel correctly detects Late, Unass
 
 test('dispatcher.html: archiving a delivered job removes it from the active board and into History', async () => {
   const { allJobs, fetchHandler } = buildMockBackend();
-  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler });
+  const { dom, cleanup } = loadApp('dispatcher.html', { fetchHandler: legacyRest(fetchHandler) });
 
   try {
     dom.window.document.getElementById('loginOrgCode').value = 'demo';
