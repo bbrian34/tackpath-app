@@ -281,6 +281,7 @@ test('full stop: scan, POD, confirm closes it and records the verified count', a
     a.scan('TND');
     a.proceed().click();
     a.w.document.getElementById('podRecipient').value = 'Cy';
+    a.w.eval("dx.choose('handed'); dx.state.sigDrawn = true;");   // delivery choice + signature are required (driver experience 2026-10)
     await a.w.eval('submitPOD()');
     const d = a.delivered();
     assert.strictEqual(d.length, 1);

@@ -4042,6 +4042,13 @@ async function loadDriverMessages(){
         const bubble=document.createElement('div');bubble.className='oc-msg '+(isMe?'oc-outbound':'oc-driver');
         if(isMe) bubble.style.alignSelf='flex-end';
         bubble.textContent=m.body;
+        // A driver's problem report (STOP_EXCEPTION::) reads as a plain alert.
+        if(m.body.startsWith('STOP_EXCEPTION::')){
+          let x={};try{x=JSON.parse(m.body.slice(16));}catch(e){}
+          bubble.textContent='\u26A0 PROBLEM \u2014 Stop '+(x.stop_number||'?')+': '+(x.reason_label||x.reason||'problem')
+            +' \u00b7 '+(x.packages||0)+' package'+(x.packages===1?'':'s')+' returning to station'+(x.recipient?' ('+x.recipient+')':'');
+          bubble.style.borderLeft='4px solid #ef4444';
+        }
         wrap.appendChild(meta);wrap.appendChild(bubble);
         container.appendChild(wrap);
       });
@@ -4311,8 +4318,16 @@ function parseCSV(text){
     // Optional -- not every manifest will have one yet, so its absence
     // never blocks an upload the way the four required columns do.
     tracking_number:headers.indexOf('tracking_number'),
-    route_hint:headers.indexOf('route_hint')
+    route_hint:headers.indexOf('route_hint'),
+    // Optional columns the driver sees at the stop (driver experience 2026-10).
+    phone:headers.indexOf('phone'),
+    unit:headers.indexOf('unit'),
+    access_notes:headers.indexOf('access_notes'),
+    gate_code:headers.indexOf('gate_code'),
+    delivery_notes:headers.indexOf('delivery_notes'),
+    signature_required:headers.indexOf('signature_required')
   };
+  const opt=(c,k)=>idx[k]>=0?((c[idx[k]]||'').trim()||null):null;
   if(idx.order_id<0||idx.recipient<0||idx.address<0){
     toast('Missing required columns: order_id, recipient, address','warn');return;
   }
@@ -4329,7 +4344,9 @@ function parseCSV(text){
       address:c[idx.address],
       packages:parseInt(c[idx.packages])||1,
       tracking_number: idx.tracking_number>=0 ? (c[idx.tracking_number]||null) : null,
-      route_hint: hint||null
+      route_hint: hint||null,
+      phone:opt(c,'phone'),unit:opt(c,'unit'),access_notes:opt(c,'access_notes'),gate_code:opt(c,'gate_code'),
+      delivery_notes:opt(c,'delivery_notes'),signature_required:/^(true|yes|y|1)$/i.test(opt(c,'signature_required')||'')
     });
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
@@ -6040,6 +6057,9 @@ async function buildRoutes(){
       });
     }
     const stop=stopMap.get(key);
+    // Driver-facing stop details: the first package that has each one.
+    ['phone','unit','access_notes','gate_code','delivery_notes'].forEach(k=>{if(!stop[k]&&pkg[k])stop[k]=pkg[k];});
+    if(pkg.signature_required)stop.signature_required=true;
     stop.pkgs.push(normalizePackage(pkg));
     stop.packages+=(parseInt(pkg.packages)||1);
   }
@@ -6637,6 +6657,10 @@ async function assignSSRoute(routeId){
       packages: s.packages,
       stop_number: i+1,
       coords: s.coords||null,
+      // shown to the driver at the stop when the manifest has them
+      phone: s.phone||null, unit: s.unit||null, access_notes: s.access_notes||null,
+      gate_code: s.gate_code||null, delivery_notes: s.delivery_notes||null,
+      signature_required: !!s.signature_required,
       // Every real, distinct manifest line at this stop. piece_id is the
       // real, physical, scannable barcode as supplied (tracking_number or
       // order_id) -- never an invented per-unit id. required_count is how

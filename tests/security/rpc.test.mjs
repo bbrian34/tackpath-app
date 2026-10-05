@@ -271,6 +271,40 @@ test('driver gateway: offers, claim race, own route updates only, messages, GPS,
   assert.equal((await call('bin_binding', { job_id: offer }))[0].bin_code, '2B');
 });
 
+test('driver experience: offline replays apply once, a route never moves backwards, sign-in slides, dispatch phone', async () => {
+  const { db, insJob } = await setup();
+  const tok = await driverToken(db);
+  const call = (action, args = {}) => rpc(db, 'tp_driver', { p_token: tok, p_action: action, p_args: args });
+  const route = await insJob({ status: 'assigned', driver: 'Dana Driver' });
+  // the same delivery record sent twice (offline replay) is stored once
+  const a = await call('post_message', { job_id: route, body: 'STOP_DELIVERED::{"stop_number":1}', client_id: 'c-1' });
+  const b = await call('post_message', { job_id: route, body: 'STOP_DELIVERED::{"stop_number":1}', client_id: 'c-1' });
+  assert.equal(a.id, b.id);
+  await call('post_message', { job_id: route, body: 'hello', client_id: 'c-2' });
+  assert.equal((await call('messages', { job_id: route })).length, 2);
+  // progress replayed out of order never goes backwards; delivered stays delivered
+  await call('update_job', { id: route, patch: { status: 'in_transit', stops_completed: 3 }, client_id: 'u-1' });
+  await call('update_job', { id: route, patch: { stops_completed: 2 }, client_id: 'u-0' });
+  let row = (await db.query('select status, stops_completed from public.jobs where id = $1', [route])).rows[0];
+  assert.equal(row.stops_completed, 3);
+  await call('update_job', { id: route, patch: { status: 'delivered', stops_completed: 5 }, client_id: 'u-2' });
+  await call('update_job', { id: route, patch: { status: 'in_transit', driver_name: 'Dana Driver' }, client_id: 'u-3' });
+  row = (await db.query('select status, stops_completed from public.jobs where id = $1', [route])).rows[0];
+  assert.deepEqual([row.status, row.stops_completed], ['delivered', 5]);
+  // a replayed update returns the first answer even after the route changed
+  const again = await call('update_job', { id: route, patch: { status: 'in_transit', stops_completed: 3 }, client_id: 'u-1' });
+  assert.equal(again[0].stops_completed, 3);
+  // using the app keeps the driver signed in (expiry slides to 30 days out)
+  await db.query(`update tp_sec.sessions set expires_at = now() + interval '1 day', last_seen_at = now() - interval '1 hour' where kind = 'driver'`);
+  await call('me');
+  const left = (await db.query(`select extract(epoch from expires_at - now())/86400 as d from tp_sec.sessions where kind = 'driver'`)).rows[0].d;
+  assert.ok(Number(left) > 29, 'expiry moved out to ~30 days, got ' + left);
+  // dispatch phone comes from the setting when the company has none
+  assert.equal((await call('me')).dispatch_phone, null);
+  await db.query(`insert into tp_sec.settings values ('dispatch_phone', '"4045550100"')`);
+  assert.equal((await call('me')).dispatch_phone, '4045550100');
+});
+
 test('removing a driver signs them out', async () => {
   const { db } = await setup();
   const dtok = await driverToken(db);

@@ -140,10 +140,11 @@ and tracking.html links; driver application → Approve → sign-in; dispatcher 
 storage schema and the live tables as they are today (anon granted everything, "allow all" policies),
 then the migrations on top:
 
-- `rpc.test.mjs` (15): preflight abort; company sign-in, lockout, bcrypt; admin codes; org scoping;
+- `rpc.test.mjs` (16): preflight abort; company sign-in, lockout, bcrypt; admin codes; org scoping;
   every dispatcher, PathIQ, driver, customer, tracking, signup flow; real codes — wrong, reused,
   expired, 5 attempts, unknown/pending numbers, rate limits; demo code only for 555-0199 and only
-  the review company; service-only RPCs not callable by anon/authenticated.
+  the review company; service-only RPCs not callable by anon/authenticated; offline replays applied
+  once, a route never moving backwards, the driver's sign-in sliding to 30 days, dispatch phone.
 - `lockdown.test.mjs` (5): anon/authenticated cannot SELECT/INSERT/UPDATE/DELETE any table or view or
   call other functions; future tables not auto-granted; pod private; all flows still work; exact rollback.
 - `edge.test.mjs` (10): relay closed (`{to, body}` refused, nothing sent), only the fixed text to the
@@ -157,7 +158,8 @@ then the migrations on top:
   customer, track, tracking, fleet, signup — with **zero** direct table or storage requests.
 - `tests/driver-login-ui.test.js` (2): no dead sign-in button is visible; driver.html shows the new symbol.
 
-tackpath-driver: `cd tests && node --test` (33, including `security.test.js` and `login-ui.test.js`).
+tackpath-driver: `cd tests && node --test` (47, including `security.test.js`, `login-ui.test.js` and
+`experience.test.js`).
 
 ## Decisions made (please confirm)
 
@@ -183,6 +185,67 @@ tackpath-driver: `cd tests && node --test` (33, including `security.test.js` and
   limits are in place.
 - The September `operations` migrations in `supabase/migrations` are not used by the live pages.
 - Pre-existing test failures unchanged: `tests/driver.test.js` (5), `tests/smartsort_integration.test.js` (1).
+
+## Driver experience (branch `claude/driver-experience`, on top of this one)
+
+One shared layer, identical in `driver.html` and the driver app's `www/index.html` (between the
+`TP-DX:BEGIN` / `TP-DX:END` markers; a test checks they match). It wraps the existing app, so the scan
+gates, loading counts, arrival detection, floating button and voice are unchanged.
+
+- **Stays signed in**: a driver session now slides — every use pushes expiry out to 30 days
+  (`tp_sec.session`). No signal never signs a driver out; only a revoked/expired session does.
+- **Never loses or doubles work**: route updates and messages (deliveries, problems, chat) go
+  through an outbox on the phone; with no signal they wait and are sent in order when signal returns.
+  Each carries a `client_id`; `tp_driver` applies a repeated one once (`tp_sec.client_ops`), never moves
+  `stops_completed` backwards and never takes a delivered route back to in transit. Proof photos waiting
+  for signal are kept in IndexedDB (room for a day of photos) and shrunk to 1280 px. Scans survive a
+  restart. A pill at the top says "No signal · N updates saved on this phone".
+- **Start of day**: one card — route, stops, packages, bin, pickup (bin + location), warehouse status
+  (waiting / staging / ready), message or call dispatch.
+- **Scanning**: distinct tone, buzz and screen colour for right / wrong / duplicate; big STOP number on
+  each loaded package; the app says "Stop 4. 12 of 30", "Already scanned"; "Problem? Tell dispatch" on
+  every scan screen.
+- **At the stop**: recipient, unit, access notes / gate code, package count, signature-required flag,
+  call customer, message or call dispatch, Google Maps (web), a Problem button.
+- **Proof of delivery**: one-tap choice (handed to customer, front door, mailroom, back door); the
+  photo and/or signature that choice or the stop requires; blank signatures no longer pass; choice and
+  notes go into the `STOP_DELIVERED` record.
+- **Problems**: one tap (no access, business closed, refused, damaged, wrong address, unsafe) →
+  `STOP_EXCEPTION::{…}` message to dispatch (shown as a red PROBLEM line in dispatch chat), packages
+  marked to return, route moves on.
+- **After each stop** the next stop comes up by itself (5 s countdown, or tap). **End of route**: summary
+  of stops and packages delivered, problems, and packages to bring back.
+- **Dispatch**: typed messages and quick replies (no more voice-only), messages shown as text,
+  call buttons when a dispatch number is set.
+- **Battery / permissions / crashes**: one GPS watcher, positions sent at most every 15 s or 60 m,
+  paused while the app is hidden, stopped at route end (it used to keep running). The native app no
+  longer asks for location and "Appear on top" at launch: it explains once after sign-in, location is
+  asked when a route starts, "Appear on top" the first time the driver navigates. Fixed: web arrival
+  detection threw on every GPS update (`haversineDistance` was never defined); Begin Route called an
+  undefined `startGPSTracking`; message text was inserted as HTML.
+- **Honest numbers**: the made-up 4.9★ rating, "YTD = today + $800" and random pay are gone.
+- **Ruby** no longer sends what the driver said to an outside AI service (there was no key, so the call
+  always failed after a delay); its built-in commands run straight away.
+- **Text and taps**: nothing below ~13 px, faint text made readable, tap targets at least 48 px.
+
+Deploy additions:
+- Migration 10 already contains the session, `client_ops` and `tp_driver` changes (it is not applied yet).
+- Dispatch phone shown to drivers: `insert into tp_sec.settings values ('dispatch_phone', '"4045550100"');`
+  (or an `organizations.dispatch_phone` / `phone` column per company).
+- Manifest CSV may now include `phone`, `unit`, `access_notes`, `gate_code`, `delivery_notes`,
+  `signature_required` (yes/no); the dispatcher passes them to the driver.
+- Native: build a new APK/AAB from `claude/driver-experience` (Java changed: `MainActivity`,
+  `ArrivalPlugin`). It was not compiled here (no Android SDK in this environment).
+
+Decisions for Bryan (defaults in `window.TP_DX_POLICY`, top of the layer):
+1. Delivery choices and what each requires — default: handed to customer = signature; front door,
+   mailroom, back door = photo. A stop with `signature_required` always needs a signature.
+2. Problem reasons and outcome — default: all six return the packages to the station; none re-attempts
+   the same day. A problem at the last stop still closes the route as `delivered` (the only driver
+   statuses the gateway accepts are assigned / in_transit / delivered).
+3. Auto-advance — default 5 s to the next stop (Maps opens by itself in the app). 0 turns it off.
+4. Voice on the web page stays off (`driver.html` `speak()` was switched off on purpose); the app speaks.
+5. Where the dispatch phone comes from (setting vs per company).
 
 ## Stage B (plan only): Supabase Auth with per-company RLS
 
