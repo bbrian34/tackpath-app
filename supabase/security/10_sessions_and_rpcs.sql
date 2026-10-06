@@ -58,6 +58,16 @@ begin
   if to_regprocedure('public.publish_surge_route(jsonb)') is null then
     missing := missing || 'function public.publish_surge_route(jsonb)'::text;
   end if;
+  -- Routes that end with problem stops finish as 'completed_with_exceptions'.
+  -- jobs.status must be able to hold it: not an enum, no CHECK list without it.
+  if exists (select 1 from information_schema.columns
+              where table_schema='public' and table_name='jobs' and column_name='status' and data_type='USER-DEFINED')
+     or exists (select 1 from pg_catalog.pg_constraint c
+                 where c.conrelid = 'public.jobs'::regclass and c.contype = 'c'
+                   and pg_catalog.pg_get_constraintdef(c.oid) ilike '%status%'
+                   and pg_catalog.pg_get_constraintdef(c.oid) not ilike '%completed_with_exceptions%') then
+    missing := missing || 'jobs.status must accept ''completed_with_exceptions'' (it is an enum or has a CHECK list)'::text;
+  end if;
   if cardinality(missing) > 0 then
     raise exception 'TackPath security migration 10 stopped, nothing was changed. Production differs from what this migration expects: %', missing;
   end if;
@@ -147,6 +157,13 @@ create index on tp_sec.sms_log (kind, job_key, at);
 -- Driver writes made offline are replayed when signal returns. Each carries a
 -- client_id; a replay of one already applied returns the first result instead
 -- of applying it twice (a delivery is never recorded twice).
+-- Per-company details drivers see: the dispatch phone number.
+create table tp_sec.org_profile (
+  org_key        text primary key,
+  dispatch_phone text,
+  updated_at     timestamptz not null default now()
+);
+
 create table tp_sec.client_ops (
   op_key     text primary key,        -- driver || '|' || client_id
   result     jsonb,
@@ -315,6 +332,34 @@ begin
   return 'Company code set for ' || p_slug;
 end $$;
 revoke all on function tp_sec.admin_set_org_code(text, text) from public;
+
+-- The dispatch number a company's drivers see (call button in the driver app).
+-- Empty clears it. Dispatchers set it from the Drivers tab; or, as an admin:
+--   select tp_sec.admin_set_dispatch_phone('quickhaul', '(404) 555-0100');
+create function tp_sec.set_dispatch_phone(p_org_key text, p_phone text) returns text
+language plpgsql security definer set search_path = '' as $$
+declare ph text := nullif(btrim(coalesce(p_phone,'')), '');
+begin
+  if p_org_key is null then raise exception 'TP_INVALID: no company'; end if;
+  if ph is not null then
+    ph := tp_sec.norm_phone(ph);
+    if ph is null then raise exception 'TP_INVALID: enter a 10-digit phone number'; end if;
+  end if;
+  insert into tp_sec.org_profile (org_key, dispatch_phone) values (p_org_key, ph)
+  on conflict (org_key) do update set dispatch_phone = excluded.dispatch_phone, updated_at = now();
+  return ph;
+end $$;
+revoke all on function tp_sec.set_dispatch_phone(text, text) from public;
+
+create function tp_sec.admin_set_dispatch_phone(p_slug text, p_phone text) returns text
+language plpgsql security definer set search_path = '' as $$
+declare k text;
+begin
+  select id::text into k from public.organizations where lower(slug) = lower(btrim(p_slug));
+  if k is null then raise exception 'No company with slug %', p_slug; end if;
+  return coalesce(tp_sec.set_dispatch_phone(k, p_phone), 'cleared');
+end $$;
+revoke all on function tp_sec.admin_set_dispatch_phone(text, text) from public;
 
 create function public.tp_org_lookup(p_slug text) returns jsonb
 language sql stable security definer set search_path = '' as $$
@@ -554,6 +599,12 @@ begin
        order by e.occurred_at asc limit lim) x;
     return res;
 
+  when 'dispatch_phone' then   -- the number this company's drivers can call
+    return jsonb_build_object('dispatch_phone', (select p.dispatch_phone from tp_sec.org_profile p where p.org_key = org));
+
+  when 'set_dispatch_phone' then
+    return jsonb_build_object('dispatch_phone', tp_sec.set_dispatch_phone(org, a->>'phone'));
+
   when 'sign_out' then
     update tp_sec.sessions set revoked_at = now() where token_hash = s.token_hash;
     return jsonb_build_object('ok', true);
@@ -711,12 +762,11 @@ begin
 
   case p_action
   when 'me' then
-    -- dispatch_phone: the company's dispatch line (organizations.dispatch_phone
-    -- or .phone when those columns exist), else the dispatch_phone setting.
-    select coalesce(nullif(to_jsonb(o.*)->>'dispatch_phone',''), nullif(to_jsonb(o.*)->>'phone',''))
-      into t from public.organizations o where o.id::text = s.org_key;
+    -- dispatch_phone: this driver's company's dispatch line (set by the
+    -- dispatcher or tp_sec.admin_set_dispatch_phone). There is no global number.
+    select p.dispatch_phone into t from tp_sec.org_profile p where p.org_key = s.org_key;
     return jsonb_build_object('id', s.driver_key, 'name', s.driver_name, 'phone', s.driver_phone, 'demo', s.is_demo,
-      'dispatch_phone', coalesce(t, tp_sec.setting('dispatch_phone') #>> '{}'));
+      'dispatch_phone', t);
 
   when 'jobs' then
     lim := tp_sec.clamp_limit(a, 10, 50);
@@ -743,7 +793,9 @@ begin
     if j.driver_name is distinct from s.driver_name then
       raise exception 'TP_DENIED: this route is assigned to someone else';
     end if;
-    if a->'patch' ? 'status' and a->'patch'->>'status' not in ('assigned','in_transit','delivered') then
+    -- completed_with_exceptions: the route is finished but some stops were
+    -- reported as problems (packages returning to the station).
+    if a->'patch' ? 'status' and a->'patch'->>'status' not in ('assigned','in_transit','delivered','completed_with_exceptions') then
       raise exception 'TP_INVALID: status % is not a driver status', a->'patch'->>'status';
     end if;
     if a->'patch' ? 'driver_name' and a->'patch'->>'driver_name' is distinct from s.driver_name then
@@ -755,8 +807,12 @@ begin
        and (p->>'stops_completed')::int < coalesce(nullif(to_jsonb(j)->>'stops_completed','')::numeric, 0) then
       p := p - 'stops_completed';
     end if;
-    if j.status = 'delivered' and p ? 'status' and p->>'status' <> 'delivered' then
-      p := p - 'status';
+    if j.status in ('delivered','completed_with_exceptions') and p ? 'status'
+       and p->>'status' not in ('delivered','completed_with_exceptions') then
+      p := p - 'status';   -- a finished route never goes back to in transit
+    end if;
+    if j.status = 'completed_with_exceptions' and p->>'status' = 'delivered' then
+      p := p - 'status';   -- nor loses its problems by a late "delivered"
     end if;
     if not exists (select 1 from jsonb_object_keys(p) k where k <> 'driver_name') then
       res := jsonb_build_array(to_jsonb(j));

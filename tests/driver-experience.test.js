@@ -289,9 +289,9 @@ test('5/10. a problem tells dispatch, sends the packages back, moves on; the rou
     a.w.document.querySelector('#dxSheet .dx-btn.bad').click();
     await wait(60);
     assert.strictEqual(a.w.eval('currentJob'), null);
-    assert.strictEqual(a.srv.updates[a.srv.updates.length - 1].status, 'delivered');
+    assert.strictEqual(a.srv.updates[a.srv.updates.length - 1].status, 'completed_with_exceptions', 'never "delivered"');
     const s = a.text('dxSummary');
-    assert.match(s, /Route complete/);
+    assert.match(s, /Route finished with problems/);
     assert.match(s, /2\s*problems/);
     assert.match(s, /2\s*packages to return/);
     assert.match(s, /Stop 2 · No access/);
@@ -308,6 +308,7 @@ test('6. no signal: deliveries are saved on the phone, sent once in order when s
   try {
     a.w.eval('dx.policy.autoAdvanceSeconds=0');
     a.srv.online = false;
+    Object.defineProperty(a.w.navigator, 'onLine', { configurable: true, get: () => !!a.srv.online });
     a.w.dispatchEvent(new a.w.Event('offline'));
     await scanStop(a);
     a.w.eval("dx.choose('front_door');podPhotoData='data:image/jpeg;base64,AAAA'");
@@ -316,7 +317,11 @@ test('6. no signal: deliveries are saved on the phone, sent once in order when s
     assert.strictEqual(a.w.eval('currentSurgeStop'), 1, 'the driver moves on without signal');
     const q = JSON.parse(a.storage.tp_outbox);
     assert.deepStrictEqual(q.map((x) => x.action), ['post_message', 'update_job']);
-    assert.ok(!a.$('dxSync').hidden);
+    // the driver sees the signal notice wherever they are (a card banner or the top pill)
+    const notice = () => [a.$('dxSync'), ...a.w.document.querySelectorAll('.dx-sync-inline')].filter((e) => e && !e.hidden).map((e) => e.textContent);
+    assert.ok(notice().some((t) => /No signal · \d+ updates saved on this phone/.test(t)), notice().join('|'));
+    a.w.eval("document.getElementById('dxNextList').click()");
+    assert.ok(notice().some((t) => /No signal/.test(t)), 'still shown on the route list');
     // half of stop 2 scanned, then the phone restarts
     a.w.eval('surgeTapStop(1);sdAtStop()');
     a.scan('TN2');
@@ -413,5 +418,54 @@ test('9. native only: the permission explainer comes once, before the app asks f
     a.w.document.querySelector('#dxSheet .dx-btn.ok').click();
     assert.strictEqual(a.w._asked, 1);
     assert.ok(a.storage.tp_dx_perm_intro);
+  } finally { a.close(); }
+});
+
+test('problems: "Damaged" needs a photo before it can be reported; "Unsafe" never asks for one', async () => {
+  const a = boot();
+  try {
+    a.w.eval('dx.policy.autoAdvanceSeconds=0;surgeTapStop(0)');
+    a.w.eval('dx.problem()');
+    Array.from(a.w.document.querySelectorAll('#dxSheet .dx-opt')).find((b) => b.textContent.startsWith('Damaged')).click();
+    assert.ok(a.$('dxProbPhoto'), 'camera button');
+    assert.match(a.text('dxProbNeed'), /photo is required/);
+    a.w.document.querySelector('#dxSheet .dx-btn.bad').click();
+    await wait(40);
+    assert.strictEqual(a.exceptions().length, 0, 'not reported without a photo');
+    a.w.eval("dx.setProblemPhoto('data:image/jpeg;base64,AAAA')");
+    assert.match(a.text('dxProbNeed'), /Photo taken/);
+    a.w.document.querySelector('#dxSheet .dx-btn.bad').click();
+    await wait(60);
+    const ex = a.exceptions();
+    assert.strictEqual(ex.length, 1);
+    assert.deepStrictEqual([ex[0].reason, ex[0].photo], ['damaged', true]);
+    assert.ok(a.srv.messages.some((m) => /^POD_ATTACHED::.*"problem":"damaged"/.test(m.body)), 'the photo is stored for dispatch');
+    // unsafe: straight to report, no photo
+    a.w.eval("document.getElementById('dxNext')&&document.getElementById('dxNext').remove();surgeTapStop(1);dx.problem()");
+    Array.from(a.w.document.querySelectorAll('#dxSheet .dx-opt')).find((b) => b.textContent.startsWith('Unsafe')).click();
+    assert.ok(!a.$('dxProbPhoto'));
+    a.w.document.querySelector('#dxSheet .dx-btn.bad').click();
+    await wait(60);
+    assert.strictEqual(a.exceptions().length, 2);
+  } finally { a.close(); }
+});
+
+test('a route with an earlier problem still finishes as completed_with_exceptions when its last stop is delivered', async () => {
+  const a = boot({ stop: 1 });
+  try {
+    a.w.eval('dx.policy.autoAdvanceSeconds=0;surgeTapStop(1);dx.problem()');
+    Array.from(a.w.document.querySelectorAll('#dxSheet .dx-opt')).find((b) => b.textContent.startsWith('Refused')).click();
+    a.w.document.querySelector('#dxSheet .dx-btn.bad').click();
+    await wait(60);
+    a.w.eval("document.getElementById('dxNext')&&document.getElementById('dxNext').remove()");
+    await scanStop(a);
+    a.w.eval("dx.choose('front_door');podPhotoData='data:image/jpeg;base64,AAAA'");
+    await a.w.eval('submitPOD()');
+    await wait(80);
+    assert.strictEqual(a.w.eval('currentJob'), null);
+    const last = a.srv.updates[a.srv.updates.length - 1];
+    assert.strictEqual(last.status, 'completed_with_exceptions');
+    assert.match(a.text('dxSummary'), /1\s*stops? delivered/);
+    assert.match(a.text('dxSummary'), /Stop 2 · Refused/);
   } finally { a.close(); }
 });

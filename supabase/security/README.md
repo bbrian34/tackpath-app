@@ -140,11 +140,12 @@ and tracking.html links; driver application → Approve → sign-in; dispatcher 
 storage schema and the live tables as they are today (anon granted everything, "allow all" policies),
 then the migrations on top:
 
-- `rpc.test.mjs` (16): preflight abort; company sign-in, lockout, bcrypt; admin codes; org scoping;
+- `rpc.test.mjs` (18): preflight abort; company sign-in, lockout, bcrypt; admin codes; org scoping;
   every dispatcher, PathIQ, driver, customer, tracking, signup flow; real codes — wrong, reused,
   expired, 5 attempts, unknown/pending numbers, rate limits; demo code only for 555-0199 and only
   the review company; service-only RPCs not callable by anon/authenticated; offline replays applied
-  once, a route never moving backwards, the driver's sign-in sliding to 30 days, dispatch phone.
+  once, a route never moving backwards, the driver's sign-in sliding to 30 days, per-company dispatch
+  phone; routes finishing as completed_with_exceptions; preflight stops when jobs.status can't hold it.
 - `lockdown.test.mjs` (5): anon/authenticated cannot SELECT/INSERT/UPDATE/DELETE any table or view or
   call other functions; future tables not auto-granted; pod private; all flows still work; exact rollback.
 - `edge.test.mjs` (10): relay closed (`{to, body}` refused, nothing sent), only the fixed text to the
@@ -158,7 +159,7 @@ then the migrations on top:
   customer, track, tracking, fleet, signup — with **zero** direct table or storage requests.
 - `tests/driver-login-ui.test.js` (2): no dead sign-in button is visible; driver.html shows the new symbol.
 
-tackpath-driver: `cd tests && node --test` (47, including `security.test.js`, `login-ui.test.js` and
+tackpath-driver: `cd tests && node --test` (49, including `security.test.js`, `login-ui.test.js` and
 `experience.test.js`).
 
 ## Decisions made (please confirm)
@@ -229,23 +230,35 @@ gates, loading counts, arrival detection, floating button and voice are unchange
 - **Text and taps**: nothing below ~13 px, faint text made readable, tap targets at least 48 px.
 
 Deploy additions:
-- Migration 10 already contains the session, `client_ops` and `tp_driver` changes (it is not applied yet).
-- Dispatch phone shown to drivers: `insert into tp_sec.settings values ('dispatch_phone', '"4045550100"');`
-  (or an `organizations.dispatch_phone` / `phone` column per company).
+- Migration 10 already contains the session, `client_ops`, `org_profile` and `tp_driver` changes (it is
+  not applied yet). Its preflight now also stops, changing nothing, if `jobs.status` is an enum or has a
+  CHECK list without `completed_with_exceptions`; the snapshot (step 1) shows which.
+- **Dispatch phone, per company**: each dispatcher sets it in Drivers → "Dispatch phone drivers can call"
+  (`tp_org` `set_dispatch_phone`), or an admin runs
+  `select tp_sec.admin_set_dispatch_phone('slug', '(404) 555-0100');`. There is no global number; a
+  company without one shows drivers no dispatch call button (messages still work).
 - Manifest CSV may now include `phone`, `unit`, `access_notes`, `gate_code`, `delivery_notes`,
   `signature_required` (yes/no); the dispatcher passes them to the driver.
 - Native: build a new APK/AAB from `claude/driver-experience` (Java changed: `MainActivity`,
   `ArrivalPlugin`). It was not compiled here (no Android SDK in this environment).
 
-Decisions for Bryan (defaults in `window.TP_DX_POLICY`, top of the layer):
-1. Delivery choices and what each requires — default: handed to customer = signature; front door,
-   mailroom, back door = photo. A stop with `signature_required` always needs a signature.
-2. Problem reasons and outcome — default: all six return the packages to the station; none re-attempts
-   the same day. A problem at the last stop still closes the route as `delivered` (the only driver
-   statuses the gateway accepts are assigned / in_transit / delivered).
-3. Auto-advance — default 5 s to the next stop (Maps opens by itself in the app). 0 turns it off.
-4. Voice on the web page stays off (`driver.html` `speak()` was switched off on purpose); the app speaks.
-5. Where the dispatch phone comes from (setting vs per company).
+Decisions (confirmed by Bryan, 2026-10-06):
+1. Delivery choices: handed to customer = signature; front door, mailroom, back door = photo; a stop
+   with `signature_required` always needs a signature.
+2. Problems (v1, same for every company): every reason returns the packages to the station.
+   **Damaged** needs a photo before it can be reported (stored like proof of delivery and attached to
+   the report); **Unsafe** never asks for one, so the driver can leave. Per-company reasons and
+   outcomes are a later change.
+   A route with any problem stop finishes as **`completed_with_exceptions`**, never `delivered`
+   (tp_driver accepts it; a late "delivered" or "in transit" cannot overwrite it). Dispatch shows it
+   orange as "Finished · problems", lists it under exceptions ("Finished with problems"), treats it as
+   finished (archive, timing), and the driver's thank-you message asks for the returns. Fleet, track,
+   tracking and customer pages show it as finished but not delivered.
+3. Auto-advance: 5 s to the next stop.
+4. Voice on the web page stays off; the native app is the driver product and speaks.
+
+Screens were rendered at 390×844 and 360×640 (both apps) and checked for text under 13 px, WCAG AA
+contrast, controls under 44 px, clipped or off-screen text and overlaps; all screens pass.
 
 ## Stage B (plan only): Supabase Auth with per-company RLS
 

@@ -3487,16 +3487,57 @@ if(window.visualViewport){
 .bn-lbl,.stat-l,.wc-lbl,.pod-lbl,.dest-lbl,.jt-lbl,.scan-count-lbl,.c-meta,.fl,.fn{font-size:.8125rem!important;}
 .screen button,#binScanOverlay button,#loadPkgOverlay button,#dlvScanOverlay button,.ruby-cmd{min-height:48px;}
 .c-bubble{font-size:1rem!important;line-height:1.35;}
+[style*="font-size:.8rem"],[style*="font-size:0.8rem"]{font-size:.875rem!important;}
+/* buttons the app restyles from script (inline style rewritten, so matched by place) */
+#scRouteAccepted button:not(.dx-btn){background:linear-gradient(135deg,#0b74bd,#0052b8)!important;color:#fff!important;}
+#scRouteAccepted button:not(.dx-btn)[disabled]{opacity:1!important;background:#1e293b!important;color:#cbd5e1!important;box-shadow:none!important;border:1.5px solid rgba(255,255,255,.18)!important;}
+.profile-av{background:linear-gradient(135deg,#0b74bd,#0052b8)!important;color:#fff!important;}
+.dx-resend[disabled]{color:#94a3b8!important;}
+/* Sun-readable contrast (WCAG AA): darker brand blue/green/orange/red under
+   white text, lighter grey labels on the dark theme. */
+.fb,.check-btn,.pod-tab.on,[style*="linear-gradient(135deg,#19b7ef,#0060cc)"],[style*="linear-gradient(135deg,var(--blue),#0060cc)"]{background:linear-gradient(135deg,#0b74bd,#0052b8)!important;color:#fff!important;}
+[style*="background:#22aa55"]{background:#15803d!important;}
+[style*="background:var(--blue)"]{background:#0b74bd!important;}
+[style*="background:#ff7700"]{background:#c2410c!important;}
+.ruby-btn{background:linear-gradient(135deg,#d42a1f,#a3140c)!important;}
+[style*="color:#4a6e88"],.pod-lbl,.c-sys,.cr-lbl,.stat-l,.profile-email,.comms-hdr-info .sub,#loginCodeHint{color:#a3bccd!important;}
+[style*="color:#0077cc"]{color:#005fa3!important;}
+[style*="color:#64748b"]{color:#475569!important;}
+.cr-lbl,.scan-status,.comms-hdr-info .sub,.c-sys{font-size:.875rem!important;}
+.scan-status{color:rgba(255,255,255,.8)!important;}
+#themeBtn{color:#e2e8f0!important;min-width:48px;}
+.back-btn{min-width:48px;}
+/* scan screens: the heading sits below BACK; the old counter is hidden */
+#binScanOverlay>div:first-child,#loadPkgOverlay>div:first-child,#dlvScanOverlay>div:first-child{padding-top:74px!important;background:rgba(0,0,0,.95)!important;}
+body.dx-scanmode .scan-top,body.dx-scanmode #buildRouteBtn,body.dx-scanmode #scannedMiniList,body.dx-scanmode #doneScanBtn{display:none!important;}
+#surgeMapRoute{display:none!important;}
+#sdPkgBadge{display:none!important;}
+#scSurgeMap button[onclick^="showRouteMapOverlay"]{white-space:nowrap;}
 /* building blocks */
 .dx-eyebrow{font:800 .8125rem/1.2 var(--sans,system-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dx-blue);}
 .dx-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:12px 16px;border-radius:14px;
-  font:800 1rem/1.1 var(--sans,system-ui);border:none;cursor:pointer;text-decoration:none;color:#fff;background:var(--dx-blue);}
+  font:800 1rem/1.1 var(--sans,system-ui);border:none;cursor:pointer;text-decoration:none;color:#fff;background:#0b74bd;white-space:nowrap;}
+.dx-btn .i{font-size:1.15em;line-height:1;}
 .dx-btn.ghost{background:rgba(255,255,255,.08);border:1.5px solid var(--dx-line);color:var(--dx-ink);}
-.dx-btn.bad{background:var(--dx-bad);color:#fff;}
+.dx-btn.bad{background:#dc2626;color:#fff;}
 .dx-btn.ok{background:var(--dx-ok);color:#03210f;}
 .dx-btn.wide{width:100%;}
 .dx-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
-.dx-actions .dx-btn{flex:1 1 30%;font-size:.95rem;padding:10px 12px;}
+.dx-actions .dx-btn{flex:1 1 0;min-width:0;flex-direction:column;gap:4px;font-size:.95rem;padding:8px 6px;min-height:60px;white-space:normal;text-align:center;line-height:1.1;}
+/* four actions: two rows of two, icon beside the label */
+.dx-actions.n4{display:grid;grid-template-columns:1fr 1fr;}
+.dx-actions.n4 .dx-btn{flex-direction:row;min-height:52px;}
+/* the stop screen keeps Deliver / Problem on screen on short phones */
+#scSurgeDelivery [style*="flex:1"]{min-height:0;overflow-y:auto;}
+@media (max-height:700px){
+  .dx-stop{padding:12px 14px;margin-top:8px;}
+  .dx-name{font-size:1.35rem;margin-top:4px;}
+  .dx-addr{font-size:1rem;}
+  .dx-notes{margin-top:8px;padding:8px 10px;}
+  .dx-stop .dx-actions{margin-top:8px;}
+  .dx-stop .dx-actions .dx-btn{min-height:52px;gap:2px;}
+  #scSurgeDelivery [style*="flex:1"]{padding:12px!important;gap:8px!important;}
+}
 /* start of day */
 .dx-day{width:100%;max-width:420px;text-align:left;background:var(--dx-card);border:1px solid var(--dx-line);border-radius:22px;padding:20px;margin-bottom:18px;color:var(--dx-ink);box-shadow:0 18px 50px rgba(0,0,0,.35);}
 .dx-title{font:900 1.5rem/1.15 var(--sans,system-ui);margin:4px 0 14px;color:#fff;}
@@ -3526,7 +3567,7 @@ if(window.visualViewport){
 .dx-notes b{color:#fbbf24;text-transform:uppercase;font-size:.8125rem;letter-spacing:.08em;margin-right:6px;}
 .dx-flag{display:inline-block;margin-top:10px;padding:6px 10px;border-radius:8px;background:rgba(25,183,239,.16);color:#7dd3fc;font:800 .9375rem/1.2 var(--sans,system-ui);}
 #sdAtStopBtn.dx-primary{font-size:1.15rem!important;padding:16px 8px!important;background:linear-gradient(135deg,#16c060,#0e9a4a)!important;color:#03210f!important;}
-#dxProblemBtn{flex:0 0 auto;min-width:96px;border-radius:14px;}
+#dxProblemBtn{flex:1;min-width:96px;border-radius:14px;font-size:1.05rem;}
 /* proof of delivery */
 #dxPodTop{margin-bottom:6px;}
 .dx-pod-head{padding:12px 14px;border-radius:16px;background:var(--dx-card);border:1px solid var(--dx-line);margin-bottom:14px;color:var(--dx-ink);}
@@ -3537,6 +3578,10 @@ if(window.visualViewport){
 .dx-choice.on{border-color:var(--dx-ok);background:rgba(22,192,96,.18);color:#fff;}
 .dx-need{font:700 .9375rem/1.4 var(--sans,system-ui);color:var(--dx-sub);min-height:1.4em;margin-bottom:6px;}
 .dx-need .ok{color:#4ade80;} .dx-need .todo{color:#fbbf24;}
+.dx-photo-btn{position:relative;margin-bottom:10px;}
+.dx-photo-prev{display:block;width:100%;max-height:180px;object-fit:cover;border-radius:14px;margin-bottom:10px;}
+.dx-sheet .dx-need{margin:0 4px 14px;}
+.dx-btn.dx-wait{opacity:.45;}
 .dx-link-bad{width:100%;margin:6px 0 12px;background:none;border:1.5px dashed rgba(239,68,68,.6);border-radius:14px;color:#fca5a5;font:800 1rem/1 var(--sans,system-ui);padding:14px;cursor:pointer;}
 body.light-mode .dx-choice{color:#111827;background:#fff;border-color:rgba(0,0,0,.15);}
 body.light-mode .dx-need{color:#374151;}
@@ -3546,6 +3591,7 @@ body.light-mode .dx-need{color:#374151;}
   padding:18px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.5);}
 .dx-sheet h3{font:900 1.3rem/1.2 var(--sans,system-ui);margin:4px 4px 14px;color:#fff;}
 .dx-sheet p{font:600 1.0625rem/1.4 var(--sans,system-ui);color:var(--dx-sub);margin:0 4px 14px;}
+.dx-sheet .dx-btn.wide{margin-bottom:10px;}
 .dx-opt{width:100%;display:block;text-align:left;min-height:60px;margin-bottom:10px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.07);
   border:1.5px solid var(--dx-line);color:#fff;font:800 1.125rem/1.2 var(--sans,system-ui);cursor:pointer;}
 .dx-opt small{display:block;margin-top:4px;font:600 .875rem/1.2 var(--sans,system-ui);color:var(--dx-sub);}
@@ -3576,6 +3622,8 @@ body.light-mode .dx-need{color:#374151;}
 #dxSync{position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:9500;padding:8px 14px;border-radius:999px;
   background:#1e293b;color:#e2e8f0;font:800 .875rem/1.2 var(--sans,system-ui);box-shadow:0 6px 20px rgba(0,0,0,.4);max-width:92vw;text-align:center;}
 #dxSync.off{background:#78350f;color:#fef3c7;}
+.dx-sync-inline{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:#1e293b;color:#e2e8f0;font:800 .9375rem/1.3 var(--sans,system-ui);}
+.dx-sync-inline.off{background:#78350f;color:#fef3c7;}
 #dxFlash{position:fixed;inset:0;z-index:9400;pointer-events:none;border:14px solid transparent;opacity:0;transition:opacity .45s;}
 #dxFlash.ok{border-color:var(--dx-ok);opacity:1;transition:none;}
 #dxFlash.bad{border-color:var(--dx-bad);opacity:1;transition:none;background:rgba(239,68,68,.12);}
@@ -3583,14 +3631,16 @@ body.light-mode .dx-need{color:#374151;}
 .dx-bigstop{font:900 2.4rem/1 var(--sans,system-ui);color:#fff;margin:6px 0 2px;}
 .dx-help{margin-top:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:12px;padding:10px 16px;font:800 .9375rem/1 var(--sans,system-ui);cursor:pointer;}
 #dxCompose{padding:10px 12px;border-top:1px solid var(--dx-line);background:var(--card,#071828);}
-.dx-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;}
+.dx-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);}
+.dx-chips::-webkit-scrollbar{display:none;}
 .dx-chips button{flex-shrink:0;min-height:44px;padding:8px 14px;border-radius:999px;background:rgba(25,183,239,.12);border:1.5px solid rgba(25,183,239,.4);
   color:#7dd3fc;font:800 .9375rem/1 var(--sans,system-ui);cursor:pointer;}
 .dx-send{display:flex;gap:8px;}
 .dx-send input{flex:1;min-height:52px;border-radius:14px;border:1.5px solid var(--dx-line);background:rgba(255,255,255,.06);color:inherit;
   font:600 1.0625rem/1 var(--sans,system-ui);padding:0 14px;}
 .dx-resend{width:100%;margin-top:10px;min-height:48px;background:none;border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#7dd3fc;font:800 .9375rem/1 var(--sans,system-ui);cursor:pointer;}
-.dx-resend[disabled]{color:#64748b;}
+
 </style>
 <div id="dxSync" hidden></div>
 <div id="dxFlash"></div>
@@ -3612,9 +3662,9 @@ var POLICY=W.TP_DX_POLICY||{
     {id:'no_access',label:'No access',hint:'Gate, door or building is locked'},
     {id:'business_closed',label:'Business closed',hint:'Closed, or nobody to receive it'},
     {id:'refused',label:'Refused',hint:'The customer would not accept it'},
-    {id:'damaged',label:'Damaged',hint:'The package is damaged'},
+    {id:'damaged',label:'Damaged',hint:'The package is damaged \u2014 take a photo',photo:true},
     {id:'wrong_address',label:'Wrong address',hint:'Address is wrong or does not exist'},
-    {id:'unsafe',label:'Unsafe to deliver',hint:'Dog, weather or an unsafe place'}
+    {id:'unsafe',label:'Unsafe to deliver',hint:'Leave now \u2014 no photo needed'}
   ],
   problemOutcome:'return_to_station',
   autoAdvanceSeconds:5,
@@ -3740,11 +3790,20 @@ function augment(args){
   o.client_id=args.client_id;
   return Object.assign({},args,{body:'STOP_DELIVERED::'+JSON.stringify(o)});
 }
+// A route with any stop reported as a problem never finishes as "delivered":
+// it finishes as completed_with_exceptions (accepted by tp_driver).
+function routeHadProblem(jobId){
+  var s=ls(RS);if(!s||String(s.job)!==String(jobId))return false;
+  var oc=s.outcomes||{};return Object.keys(oc).some(function(k){return oc[k].kind==='problem';});
+}
 wrap('tpDriver',function(orig){return async function(action,args){
   if(!QUEUED[action]||!tpToken())return orig.apply(this,arguments);
   args=Object.assign({},args||{});
   if(!args.client_id)args.client_id=uid();
   if(action==='post_message')args=augment(args);
+  if(action==='update_job'&&args.patch&&args.patch.status==='delivered'&&routeHadProblem(args.id)){
+    args.patch=Object.assign({},args.patch,{status:'completed_with_exceptions'});
+  }
   if(obMine().length){enqueue(action,args);flush();return optimistic(action,args);}   // keep order
   var r=await rpcRaw(action,args);
   if(r.kind==='ok')return r.data;
@@ -3832,7 +3891,15 @@ dx.outcomes=outcomes;
 function renderSync(){
   var el=$('dxSync');if(!el)return;
   var n=obMine().length+(DX.podWaiting||0),off=navigator.onLine===false;
-  if(!n&&!off){el.hidden=true;return;}
+  var inl=document.querySelectorAll('.dx-sync-inline'),on=document.querySelector('.screen.on'),shown=false;
+  var txt=!n&&!off?'':(off?('No signal \u00b7 '+(n?plural(n,'update')+' saved on this phone':'your work is saved on this phone'))
+                    :('Sending '+plural(n,'saved update')+'\u2026'));
+  Array.prototype.forEach.call(inl,function(b){
+    b.hidden=!txt;b.textContent=txt;b.className='dx-sync-inline'+(off?' off':'');
+    if(txt&&((on&&on.contains(b))||b.closest('#dxNext')))shown=true;
+  });
+  // full-screen panels (next stop, summary) say it themselves or cover the screen
+  if(!txt||shown||$('dxSummary')){el.hidden=true;return;}
   el.hidden=false;el.className=off?'off':'';
   el.textContent=off?('No signal · '+(n?plural(n,'update')+' saved on this phone':'your work is saved on this phone'))
                     :('Sending '+plural(n,'saved update')+'…');
@@ -3939,7 +4006,7 @@ function renderDay(){
   if(bin)where.push('Bin '+bin);
   if(b&&b.location_code)where.push('Location '+b.location_code);
   var ph=dispatchPhone();
-  card.innerHTML='<div class="dx-eyebrow">Today’s route</div>'
+  card.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-eyebrow">Today\u2019s route</div>'
     +'<div class="dx-title">'+h(j.title||'Your route')+'</div>'
     +'<div class="dx-tiles"><div><b>'+stops().length+'</b><span>stops</span></div><div><b>'+routePkgs()+'</b><span>packages</span></div>'
     +'<div><b>'+h(bin||'—')+'</b><span>bin</span></div></div>'
@@ -3947,8 +4014,8 @@ function renderDay(){
     +'<div class="dx-status dx-st-'+st+'" id="dxStage"><i></i>'+lab[0]+'</div>'
     +'<div class="dx-hint">'+lab[1]+'</div>'
     // links, not buttons: the native warehouse poll drives the first <button> here (AT PICKUP)
-    +'<div class="dx-actions"><a href="#" role="button" class="dx-btn ghost" onclick="dx.messageDispatch();return false;">\u{1F4AC} Message dispatch</a>'
-    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'">\u{1F4DE} Call dispatch</a>':'')+'</div>';
+    +'<div class="dx-actions"><a href="#" role="button" class="dx-btn ghost" onclick="dx.messageDispatch();return false;"><span class="i">\u{1F4AC}</span>Message</a>'
+    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'"><span class="i">\u{1F4DE}</span>Call dispatch</a>':'')+'</div>';
 }
 dx.renderDay=renderDay;
 // The native app already polls the warehouse (tpRefreshStage); listen to it.
@@ -3985,7 +4052,7 @@ function renderStopCard(){
     hdr.style.justifyContent='flex-end';
   }
   var info=stopInfo(s),n=stopPkgs(i),ph=dispatchPhone();
-  card.innerHTML='<div class="dx-stop-top"><span class="dx-eyebrow">Stop '+(i+1)+' of '+stops().length+'</span>'
+  card.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-stop-top"><span class="dx-eyebrow">Stop '+(i+1)+' of '+stops().length+'</span>'
     +'<span class="dx-pk">'+plural(n,'package')+'</span></div>'
     +'<div class="dx-name">'+h(s.recipient||'Customer')+'</div>'
     +(info.unit?'<div class="dx-unit">Unit '+h(info.unit)+'</div>':'')
@@ -3993,11 +4060,12 @@ function renderStopCard(){
     +(info.notes?'<div class="dx-notes"><b>Access</b>'+h(info.notes)+'</div>':'')
     +(info.sig?'<div class="dx-flag">✍ Signature required</div>':'')
     +'<div class="dx-actions">'
-    +(isNative()?'':'<a class="dx-btn" target="_blank" rel="noopener" href="'+h(mapsUrl(s))+'">\u{1F5FA} Google Maps</a>')
-    +(info.phone?'<a class="dx-btn ghost" href="'+tel(info.phone)+'">\u{1F4DE} Customer</a>':'')
-    +'<button type="button" class="dx-btn ghost" onclick="dx.messageDispatch()">\u{1F4AC} Dispatch</button>'
-    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'">\u{1F4DE} Dispatch</a>':'')
+    +(isNative()?'':'<a class="dx-btn" target="_blank" rel="noopener" href="'+h(mapsUrl(s))+'"><span class="i">\u{1F5FA}</span>Maps</a>')
+    +(info.phone?'<a class="dx-btn ghost" href="'+tel(info.phone)+'"><span class="i">\u{1F4DE}</span>Customer</a>':'')
+    +'<button type="button" class="dx-btn ghost" onclick="dx.messageDispatch()"><span class="i">\u{1F4AC}</span>Message</button>'
+    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'"><span class="i">\u{1F4DE}</span>Dispatch</a>':'')
     +'</div>';
+  var row=card.querySelector('.dx-actions');if(row)row.classList.toggle('n4',row.children.length===4);
   var at=$('sdAtStopBtn');
   if(at){
     at.textContent='Deliver ›';at.classList.add('dx-primary');
@@ -4037,6 +4105,12 @@ function renderPod(){
     +'</div><div id="dxPodNeed" class="dx-need"></div>'
     +(W._surgePODMode?'<button type="button" class="dx-link-bad" onclick="dx.problem()">Can’t deliver? Report a problem</button>':'');
   try{switchPODTab('photo');}catch(e){}
+  // The app's signature setup writes the route title into "Delivered to";
+  // on a stop it is the recipient's name.
+  var rec=$('podRecipient');if(rec&&s)rec.value=s.recipient||'';
+  // Order: how it was delivered -> proof -> who received it -> notes.
+  var secs=body.querySelectorAll(':scope > .pod-sec');
+  if(secs.length>=2&&rec&&secs[0].contains(rec)&&!secs[0]._dxMoved){secs[0]._dxMoved=1;body.insertBefore(secs[0],secs[1].nextSibling);}
   renderNeeds();
 }
 dx.choose=function(id){
@@ -4103,11 +4177,39 @@ dx.problem=function(){
 };
 function confirmProblem(p){
   var i=currentSurgeStop,n=stopPkgs(i);
-  sheet(p.label+' · Stop '+(i+1),
-    '<p>'+h(plural(n,'package'))+' for '+h((stopAt(i)||{}).recipient||'this stop')+' will go back to the station. Dispatch is told right away.</p>',
-    [{label:'Report and go to the next stop',cls:'dx-btn bad wide',fn:function(){reportProblem(p);}},
+  DX.problemPhoto=null;
+  var box=sheet(p.label+' \u00b7 Stop '+(i+1),
+    '<p>'+h(plural(n,'package'))+' for '+h((stopAt(i)||{}).recipient||'this stop')+' will go back to the station. Dispatch is told right away.</p>'
+    +(p.photo?'<label class="dx-btn ghost wide dx-photo-btn" id="dxProbPhotoBtn"><span>\u{1F4F7} Take a photo of the damage</span>'
+      +'<input id="dxProbPhoto" type="file" accept="image/*" capture="environment" hidden></label>'
+      +'<img id="dxProbPhotoPrev" class="dx-photo-prev" alt="" hidden><p class="dx-need" id="dxProbNeed"><span class="todo">A photo is required for damaged packages.</span></p>':''),
+    [{label:'Report and go to the next stop',cls:'dx-btn bad wide',fn:function(){
+       if(p.photo&&!DX.problemPhoto){note('Take a photo of the damage first','warn');feel('dup');return;}
+       reportProblem(p);}},
      {label:'Back',cls:'dx-opt',fn:dx.problem}]);
+  var inp=$('dxProbPhoto');
+  if(p.photo&&inp)inp.addEventListener('change',function(){
+    var f=inp.files&&inp.files[0];if(!f)return;
+    var r=new FileReader();r.onload=function(){shrink(String(r.result),function(d){dx.setProblemPhoto(d);});};r.readAsDataURL(f);
+  });
+  var go=box&&box.querySelector('.dx-btn.bad');if(go&&p.photo)go.classList.add('dx-wait');
 }
+function shrink(dataUrl,done){
+  try{
+    var img=new Image();img.onload=function(){
+      try{var max=1280,sc=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');
+        c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        done(c.toDataURL('image/jpeg',0.72));}catch(e){done(dataUrl);}
+    };img.onerror=function(){done(dataUrl);};img.src=dataUrl;
+  }catch(e){done(dataUrl);}
+}
+dx.setProblemPhoto=function(d){
+  DX.problemPhoto=d;
+  var pv=$('dxProbPhotoPrev');if(pv){pv.src=d;pv.hidden=false;}
+  var nd=$('dxProbNeed');if(nd)nd.innerHTML='<span class="ok">\u2713 Photo taken</span>';
+  var b=$('dxProbPhotoBtn');if(b&&b.firstChild)b.firstChild.textContent='\u{1F4F7} Retake photo';
+  var go=document.querySelector('#dxSheet .dx-btn.bad');if(go)go.classList.remove('dx-wait');
+};
 async function reportProblem(p){
   closeSheet();
   var i=currentSurgeStop,s=stopAt(i)||{},j=job(),n=stopPkgs(i);
@@ -4118,6 +4220,13 @@ async function reportProblem(p){
              order_id:s.smart_id||s.order_id||'',reason:p.id,reason_label:p.label,outcome:POLICY.problemOutcome,
              packages:n,reported_at:new Date().toISOString()};
     if(DX.fix){rec.lat=DX.fix.lat;rec.lng=DX.fix.lng;}
+    if(p.photo&&DX.problemPhoto){
+      rec.photo=true;
+      var ph=DX.problemPhoto,jid=j.id,sn=i+1;DX.problemPhoto=null;
+      uploadPOD(jid,sn,'photo',ph).then(function(path){
+        if(path)sbPost('messages',{job_id:jid,sender:me().name,sender_role:'driver',body:'POD_ATTACHED::'+JSON.stringify({stop:sn,kind:'photo',url:path,problem:p.id})}).catch(function(){});
+      }).catch(function(){});
+    }
     sbPost('messages',{job_id:j.id,sender:me().name,sender_role:'driver',body:'STOP_EXCEPTION::'+JSON.stringify(rec)}).catch(function(){});
     feel('dup');say(p.label+' reported. Dispatch has been told.');
     if(W._deliveryScan){
@@ -4137,7 +4246,7 @@ function snapshot(){var j=job();return {job:j&&{id:j.id,title:j.title},stops:sto
 async function advance(i,snap){
   var j=job(),total=stops().length,k=nextIndex(i),path='jobs?id=eq.'+j.id+'&driver_name=eq.'+encodeURIComponent(me().name);
   if(k>=total){
-    try{await sbPatch(path,{status:'delivered',driver_name:me().name,stops_completed:total});}catch(e){}
+    try{await sbPatch(path,{status:'completed_with_exceptions',driver_name:me().name,stops_completed:total});}catch(e){}
     endRoute();finishRoute(snap);return;
   }
   currentSurgeStop=k;
@@ -4182,17 +4291,17 @@ function showNext(i){
   var old=$('dxNext');if(old)old.remove();
   var secs=POLICY.autoAdvanceSeconds,info=stopInfo(s),last=outcomes()[i];
   var el=document.createElement('div');el.id='dxNext';el.className='dx-full';
-  el.innerHTML='<div class="dx-center"><div class="dx-big-check'+(last&&last.kind==='problem'?' warn':'')+'">'+(last&&last.kind==='problem'?'!':'✓')+'</div>'
+  el.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-center"><div class="dx-big-check'+(last&&last.kind==='problem'?' warn':'')+'">'+(last&&last.kind==='problem'?'!':'✓')+'</div>'
     +'<div class="dx-eyebrow">Stop '+(i+1)+(last&&last.kind==='problem'?' · '+h(last.label):' delivered')+'</div></div>'
     +'<div class="dx-stop" style="margin:22px 0;"><div class="dx-stop-top"><span class="dx-eyebrow">Next · stop '+(k+1)+' of '+stops().length+'</span>'
     +'<span class="dx-pk">'+plural(stopPkgs(k),'package')+'</span></div><div class="dx-name">'+h(s.recipient||'')+'</div>'
     +(info.unit?'<div class="dx-unit">Unit '+h(info.unit)+'</div>':'')+'<div class="dx-addr">'+h(s.address||'')+'</div></div>'
     +'<button type="button" class="dx-btn ok wide dx-count" id="dxNextGo"><i></i><span>Go to stop '+(k+1)+' ›</span></button>'
     +'<button type="button" class="dx-btn ghost wide" id="dxNextList" style="margin-top:10px;">Route list</button>';
-  document.body.appendChild(el);
-  var go=function(){clearInterval(DX.timer);el.remove();if(job()&&currentSurgeStop===k)surgeTapStop(k);};
+  document.body.appendChild(el);renderSync();
+  var go=function(){clearInterval(DX.timer);el.remove();renderSync();if(job()&&currentSurgeStop===k)surgeTapStop(k);};
   $('dxNextGo').onclick=go;
-  $('dxNextList').onclick=function(){clearInterval(DX.timer);el.remove();};
+  $('dxNextList').onclick=function(){clearInterval(DX.timer);el.remove();renderSync();};
   say((last&&last.kind==='problem'?'':'Delivered. ')+'Next, stop '+(k+1)+', '+(s.recipient||'')+'.');
   var bar=el.querySelector('.dx-count i'),t0=Date.now();
   clearInterval(DX.timer);
@@ -4216,7 +4325,8 @@ function showSummary(sum){
   var old=$('dxSummary');if(old)old.remove();
   var el=document.createElement('div');el.id='dxSummary';el.className='dx-full';
   var waiting=obMine().length+(DX.podWaiting||0);
-  el.innerHTML='<div class="dx-center"><div class="dx-big-check">✓</div><div class="dx-eyebrow">Route complete</div>'
+  el.innerHTML='<div class="dx-center"><div class="dx-big-check'+(sum.problems.length?' warn':'')+'">'+(sum.problems.length?'!':'\u2713')+'</div>'
+    +'<div class="dx-eyebrow">'+(sum.problems.length?'Route finished with problems':'Route complete')+'</div>'
     +'<div class="dx-title" style="margin-top:6px;">'+h(sum.title)+'</div></div>'
     +'<div class="dx-sum"><div><b style="color:#4ade80">'+sum.delivered+'</b><span>stops delivered</span></div>'
     +'<div><b>'+sum.deliveredPkgs+'</b><span>packages delivered</span></div>'
@@ -4228,7 +4338,7 @@ function showSummary(sum){
     +'<button type="button" class="dx-btn ok wide" id="dxSummaryDone">Done</button>';
   document.body.appendChild(el);
   $('dxSummaryDone').onclick=function(){ls('tp_dx_summary',null);el.remove();try{showHome();}catch(e){}};
-  say('Route complete. '+plural(sum.delivered,'stop')+' delivered'+(sum.returns?', '+plural(sum.returns,'package')+' to return.':'.'));
+  say((sum.problems.length?'Route finished. ':'Route complete. ')+plural(sum.delivered,'stop')+' delivered'+(sum.returns?', '+plural(sum.returns,'package')+' to return.':'.'));
 }
 dx.showSummary=showSummary;
 
@@ -4253,12 +4363,12 @@ function renderRouteBar(){
   var oc=outcomes(),total=stops().length,prob=0,del=0;
   Object.keys(oc).forEach(function(k){if(oc[k].kind==='problem')prob++;else del++;});
   var doneN=Math.min(total,currentSurgeStop),ph=dispatchPhone(),inTransit=job().status==='in_transit';
-  bar.innerHTML='<div class="dx-line"><span>'+(inTransit?'Next: stop '+(currentSurgeStop+1)+' of '+total:plural(total,'stop'))+'</span>'
+  bar.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-line"><span>'+(inTransit?'Next: stop '+(currentSurgeStop+1)+' of '+total:plural(total,'stop'))+'</span>'
     +'<span>'+del+' delivered'+(prob?' · '+prob+' problem'+(prob>1?'s':''):'')+'</span></div>'
     +'<div class="dx-prog"><i style="width:'+(total?Math.round(100*doneN/total):0)+'%"></i></div>'
-    +'<div class="dx-actions">'+(inTransit?'<button type="button" class="dx-btn ok" onclick="surgeTapStop(currentSurgeStop)">Open stop '+(currentSurgeStop+1)+' ›</button>':'')
-    +'<button type="button" class="dx-btn ghost" onclick="dx.messageDispatch()">\u{1F4AC} Dispatch</button>'
-    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'">\u{1F4DE} Call</a>':'')+'</div>';
+    +'<div class="dx-actions">'+(inTransit?'<button type="button" class="dx-btn ok" onclick="surgeTapStop(currentSurgeStop)"><span class="i">\u{1F4CD}</span>Stop '+(currentSurgeStop+1)+'</button>':'')
+    +'<button type="button" class="dx-btn ghost" onclick="dx.messageDispatch()"><span class="i">\u{1F4AC}</span>Message</button>'
+    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'"><span class="i">\u{1F4DE}</span>Call</a>':'')+'</div>';
 }
 
 // ══ 8. DISPATCH: typed messages, quick replies, call buttons ══
@@ -4441,6 +4551,12 @@ wrap('startTurnByTurn',function(orig){return function(){
 };});
 
 // ══ Screen hooks ══
+// cards carry the signal banner: refresh it whenever a card is redrawn
+(function(){
+  var d=renderDay,c=renderStopCard,b=renderRouteBar;
+  renderDay=function(){d();renderSync();};renderStopCard=function(){c();renderSync();};renderRouteBar=function(){b();renderSync();};
+  dx.renderDay=renderDay;dx.renderStopCard=renderStopCard;
+})();
 function renderScreen(id){
   try{
     if(id==='scRouteAccepted'){renderDay();pollStage();}
@@ -4449,9 +4565,11 @@ function renderScreen(id){
     else if(id==='scSurgeMap')renderRouteBar();
     else if(id==='scComms')renderCompose();
     else if(id==='scScan'){addHelp('binScanOverlay','scan');addHelp('loadPkgOverlay','scan');addHelp('dlvScanOverlay','scan');}
+    // the bin/loading/delivery overlays replace the old counter at the top
+    document.body.classList.toggle('dx-scanmode',id==='scScan'&&['binScanOverlay','loadPkgOverlay','dlvScanOverlay'].some(function(o){var e=$(o);return e&&e.style.display==='block';}));
   }catch(e){}
 }
-wrap('showScreen',function(orig){return function(id){var r=orig.apply(this,arguments);renderScreen(id);return r;};});
+wrap('showScreen',function(orig){return function(id){var r=orig.apply(this,arguments);renderScreen(id);renderSync();return r;};});
 wrap('surgeTapStop',function(orig){return function(){var r=orig.apply(this,arguments);try{if($('scSurgeDelivery').classList.contains('on'))renderStopCard();}catch(e){}return r;};});
 wrap('switchPODTab',function(orig){return function(){var r=orig.apply(this,arguments);setTimeout(renderNeeds,0);return r;};});
 
