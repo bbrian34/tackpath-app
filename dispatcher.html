@@ -3952,8 +3952,11 @@ async function clearAllJobs(){
     const after=await sbGet('jobs?select=id,archived&limit=2000');
     const remaining=(Array.isArray(after)?after:[]).filter(r=>r.archived!==true).length;
     console.log('[ClearAll] archived='+(res&&res.archived)+' remaining='+remaining);
+    const locked=(res&&res.locked)||0;   // closed operations-system routes are read-only
     if(remaining===0){
       toast(ids.length+' job'+(ids.length===1?'':'s')+' cleared','ok');
+    }else if(locked>=remaining){
+      toast('Cleared '+((res&&res.archived)||0)+'; '+locked+' closed route'+(locked===1?' is':'s are')+' read-only and stay','ok');
     }else{
       toast('Cleared '+((res&&res.archived)||0)+', but '+remaining+' still remain','warn');
     }
@@ -3970,6 +3973,7 @@ async function deleteJob(){
   try{
     const r=await tpOrg('archive_jobs',{ids:[currentJobId]});
     if(r&&r.archived){toast('Job archived');closeDrawer();loadJobs();}
+    else if(r&&r.locked){toast('This route was closed by the operations system and is read-only','warn');}
     else{toast('Could not archive this job','warn');}
   }catch(e){toast('Archive failed: '+e.message);console.error(e);}
 }

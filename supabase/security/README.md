@@ -32,30 +32,78 @@ dispatcher clicks **Approve** in the Drivers tab; removing a driver signs them o
 |---|---|
 | `00_production_snapshot.sql` | Read-only snapshot of production security settings |
 | `10_sessions_and_rpcs.sql` / `.rollback.sql` | Additive: private `tp_sec` schema, sessions, codes, RPCs. Changes nothing existing. Preflight aborts (changing nothing) if a needed column is missing. |
-| `20_lockdown.sql` / `.rollback.sql` | Stage A lockdown. Records a replayable backup of every grant, policy, RLS flag, default privilege and bucket setting it changes; the rollback replays it. |
+| `20_lockdown.sql` / `.rollback.sql` | Stage A lockdown. Records a replayable backup of every grant, policy, RLS flag, default privilege and bucket setting it changes; the rollback replays it. Keeps restrictive policies untouched. Stops (changing nothing) unless the only public functions anon/authenticated can execute afterwards are the nine `tp_*` entry points. |
+| `40_swarm_watch_cron.sql` / `.rollback.sql` | pg_cron job `swarm-watch-job` sends `x-tp-cron-secret`, read from Vault secret `tp_cron_secret` at each run (never in the cron command). The rollback restores the exact previous command. |
 | `30_review_account.sql` | Creates the review company and driver (idempotent) |
 | `../functions/_shared/tp_security.js` | Logic for send-sms, driver-login, pod, Shopify HMAC (unit-tested under Node) |
 | `../functions/{send-sms,driver-login,pod}/index.ts`, `shopify-webhook/index.ts` | Edge functions |
 
+## Production snapshot 2026-10-07 (what it changed in this plan)
+
+Production matches the plan; data is tiny (jobs ~3, messages ~6, events ~187).
+
+| Finding | Handling |
+|---|---|
+| **Operations leftovers are partly live**: trigger `protect_operational_projection` on `public.jobs` (`operations.protect_job_projection`) refuses DELETE and any non-ETA UPDATE of a job whose id is in `operations.routes`. 2 rows in `operations.routes`, 2 jobs affected, both `closed_with_exceptions` (closed routes). | Handled in the RPCs; **nothing in `operations` is changed or dropped**. `tp_sec.job_locked(id)` (true only while that trigger is present and enabled and the id is in `operations.routes`). Clear Board / Delete Job skip those jobs and report `{archived, locked}` (the dispatcher says "N closed routes are read-only and stay"); a single-job write to one (status, bin label, staging, driver updates, rating, publish over it) returns `TP_LOCKED: … read-only` instead of the trigger's error; ETA/exception columns (`exception_flag`, `exception_detected_at`, `eta_minutes`, `estimated_delivery_at`, `original_eta_at`) still update, as the trigger allows. Reads are unchanged. No RPC deletes jobs. Edge functions: swarm-watch only sets `exception_flag` (allowed); shopify-webhook and smartsort only insert (the trigger is UPDATE/DELETE). |
+| Public functions anon can execute today: `publish_surge_route`, `ops_command`, `ops_state`, `ops_revoke_session`, `increment_address_failures`, `materialize_package_state`, `rls_auto_enable`, `touch_updated_at`, `events_block_mutation` | Migration 20 revokes EXECUTE from PUBLIC, anon, authenticated on all of them (recorded; the rollback grants back exactly what was there). The service role keeps EXECUTE where it had it only through PUBLIC (smartsort calls `increment_address_failures`). Trigger / event-trigger functions keep firing (EXECUTE is not checked when a trigger fires). Migration 20 then **verifies** that the only public functions anon or authenticated can execute are the nine `tp_*` entry points, and stops otherwise. |
+| Restrictive policies `protect_scoped_drivers` (drivers) and `protect_operational_memory` (agent_memory), `using (org_id IS NULL) with check (org_id IS NULL)` | Migration 20 drops only PERMISSIVE policies; restrictive ones stay as the same objects. The rollback drops only policies that differ from what was recorded before the lockdown, so these two are never touched (tested: same OID and definition after 20 and after the rollback). |
+| pg_cron `swarm-watch-job`: every minute, `net.http_post` with only Content-Type | Migration 40 (below, steps 5–7). |
+| pgcrypto lives in schema `extensions` | Every `crypt`, `gen_salt`, `gen_random_bytes` call is `extensions.`-qualified (no `digest` call: hashes use built-in `pg_catalog.sha256`); every function has `search_path = ''`. Migration 10's preflight stops with a clear message if pgcrypto is missing, in another schema, or its functions are not executable, and makes one real call. |
+| `public.jobs`: no CHECK constraints; `status` text; 2 rows `closed_with_exceptions` | Migration 10's preflight copies the jobs constraints to a temporary table and inserts every status the RPCs write (`routing, pending, assigned, in_transit, delivered, cancelled`); any rejection stops it, naming the status and constraint. Statuses the RPCs only read (here `closed_with_exceptions`) are reported as a NOTICE. |
+| Companies without a code: `zelurco`, `atl-express`, `metro-courier` | Step 3: set one for each (they cannot sign in until then). Carried over: `demo`, `abccouriers`, `ops-verification-1789783407324`, `ops-release-check-1789815927184`. |
+
+Optional, not needed (reversible): to take the 2 closed operations routes off the board, archive them
+the way the operations system itself writes:
+```sql
+begin; set local tackpath.operational_write = 'on';
+update public.jobs set archived = true where id in (select id from operations.routes) and archived is not true returning id;
+commit;
+-- undo: the same with archived = false for the returned ids
+```
+
 ## Deploy order (do not skip ahead)
+
+All SQL runs in Supabase Dashboard → SQL Editor (project `hofijsiphyjpdvujjzfi`), one file or block per run.
+Terminal commands run from a checkout of `claude/security-hardening`, logged in (`supabase login`) and
+linked (`supabase link --project-ref hofijsiphyjpdvujjzfi`).
 
 0. **Now, independent of everything else:** Anthropic Console → API keys → revoke the key that was in
    `owl.html` / `tackpathone.html` / `guide.html`. Check usage/billing for abuse since July.
-1. **Snapshot** — SQL Editor: run `00_production_snapshot.sql`, export CSV, keep it (and send it for
-   review). Confirm the tables, RLS and policies match what this plan assumes.
-2. **Migration 10** — SQL Editor: paste `10_sessions_and_rpcs.sql`, Run. If it stops with "Production
-   differs…", nothing changed: send the message.
-3. **Company codes** — existing portal access codes were carried over. For every company without one:
-   `select tp_sec.admin_set_org_code('slug', 'a code of 8+ characters');`
-   Tell each dispatcher their code (they now enter company + code).
+1. **Snapshot** — done 2026-10-07 (above). Re-run `00_production_snapshot.sql` only if production changed since.
+2. **Migration 10** — paste `10_sessions_and_rpcs.sql`, Run. Expected: success with the NOTICE
+   `public.jobs has statuses the RPCs only read, never write: closed_with_exceptions`. If it stops with
+   "nothing was changed", nothing changed: send the message.
+3. **Company codes** — for the three companies without one (8+ characters each):
+   ```sql
+   select tp_sec.admin_set_org_code('zelurco', '…');
+   select tp_sec.admin_set_org_code('atl-express', '…');
+   select tp_sec.admin_set_org_code('metro-courier', '…');
+   ```
+   Tell each dispatcher their code (they now enter company + code). The others keep their portal code.
 4. **Review account** — run `30_review_account.sql`, then
-   `select tp_sec.admin_set_demo_code('NNNNNN');` and
-   `select tp_sec.admin_set_org_code('tackpath-review', '…');`. Create a short demo route in the
-   tackpath-review dispatcher. Put +1 (404) 555-0199 and the code in the Play/App Store review notes.
-5. **Edge functions** (secrets `SERVICE_ROLE_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
-   `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET` must be set; if `swarm-watch` runs on a schedule, also
-   `supabase secrets set CRON_SECRET=<long random string>` and add the header
-   `x-tp-cron-secret: <that string>` to the scheduled call — the snapshot's `12_cron` row shows it):
+   ```sql
+   select tp_sec.admin_set_demo_code('NNNNNN');
+   select tp_sec.admin_set_org_code('tackpath-review', '…');
+   ```
+   Create a short demo route in the tackpath-review dispatcher. Put +1 (404) 555-0199 and the code in
+   the Play/App Store review notes.
+5. **Cron secret** (before any edge function is deployed; the current swarm-watch ignores the header):
+   1. SQL — create the secret in Vault (generated in the database):
+      ```sql
+      select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'tp_cron_secret', 'swarm-watch cron header');
+      ```
+   2. SQL — read it once: `select decrypted_secret from vault.decrypted_secrets where name = 'tp_cron_secret';`
+   3. Terminal — give the edge functions the same value (leading space keeps it out of shell history):
+      ```
+       supabase secrets set CRON_SECRET=<value from 5.2> --project-ref hofijsiphyjpdvujjzfi
+      ```
+   4. SQL — paste `40_swarm_watch_cron.sql`, Run. Check:
+      ```sql
+      select jobname, schedule, active, command from cron.job where jobname = 'swarm-watch-job';
+      ```
+      The command must contain `vault.decrypted_secrets where name = 'tp_cron_secret'` and no secret.
+6. **Edge functions** (secrets `SERVICE_ROLE_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
+   `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, and now `CRON_SECRET`, must be set — `supabase secrets list`):
    ```
    supabase functions deploy send-sms --no-verify-jwt
    supabase functions deploy driver-login --no-verify-jwt
@@ -70,22 +118,38 @@ dispatcher clicks **Approve** in the Drivers tab; removing a driver signs them o
    ```
    (They check the TackPath session themselves; the publishable key is not a JWT.) From this moment
    the SMS relay and the Google/Shopify/AI functions are closed to strangers. Assignment texts,
-   dispatcher routing/ETA (smooth-api) and the driver app's address lookup resume when steps 6 and 7
-   are live (the old pages and app do not send a session), so deploy step 5 together with step 6.
-6. **Web pages** — merge tackpath-app `claude/security-hardening` into `main` (GitHub Pages deploys it).
+   dispatcher routing/ETA (smooth-api) and the driver app's address lookup resume when steps 8 and 9
+   are live (the old pages and app do not send a session), so deploy step 6 together with step 8.
+7. **Check the cron call is accepted** — wait 2 minutes, then SQL:
+   ```sql
+   select id, status_code, left(content, 120) as body, created
+     from net._http_response where created > now() - interval '5 minutes' order by created desc limit 10;
+   ```
+   The swarm-watch rows must be `200` with `{"success":true,"exceptions_flagged":…`. `401
+   {"error":"Sign in required"}` means CRON_SECRET and the Vault secret differ: repeat 5.2–5.3 (no
+   redeploy needed). Also `curl -s -o /dev/null -w "%{http_code}\n" -X POST
+   https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/swarm-watch -H "Content-Type: application/json" -d "{}"`
+   must print `401` (no secret, no session).
+   **Cron rollback** (only if needed): redeploy the previous swarm-watch, then restore the old command:
+   ```
+   git checkout 4d42cd6 -- supabase/functions/swarm-watch && supabase functions deploy swarm-watch --no-verify-jwt
+   ```
+   then SQL `40_swarm_watch_cron.rollback.sql`. (Rolling back 40 alone, with the new swarm-watch
+   deployed, makes every run a 401 — the check stops.)
+8. **Web pages** — merge tackpath-app `claude/security-hardening` into `main` (GitHub Pages deploys it).
    Everyone signs in again once (dispatchers with company + code, drivers with a texted code).
-7. **Driver app** — merge tackpath-driver `claude/security-hardening`, build a new version
+9. **Driver app** — merge tackpath-driver `claude/security-hardening`, build a new version
    (bump versionCode), upload to Play closed testing, and wait until every tester has updated.
-   Old app builds keep working until step 10, then stop.
-8. **PathIQ on the Zebra TC56** (its own copy of stow.html in `C:\Users\bbald\Downloads\pathiq-app`,
-   not in git). The current APK keeps working until step 10, then cannot load routes. Rebuild it now:
+   Old app builds keep working until step 12, then stop.
+10. **PathIQ on the Zebra TC56** (its own copy of stow.html in `C:\Users\bbald\Downloads\pathiq-app`,
+   not in git). The current APK keeps working until step 12, then cannot load routes. Rebuild it now:
    ```powershell
    cd C:\Users\bbald\Downloads\pathiq-app
    copy www\index.html www\index.before-security.html            # backup
    # 1. Does your copy have local edits the repo does not have?
    curl.exe -o stow-old.html https://raw.githubusercontent.com/bbrian34/tackpath-app/4d42cd6/stow.html
    fc.exe /N stow-old.html www\index.html                          # "no differences" = safe to replace
-   # 2. Take the new page (from main, after step 6)
+   # 2. Take the new page (from main, after step 8)
    curl.exe -o www\index.html https://raw.githubusercontent.com/bbrian34/tackpath-app/main/stow.html
    #    (re-apply any local edits that fc showed in step 1)
    npx cap sync android
@@ -107,13 +171,23 @@ dispatcher clicks **Approve** in the Drivers tab; removing a driver signs them o
      CORS change is needed.
    - **IQ2 button.** It opens `iq2.html`, which is not in the APK (it was not before either); on the
      web it redirects to stow.html. Unchanged.
-9. **Check every flow** with the anon key still open (checklist below), on the TC56 too.
-10. **Migration 20 (lockdown)** — SQL Editor: paste `20_lockdown.sql`, Run.
-11. **Check again**, plus confirm the anon key is closed:
+11. **Check every flow** with the anon key still open (checklist below), on the TC56 too.
+12. **Migration 20 (lockdown)** — paste `20_lockdown.sql`, Run. If it stops with "still executable by
+    anon/authenticated: …", nothing changed: send the message.
+13. **Check again**, plus confirm the anon key is closed:
     ```
     curl "https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?select=id&limit=1" -H "apikey: sb_publishable_…"
     ```
-    must return a permission error, not rows.
+    must return a permission error, not rows. And SQL:
+    ```sql
+    -- exactly 9 rows: tp_customer, tp_driver, tp_driver_sign_in, tp_driver_signup, tp_org,
+    -- tp_org_lookup, tp_org_sign_in, tp_sign_out, tp_track
+    select p.oid::regprocedure from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and (has_function_privilege('anon', p.oid, 'EXECUTE')
+        or has_function_privilege('authenticated', p.oid, 'EXECUTE')) order by 1;
+    -- exactly the 2 restrictive policies, unchanged
+    select tablename, policyname, permissive, roles, qual, with_check from pg_policies where schemaname = 'public';
+    ```
 
 Flow checklist: dispatcher sign-in, board, assign (driver gets the text), broadcast, cancel stop,
 archive, Clear Board, drivers add/edit/approve/remove, SmartSort publish, fleet page; driver sign-in
@@ -124,12 +198,14 @@ and tracking.html links; driver application → Approve → sign-in; dispatcher 
 
 ## Rollback
 
-- **Something breaks after step 10:** SQL Editor → `20_lockdown.rollback.sql`. Restores exactly the
-  grants, policies, RLS flags, default privileges and pod bucket setting from before 9 (tested:
+- **Something breaks after step 12:** SQL Editor → `20_lockdown.rollback.sql`. Restores exactly the
+  grants (EXECUTE on the nine functions above included), policies, RLS flags, default privileges and pod
+  bucket setting from before 12, and leaves the two restrictive policies as they are (tested:
   production snapshot before 20 and after 20 + rollback are identical, except that a function whose
   ACL was the implicit default comes back as the equivalent explicit grant). Pages and app keep
   working through the RPCs.
-- **Full rollback:** `20_lockdown.rollback.sql` (if 20 was applied), then `10_sessions_and_rpcs.rollback.sql`,
+- **Full rollback:** `20_lockdown.rollback.sql` (if 20 was applied), the cron rollback in step 7 (if 40
+  was applied; 10's rollback refuses while 40 is applied), then `10_sessions_and_rpcs.rollback.sql`,
   revert the merges, redeploy the previous edge functions
   (`git checkout <previous main> -- supabase/functions && supabase functions deploy …`).
   Rolling back send-sms re-opens the SMS relay.
@@ -137,15 +213,25 @@ and tracking.html links; driver application → Approve → sign-in; dispatcher 
 ## Tests (all local; nothing touches production)
 
 `cd tests && npm ci && node --test security/*.test.mjs` — PGlite with Supabase roles, pgcrypto, a
-storage schema and the live tables as they are today (anon granted everything, "allow all" policies),
-then the migrations on top:
+storage schema and the live tables as they are today (anon granted everything, "allow all" policies,
+the two restrictive policies, the nine anon-executable functions, `operations.routes` and its jobs
+trigger), then the migrations on top:
 
-- `rpc.test.mjs` (15): preflight abort; company sign-in, lockout, bcrypt; admin codes; org scoping;
+- `rpc.test.mjs` (19): preflight abort; pgcrypto qualified everywhere and preflight messages (missing,
+  other schema); jobs status preflight (a CHECK rejecting a written status stops it; `closed_with_exceptions`
+  only reported); operations routes under the live trigger — Clear Board skips them, single writes get
+  `TP_LOCKED`, ETA columns still update, nothing locked once the trigger is disabled; company sign-in, lockout, bcrypt; admin codes; org scoping;
   every dispatcher, PathIQ, driver, customer, tracking, signup flow; real codes — wrong, reused,
   expired, 5 attempts, unknown/pending numbers, rate limits; demo code only for 555-0199 and only
   the review company; service-only RPCs not callable by anon/authenticated.
-- `lockdown.test.mjs` (5): anon/authenticated cannot SELECT/INSERT/UPDATE/DELETE any table or view or
-  call other functions; future tables not auto-granted; pod private; all flows still work; exact rollback.
+- `lockdown.test.mjs` (8): anon/authenticated cannot SELECT/INSERT/UPDATE/DELETE any table or view or
+  call other functions; future tables not auto-granted; pod private; all flows still work; exact rollback;
+  each of the nine functions above closed by 20 and reopened by the rollback, final anon list = the nine
+  `tp_*`, service role keeps them, triggers still fire; 20 stops if a function would stay open; the
+  restrictive policies keep their OID and definition through 20 and its rollback.
+- `cron.test.mjs` (4): before 40 the cron call gets 401; after 40 it carries the Vault secret (not stored
+  in `cron.job`), passes the swarm-watch guard, survives secret rotation; 40 refuses without the secret,
+  the job, or migration 10; the rollback restores the exact command.
 - `edge.test.mjs` (10): relay closed (`{to, body}` refused, nothing sent), only the fixed text to the
   assigned consenting driver of the caller's company, rate limits, driver-login, pod upload/view rules,
   Shopify webhook HMAC, CORS; the session guard (who passes, who gets 401, cron secret only where set)
@@ -171,7 +257,7 @@ tackpath-driver: `cd tests && node --test` (33, including `security.test.js` and
    (which never worked) was removed.
 5. **Pending applicants cannot sign in** until approved (new Approve button).
 6. **`tracking.html`** now receives only the customer's own stop (it used to receive the whole route).
-7. **Retired pages** lose database access at step 10 as agreed: owl, brain, crm, smartsort, de, zelurco,
+7. **Retired pages** lose database access at step 12 as agreed: owl, brain, crm, smartsort, de, zelurco,
    dispatcher-white(-preview), dispatcher-mobile, driver-app, fleet-cards, symphony(.trial), tackpathone,
    policy-engine(-recovery), index-white, guide.
 
@@ -181,7 +267,9 @@ tackpath-driver: `cd tests && node --test` (33, including `security.test.js` and
   key; move them to `nav-proxy`.
 - No per-IP rate limiting (the database cannot see client IPs); per-number, per-company and global
   limits are in place.
-- The September `operations` migrations in `supabase/migrations` are not used by the live pages.
+- The September `operations` migrations in `supabase/migrations` are not used by the live pages. Of
+  them, production still has `operations.routes` (2 rows), the jobs trigger and the two restrictive
+  policies; this plan leaves them all in place.
 - Pre-existing test failures unchanged: `tests/driver.test.js` (5), `tests/smartsort_integration.test.js` (1).
 
 ## Stage B (plan only): Supabase Auth with per-company RLS

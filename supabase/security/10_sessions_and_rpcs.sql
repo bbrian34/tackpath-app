@@ -51,10 +51,6 @@ begin
       missing := missing || (r.t||'.'||r.c);
     end if;
   end loop;
-  if to_regprocedure('extensions.gen_random_bytes(integer)') is null
-     or to_regprocedure('extensions.crypt(text,text)') is null then
-    missing := missing || 'pgcrypto in schema extensions'::text;
-  end if;
   if to_regprocedure('public.publish_surge_route(jsonb)') is null then
     missing := missing || 'function public.publish_surge_route(jsonb)'::text;
   end if;
@@ -63,6 +59,74 @@ begin
   end if;
 end
 $pre$;
+
+-- pgcrypto: every call in these functions is schema-qualified as
+-- extensions.<fn> (the functions run with search_path = ''), so pgcrypto must
+-- be installed in schema "extensions" (production snapshot 2026-10-07: it is).
+do $pgcrypto$
+declare sch text; fn text; bad text[] := '{}';
+begin
+  select n.nspname into sch from pg_extension e join pg_namespace n on n.oid = e.extnamespace
+   where e.extname = 'pgcrypto';
+  if sch is null then
+    raise exception 'TackPath security migration 10 stopped, nothing was changed: pgcrypto is not installed. Install it in schema extensions (Database -> Extensions -> pgcrypto, schema "extensions") and run this again.';
+  end if;
+  if sch <> 'extensions' then
+    raise exception 'TackPath security migration 10 stopped, nothing was changed: pgcrypto is installed in schema "%", but these functions call extensions.crypt / extensions.gen_salt / extensions.gen_random_bytes / extensions.digest. Move it (alter extension pgcrypto set schema extensions) or send this message for review.', sch;
+  end if;
+  foreach fn in array array['extensions.crypt(text,text)', 'extensions.gen_salt(text,integer)',
+                            'extensions.gen_random_bytes(integer)', 'extensions.digest(text,text)'] loop
+    if to_regprocedure(fn) is null or not has_function_privilege(current_user, fn, 'EXECUTE') then
+      bad := bad || fn;
+    end if;
+  end loop;
+  if cardinality(bad) > 0 then
+    raise exception 'TackPath security migration 10 stopped, nothing was changed: pgcrypto functions not reachable by %: %', current_user, bad;
+  end if;
+  -- a real call, so a broken install fails here and not at the first sign-in
+  if extensions.crypt('probe', extensions.gen_salt('bf', 4)) is null
+     or length(extensions.gen_random_bytes(4)) <> 4 then
+    raise exception 'TackPath security migration 10 stopped, nothing was changed: pgcrypto calls returned nothing';
+  end if;
+end
+$pgcrypto$;
+
+-- public.jobs status: every status these RPCs write must be accepted by the
+-- table's CHECK constraints and column type. Production snapshot 2026-10-07:
+-- public.jobs has NO check constraints and status is text; existing rows use
+-- "closed_with_exceptions" (2 rows, routes of the September operations
+-- system), which the RPCs only read. The probe copies the constraints to a
+-- temporary table, so nothing in public is touched.
+do $status$
+declare
+  st text; c record; rejected text[] := '{}'; unknown text;
+  written constant text[] := array['routing','pending','assigned','in_transit','delivered','cancelled'];
+begin
+  create temp table tp_status_probe (like public.jobs including constraints) on commit drop;
+  for c in select attname from pg_attribute where attrelid = 'pg_temp.tp_status_probe'::regclass
+            and attnum > 0 and not attisdropped and attnotnull loop
+    execute format('alter table pg_temp.tp_status_probe alter column %I drop not null', c.attname);
+  end loop;
+  foreach st in array written loop
+    begin
+      insert into pg_temp.tp_status_probe (status) values (st);
+    exception when check_violation or invalid_text_representation or string_data_right_truncation then
+      rejected := rejected || (st || ' (' || sqlerrm || ')');
+    end;
+  end loop;
+  drop table pg_temp.tp_status_probe;
+  if cardinality(rejected) > 0 then
+    raise exception 'TackPath security migration 10 stopped, nothing was changed: public.jobs rejects statuses the new RPCs write: %. CHECK constraints on public.jobs: %', rejected,
+      coalesce((select string_agg(conname || ' ' || pg_get_constraintdef(oid), '; ') from pg_constraint
+                 where conrelid = 'public.jobs'::regclass and contype = 'c'), 'none');
+  end if;
+  select string_agg(distinct j.status::text, ', ') into unknown from public.jobs j
+   where j.status is not null and j.status::text <> all(written);
+  if unknown is not null then
+    raise notice 'public.jobs has statuses the RPCs only read, never write: %', unknown;
+  end if;
+end
+$status$;
 
 -- ── 1. PRIVATE SCHEMA AND TABLES ─────────────────────────────────────────
 create schema tp_sec;
@@ -231,6 +295,31 @@ begin
   return res;
 end $$;
 
+-- Routes of the September "operations" system. Production still has its
+-- trigger protect_operational_projection on public.jobs: for a job whose id is
+-- in operations.routes it refuses DELETE and any UPDATE except these ETA
+-- columns (unless tackpath.operational_write = 'on', which these RPCs never
+-- set). The RPCs check first, so such a job is skipped or refused with
+-- TP_LOCKED instead of failing on the trigger. When the trigger is gone or
+-- disabled (or there is no operations schema) nothing is locked.
+create function tp_sec.locked_job_columns() returns text[]
+language sql immutable set search_path = '' as
+$$ select array['exception_flag','exception_detected_at','eta_minutes','estimated_delivery_at','original_eta_at'] $$;
+
+create function tp_sec.job_locked(p_id text) returns boolean
+language plpgsql stable set search_path = '' as $$
+declare r boolean;
+begin
+  if p_id is null or to_regclass('operations.routes') is null
+     or not exists (select 1 from pg_catalog.pg_trigger t
+                     where t.tgrelid = 'public.jobs'::regclass and not t.tgisinternal and t.tgenabled <> 'D'
+                       and t.tgfoid = coalesce(to_regprocedure('operations.protect_job_projection()'), 0)) then
+    return false;
+  end if;
+  execute 'select exists (select 1 from operations.routes where id::text = $1)' into r using p_id;
+  return r;
+end $$;
+
 -- UPDATE rows WHERE id = p_id AND every p_expect key equals its value (NULL
 -- matches NULL), setting only allowed keys of p_patch that are real columns.
 -- Returns the updated rows as a JSON array (empty when nothing matched).
@@ -242,6 +331,9 @@ begin
   select array_agg(c order by c) into cols from jsonb_object_keys(p_patch) c
    where c = any(p_allowed) and c = any(tp_sec.table_cols(p_table));
   if cols is null then raise exception 'TP_INVALID: nothing to change'; end if;
+  if p_table = 'public.jobs'::regclass and not (cols <@ tp_sec.locked_job_columns()) and tp_sec.job_locked(p_id) then
+    raise exception 'TP_LOCKED: this route was closed by the operations system and is read-only';
+  end if;
   select string_agg(format('%1$I = r.%1$I', c), ', ') into sets from unnest(cols) c;
   for k in select jsonb_object_keys(p_expect) loop
     conds := conds || format(' and (to_jsonb(t.*)->>%L) is not distinct from ($3->>%L)', k, k);
@@ -387,16 +479,32 @@ begin
                               coalesce(a->'expect', '{}'));
 
   when 'archive_jobs' then  -- "Clear board": archive instead of delete
+    -- operations-system routes are read-only (see tp_sec.job_locked): skipped and counted
     with u as (update public.jobs j set archived = true
                 where tp_sec.org_in_scope(org, j.org_id::text)
                   and j.id::text = any(array(select jsonb_array_elements_text(a->'ids')))
+                  and not tp_sec.job_locked(j.id::text)
                 returning 1)
     select jsonb_build_object('archived', count(*)) into res from u;
-    return res;
+    return res || jsonb_build_object('locked', (select count(*) from public.jobs j
+       where tp_sec.org_in_scope(org, j.org_id::text)
+         and j.id::text = any(array(select jsonb_array_elements_text(a->'ids')))
+         and tp_sec.job_locked(j.id::text)));
 
   when 'publish_route' then
     -- the RPC that validates piece conservation; the company comes from the session
-    return public.publish_surge_route(jsonb_set(coalesce(a->'payload','{}'), '{org_id}', to_jsonb(org)));
+    if tp_sec.job_locked(a->'payload'->>'id') then
+      raise exception 'TP_LOCKED: this route was closed by the operations system and is read-only';
+    end if;
+    begin
+      return public.publish_surge_route(jsonb_set(coalesce(a->'payload','{}'), '{org_id}', to_jsonb(org)));
+    exception when raise_exception then
+      -- the operations trigger, reached by an update inside publish_surge_route
+      if sqlerrm in ('Use authoritative operational commands', 'Operational history cannot be deleted') then
+        raise exception 'TP_LOCKED: this route was closed by the operations system and is read-only';
+      end if;
+      raise;
+    end;
 
   when 'drivers' then
     select coalesce(jsonb_agg(to_jsonb(d.*) order by d.name), '[]') into res from public.drivers d

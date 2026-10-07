@@ -347,3 +347,126 @@ test('review account seed (30) creates the review company and driver once; the f
   assert.equal(r.ok, true);
   assert.equal(r.driver.name, 'App Review Driver');
 });
+
+// Production 2026-10-07: 2 jobs (status closed_with_exceptions) are routes of
+// the September operations system; trigger protect_operational_projection
+// refuses DELETE and any non-ETA UPDATE of them.
+async function lockedSetup() {
+  const s = await setup();
+  const locked = [];
+  for (let i = 0; i < 2; i++) {
+    const id = await s.insJob({ status: 'closed_with_exceptions', driver: 'Dana Driver', title: 'Ops route ' + i });
+    await s.db.query(`insert into operations.routes (id, org_id, status) values ($1, $2, 'closed')`, [id, ORG_A]);
+    locked.push(id);
+  }
+  return { ...s, locked };
+}
+
+test('operations routes: the trigger is live, and the gateways skip or refuse those jobs cleanly instead of failing', async () => {
+  const { db, insJob, locked } = await lockedSetup();
+  const [L] = locked;
+  // the live trigger, as production has it
+  await assert.rejects(db.query(`update public.jobs set status = 'pending' where id = $1`, [L]), /Use authoritative operational commands/);
+  await assert.rejects(db.query(`delete from public.jobs where id = $1`, [L]), /Operational history cannot be deleted/);
+
+  const t = await orgToken(db);
+  const free = await insJob({ status: 'pending' });
+  const ids = (await rpc(db, 'tp_org', { p_token: t, p_action: 'jobs' })).map((j) => j.id);
+  assert.ok(locked.every((id) => ids.includes(id)), 'still listed and readable');
+  assert.equal((await rpc(db, 'tp_org', { p_token: t, p_action: 'job', p_args: { id: L } })).status, 'closed_with_exceptions');
+
+  // Clear Board with every job: the others are archived, the 2 routes are skipped and counted
+  const clear = await rpc(db, 'tp_org', { p_token: t, p_action: 'archive_jobs', p_args: { ids: [free, ...locked] } });
+  assert.deepEqual(clear, { archived: 1, locked: 2 });
+
+  // single-job writes: TP_LOCKED, never the trigger's own error
+  const refusals = [
+    ['tp_org', { p_token: t, p_action: 'update_job', p_args: { id: L, patch: { status: 'delivered' } } }],
+    ['tp_org', { p_token: t, p_action: 'update_job', p_args: { id: L, patch: { archived: true, eta_minutes: 5 } } }],
+    ['tp_org', { p_token: t, p_action: 'set_bin_label', p_args: { id: L, bin_label: 'B1' } }],
+    ['tp_org', { p_token: t, p_action: 'set_staged', p_args: { id: L, staged: true } }],
+    ['tp_org', { p_token: t, p_action: 'publish_route', p_args: { payload: { id: L, title: 'x', master_code: 'Z1' } } }],
+    ['tp_track', { p_action: 'rate', p_args: { id: L, rating: 5 } }],
+  ];
+  for (const [fn, args] of refusals) {
+    assert.match(await rpcError(db, fn, args), /^TP_LOCKED/, JSON.stringify(args));
+  }
+  // ETA / exception columns are allowed by the trigger and still work
+  const eta = await rpc(db, 'tp_org', { p_token: t, p_action: 'update_job',
+    p_args: { id: L, patch: { exception_flag: true, estimated_delivery_at: '2026-10-08T12:00:00Z' } } });
+  assert.equal(eta.length, 1);
+  assert.equal(eta[0].exception_flag, true);
+
+  // the driver it was assigned to: can read it, cannot change it
+  const d = await driverToken(db);
+  assert.equal((await rpc(db, 'tp_driver', { p_token: d, p_action: 'job', p_args: { id: L } })).id, L);
+  assert.match(await rpcError(db, 'tp_driver', { p_token: d, p_action: 'update_job', p_args: { id: L, patch: { stops_completed: 1 } } }), /^TP_LOCKED/);
+  await rpc(db, 'tp_driver', { p_token: d, p_action: 'post_message', p_args: { job_id: L, body: 'note' } });
+  await rpc(db, 'tp_driver', { p_token: d, p_action: 'location', p_args: { job_id: L, lat: 1, lng: 2 } });
+  // archive of only locked jobs: nothing archived, no error
+  assert.deepEqual(await rpc(db, 'tp_org', { p_token: t, p_action: 'archive_jobs', p_args: { ids: locked } }), { archived: 0, locked: 2 });
+  // another company never learns that an id is an operations route
+  const tb = await (async () => { await db.query(`select tp_sec.admin_set_org_code('otherco', 'other-code-1')`); return orgToken(db, 'otherco', 'other-code-1'); })();
+  assert.deepEqual(await rpc(db, 'tp_org', { p_token: tb, p_action: 'archive_jobs', p_args: { ids: locked } }), { archived: 0, locked: 0 });
+
+  const unchanged = (await db.query(`select count(*)::int n from public.jobs where id = any($1) and status = 'closed_with_exceptions' and not archived`, [locked])).rows[0].n;
+  assert.equal(unchanged, 2, 'the operations routes are exactly as they were');
+});
+
+test('operations routes are writable again once the trigger is disabled (nothing is locked without it)', async () => {
+  const { db, locked } = await lockedSetup();
+  await db.exec('alter table public.jobs disable trigger protect_operational_projection');
+  const t = await orgToken(db);
+  assert.deepEqual(await rpc(db, 'tp_org', { p_token: t, p_action: 'archive_jobs', p_args: { ids: locked } }), { archived: 2, locked: 0 });
+  await db.exec('alter table public.jobs enable trigger protect_operational_projection');
+  assert.match(await rpcError(db, 'tp_org', { p_token: t, p_action: 'update_job', p_args: { id: locked[0], patch: { status: 'pending' } } }), /^TP_LOCKED/);
+});
+
+test('pgcrypto: every call is schema-qualified; preflight stops clearly when pgcrypto is elsewhere or missing', async () => {
+  const { db } = await setup();
+  const fns = (await db.query(`select p.oid::regprocedure::text as f, p.prosrc, p.proconfig from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'tp_sec' or (n.nspname = 'public' and p.proname like 'tp\\_%')`)).rows;
+  assert.ok(fns.length > 30);
+  for (const f of fns) {
+    assert.deepEqual(f.proconfig, ['search_path=""'], `${f.f} has a fixed, empty search_path`);
+    const bare = f.prosrc.match(/(?<![\w.])(crypt|gen_salt|digest|gen_random_bytes|hmac|encrypt|decrypt)\s*\(/g);
+    assert.equal(bare, null, `${f.f} calls pgcrypto without the extensions. schema: ${bare}`);
+  }
+  const sql = (await import('./fixture.mjs')).sqlFile('10_sessions_and_rpcs.sql');
+  const code = sql.replace(/--[^\n]*/g, '');
+  assert.equal(code.match(/(?<![\w.'])(crypt|gen_salt|digest|gen_random_bytes)\s*\(/g), null, 'no unqualified call anywhere in migration 10');
+
+  const moved = await freshDb();
+  await moved.exec('create schema other; alter extension pgcrypto set schema other');
+  await assert.rejects(moved.exec(sql), /nothing was changed: pgcrypto is installed in schema "other"/);
+  await moved.exec('rollback');
+  assert.equal((await moved.query(`select to_regnamespace('tp_sec') s`)).rows[0].s, null);
+
+  const none = await freshDb();
+  await none.exec('drop extension pgcrypto');
+  await assert.rejects(none.exec(sql), /nothing was changed: pgcrypto is not installed/);
+  await none.exec('rollback');
+});
+
+test('jobs status preflight: a CHECK constraint rejecting a status the RPCs write stops migration 10; operations statuses are only reported', async () => {
+  const sql = (await import('./fixture.mjs')).sqlFile('10_sessions_and_rpcs.sql');
+  const strict = await freshDb();
+  await strict.exec(`alter table public.jobs add constraint jobs_status_check check (status in ('pending','assigned','in_transit','delivered','cancelled'))`);
+  await assert.rejects(strict.exec(sql), /nothing was changed: public\.jobs rejects statuses the new RPCs write: \{"routing \(.*jobs_status_check.*\)"\}.*CHECK constraints on public\.jobs: jobs_status_check CHECK/s);
+  await strict.exec('rollback');
+  assert.equal((await strict.query(`select to_regnamespace('tp_sec') s`)).rows[0].s, null);
+  assert.equal((await strict.query(`select to_regclass('pg_temp.tp_status_probe') t`)).rows[0].t, null, 'probe table gone');
+
+  // production today: no CHECK constraint, 2 closed_with_exceptions rows -> runs, with a notice
+  const today = await freshDb();
+  await today.exec(`insert into public.jobs (org_id, status) values ('${ORG_A}', 'closed_with_exceptions'), ('${ORG_A}', 'closed_with_exceptions')`);
+  const notices = [];
+  const res = await today.exec(sql, { onNotice: (n) => notices.push(n.message) });
+  assert.ok(res);
+  assert.ok(notices.some((m) => /statuses the RPCs only read, never write: closed_with_exceptions/.test(m)), notices.join('\n'));
+  assert.ok((await today.query(`select to_regprocedure('public.tp_org(text,text,jsonb)') f`)).rows[0].f);
+  // a CHECK that allows every written status is fine
+  const ok = await freshDb();
+  await ok.exec(`alter table public.jobs add constraint jobs_status_check check (status in ('routing','pending','assigned','in_transit','delivered','cancelled','closed_with_exceptions'))`);
+  await ok.exec(sql);
+});
