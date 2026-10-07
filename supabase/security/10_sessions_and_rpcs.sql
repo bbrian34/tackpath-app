@@ -91,8 +91,9 @@ begin
 end
 $pgcrypto$;
 
--- public.jobs status: every status these RPCs write must be accepted by the
--- table's CHECK constraints and column type. Production snapshot 2026-10-07:
+-- public.jobs status: every status these RPCs write (completed_with_exceptions
+-- included) must be accepted by the table's CHECK constraints and column type
+-- (an enum without one of them stops it too). Production snapshot 2026-10-07:
 -- public.jobs has NO check constraints and status is text; existing rows use
 -- "closed_with_exceptions" (2 rows, routes of the September operations
 -- system), which the RPCs only read. The probe copies the constraints to a
@@ -100,7 +101,9 @@ $pgcrypto$;
 do $status$
 declare
   st text; c record; rejected text[] := '{}'; unknown text;
-  written constant text[] := array['routing','pending','assigned','in_transit','delivered','cancelled'];
+  -- completed_with_exceptions: a route that finished with problem stops (driver app)
+  written constant text[] := array['routing','pending','assigned','in_transit','delivered','cancelled',
+                                   'completed_with_exceptions'];
 begin
   create temp table tp_status_probe (like public.jobs including constraints) on commit drop;
   for c in select attname from pg_attribute where attrelid = 'pg_temp.tp_status_probe'::regclass
@@ -208,6 +211,22 @@ create table tp_sec.sms_log (
 create index on tp_sec.sms_log (kind, driver_key, at);
 create index on tp_sec.sms_log (kind, job_key, at);
 
+-- Driver writes made offline are replayed when signal returns. Each carries a
+-- client_id; a replay of one already applied returns the first result instead
+-- of applying it twice (a delivery is never recorded twice).
+-- Per-company details drivers see: the dispatch phone number.
+create table tp_sec.org_profile (
+  org_key        text primary key,
+  dispatch_phone text,
+  updated_at     timestamptz not null default now()
+);
+
+create table tp_sec.client_ops (
+  op_key     text primary key,        -- driver || '|' || client_id
+  result     jsonb,
+  created_at timestamptz not null default now()
+);
+
 -- ── 2. HELPERS (private) ─────────────────────────────────────────────────
 create function tp_sec.sha256_hex(p text) returns text
 language sql immutable set search_path = '' as
@@ -270,7 +289,11 @@ begin
     raise exception 'TP_AUTH: please sign in again' using errcode = '28000';
   end if;
   if s.last_seen_at < now() - interval '5 minutes' then
-    update tp_sec.sessions set last_seen_at = now() where token_hash = s.token_hash;
+    -- Drivers stay signed in while they keep using the app: each use pushes
+    -- the expiry out to 30 days again. Unused for 30 days -> sign in again.
+    update tp_sec.sessions set last_seen_at = now(),
+           expires_at = case when kind = 'driver' then greatest(expires_at, now() + interval '30 days') else expires_at end
+     where token_hash = s.token_hash;
   end if;
   return s;
 end $$;
@@ -394,6 +417,34 @@ begin
   return 'Company code set for ' || p_slug;
 end $$;
 revoke all on function tp_sec.admin_set_org_code(text, text) from public;
+
+-- The dispatch number a company's drivers see (call button in the driver app).
+-- Empty clears it. Dispatchers set it from the Drivers tab; or, as an admin:
+--   select tp_sec.admin_set_dispatch_phone('quickhaul', '(404) 555-0100');
+create function tp_sec.set_dispatch_phone(p_org_key text, p_phone text) returns text
+language plpgsql security definer set search_path = '' as $$
+declare ph text := nullif(btrim(coalesce(p_phone,'')), '');
+begin
+  if p_org_key is null then raise exception 'TP_INVALID: no company'; end if;
+  if ph is not null then
+    ph := tp_sec.norm_phone(ph);
+    if ph is null then raise exception 'TP_INVALID: enter a 10-digit phone number'; end if;
+  end if;
+  insert into tp_sec.org_profile (org_key, dispatch_phone) values (p_org_key, ph)
+  on conflict (org_key) do update set dispatch_phone = excluded.dispatch_phone, updated_at = now();
+  return ph;
+end $$;
+revoke all on function tp_sec.set_dispatch_phone(text, text) from public;
+
+create function tp_sec.admin_set_dispatch_phone(p_slug text, p_phone text) returns text
+language plpgsql security definer set search_path = '' as $$
+declare k text;
+begin
+  select id::text into k from public.organizations where lower(slug) = lower(btrim(p_slug));
+  if k is null then raise exception 'No company with slug %', p_slug; end if;
+  return coalesce(tp_sec.set_dispatch_phone(k, p_phone), 'cleared');
+end $$;
+revoke all on function tp_sec.admin_set_dispatch_phone(text, text) from public;
 
 create function public.tp_org_lookup(p_slug text) returns jsonb
 language sql stable security definer set search_path = '' as $$
@@ -649,6 +700,12 @@ begin
        order by e.occurred_at asc limit lim) x;
     return res;
 
+  when 'dispatch_phone' then   -- the number this company's drivers can call
+    return jsonb_build_object('dispatch_phone', (select p.dispatch_phone from tp_sec.org_profile p where p.org_key = org));
+
+  when 'set_dispatch_phone' then
+    return jsonb_build_object('dispatch_phone', tp_sec.set_dispatch_phone(org, a->>'phone'));
+
   when 'sign_out' then
     update tp_sec.sessions set revoked_at = now() where token_hash = s.token_hash;
     return jsonb_build_object('ok', true);
@@ -787,7 +844,16 @@ declare
   j public.jobs;
   res jsonb;
   lim integer;
+  p jsonb;
+  op text;
+  t text;
 begin
+  -- Offline replay: the same write (same client_id) is applied once.
+  if p_action in ('update_job','post_message') and coalesce(a->>'client_id','') <> '' then
+    op := coalesce(s.driver_key, s.driver_name, '') || '|' || left(a->>'client_id', 100);
+    select o.result into res from tp_sec.client_ops o where o.op_key = op;
+    if found then return res; end if;
+  end if;
   if jid is not null and p_action in ('job','claim','update_job','messages','post_message','bin_binding') then
     select * into j from public.jobs where id::text = jid;
     if not found or not tp_sec.driver_sees(s, j) then
@@ -797,7 +863,11 @@ begin
 
   case p_action
   when 'me' then
-    return jsonb_build_object('id', s.driver_key, 'name', s.driver_name, 'phone', s.driver_phone, 'demo', s.is_demo);
+    -- dispatch_phone: this driver's company's dispatch line (set by the
+    -- dispatcher or tp_sec.admin_set_dispatch_phone). There is no global number.
+    select p.dispatch_phone into t from tp_sec.org_profile p where p.org_key = s.org_key;
+    return jsonb_build_object('id', s.driver_key, 'name', s.driver_name, 'phone', s.driver_phone, 'demo', s.is_demo,
+      'dispatch_phone', t);
 
   when 'jobs' then
     lim := tp_sec.clamp_limit(a, 10, 50);
@@ -824,15 +894,36 @@ begin
     if j.driver_name is distinct from s.driver_name then
       raise exception 'TP_DENIED: this route is assigned to someone else';
     end if;
-    if a->'patch' ? 'status' and a->'patch'->>'status' not in ('assigned','in_transit','delivered') then
+    -- completed_with_exceptions: the route is finished but some stops were
+    -- reported as problems (packages returning to the station).
+    if a->'patch' ? 'status' and a->'patch'->>'status' not in ('assigned','in_transit','delivered','completed_with_exceptions') then
       raise exception 'TP_INVALID: status % is not a driver status', a->'patch'->>'status';
     end if;
     if a->'patch' ? 'driver_name' and a->'patch'->>'driver_name' is distinct from s.driver_name then
       raise exception 'TP_INVALID: a driver can only keep the route on their own name';
     end if;
-    return tp_sec.update_json('public.jobs', jid, coalesce(a->'patch','{}'),
-      array['status','driver_name','stops_completed','picked_up_at','started_at','delivered_at'],
-      jsonb_build_object('driver_name', s.driver_name));
+    p := coalesce(a->'patch','{}');
+    -- Replayed or out-of-order updates never move a route backwards.
+    if p ? 'stops_completed' and (p->>'stops_completed') ~ '^[0-9]+$'
+       and (p->>'stops_completed')::int < coalesce(nullif(to_jsonb(j)->>'stops_completed','')::numeric, 0) then
+      p := p - 'stops_completed';
+    end if;
+    if j.status in ('delivered','completed_with_exceptions') and p ? 'status'
+       and p->>'status' not in ('delivered','completed_with_exceptions') then
+      p := p - 'status';   -- a finished route never goes back to in transit
+    end if;
+    if j.status = 'completed_with_exceptions' and p->>'status' = 'delivered' then
+      p := p - 'status';   -- nor loses its problems by a late "delivered"
+    end if;
+    if not exists (select 1 from jsonb_object_keys(p) k where k <> 'driver_name') then
+      res := jsonb_build_array(to_jsonb(j));
+    else
+      res := tp_sec.update_json('public.jobs', jid, p,
+        array['status','driver_name','stops_completed','picked_up_at','started_at','delivered_at'],
+        jsonb_build_object('driver_name', s.driver_name));
+    end if;
+    if op is not null then insert into tp_sec.client_ops (op_key, result) values (op, res); end if;
+    return res;
 
   when 'messages' then
     lim := tp_sec.clamp_limit(a, 200, 500);
@@ -847,12 +938,14 @@ begin
     return res;
 
   when 'post_message' then
-    return tp_sec.insert_json('public.messages', jsonb_build_object(
+    res := tp_sec.insert_json('public.messages', jsonb_build_object(
       'job_id', jid,
       'sender', case when a->>'sender' = 'system' then 'system' else s.driver_name end,
       'sender_role', case when a->>'sender' = 'system' then 'dispatcher' else 'driver' end,
       'body', left(coalesce(a->>'body',''), 8000)),
       array['job_id','sender','sender_role','body']);
+    if op is not null then insert into tp_sec.client_ops (op_key, result) values (op, res); end if;
+    return res;
 
   when 'location' then
     if a->>'job_id' is not null then

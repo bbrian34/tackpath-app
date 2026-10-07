@@ -1,7 +1,8 @@
 # TackPath security hardening — System A, Stage A
 
-Branches: `claude/security-hardening` in **bbrian34/tackpath-app** (SQL, edge functions, web pages,
-tests) and **bbrian34/tackpath-driver** (driver app). Nothing here has been applied to production,
+Branch: `claude/combined-release` in **bbrian34/tackpath-app** (SQL, edge functions, web pages,
+tests) and **bbrian34/tackpath-driver** (driver app) — the security hardening (`claude/security-hardening`)
+and the driver experience (`claude/driver-experience`) together; deploy this branch, not either one alone. Nothing here has been applied to production,
 deployed, or merged. Bryan applies everything after review, in the order below.
 
 ## What changes
@@ -64,7 +65,7 @@ commit;
 ## Deploy order (do not skip ahead)
 
 All SQL runs in Supabase Dashboard → SQL Editor (project `hofijsiphyjpdvujjzfi`), one file or block per run.
-Terminal commands run from a checkout of `claude/security-hardening`, logged in (`supabase login`) and
+Terminal commands run from a checkout of tackpath-app `claude/combined-release`, logged in (`supabase login`) and
 linked (`supabase link --project-ref hofijsiphyjpdvujjzfi`).
 
 0. **Now, independent of everything else:** Anthropic Console → API keys → revoke the key that was in
@@ -80,6 +81,11 @@ linked (`supabase link --project-ref hofijsiphyjpdvujjzfi`).
    select tp_sec.admin_set_org_code('metro-courier', '…');
    ```
    Tell each dispatcher their code (they now enter company + code). The others keep their portal code.
+   Optional, per company — the number drivers can call from the app (dispatchers can also set it later in
+   Drivers → "Dispatch phone drivers can call"; without one the driver app shows no call button):
+   ```sql
+   select tp_sec.admin_set_dispatch_phone('slug', '(404) 555-0100');
+   ```
 4. **Review account** — run `30_review_account.sql`, then
    ```sql
    select tp_sec.admin_set_demo_code('NNNNNN');
@@ -136,10 +142,10 @@ linked (`supabase link --project-ref hofijsiphyjpdvujjzfi`).
    ```
    then SQL `40_swarm_watch_cron.rollback.sql`. (Rolling back 40 alone, with the new swarm-watch
    deployed, makes every run a 401 — the check stops.)
-8. **Web pages** — merge tackpath-app `claude/security-hardening` into `main` (GitHub Pages deploys it).
+8. **Web pages** — merge tackpath-app `claude/combined-release` into `main` (GitHub Pages deploys it).
    Everyone signs in again once (dispatchers with company + code, drivers with a texted code).
-9. **Driver app** — merge tackpath-driver `claude/security-hardening`, build a new version
-   (bump versionCode), upload to Play closed testing, and wait until every tester has updated.
+9. **Driver app** — merge tackpath-driver `claude/combined-release`, build a new version
+   (bump versionCode; Java changed, so a full Android build, not only `npx cap sync`), upload to Play closed testing, and wait until every tester has updated.
    Old app builds keep working until step 12, then stop.
 10. **PathIQ on the Zebra TC56** (its own copy of stow.html in `C:\Users\bbald\Downloads\pathiq-app`,
    not in git). The current APK keeps working until step 12, then cannot load routes. Rebuild it now:
@@ -195,6 +201,9 @@ archive, Clear Board, drivers add/edit/approve/remove, SmartSort publish, fleet 
 Ruby, address lookup while navigating; PathIQ sign-in (web and TC56), bin open, stow, reset; Shopify
 connect; portal sign-in; customer order → confirm; track.html
 and tracking.html links; driver application → Approve → sign-in; dispatcher "View proof of delivery".
+Driver experience: start-of-day card; a delivery and a message sent in airplane mode arrive once when
+signal returns; a problem stop (Damaged asks for a photo) → route ends as "Finished · problems" on the
+dispatch board; driver stays signed in after a day; dispatch phone call button.
 
 ## Rollback
 
@@ -217,13 +226,16 @@ storage schema and the live tables as they are today (anon granted everything, "
 the two restrictive policies, the nine anon-executable functions, `operations.routes` and its jobs
 trigger), then the migrations on top:
 
-- `rpc.test.mjs` (19): preflight abort; pgcrypto qualified everywhere and preflight messages (missing,
-  other schema); jobs status preflight (a CHECK rejecting a written status stops it; `closed_with_exceptions`
-  only reported); operations routes under the live trigger — Clear Board skips them, single writes get
-  `TP_LOCKED`, ETA columns still update, nothing locked once the trigger is disabled; company sign-in, lockout, bcrypt; admin codes; org scoping;
+- `rpc.test.mjs` (22): preflight abort; pgcrypto qualified everywhere and preflight messages (missing,
+  other schema); jobs status preflight (a CHECK or enum rejecting a written status — `completed_with_exceptions`
+  included — stops it; `closed_with_exceptions` only reported); operations routes under the live trigger —
+  Clear Board skips them, single writes get `TP_LOCKED`, ETA columns still update, nothing locked once the
+  trigger is disabled; company sign-in, lockout, bcrypt; admin codes; org scoping;
   every dispatcher, PathIQ, driver, customer, tracking, signup flow; real codes — wrong, reused,
   expired, 5 attempts, unknown/pending numbers, rate limits; demo code only for 555-0199 and only
-  the review company; service-only RPCs not callable by anon/authenticated.
+  the review company; service-only RPCs not callable by anon/authenticated; offline replays applied
+  once, a route never moving backwards, the driver's sign-in sliding to 30 days, per-company dispatch
+  phone; routes finishing as completed_with_exceptions.
 - `lockdown.test.mjs` (8): anon/authenticated cannot SELECT/INSERT/UPDATE/DELETE any table or view or
   call other functions; future tables not auto-granted; pod private; all flows still work; exact rollback;
   each of the nine functions above closed by 20 and reopened by the rollback, final anon list = the nine
@@ -243,7 +255,8 @@ trigger), then the migrations on top:
   customer, track, tracking, fleet, signup — with **zero** direct table or storage requests.
 - `tests/driver-login-ui.test.js` (2): no dead sign-in button is visible; driver.html shows the new symbol.
 
-tackpath-driver: `cd tests && node --test` (33, including `security.test.js` and `login-ui.test.js`).
+tackpath-driver: `cd tests && node --test` (49, including `security.test.js`, `login-ui.test.js` and
+`experience.test.js`).
 
 ## Decisions made (please confirm)
 
@@ -271,6 +284,79 @@ tackpath-driver: `cd tests && node --test` (33, including `security.test.js` and
   them, production still has `operations.routes` (2 rows), the jobs trigger and the two restrictive
   policies; this plan leaves them all in place.
 - Pre-existing test failures unchanged: `tests/driver.test.js` (5), `tests/smartsort_integration.test.js` (1).
+
+## Driver experience (from `claude/driver-experience`, combined here in `claude/combined-release`)
+
+One shared layer, identical in `driver.html` and the driver app's `www/index.html` (between the
+`TP-DX:BEGIN` / `TP-DX:END` markers; a test checks they match). It wraps the existing app, so the scan
+gates, loading counts, arrival detection, floating button and voice are unchanged.
+
+- **Stays signed in**: a driver session now slides — every use pushes expiry out to 30 days
+  (`tp_sec.session`). No signal never signs a driver out; only a revoked/expired session does.
+- **Never loses or doubles work**: route updates and messages (deliveries, problems, chat) go
+  through an outbox on the phone; with no signal they wait and are sent in order when signal returns.
+  Each carries a `client_id`; `tp_driver` applies a repeated one once (`tp_sec.client_ops`), never moves
+  `stops_completed` backwards and never takes a delivered route back to in transit. Proof photos waiting
+  for signal are kept in IndexedDB (room for a day of photos) and shrunk to 1280 px. Scans survive a
+  restart. A pill at the top says "No signal · N updates saved on this phone".
+- **Start of day**: one card — route, stops, packages, bin, pickup (bin + location), warehouse status
+  (waiting / staging / ready), message or call dispatch.
+- **Scanning**: distinct tone, buzz and screen colour for right / wrong / duplicate; big STOP number on
+  each loaded package; the app says "Stop 4. 12 of 30", "Already scanned"; "Problem? Tell dispatch" on
+  every scan screen.
+- **At the stop**: recipient, unit, access notes / gate code, package count, signature-required flag,
+  call customer, message or call dispatch, Google Maps (web), a Problem button.
+- **Proof of delivery**: one-tap choice (handed to customer, front door, mailroom, back door); the
+  photo and/or signature that choice or the stop requires; blank signatures no longer pass; choice and
+  notes go into the `STOP_DELIVERED` record.
+- **Problems**: one tap (no access, business closed, refused, damaged, wrong address, unsafe) →
+  `STOP_EXCEPTION::{…}` message to dispatch (shown as a red PROBLEM line in dispatch chat), packages
+  marked to return, route moves on.
+- **After each stop** the next stop comes up by itself (5 s countdown, or tap). **End of route**: summary
+  of stops and packages delivered, problems, and packages to bring back.
+- **Dispatch**: typed messages and quick replies (no more voice-only), messages shown as text,
+  call buttons when a dispatch number is set.
+- **Battery / permissions / crashes**: one GPS watcher, positions sent at most every 15 s or 60 m,
+  paused while the app is hidden, stopped at route end (it used to keep running). The native app no
+  longer asks for location and "Appear on top" at launch: it explains once after sign-in, location is
+  asked when a route starts, "Appear on top" the first time the driver navigates. Fixed: web arrival
+  detection threw on every GPS update (`haversineDistance` was never defined); Begin Route called an
+  undefined `startGPSTracking`; message text was inserted as HTML.
+- **Honest numbers**: the made-up 4.9★ rating, "YTD = today + $800" and random pay are gone.
+- **Ruby** no longer sends what the driver said to an outside AI service (there was no key, so the call
+  always failed after a delay); its built-in commands run straight away.
+- **Text and taps**: nothing below ~13 px, faint text made readable, tap targets at least 48 px.
+
+Deploy additions:
+- Migration 10 already contains the session, `client_ops`, `org_profile` and `tp_driver` changes (it is
+  not applied yet). Its status preflight includes `completed_with_exceptions` among the statuses that
+  `jobs.status` must accept (snapshot 2026-10-07: no CHECK constraint, text column, so it passes).
+- **Dispatch phone, per company**: each dispatcher sets it in Drivers → "Dispatch phone drivers can call"
+  (`tp_org` `set_dispatch_phone`), or an admin runs
+  `select tp_sec.admin_set_dispatch_phone('slug', '(404) 555-0100');`. There is no global number; a
+  company without one shows drivers no dispatch call button (messages still work).
+- Manifest CSV may now include `phone`, `unit`, `access_notes`, `gate_code`, `delivery_notes`,
+  `signature_required` (yes/no); the dispatcher passes them to the driver.
+- Native: build a new APK/AAB from tackpath-driver `claude/combined-release` (Java changed: `MainActivity`,
+  `ArrivalPlugin`). It was not compiled here (no Android SDK in this environment).
+
+Decisions (confirmed by Bryan, 2026-10-06):
+1. Delivery choices: handed to customer = signature; front door, mailroom, back door = photo; a stop
+   with `signature_required` always needs a signature.
+2. Problems (v1, same for every company): every reason returns the packages to the station.
+   **Damaged** needs a photo before it can be reported (stored like proof of delivery and attached to
+   the report); **Unsafe** never asks for one, so the driver can leave. Per-company reasons and
+   outcomes are a later change.
+   A route with any problem stop finishes as **`completed_with_exceptions`**, never `delivered`
+   (tp_driver accepts it; a late "delivered" or "in transit" cannot overwrite it). Dispatch shows it
+   orange as "Finished · problems", lists it under exceptions ("Finished with problems"), treats it as
+   finished (archive, timing), and the driver's thank-you message asks for the returns. Fleet, track,
+   tracking and customer pages show it as finished but not delivered.
+3. Auto-advance: 5 s to the next stop.
+4. Voice on the web page stays off; the native app is the driver product and speaks.
+
+Screens were rendered at 390×844 and 360×640 (both apps) and checked for text under 13 px, WCAG AA
+contrast, controls under 44 px, clipped or off-screen text and overlaps; all screens pass.
 
 ## Stage B (plan only): Supabase Auth with per-company RLS
 

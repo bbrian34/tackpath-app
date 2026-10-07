@@ -529,6 +529,8 @@ function customerStatus(jobStatus) {
     customer_confirmed:  { label: 'Out for Delivery',            step: 2, color: 'var(--blue)' },
     in_transit:          { label: 'Out for Delivery',            step: 2, color: 'var(--blue)' },
     delivered:           { label: 'Delivered',                   step: 3, color: 'var(--green)' },
+    // the driver's route finished but some stops could not be delivered
+    completed_with_exceptions: { label: 'Route finished',        step: 3, color: 'var(--orange)' },
   };
   return m[jobStatus] || m.pending;
 }
@@ -581,6 +583,11 @@ function renderResult(result) {
         : ''}
     </div>`;
 
+  } else if (job.status === 'completed_with_exceptions') {
+    html += `<div class="delivered-badge" style="border-color:rgba(245,158,11,.4);">
+      <div class="delivered-lbl" style="color:var(--orange);">Driver's route finished</div>
+      <div class="delivered-time">If your package did not arrive, the sender will contact you.</div>
+    </div>`;
   } else if (job.status === 'in_transit' || job.status === 'customer_confirmed') {
     // Out for delivery — show stops away + ETA
     html += `<div class="stops-badge">

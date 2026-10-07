@@ -427,7 +427,10 @@ async function renderTracking(job){
   }
 
   document.getElementById('content').innerHTML=html;
-  document.getElementById('pollBar').style.display=job.status==='delivered'?'none':'flex';
+  if(job.status==='completed_with_exceptions'){
+    document.getElementById('content').insertAdjacentHTML('beforeend','<div class="field" style="border-left:4px solid #f59e0b;">Your driver could not complete this delivery. The sender will contact you about your package.</div>');
+  }
+  document.getElementById('pollBar').style.display=(job.status==='delivered'||job.status==='completed_with_exceptions')?'none':'flex';
 
   // ── Initialize live map after DOM is ready ──
   // Geocode the delivery address for the destination pin.
@@ -522,7 +525,7 @@ if(!jobParam){
 
   // Poll: reload job status every 15 seconds
   const jobPoll=setInterval(async()=>{
-    if(!currentJob||currentJob.status==='delivered'||currentJob.status==='cancelled'){
+    if(!currentJob||currentJob.status==='delivered'||currentJob.status==='completed_with_exceptions'||currentJob.status==='cancelled'){
       clearInterval(jobPoll);
       return;
     }

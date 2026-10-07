@@ -942,6 +942,10 @@ async function checkStatus(){
       document.getElementById('approachingAlert').style.display='block';
       document.getElementById('smsSig').textContent=currentSignalId;
       document.getElementById('smsModal').style.display='block';
+    } else if(s==='completed_with_exceptions'){
+      clearInterval(pollInterval);
+      setStatus('wave','<span style="color:#ff961e">Delivery not completed</span>','Your driver could not deliver this order. We will contact you to arrange it.');
+      document.getElementById('sbStatus').textContent='not delivered';
     } else if(s==='delivered'){
       logCommEvent('delivered', driverName);
       clearInterval(pollInterval);

@@ -271,6 +271,78 @@ test('driver gateway: offers, claim race, own route updates only, messages, GPS,
   assert.equal((await call('bin_binding', { job_id: offer }))[0].bin_code, '2B');
 });
 
+test('driver experience: offline replays apply once, a route never moves backwards, sign-in slides, dispatch phone', async () => {
+  const { db, insJob } = await setup();
+  const tok = await driverToken(db);
+  const call = (action, args = {}) => rpc(db, 'tp_driver', { p_token: tok, p_action: action, p_args: args });
+  const route = await insJob({ status: 'assigned', driver: 'Dana Driver' });
+  // the same delivery record sent twice (offline replay) is stored once
+  const a = await call('post_message', { job_id: route, body: 'STOP_DELIVERED::{"stop_number":1}', client_id: 'c-1' });
+  const b = await call('post_message', { job_id: route, body: 'STOP_DELIVERED::{"stop_number":1}', client_id: 'c-1' });
+  assert.equal(a.id, b.id);
+  await call('post_message', { job_id: route, body: 'hello', client_id: 'c-2' });
+  assert.equal((await call('messages', { job_id: route })).length, 2);
+  // progress replayed out of order never goes backwards; delivered stays delivered
+  await call('update_job', { id: route, patch: { status: 'in_transit', stops_completed: 3 }, client_id: 'u-1' });
+  await call('update_job', { id: route, patch: { stops_completed: 2 }, client_id: 'u-0' });
+  let row = (await db.query('select status, stops_completed from public.jobs where id = $1', [route])).rows[0];
+  assert.equal(row.stops_completed, 3);
+  await call('update_job', { id: route, patch: { status: 'delivered', stops_completed: 5 }, client_id: 'u-2' });
+  await call('update_job', { id: route, patch: { status: 'in_transit', driver_name: 'Dana Driver' }, client_id: 'u-3' });
+  row = (await db.query('select status, stops_completed from public.jobs where id = $1', [route])).rows[0];
+  assert.deepEqual([row.status, row.stops_completed], ['delivered', 5]);
+  // a replayed update returns the first answer even after the route changed
+  const again = await call('update_job', { id: route, patch: { status: 'in_transit', stops_completed: 3 }, client_id: 'u-1' });
+  assert.equal(again[0].stops_completed, 3);
+  // using the app keeps the driver signed in (expiry slides to 30 days out)
+  await db.query(`update tp_sec.sessions set expires_at = now() + interval '1 day', last_seen_at = now() - interval '1 hour' where kind = 'driver'`);
+  await call('me');
+  const left = (await db.query(`select extract(epoch from expires_at - now())/86400 as d from tp_sec.sessions where kind = 'driver'`)).rows[0].d;
+  assert.ok(Number(left) > 29, 'expiry moved out to ~30 days, got ' + left);
+  // dispatch phone is per company: none until that company sets one; a global setting is ignored
+  assert.equal((await call('me')).dispatch_phone, null);
+  await db.query(`insert into tp_sec.settings values ('dispatch_phone', '"4045550100"')`);
+  assert.equal((await call('me')).dispatch_phone, null);
+  const orgA = await orgToken(db);
+  await db.query(`select tp_sec.admin_set_org_code('otherco', 'other-code-2026')`);
+  const orgB = await orgToken(db, 'otherco', 'other-code-2026');
+  assert.equal((await rpc(db, 'tp_org', { p_token: orgA, p_action: 'set_dispatch_phone', p_args: { phone: '(404) 555-0123' } })).dispatch_phone, '4045550123');
+  assert.match(await rpcError(db, 'tp_org', { p_token: orgA, p_action: 'set_dispatch_phone', p_args: { phone: '12' } }), /TP_INVALID/);
+  assert.equal((await call('me')).dispatch_phone, '4045550123', 'this driver\'s company');
+  assert.equal((await rpc(db, 'tp_org', { p_token: orgB, p_action: 'dispatch_phone' })).dispatch_phone, null, 'not another company');
+  await db.query(`select tp_sec.admin_set_dispatch_phone('otherco', '6785550100')`);
+  assert.equal((await rpc(db, 'tp_org', { p_token: orgB, p_action: 'dispatch_phone' })).dispatch_phone, '6785550100');
+  assert.equal((await call('me')).dispatch_phone, '4045550123');
+});
+
+test('a route that ends with problem stops finishes as completed_with_exceptions, never "delivered", and stays finished', async () => {
+  const { db, insJob } = await setup();
+  const tok = await driverToken(db);
+  const call = (action, args = {}) => rpc(db, 'tp_driver', { p_token: tok, p_action: action, p_args: args });
+  const route = await insJob({ status: 'in_transit', driver: 'Dana Driver' });
+  const done = await call('update_job', { id: route, patch: { status: 'completed_with_exceptions', stops_completed: 3 } });
+  assert.equal(done[0].status, 'completed_with_exceptions');
+  // a late "delivered" or "in transit" (offline replay) cannot hide the problems or reopen the route
+  await call('update_job', { id: route, patch: { status: 'delivered' }, client_id: 'late-1' });
+  await call('update_job', { id: route, patch: { status: 'in_transit', driver_name: 'Dana Driver' }, client_id: 'late-2' });
+  assert.equal((await db.query('select status from public.jobs where id = $1', [route])).rows[0].status, 'completed_with_exceptions');
+  assert.match(await rpcError(db, 'tp_driver', { p_token: tok, p_action: 'update_job', p_args: { id: route, patch: { status: 'returned' } } }), /TP_INVALID/);
+  // the dispatcher sees it and can archive it like any finished route
+  const org = await orgToken(db);
+  const seen = await rpc(db, 'tp_org', { p_token: org, p_action: 'jobs', p_args: { limit: 50 } });
+  assert.equal(seen.find((j) => j.id === route).status, 'completed_with_exceptions');
+  assert.equal((await rpc(db, 'tp_org', { p_token: org, p_action: 'archive_jobs', p_args: { ids: [route] } })).archived, 1);
+});
+
+test('migration 10 stops (changing nothing) when jobs.status cannot hold completed_with_exceptions', async () => {
+  const db = await freshDb();
+  const { sqlFile } = await import('./fixture.mjs');
+  await db.exec(`alter table public.jobs add constraint jobs_status_check check (status in ('pending','assigned','in_transit','delivered','cancelled','routing'))`);
+  await assert.rejects(db.exec(sqlFile('10_sessions_and_rpcs.sql')), /nothing was changed.*completed_with_exceptions/s);
+  await db.exec('rollback');
+  assert.equal((await db.query(`select to_regnamespace('tp_sec') as n`)).rows[0].n, null, 'nothing was created');
+});
+
 test('removing a driver signs them out', async () => {
   const { db } = await setup();
   const dtok = await driverToken(db);
@@ -451,7 +523,7 @@ test('pgcrypto: every call is schema-qualified; preflight stops clearly when pgc
 test('jobs status preflight: a CHECK constraint rejecting a status the RPCs write stops migration 10; operations statuses are only reported', async () => {
   const sql = (await import('./fixture.mjs')).sqlFile('10_sessions_and_rpcs.sql');
   const strict = await freshDb();
-  await strict.exec(`alter table public.jobs add constraint jobs_status_check check (status in ('pending','assigned','in_transit','delivered','cancelled'))`);
+  await strict.exec(`alter table public.jobs add constraint jobs_status_check check (status in ('pending','assigned','in_transit','delivered','cancelled','completed_with_exceptions'))`);
   await assert.rejects(strict.exec(sql), /nothing was changed: public\.jobs rejects statuses the new RPCs write: \{"routing \(.*jobs_status_check.*\)"\}.*CHECK constraints on public\.jobs: jobs_status_check CHECK/s);
   await strict.exec('rollback');
   assert.equal((await strict.query(`select to_regnamespace('tp_sec') s`)).rows[0].s, null);
@@ -467,6 +539,6 @@ test('jobs status preflight: a CHECK constraint rejecting a status the RPCs writ
   assert.ok((await today.query(`select to_regprocedure('public.tp_org(text,text,jsonb)') f`)).rows[0].f);
   // a CHECK that allows every written status is fine
   const ok = await freshDb();
-  await ok.exec(`alter table public.jobs add constraint jobs_status_check check (status in ('routing','pending','assigned','in_transit','delivered','cancelled','closed_with_exceptions'))`);
+  await ok.exec(`alter table public.jobs add constraint jobs_status_check check (status in ('routing','pending','assigned','in_transit','delivered','cancelled','completed_with_exceptions','closed_with_exceptions'))`);
   await ok.exec(sql);
 });
