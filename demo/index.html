@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The demo page itself may only load files from this folder. The embedded
+     TackPath pages get their own, equally strict policy (see js/hub.js). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' data: blob:; frame-src 'self' about:; worker-src 'none'; form-action 'none'">
+<title>TackPath Live Demo</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/demo.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <div id="bgGlow"></div>
+
+    <header id="topbar">
+      <div class="brand">
+        <svg viewBox="0 0 40 70" width="16" height="28" aria-hidden="true"><defs><linearGradient id="tpg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#19b7ef"/><stop offset="1" stop-color="#0060cc"/></linearGradient></defs><rect x="2" y="4" width="36" height="8" rx="3" fill="url(#tpg)"/><rect x="16" y="4" width="8" height="62" rx="3" fill="url(#tpg)"/></svg>
+        <span class="wordmark"><b>T Ʌ C K</b> <i>P Ʌ T H</i></span>
+        <span class="sep"></span>
+        <span class="sub">Live operation · <em>Peachline Courier</em> <small>(fictional)</small></span>
+      </div>
+      <div id="actTitle" class="act-title"></div>
+      <div class="right">
+        <div id="demoClock" class="clock">7:52 AM</div>
+        <div class="safe" title="Every TackPath page here talks to an in-browser demo backend. No network calls, no SMS, no GPS, no charges.">● DEMO DATA · nothing leaves this browser</div>
+      </div>
+    </header>
+
+    <!-- Dispatcher on a desktop browser -->
+    <div class="device desk" id="devDesk">
+      <div class="desk-chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">tackpath · dispatcher</span>
+        <span class="who">Peachline dispatch office</span>
+      </div>
+      <div class="screen"><iframe id="fDisp" title="TackPath dispatcher" scrolling="no"></iframe></div>
+      <div class="device-label">Dispatcher · desktop</div>
+    </div>
+
+    <!-- PathIQ on the warehouse handheld -->
+    <div class="device tc56" id="devTc56">
+      <div class="tc-top"><span class="tc-name">TC56</span><span class="tc-led"></span></div>
+      <div class="tc-beam" id="tcBeam"></div>
+      <div class="tc-side l"></div><div class="tc-side r"></div>
+      <div class="screen"><iframe id="fPiq" title="TackPath PathIQ" scrolling="no"></iframe></div>
+      <div class="tc-bottom"><i></i><i></i><i></i></div>
+      <div class="device-label">PathIQ · warehouse handheld</div>
+    </div>
+
+    <!-- Driver app on an Android phone -->
+    <div class="device phone" id="devPhone">
+      <div class="screen">
+        <div class="statusbar"><span id="phoneTime">7:52</span><span class="sb-r">▾ ▴ ▮ 87%</span></div>
+        <iframe id="fDrv" title="TackPath driver app" scrolling="no"></iframe>
+        <div id="navApp" class="nav-app" hidden>
+          <div class="nav-map" id="navMap"></div>
+          <div class="nav-banner"><div class="nav-turn" id="navTurn">↑</div><div><div class="nav-dist" id="navDist">0.3 mi</div><div class="nav-street" id="navStreet">Marietta St NW</div></div></div>
+          <div class="nav-then" id="navThen"></div>
+          <div class="nav-sheet"><div class="nav-x">✕</div><div class="nav-eta"><b id="navEtaMin">6 min</b><span id="navEtaInfo">1.2 mi · 9:04 AM</span></div><div class="nav-chip">Navigation (simulated)</div></div>
+        </div>
+        <div id="arrBubble" class="arr-bubble" hidden></div>
+        <div id="notif" class="notif" hidden></div>
+        <div id="speech" class="speech" hidden></div>
+      </div>
+      <div class="device-label">Driver app · Android</div>
+    </div>
+
+    <!-- Warehouse floor illustration -->
+    <section id="rack" class="panel rack" aria-label="Staging rack (illustration)">
+      <div class="panel-h">Staging rack <small>illustration of the warehouse floor</small></div>
+      <div class="rack-bins" id="rackBins"></div>
+      <div class="rack-feed" id="rackFeed"></div>
+    </section>
+
+    <!-- The manifest arriving -->
+    <section id="manifest" class="panel manifest">
+      <div class="mf-file"><div class="mf-ico">CSV</div><div><b>peachline-manifest.csv</b><span id="mfMeta">21 lines</span></div></div>
+      <pre id="mfPreview"></pre>
+    </section>
+
+    <!-- Data flow note between two devices -->
+    <div id="flow" class="flow" hidden><span id="flowText"></span></div>
+
+    <!-- End-of-day reconciliation -->
+    <section id="recon" class="panel recon" hidden></section>
+
+    <div id="hl" class="hl" hidden></div>
+    <div id="ripples"></div>
+
+    <footer id="captionBar"><div id="caption" class="caption"></div></footer>
+
+    <!-- Title card -->
+    <div id="titleCard" class="title-card">
+      <div class="tc-inner">
+        <div class="eyebrow">TackPath · live demonstration</div>
+        <h1>Watch what happens when a courier company receives a shipment and TackPath runs the operation.</h1>
+        <p>Real TackPath screens: dispatcher, PathIQ on a warehouse handheld, and the driver app. They run on demo data inside this browser. Nothing is sent anywhere.</p>
+        <button id="bigStart" class="big-start" disabled>Loading TackPath…</button>
+        <div class="tc-foot">Runs by itself, about 5½ minutes at 1×. Use the controls at the bottom to pause, change speed or jump between scenes.</div>
+      </div>
+    </div>
+
+    <div id="busy" class="busy" hidden><div><span class="spin"></span><span id="busyText">Fast-forwarding…</span></div></div>
+  </div>
+</div>
+
+<nav id="controls" aria-label="Demo controls">
+  <button id="cStart" class="primary" title="Start demo (Space)">▶ Start</button>
+  <button id="cPause" disabled title="Pause / resume (Space)">❚❚</button>
+  <button id="cRestart" title="Restart (R)">↺</button>
+  <span class="grp" id="cSpeed"><button data-s="1" class="on" title="Speed 1×">1×</button><button data-s="2" title="Speed 2×">2×</button><button data-s="4" title="Speed 4×">4×</button></span>
+  <button id="cPrev" title="Previous scene (←)">⏮</button>
+  <button id="cNext" title="Next scene (→)">⏭</button>
+  <button id="cSound" title="Sound on/off">🔊</button>
+  <span id="cScenes" class="scenes"></span>
+</nav>
+
+<script src="../jsbarcode.min.js"></script>
+<script src="vendor/qrcode.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/map.js"></script>
+<script src="js/backend.js"></script>
+<script src="js/hub.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/director.js"></script>
+</body>
+</html>
