@@ -3,6 +3,7 @@
 // feeds structured knowledge into agent_memory so the Brain understands how TackPath actually works.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { guardRequest, serviceRpc } from "../_shared/tp_security.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SB_URL = "https://hofijsiphyjpdvujjzfi.supabase.co";
@@ -28,8 +29,15 @@ const TARGET_FILES = [
   { path: "supabase/functions/swarm-watch/index.ts", label: "Todd + Brain Edge Function", focus: "exception detection thresholds, pattern detection logic" },
 ];
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // Security hardening 2026-10: only company sessions may call this.
+  const guard = await guardRequest(req, {
+    rpc: serviceRpc("https://hofijsiphyjpdvujjzfi.supabase.co", Deno.env.get("SERVICE_ROLE_KEY") || ""),
+  }, { kinds: ["org"], cors: corsHeaders });
+  if (guard.response) return guard.response;
+  req = guard.req;
 
   const supabase = createClient(SB_URL, SB_KEY);
   const results: any[] = [];

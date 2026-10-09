@@ -509,7 +509,7 @@ const sbPost=async(p,b)=>{const r=await fetch(SB+'/rest/v1/'+p,{method:'POST',he
 const sbPatch=async(p,b)=>{const r=await fetch(SB+'/rest/v1/'+p,{method:'PATCH',headers:{...SBH,'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
 
 // ── ANTHROPIC ──
-const ANT_KEY=['sk-ant-api03-ekMGJHorvQ_CWJxUy','KatJHXdpLkBxQziMLcNycmAAoFxpghfEtsjVFAb3gyx9D9H46b5lT18qBXbqPPO213eTA-mqkG9gAA'].join('');
+const ANT_KEY=''; // REMOVED 2026-10 (security hardening): an Anthropic API key was committed here and must be revoked. AI calls must go through a server-side function.
 async function askClaude(prompt,sys='You are TackPath One, an AI operations assistant.'){
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',

@@ -2,6 +2,7 @@
 // Receives manifest packages, clusters geographically, creates jobs, broadcasts to drivers
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { guardRequest, serviceRpc } from "../_shared/tp_security.js";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Server-side key is read from the function secret, never committed.
@@ -15,11 +16,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Security hardening 2026-10: only company sessions may call this, and the company comes from the session.
+  const guard = await guardRequest(req, {
+    rpc: serviceRpc("https://hofijsiphyjpdvujjzfi.supabase.co", Deno.env.get("SERVICE_ROLE_KEY") || ""),
+  }, { kinds: ["org"], cors: corsHeaders });
+  if (guard.response) return guard.response;
+  req = guard.req;
+
   try {
-    const { packages, org_id, pkgs_per_driver } = await req.json();
+    const { packages, pkgs_per_driver } = await req.json();
+    const org_id = guard.session.kind === "org" ? guard.session.org_id : null;   // never from the body
     if (!packages || !packages.length) throw new Error("No packages provided");
 
     const supabase = createClient(SB_URL, SB_KEY);

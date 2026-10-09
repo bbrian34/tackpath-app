@@ -348,6 +348,7 @@ body::after{content:'';position:fixed;inset:0;
 .s-in_transit{background:rgba(83,255,136,.07);border:1px solid rgba(83,255,136,.2);color:var(--green);}
 .s-delivered{background:rgba(83,255,136,.04);border:1px solid rgba(83,255,136,.1);color:rgba(83,255,136,.5);}
 .s-cancelled{background:rgba(255,59,48,.07);border:1px solid rgba(255,59,48,.18);color:var(--red);}
+.s-completed_with_exceptions{background:rgba(255,150,30,.1);border:1px solid rgba(255,150,30,.35);color:var(--orange);}
 .s-problem{background:rgba(255,59,48,.07);border:1px solid rgba(255,59,48,.18);color:var(--red);}
 .act-btn{padding:5px 10px;border-radius:6px;font-size:0.692rem;font-weight:700;cursor:pointer;
   font-family:var(--sans);background:rgba(25,183,239,.1);color:var(--blue);
@@ -1040,7 +1041,7 @@ body::after{content:'';position:fixed;inset:0;
             <div class="live-chip"><div class="live-dot"></div>LIVE</div>
             <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);" id="lastRefresh">—</div>
             <button onclick="triggerCSVUpload()" style="padding:8px 16px;border-radius:8px;font-size:0.923rem;font-weight:700;cursor:pointer;font-family:var(--sans);background:linear-gradient(135deg,#0aa8ff,#005fcc);border:none;color:#fff;">+ New Route</button>
-<button onclick="clearAllJobs()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#128465; Clear All Jobs</button>
+<button onclick="clearAllJobs()" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;">&#128465; Clear Board</button>
 <a href="fleet.html" style="padding:8px 14px;border-radius:8px;font-size:0.923rem;font-weight:600;cursor:pointer;font-family:var(--sans);background:rgba(25,183,239,.08);border:1px solid rgba(25,183,239,.25);color:#19b7ef;text-decoration:none;">&#9783; FleetView</a>
           </div>
           <div style="overflow-x:auto;">
@@ -1235,6 +1236,15 @@ body::after{content:'';position:fixed;inset:0;
             <div style="font-family:var(--cond);font-size:2rem;font-weight:700;letter-spacing:-0.5px;">Driver Roster</div>
           </div>
           <button class="btn-primary" onclick="showAddDriverForm()" style="padding:9px 18px;font-size:0.923rem;">+ Add Driver</button>
+        </div>
+        <!-- The number this company's drivers can call from the driver app (driver experience 2026-10) -->
+        <div id="dispatchPhoneRow" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+          <div style="flex:1;min-width:220px;">
+            <label for="dispatchPhoneInput" style="font-size:0.846rem;color:var(--muted);display:block;margin-bottom:4px;">Dispatch phone drivers can call</label>
+            <input type="tel" id="dispatchPhoneInput" class="fi2" placeholder="(404) 555-0100" autocomplete="tel"/>
+          </div>
+          <button class="btn-primary" onclick="saveDispatchPhone()" style="padding:9px 18px;font-size:0.923rem;white-space:nowrap;">Save number</button>
+          <div id="dispatchPhoneNote" style="flex-basis:100%;font-size:0.846rem;color:var(--muted);">Shown on every stop in the driver app. Leave empty to hide the call button.</div>
         </div>
         <div id="addDriverForm" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;">
@@ -1463,7 +1473,7 @@ body::after{content:'';position:fixed;inset:0;
     <button class="dra dra-ghost" onclick="toast('Customer notification sent')">&#128226; Notify Customer</button>
   </div>
   <div style="margin-top:7px;">
-    <button class="dra dra-d" style="width:100%;" onclick="deleteJob()">&#128465; Delete Job</button>
+    <button class="dra dra-d" style="width:100%;" onclick="deleteJob()">&#128465; Archive Job</button>
   </div>
 </div>
 
@@ -1620,6 +1630,157 @@ const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 function sbUrl(p){return SB_URL+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+SB_KEY;}
 
+// ══════════════════════════════════════════════════════════════════════
+// SECURED DATA LAYER (security hardening 2026-10)
+// The public key can no longer read or write tables. Every request this page
+// makes to /rest/v1/<table> (and the publish_surge_route RPC) is answered by
+// the server-side company gateway tp_org, using the session from the company
+// sign-in. The server decides what this company may see and change. A
+// request shape that is not mapped below fails loudly instead of reaching a
+// table. Deleting is replaced by archiving; messages are kept.
+// ══════════════════════════════════════════════════════════════════════
+function tpSession(){
+  try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
+}
+const tpRealFetch=window.fetch.bind(window);
+function tpResp(status,data){
+  const text=typeof data==='string'?data:JSON.stringify(data);
+  return {ok:status>=200&&status<300,status:status,json:async()=>JSON.parse(text),text:async()=>text};
+}
+async function tpRpc(fn,args){
+  const r=await tpRealFetch(SB_URL+'/rest/v1/rpc/'+fn,{method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(args||{})});
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok){const m=(d&&d.message)||t||('HTTP '+r.status);if(/TP_AUTH/.test(m))tpSessionLost();throw new Error(m);}
+  return d;
+}
+// ── DISPATCH PHONE (per company; drivers see a call button) ──
+function fmtUsPhone(p){const d=String(p||'').replace(/\D/g,'');return d.length===10?'('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6):(p||'');}
+async function loadDispatchPhone(){
+  const inp=document.getElementById('dispatchPhoneInput');if(!inp)return;
+  try{const r=await tpOrg('dispatch_phone',{});inp.value=fmtUsPhone(r&&r.dispatch_phone);}catch(e){}
+}
+async function saveDispatchPhone(){
+  const inp=document.getElementById('dispatchPhoneInput'),note=document.getElementById('dispatchPhoneNote');
+  try{
+    const r=await tpOrg('set_dispatch_phone',{phone:inp.value});
+    inp.value=fmtUsPhone(r&&r.dispatch_phone);
+    note.style.color='var(--green)';note.textContent=r&&r.dispatch_phone?'Saved. Drivers now see a call button for '+fmtUsPhone(r.dispatch_phone)+'.':'Cleared. Drivers no longer see a dispatch call button.';
+  }catch(e){
+    note.style.color='var(--red)';note.textContent=/10-digit/.test(e.message)?'Enter a 10-digit US phone number.':'Could not save: '+String(e.message||e).replace(/^TP_\w+:\s*/,'');
+  }
+}
+
+async function tpOrg(action,args){
+  const s=tpSession();
+  if(!s){tpSessionLost();throw new Error('TP_AUTH: please sign in');}
+  return tpRpc('tp_org',{p_token:s.token,p_action:action,p_args:args||{}});
+}
+let tpLostShown=false;
+function tpSessionLost(){
+  if(tpLostShown)return;tpLostShown=true;
+  try{if(typeof doLogout==='function')doLogout();}catch(e){}
+  const err=document.getElementById('loginError');
+  if(err){err.textContent='Please sign in with your company code.';err.style.display='block';}
+  setTimeout(()=>{tpLostShown=false;},2000);
+}
+// PostgREST filter value -> plain value(s)
+function tpVal(v){return decodeURIComponent(v);}
+function tpList(v){return tpVal(v).replace(/^in\.\(/,'').replace(/\)$/,'').split(',').map(x=>x.replace(/^"|"$/g,'')).filter(Boolean);}
+function tpQuery(qs){
+  const q={};
+  new URLSearchParams(qs||'').forEach((v,k)=>{if(k!=='apikey'&&k!=='select')q[k]=v;});
+  return q;
+}
+function tpCommon(q,a){
+  if(q.order)a.order=/\.asc$/.test(q.order)?'asc':'desc';
+  if(q.limit)a.limit=parseInt(q.limit,10);
+  return a;
+}
+async function tpTable(method,table,q,body){
+  const a={};
+  const eq=(k)=>q[k]&&q[k].startsWith('eq.')?tpVal(q[k].slice(3)):null;
+  const gte=(k)=>q[k]&&q[k].startsWith('gte.')?tpVal(q[k].slice(4)):null;
+  if(method==='GET'){
+    if(table==='jobs'){
+      if(eq('id'))a.ids=[eq('id')];
+      if(q.id&&q.id.startsWith('in.'))a.ids=tpList(q.id);
+      if(gte('created_at'))a.since=gte('created_at');
+      if(eq('source'))a.source=eq('source');
+      if(q.status&&q.status.startsWith('in.'))a.statuses=tpList(q.status);
+      if(eq('status'))a.statuses=[eq('status')];
+      return tpOrg('jobs',tpCommon(q,a));   // org_id filters are applied by the server session
+    }
+    if(table==='drivers'){
+      let rows=await tpOrg('drivers');
+      if(eq('name'))rows=rows.filter(d=>d.name===eq('name'));
+      if(eq('id'))rows=rows.filter(d=>String(d.id)===eq('id'));
+      return rows;
+    }
+    if(table==='messages'){
+      if(eq('job_id'))a.job_id=eq('job_id');
+      if(eq('sender_role'))a.sender_role=eq('sender_role');
+      if(gte('created_at'))a.since=gte('created_at');
+      return tpOrg('messages',tpCommon(q,a));
+    }
+    if(table==='agent_memory'){
+      if(eq('agent_name'))a.agent_name=eq('agent_name');
+      if(eq('event_type'))a.event_type=eq('event_type');
+      if(gte('created_at'))a.since=gte('created_at');
+      return tpOrg('agent_memory',tpCommon(q,a));
+    }
+    if(table==='driver_locations')return tpOrg('locations',tpCommon(q,a));
+    if(table==='bin_shortfall'){const r=await tpOrg('bin_shortfall');return q.limit?r.slice(0,+q.limit):r;}
+    if(table==='shopify_connections'){const r=await tpOrg('shopify_connection');return q.limit?r.slice(0,+q.limit):r;}
+  }
+  if(method==='PATCH'){
+    if(table==='jobs'&&eq('id'))return tpOrg('update_job',{id:eq('id'),patch:body||{}});
+    if(table==='drivers'&&eq('id'))return tpOrg('driver_update',{id:eq('id'),name:body&&body.name,phone:body&&body.phone});
+  }
+  if(method==='DELETE'){
+    if(table==='jobs'&&(eq('id')||q.id))return tpOrg('archive_jobs',{ids:eq('id')?[eq('id')]:tpList(q.id)});
+    if(table==='messages')return [];                       // messages are kept for the record
+    if(table==='drivers'&&eq('id'))return tpOrg('driver_remove',{id:eq('id')});
+  }
+  if(method==='POST'){
+    if(table==='messages'){const r=await tpOrg('post_message',body||{});return [r];}
+    if(table==='drivers'){const r=await tpOrg('driver_add',body||{});return [r];}
+    if(table==='agent_memory'){const r=await tpOrg('agent_memory_insert',body||{});return [r];}
+  }
+  throw new Error('TP_UNMAPPED: '+method+' '+table+' '+JSON.stringify(q));
+}
+window.fetch=async function(input,opts){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  const m=url.match(/\/rest\/v1\/(rpc\/publish_surge_route|[a-z_]+)(?:\?([^#]*))?$/);
+  if(!m||!url.startsWith(SB_URL))return tpRealFetch(input,opts);
+  const method=((opts&&opts.method)||'GET').toUpperCase();
+  let body=null;try{body=opts&&opts.body?JSON.parse(opts.body):null;}catch(e){}
+  try{
+    if(m[1]==='rpc/publish_surge_route')return tpResp(200,await tpOrg('publish_route',{payload:body&&body.payload}));
+    return tpResp(200,await tpTable(method,m[1],tpQuery(m[2]),body));
+  }catch(e){
+    if(/TP_UNMAPPED/.test(e.message))console.error('[TackPath] '+e.message);
+    return tpResp(/TP_AUTH/.test(e.message)?401:400,{message:e.message});
+  }
+};
+// Proof of delivery: private files, opened through a 1-hour signed link.
+async function tpViewPod(jobId,pathOrUrl){
+  const s=tpSession();if(!s){tpSessionLost();return;}
+  let path=String(pathOrUrl||'');
+  const pub=path.indexOf('/object/public/pod/');
+  if(pub>=0)path=decodeURIComponent(path.slice(pub+'/object/public/pod/'.length));
+  try{
+    const r=await tpRealFetch(SB_URL+'/functions/v1/pod',{method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'sign',session:s.token,job_id:jobId,path:path})});
+    const d=await r.json();
+    if(!r.ok||!d.url)throw new Error(d.error||'Proof not available');
+    window.open(d.url,'_blank');
+  }catch(e){if(typeof toast==='function')toast('Proof not available: '+e.message,'warn');}
+}
+
+
 // ── ORGANIZATION RESOLUTION ──
 // A dispatcher's own org is resolved from ?org=slug on their URL, so they only ever
 // see their own company's jobs. Example: dispatcher.html?org=quickhaul
@@ -1629,12 +1790,14 @@ async function resolveOrgFromUrl(){
   const slug=params.get('org');
   if(!slug)return;
   try{
-    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(slug)),{headers:H});
-    const rows=await r.json();
-    if(rows&&rows[0])currentOrgId=rows[0].id;
+    const org=await tpRpc('tp_org_lookup',{p_slug:slug});
+    if(org)currentOrgId=org.id;
+    const ci=document.getElementById('loginOrgCode');
+    if(ci&&!ci.value)ci.value=slug;
   }catch(e){}
 }
 const orgReady=resolveOrgFromUrl();
+async function sbPost(p,b){const r=await fetch(sbUrl(p),{method:'POST',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbGet(p){const r=await fetch(sbUrl(p),{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbPatch(p,b){const r=await fetch(sbUrl(p),{method:'PATCH',headers:H,body:JSON.stringify(b)});if(!r.ok)throw new Error(await r.text());return r.json();}
 async function sbDelete(p){const r=await fetch(sbUrl(p),{method:'DELETE',headers:H});if(!r.ok)throw new Error(await r.text());return true;}
@@ -1669,14 +1832,15 @@ async function doLogin(){
   if(!code)return;
   errEl.style.display='none';
   try{
-    const r=await fetch(sbUrl('organizations?slug=eq.'+encodeURIComponent(code)),{headers:H});
-    const rows=await r.json();
-    if(!rows||!rows[0]){
+    const passEl=document.getElementById('loginOrgPassword');
+    const res=await tpRpc('tp_org_sign_in',{p_slug:code,p_code:passEl?passEl.value:''});
+    if(!res||!res.ok){
+      errEl.textContent=res&&/TP_RATE/.test(res.error||'')?'Too many attempts. Try again in 15 minutes.':'Company code or password not recognized.';
       errEl.style.display='block';
       return;
     }
-    currentOrgId=rows[0].id;
-    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:rows[0].id,slug:rows[0].slug,name:rows[0].name}));
+    currentOrgId=res.org.id;
+    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:res.org.id,slug:res.org.slug,name:res.org.name,token:res.token}));
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('shell').style.display='flex';
     startClock();loadJobs();if(typeof loadDrivers==='function')loadDrivers();
@@ -1695,6 +1859,8 @@ async function doLogin(){
 }
 function doLogout(){
   if(dispatchPollId){clearInterval(dispatchPollId);dispatchPollId=null;}
+  const tpS=tpSession();
+  if(tpS)tpRpc('tp_sign_out',{p_token:tpS.token}).catch(()=>{});
   localStorage.removeItem('tp_dispatch_org');
   currentOrgId=null;
   jobs=[];
@@ -1743,7 +1909,7 @@ function setTab(id,btn){
   if(id==='shopify') checkShopifyConnection();
   if(id==='sprint') renderSprint();
   if(id==='surge') renderSurge();
-  if(id==='drivers') renderDriverRoster();
+  if(id==='drivers'){ renderDriverRoster(); loadDispatchPhone(); }
 }
 
 // ── DRIVER ROSTER ──
@@ -1772,7 +1938,7 @@ async function renderDriverRoster(){
   listEl.innerHTML=driverRoster.map(d=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;" id="drv-row-${d.id}">
       <div id="drv-display-${d.id}" style="flex:1;">
-        <div style="font-weight:700;font-size:1.077rem;">${d.name}</div>
+        <div style="font-weight:700;font-size:1.077rem;">${d.name}${d.status==='pending_approval'?' <span style="color:var(--orange);font-size:0.8rem;font-weight:600;">· Applied, waiting for approval</span>':''}</div>
         <div style="font-size:0.923rem;color:var(--muted);font-family:var(--mono);">${d.phone}</div>
       </div>
       <div id="drv-edit-${d.id}" style="display:none;flex:1;gap:8px;">
@@ -1780,12 +1946,23 @@ async function renderDriverRoster(){
         <input type="text" id="drv-phone-${d.id}" value="${d.phone}" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);"/>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
+        ${d.status==='pending_approval'?`<button onclick="approveDriver('${d.id}')" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(83,255,136,.3);background:rgba(83,255,136,.08);color:#53ff88;font-size:0.8rem;cursor:pointer;">Approve</button>`:''}
         <button onclick="startEditDriver('${d.id}')" id="drv-editbtn-${d.id}" style="padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:0.8rem;cursor:pointer;">Edit</button>
         <button onclick="saveEditDriver('${d.id}')" id="drv-savebtn-${d.id}" style="display:none;padding:6px 12px;border-radius:7px;border:1px solid rgba(83,255,136,.3);background:rgba(83,255,136,.08);color:#53ff88;font-size:0.8rem;cursor:pointer;">Save</button>
         <button onclick="deleteDriver('${d.id}','${d.name}')" style="padding:6px 12px;border-radius:7px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.8rem;cursor:pointer;">Delete</button>
       </div>
     </div>
   `).join('');
+}
+
+// Drivers who applied through driversignup.html cannot sign in until approved
+// (security hardening 2026-10).
+async function approveDriver(id){
+  try{
+    await tpOrg('driver_approve',{id:id});
+    toast('Driver approved — they can sign in now','ok');
+    renderDriverRoster();
+  }catch(e){toast('Could not approve: '+e.message.slice(0,60),'warn');}
 }
 
 function startEditDriver(id){
@@ -1871,24 +2048,18 @@ async function populateDriverPicker(){
 // exactly ONE driver has that name, that driver has sms_consent === true, and
 // the phone is exactly 10 digits. Any doubt = no text.
 async function sendDriverAssignmentSMS(driverName,jobId){
+  // Security hardening 2026-10: the server decides everything. send-sms takes
+  // only this company's session and the job id; the database checks the job
+  // is assigned to exactly one consenting driver of this company, applies the
+  // rate limits and builds the fixed message. Nothing is sent otherwise.
   try{
     if(!driverName||!jobId) return;
-    var jr=await fetch(sbUrl('jobs?select=title,driver_name,status&id=eq.'+encodeURIComponent(jobId)),{headers:H});
-    if(!jr.ok) return;
-    var jobs=await jr.json();
-    if(!Array.isArray(jobs)||jobs.length!==1) return;
-    if(jobs[0].driver_name!==driverName||jobs[0].status!=='assigned') return;
-    var dr=await fetch(sbUrl('drivers?select=phone,sms_consent&name=eq.'+encodeURIComponent(driverName)),{headers:H});
-    if(!dr.ok) return;
-    var rows=await dr.json();
-    if(!Array.isArray(rows)||rows.length!==1) return;
-    var digits=String(rows[0].phone||'').replace(/\D/g,'');
-    if(rows[0].sms_consent!==true||digits.length!==10) return;
-    var title=jobs[0].title||'a new route';
-    await fetch(SB_URL+'/functions/v1/send-sms',{
+    const s=tpSession();
+    if(!s) return;
+    await tpRealFetch(SB_URL+'/functions/v1/send-sms',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
-      body:JSON.stringify({to:'+1'+digits,body:'TackPath: You have been assigned a new route: '+title+'. Open the TackPath driver app for details. Reply STOP to opt out.'})
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({session:s.token,job_id:jobId})
     });
   }catch(e){console.error('Driver SMS error:',e);}
 }
@@ -2245,7 +2416,7 @@ async function runSmartComms(){
     }
 
     // ── End-of-route confirmation: fires once when all stops complete ──
-    const completedJobs=jobs.filter(j=>j.status==='delivered'&&j.driver_name);
+    const completedJobs=jobs.filter(j=>tpDone(j.status)&&j.driver_name);
     for(const job of completedJobs){
       if(SMARTCOMMS_COMPLETED_MSG.has(job.id))continue;
       SMARTCOMMS_COMPLETED_MSG.add(job.id);
@@ -2253,7 +2424,9 @@ async function runSmartComms(){
       if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
       const totalStops=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
       const firstName=job.driver_name.split(' ')[0];
-      const msg='Great work '+firstName+'! All '+totalStops+' stops complete on this route. Please confirm you are heading back or ready for your next assignment.';
+      const msg=job.status==='completed_with_exceptions'
+        ?'Thanks '+firstName+', the route is finished. Some stops had problems: please bring those packages back to the station and confirm when you are on your way.'
+        :'Great work '+firstName+'! All '+totalStops+' stops complete on this route. Please confirm you are heading back or ready for your next assignment.';
       await sbPostMsg(job.id,msg,'dispatcher');
       await logAgentMemory('SmartComms','route_completed',job.id,job.driver_name,{
         total_stops:totalStops
@@ -2410,9 +2583,23 @@ async function checkShopifyConnection(){
 function connectShopify(){
   const shopDomain=prompt('Enter your Shopify store domain (e.g. yourstore.myshopify.com):');
   if(!shopDomain)return;
-  const cleanDomain=shopDomain.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');
-  const installUrl='https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/shopify-oauth?shop='+encodeURIComponent(cleanDomain)+'&org_id='+encodeURIComponent(currentOrgId||'');
-  window.open(installUrl,'_blank');
+  const cleanDomain=shopDomain.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  // Security hardening 2026-10: the link is issued by the server for THIS
+  // company's session (signed state), so a store can only be linked to the
+  // company that started the connection. The window opens now, while the
+  // click still counts as a user action, and is pointed at Shopify after.
+  const win=window.open('about:blank','_blank');
+  const s=tpSession();
+  if(!s){if(win)win.close();tpSessionLost();return;}
+  tpRealFetch(SB_URL+'/functions/v1/shopify-oauth',{method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY},
+    body:JSON.stringify({action:'start',session:s.token,shop:cleanDomain})})
+    .then(r=>r.json().then(d=>({ok:r.ok,d})))
+    .then(({ok,d})=>{
+      if(!ok||!d.url)throw new Error(d&&d.error||'Could not start the Shopify connection');
+      if(win)win.location.href=d.url;else window.location.href=d.url;
+    })
+    .catch(e=>{if(win)win.close();toast(e.message,'warn');});
 }
 
 async function loadJobs(){
@@ -2429,7 +2616,7 @@ async function loadJobs(){
     ring.style.display='none';ps.textContent='Live';
     document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
     // Detect status changes
-    const colors={routing:'var(--purple)',pending:'var(--orange)',assigned:'var(--blue)',customer_confirmed:'var(--yellow)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
+    const colors={routing:'var(--purple)',pending:'var(--orange)',assigned:'var(--blue)',customer_confirmed:'var(--yellow)',in_transit:'var(--purple)',delivered:'var(--green)',completed_with_exceptions:'var(--orange)',cancelled:'var(--red)'};
     newJobs.forEach(j=>{
       const prev=prevStatuses[j.id];
       if(prev&&prev!==j.status){
@@ -2467,7 +2654,7 @@ async function loadJobs(){
       renderBinShortfallAlerts(shortfalls||[]);
     }catch(e){ renderBinShortfallAlerts([]); }
     try{
-      const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||j.status==='delivered').map(j=>j.id);
+      const activeJobIds=newJobs.filter(j=>j.status==='in_transit'||tpDone(j.status)).map(j=>j.id);
       if(activeJobIds.length){
         const msgs=await sbGet('messages?sender_role=eq.driver&order=created_at.desc&limit=200');
         const jobIds=new Set(newJobs.map(j=>j.id));
@@ -2522,6 +2709,11 @@ function clearExceptionFilter(){
   document.getElementById('excDetailPanel').style.display='none';
 }
 
+// A route is finished when it was delivered, or finished with stops the driver
+// reported as problems (completed_with_exceptions, driver experience 2026-10).
+function tpDone(s){return s==='delivered'||s==='completed_with_exceptions';}
+function tpStatusText(s){return s==='completed_with_exceptions'?'finished with problems':String(s||'').replace('_',' ');}
+
 function getRealExceptions(){
   const exceptions=[];
   jobs.forEach(j=>{
@@ -2530,6 +2722,8 @@ function getRealExceptions(){
       exceptions.push({job:j,reason:'Late',since:j.estimated_delivery_at,mins:Math.floor((Date.now()-new Date(j.estimated_delivery_at).getTime())/60000)});
     }else if(j.status==='pending'&&((Date.now()-new Date(j.created_at).getTime())>15*60*1000)){
       exceptions.push({job:j,reason:'Unassigned',since:j.created_at,mins:Math.floor((Date.now()-new Date(j.created_at).getTime())/60000)});
+    }else if(j.status==='completed_with_exceptions'){
+      exceptions.push({job:j,reason:'Finished with problems',since:j.delivered_at||j.created_at,mins:Math.floor((Date.now()-new Date(j.delivered_at||j.created_at).getTime())/60000)});
     }else if(j.status==='in_transit'&&lastSeen&&((Date.now()-new Date(lastSeen).getTime())>30*60*1000)){
       exceptions.push({job:j,reason:'Driver Dark',since:lastSeen,mins:Math.floor((Date.now()-new Date(lastSeen).getTime())/60000)});
     }
@@ -2697,7 +2891,7 @@ function renderAll(){
 
 // ── KPIS ──
 function renderKPIs(){
-  const counts={pending:0,assigned:0,in_transit:0,delivered:0,cancelled:0};
+  const counts={pending:0,assigned:0,in_transit:0,delivered:0,completed_with_exceptions:0,cancelled:0};
   jobs.forEach(j=>{ const s=j.status||'pending'; if(counts[s]!==undefined) counts[s]++; });
   document.getElementById('kpi-total').textContent=jobs.length;
   document.getElementById('sb-total').textContent=jobs.length;
@@ -2892,7 +3086,8 @@ function renderPipeline(){
       stopLabel:'Stop '+sd.stop_number+' of '+sd.stop_total,
       detail:(sd.recipient?sd.recipient+' · ':'')+sd.address,
       age:sd.delivered_at?timeAgo(sd.delivered_at):'',
-      shortId:sd.job_id?sd.job_id.slice(0,8):'—'
+      shortId:sd.job_id?sd.job_id.slice(0,8):'—',
+      podRef:sd.pod_path||sd.pod_url||null
     });
   });
 
@@ -2928,6 +3123,7 @@ function renderPipeline(){
           <div class="pcard-name">${e.title}</div>
           <div class="pcard-route" style="font-size:0.769rem;">${e.detail}</div>
           <div class="pcard-age">${e.age}</div>
+          ${e.podRef?`<div class="pcard-age" style="color:var(--blue);cursor:pointer;" data-job="${e.jobId}" data-pod="${String(e.podRef).replace(/"/g,'&quot;')}" onclick="event.stopPropagation();tpViewPod(this.dataset.job,this.dataset.pod)">View proof of delivery</div>`:''}
         </div>`).join('');
     }
   }
@@ -3004,13 +3200,14 @@ function renderTable(){
     const dropoffChanged=lastDropoffByJobId[j.id]!==undefined&&lastDropoffByJobId[j.id]!==dropoffDisplay;
     lastDropoffByJobId[j.id]=dropoffDisplay;
     const dropoffColor=dropoffChanged?'color:var(--green);font-weight:700;':'';
-    const progressPct=s==='delivered'?100:Math.round((doneCount/totalStops)*100);
+    const progressPct=tpDone(s)?100:Math.round((doneCount/totalStops)*100);
     return `<tr onclick="openDrawer('${j.id}')" style="${s==='delivered'?'opacity:.55;':''}">
       <td><div class="tbl-sig" onmouseenter="highlightPipelineCard('${j.id}',true)" onmouseleave="highlightPipelineCard('${j.id}',false)">TP-${shortId}</div><div class="tbl-order">${j.id?j.id.slice(-4):''}</div></td>
       <td><div class="tbl-name">${j.title||'Untitled'}</div></td>
       <td><div class="tbl-route" style="${dropoffColor}">${dropoffDisplay}</div></td>
       <td>${(()=>{
         if(s==='delivered')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
+        if(s==='completed_with_exceptions')return '<span class="tp-exc-done" style="color:var(--orange);font-weight:700;font-size:0.846rem;">&#9888; Finished &middot; problems</span>';
         if(s!=='in_transit'&&s!=='customer_confirmed')return '<span style="color:var(--muted);font-size:0.769rem;">—</span>';
         let urgencyColor='var(--muted)';
         let urgencyLabel='';
@@ -3045,7 +3242,7 @@ function renderTable(){
           ${driftText?`<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-top:6px;">${driftText.replace(' · ','')}${j.driver_name?' · '+j.driver_name:''}</div>`:''}
         </div>`;
       })()}</td>
-      <td><span class="spill s-${s}">${s.replace('_',' ')}</span></td>
+      <td><span class="spill s-${s}">${tpStatusText(s)}</span></td>
       <td style="font-family:var(--mono);font-size:0.769rem;color:var(--muted);">${created}</td>
       <td><button class="act-btn" onclick="event.stopPropagation();${s==='pending'||s==='assigned'?`quickDispatch('${j.id}','${s}')`:`openDrawer('${j.id}')`}">${s==='pending'?'Dispatch':s==='assigned'?'Track':'View'}</button></td>
     </tr>`;
@@ -3249,12 +3446,12 @@ function renderAnalytics(){
   document.getElementById('an-rate').textContent=rate+'%';
   document.getElementById('an-rbar').style.width=rate+'%';
   // Status breakdown
-  const counts={pending:0,assigned:0,in_transit:0,delivered:0,cancelled:0};
+  const counts={pending:0,assigned:0,in_transit:0,delivered:0,completed_with_exceptions:0,cancelled:0};
   jobs.forEach(j=>{const s=j.status||'pending';if(counts[s]!==undefined)counts[s]++;});
-  const colors={pending:'var(--muted)',assigned:'var(--blue)',in_transit:'var(--purple)',delivered:'var(--green)',cancelled:'var(--red)'};
+  const colors={pending:'var(--muted)',assigned:'var(--blue)',in_transit:'var(--purple)',delivered:'var(--green)',completed_with_exceptions:'var(--orange)',cancelled:'var(--red)'};
   document.getElementById('statusBreakdown').innerHTML=Object.entries(counts).map(([s,c])=>`
     <div style="padding:14px;border-radius:10px;background:var(--card2);border:1px solid var(--border);text-align:center;">
-      <div style="font-family:var(--mono);font-size:0.615rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">${s.replace('_',' ')}</div>
+      <div style="font-family:var(--mono);font-size:0.615rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">${tpStatusText(s)}</div>
       <div style="font-family:var(--cond);font-size:1.846rem;font-weight:600;color:${colors[s]||'var(--text)'};">${c}</div>
     </div>
   `).join('');
@@ -3265,7 +3462,7 @@ function renderAnalytics(){
     return `<div style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-bottom:1px solid var(--border2);font-size:0.846rem;" onclick="openDrawer('${j.id}')" style="cursor:pointer;">
       <div style="font-family:var(--mono);font-size:0.692rem;color:var(--blue);min-width:80px;">TP-${j.id?j.id.slice(0,8):'—'}</div>
       <div style="flex:1;font-weight:600;">${j.title||'—'}</div>
-      <span class="spill s-${s}" style="font-size:0.615rem;">${s.replace('_',' ')}</span>
+      <span class="spill s-${s}" style="font-size:0.615rem;">${tpStatusText(s)}</span>
       <div style="font-family:var(--mono);font-size:0.692rem;color:var(--faint);">${created}</div>
     </div>`;
   }).join('')||'<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:0.692rem;color:var(--faint);">No jobs yet</div>';
@@ -3274,13 +3471,13 @@ function renderAnalytics(){
 // ── COMMAND ──
 function renderCommand(){
   const total=jobs.length;
-  const counts={pending:0,assigned:0,in_transit:0,delivered:0,cancelled:0};
+  const counts={pending:0,assigned:0,in_transit:0,delivered:0,completed_with_exceptions:0,cancelled:0};
   jobs.forEach(j=>{const s=j.status||'pending';if(counts[s]!==undefined)counts[s]++;});
   document.getElementById('dbStats').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
       ${Object.entries(counts).map(([s,c])=>`
         <div style="padding:9px 11px;border-radius:8px;background:var(--card2);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:0.769rem;color:var(--muted);text-transform:capitalize;">${s.replace('_',' ')}</div>
+          <div style="font-size:0.769rem;color:var(--muted);text-transform:capitalize;">${tpStatusText(s)}</div>
           <div style="font-family:var(--mono);font-size:0.923rem;font-weight:700;">${c}</div>
         </div>
       `).join('')}
@@ -3300,6 +3497,8 @@ function renderSprint(){
   const delivered = sprintJobs.filter(j=>j.status==='delivered');
   const exceptions= sprintJobs.filter(j=>{
     if(j.status==='cancelled') return true;
+    // FINISHED WITH PROBLEMS: the driver reported a stop they could not deliver
+    if(j.status==='completed_with_exceptions') return true;
     // LATE: still moving but past its own estimated delivery time
     if(j.status==='in_transit' && j.estimated_delivery_at && Date.now() > new Date(j.estimated_delivery_at).getTime()) return true;
     // UNASSIGNED: sat pending too long with no driver
@@ -3324,7 +3523,7 @@ function renderSprint(){
   document.getElementById('sl-exc-badge').textContent = exceptions.length+' OPEN';
 
   const board = document.getElementById('sl-board');
-  const statusColor={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--green)',delivered:'var(--green)',cancelled:'var(--red)'};
+  const statusColor={pending:'var(--orange)',assigned:'var(--blue)',in_transit:'var(--green)',delivered:'var(--green)',completed_with_exceptions:'var(--orange)',cancelled:'var(--red)'};
 
   if(!sprintJobs.length){
     board.innerHTML='<div style="text-align:center;padding:32px 0;font-family:var(--mono);font-size:0.846rem;color:var(--muted);">No active Sprint jobs. Orders appear here when dispatched.</div>';
@@ -3393,6 +3592,7 @@ function syncSurgeBlocksFromJobs(){
     const stopsCompleted = j.stops_completed||0;
     let status='active';
     if(j.status==='delivered') status='complete';
+    else if(j.status==='completed_with_exceptions') status='exception';
     else if(j.status==='cancelled') status='rejected';
     else if(j.status==='pending') status='broadcast';
 
@@ -3605,10 +3805,10 @@ function openDrawer(id){
         <button onclick="broadcastJob('${j.id}')" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:0.923rem;cursor:pointer;">Broadcast to All</button>
       </div>
     </div>
-    ${j.status==='delivered'?renderTimingBreakdown(j):''}
-    ${j.status==='delivered'?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="archiveJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:0.923rem;font-weight:700;cursor:pointer;">Archive This Delivery</button></div>`:''}
-    ${(j.status!=='delivered'&&j.status!=='cancelled'&&drawerStops&&drawerStops.length>1)?renderStopCancelList(j,drawerStops):''}
-    ${(j.status!=='delivered'&&j.status!=='cancelled'&&(!drawerStops||drawerStops.length<=1))?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="cancelJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.923rem;font-weight:700;cursor:pointer;">Cancel This Job</button></div>`:''}
+    ${tpDone(j.status)?renderTimingBreakdown(j):''}
+    ${tpDone(j.status)?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="archiveJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:0.923rem;font-weight:700;cursor:pointer;">Archive This Delivery</button></div>`:''}
+    ${(!tpDone(j.status)&&j.status!=='cancelled'&&drawerStops&&drawerStops.length>1)?renderStopCancelList(j,drawerStops):''}
+    ${(!tpDone(j.status)&&j.status!=='cancelled'&&(!drawerStops||drawerStops.length<=1))?`<div class="dr-field" style="grid-column:1/-1;"><button onclick="cancelJob('${j.id}')" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,60,60,.3);background:rgba(255,60,60,.08);color:#ff6363;font-size:0.923rem;font-weight:700;cursor:pointer;">Cancel This Job</button></div>`:''}
   `;
   populateDriverPicker();
   // Load map
@@ -3772,61 +3972,33 @@ async function saveStatus(){
 }
 
 async function clearAllJobs(){
-  if(!confirm('Delete ALL jobs? This cannot be undone.'))return;
+  // Security hardening 2026-10: jobs are archived, never deleted (deleting is
+  // no longer possible with the public key). Archived jobs leave the board
+  // and stay in the Archive tab and in delivery history.
+  if(!confirm('Clear ALL jobs from the board? They move to the Archive.'))return;
   try{
-    toast('Deleting all jobs...','ok');
-
-    // Read the jobs actually visible to this org, then delete by explicit id.
-    // The previous filter (id=neq.<zero-uuid>) was rejected by PostgREST with
-    // 400 and the function reported success anyway, so nothing was deleted
-    // and the operator was told it worked.
-    // Must match loadJobs() exactly: it shows jobs for this org AND jobs
-    // with a null org_id. Filtering on org_id=eq only read zero rows, so
-    // nothing was deleted while those null-org jobs stayed on screen.
-    const orgF=currentOrgId?('&or=(org_id.eq.'+currentOrgId+',org_id.is.null)'):'';
-    const rows=await sbGet('jobs?select=id'+orgF+'&limit=1000');
-    const ids=(Array.isArray(rows)?rows:[]).map(r=>r.id).filter(Boolean);
-
+    toast('Clearing the board...','ok');
+    const rows=await sbGet('jobs?select=id,archived&limit=2000');
+    const ids=(Array.isArray(rows)?rows:[]).filter(r=>r.archived!==true).map(r=>r.id).filter(Boolean);
     if(!ids.length){
       await loadJobs();
       toast('No jobs to clear','ok');
       return;
     }
-
-    // PostgREST caps URL length, so delete in batches using in.(...)
-    const CHUNK=40;
-    let deleted=0, failed=0;
-    for(let i=0;i<ids.length;i+=CHUNK){
-      const batch=ids.slice(i,i+CHUNK);
-      const list='('+batch.join(',')+')';
-      try{
-        // Messages first — they carry the stop-level delivery records
-        await sbDelete('messages?job_id=in.'+list);
-      }catch(e){ /* messages may already be gone */ }
-      try{
-        // Delete by explicit id only — the ids already came from the
-        // org-scoped read above, so re-applying an or= filter here would
-        // just risk a malformed query.
-        await sbDelete('jobs?id=in.'+list);
-        deleted+=batch.length;
-      }catch(e){
-        failed+=batch.length;
-        console.log('[ClearAll] batch failed:',(e&&e.message?e.message:String(e)).slice(0,120));
-      }
-    }
-
+    const res=await tpOrg('archive_jobs',{ids:ids});
     closeDrawer();
     await loadJobs();
-
     // Verify against the database rather than assuming
-    const after=await sbGet('jobs?select=id'+orgF+'&limit=5');
-    console.log('[ClearAll] deleted='+deleted+' failed='+failed+' remaining='+
-      (Array.isArray(after)?after.length:'?'));
-    const remaining=(Array.isArray(after)?after:[]).length;
+    const after=await sbGet('jobs?select=id,archived&limit=2000');
+    const remaining=(Array.isArray(after)?after:[]).filter(r=>r.archived!==true).length;
+    console.log('[ClearAll] archived='+(res&&res.archived)+' remaining='+remaining);
+    const locked=(res&&res.locked)||0;   // closed operations-system routes are read-only
     if(remaining===0){
-      toast(deleted+' job'+(deleted===1?'':'s')+' cleared','ok');
+      toast(ids.length+' job'+(ids.length===1?'':'s')+' cleared','ok');
+    }else if(locked>=remaining){
+      toast('Cleared '+((res&&res.archived)||0)+'; '+locked+' closed route'+(locked===1?' is':'s are')+' read-only and stay','ok');
     }else{
-      toast('Cleared '+deleted+', but '+remaining+'+ still remain — check permissions','warn');
+      toast('Cleared '+((res&&res.archived)||0)+', but '+remaining+' still remain','warn');
     }
   }catch(e){
     console.error('Clear all error:',e);
@@ -3835,22 +4007,15 @@ async function clearAllJobs(){
 }
 
 async function deleteJob(){
+  // Archived instead of deleted (security hardening 2026-10).
   if(!currentJobId)return;
-  if(!confirm('Delete this job permanently?'))return;
+  if(!confirm('Remove this job from the board? It moves to the Archive.'))return;
   try{
-    // Delete messages first (foreign key constraint)
-    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/messages?job_id=eq.'+currentJobId,{
-      method:'DELETE',
-      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
-    });
-    // Then delete the job
-    const r=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/rest/v1/jobs?id=eq.'+currentJobId,{
-      method:'DELETE',
-      headers:{'apikey':'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp','Authorization':'Bearer sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp'}
-    });
-    if(r.ok){toast('Job deleted');closeDrawer();loadJobs();}
-    else{const e=await r.text();toast('Delete failed: '+e.slice(0,50));}
-  }catch(e){toast('Delete failed: '+e.message);console.error(e);}
+    const r=await tpOrg('archive_jobs',{ids:[currentJobId]});
+    if(r&&r.archived){toast('Job archived');closeDrawer();loadJobs();}
+    else if(r&&r.locked){toast('This route was closed by the operations system and is read-only','warn');}
+    else{toast('Could not archive this job','warn');}
+  }catch(e){toast('Archive failed: '+e.message);console.error(e);}
 }
 
 async function quickDispatch(id,status){
@@ -3921,6 +4086,13 @@ async function loadDriverMessages(){
         const bubble=document.createElement('div');bubble.className='oc-msg '+(isMe?'oc-outbound':'oc-driver');
         if(isMe) bubble.style.alignSelf='flex-end';
         bubble.textContent=m.body;
+        // A driver's problem report (STOP_EXCEPTION::) reads as a plain alert.
+        if(m.body.startsWith('STOP_EXCEPTION::')){
+          let x={};try{x=JSON.parse(m.body.slice(16));}catch(e){}
+          bubble.textContent='\u26A0 PROBLEM \u2014 Stop '+(x.stop_number||'?')+': '+(x.reason_label||x.reason||'problem')
+            +' \u00b7 '+(x.packages||0)+' package'+(x.packages===1?'':'s')+' returning to station'+(x.recipient?' ('+x.recipient+')':'');
+          bubble.style.borderLeft='4px solid #ef4444';
+        }
         wrap.appendChild(meta);wrap.appendChild(bubble);
         container.appendChild(wrap);
       });
@@ -4041,12 +4213,13 @@ if(/Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgen
 // ── AUTO LOGIN + POLLING ──
 window.addEventListener('load',async function(){
   await orgReady; // resolves currentOrgId from ?org= URL param if present
-  let sessionOrg=null;
-  try{ sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null'); }catch(e){}
+  // Signed in = a server session for this company (security hardening 2026-10).
+  // ?org= only pre-fills the company on the sign-in screen.
+  let sessionOrg=tpSession();
+  if(sessionOrg && currentOrgId && sessionOrg.id!==currentOrgId) sessionOrg=null;
 
-  if(currentOrgId || sessionOrg){
-    if(!currentOrgId && sessionOrg) currentOrgId=sessionOrg.id;
-    if(sessionOrg) localStorage.setItem('tp_dispatch_org',JSON.stringify(sessionOrg.id===currentOrgId?sessionOrg:{id:currentOrgId}));
+  if(sessionOrg){
+    currentOrgId=sessionOrg.id;
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('shell').style.display='flex';
     startClock();
@@ -4120,17 +4293,8 @@ setInterval(refreshFleetMap,10000);
 setInterval(function(){refreshAllLiveETAs().catch(function(){});},30000);
 
 
-// ── TWILIO SMS ──
-async function sendSMS(type, phone, jobId, jobTitle){
-  if(!phone) return;
-  try{
-    await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/send-sms',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
-      body:JSON.stringify({type, phone, job_id:jobId, job_title:jobTitle})
-    });
-  }catch(e){console.error('SMS error:',e);}
-}
+// (A second, unused SMS helper that sent {type, phone} was removed: send-sms
+// only sends the driver assignment text now. Security hardening 2026-10.)
 
 // ── SMARTSORT INTEGRATION ──
 const DEMO_PACKAGES = [
@@ -4198,8 +4362,16 @@ function parseCSV(text){
     // Optional -- not every manifest will have one yet, so its absence
     // never blocks an upload the way the four required columns do.
     tracking_number:headers.indexOf('tracking_number'),
-    route_hint:headers.indexOf('route_hint')
+    route_hint:headers.indexOf('route_hint'),
+    // Optional columns the driver sees at the stop (driver experience 2026-10).
+    phone:headers.indexOf('phone'),
+    unit:headers.indexOf('unit'),
+    access_notes:headers.indexOf('access_notes'),
+    gate_code:headers.indexOf('gate_code'),
+    delivery_notes:headers.indexOf('delivery_notes'),
+    signature_required:headers.indexOf('signature_required')
   };
+  const opt=(c,k)=>idx[k]>=0?((c[idx[k]]||'').trim()||null):null;
   if(idx.order_id<0||idx.recipient<0||idx.address<0){
     toast('Missing required columns: order_id, recipient, address','warn');return;
   }
@@ -4216,7 +4388,9 @@ function parseCSV(text){
       address:c[idx.address],
       packages:parseInt(c[idx.packages])||1,
       tracking_number: idx.tracking_number>=0 ? (c[idx.tracking_number]||null) : null,
-      route_hint: hint||null
+      route_hint: hint||null,
+      phone:opt(c,'phone'),unit:opt(c,'unit'),access_notes:opt(c,'access_notes'),gate_code:opt(c,'gate_code'),
+      delivery_notes:opt(c,'delivery_notes'),signature_required:/^(true|yes|y|1)$/i.test(opt(c,'signature_required')||'')
     });
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
@@ -4519,6 +4693,7 @@ async function getTrafficAwareLegData(originCoords,destCoords){
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
       body:JSON.stringify({
+        session:(tpSession()||{}).token,   // smooth-api needs a company session (2026-10)
         action:'routes',
         params:{
           origin:originCoords.lat+','+originCoords.lng,
@@ -5447,7 +5622,7 @@ async function callRealMatrixAction(origins,destinations){
   const resp=await fetch(SB_URL+'/functions/v1/smooth-api',{
     method:'POST',
     headers:{'Content-Type':'application/json','apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON},
-    body:JSON.stringify({action:'matrix',params:{
+    body:JSON.stringify({session:(tpSession()||{}).token,action:'matrix',params:{
       origins:origins.map(p=>({lat:p.lat,lng:p.lng})),
       destinations:destinations.map(p=>({lat:p.lat,lng:p.lng}))
     }})
@@ -5926,6 +6101,9 @@ async function buildRoutes(){
       });
     }
     const stop=stopMap.get(key);
+    // Driver-facing stop details: the first package that has each one.
+    ['phone','unit','access_notes','gate_code','delivery_notes'].forEach(k=>{if(!stop[k]&&pkg[k])stop[k]=pkg[k];});
+    if(pkg.signature_required)stop.signature_required=true;
     stop.pkgs.push(normalizePackage(pkg));
     stop.packages+=(parseInt(pkg.packages)||1);
   }
@@ -6523,6 +6701,10 @@ async function assignSSRoute(routeId){
       packages: s.packages,
       stop_number: i+1,
       coords: s.coords||null,
+      // shown to the driver at the stop when the manifest has them
+      phone: s.phone||null, unit: s.unit||null, access_notes: s.access_notes||null,
+      gate_code: s.gate_code||null, delivery_notes: s.delivery_notes||null,
+      signature_required: !!s.signature_required,
       // Every real, distinct manifest line at this stop. piece_id is the
       // real, physical, scannable barcode as supplied (tracking_number or
       // order_id) -- never an invented per-unit id. required_count is how

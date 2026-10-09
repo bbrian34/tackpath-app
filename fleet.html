@@ -236,12 +236,29 @@ const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
 let jobs=[],driverLocs={},perfLoaded=false;
 
+// ── SECURED DATA (security hardening 2026-10) ──
+// Fleet reads through the company session the dispatcher signed in with
+// (tp_org); without one it sends you to the dispatcher sign-in.
+function tpSession(){
+  try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
+}
+function tpSignInAgain(){localStorage.removeItem('tp_dispatch_org');window.location.href='dispatcher.html';}
+async function tpOrg(action,args){
+  const s=tpSession();
+  if(!s){tpSignInAgain();throw new Error('TP_AUTH');}
+  const r=await fetch(SB+'/rest/v1/rpc/tp_org',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+    body:JSON.stringify({p_token:s.token,p_action:action,p_args:args||{}})});
+  const t=await r.text();
+  if(!r.ok){if(/TP_AUTH/.test(t))tpSignInAgain();throw new Error(t);}
+  return t?JSON.parse(t):null;
+}
+
 // ── DATA ─────────────────────────────────────────────────────────────
 async function load(){
   try{
     const [jr,lr]=await Promise.all([
-      fetch(SB+'/rest/v1/jobs?status=in.(assigned,in_transit,delivered)&order=created_at.desc&limit=200&apikey='+KEY,{headers:H}).then(r=>r.json()),
-      fetch(SB+'/rest/v1/driver_locations?order=updated_at.desc&limit=200&apikey='+KEY,{headers:H}).then(r=>r.json())
+      tpOrg('jobs',{statuses:['assigned','in_transit','delivered','completed_with_exceptions'],limit:200}),
+      tpOrg('locations',{limit:200})
     ]);
     jobs=Array.isArray(jr)?jr:[];
     // Keep only the most recent GPS fix per driver
@@ -260,7 +277,7 @@ async function load(){
 // Returns 'good' | 'warning' | 'critical'
 function health(j){
   if(j.exception_flag)return'critical';
-  if(j.status==='delivered')return'done';
+  if(j.status==='delivered'||j.status==='completed_with_exceptions')return'done';
   if(!j.estimated_delivery_at)return'good';
   const minsLeft=Math.round((new Date(j.estimated_delivery_at).getTime()-Date.now())/60000);
   if(minsLeft<0)return'critical';
@@ -269,9 +286,9 @@ function health(j){
 }
 
 const HEALTH_COLOR={good:'#0d7a03',warning:'#c85a00',critical:'#c0392b',done:'#94a3b8'};
-const STATUS_LABEL={assigned:'At Pickup',in_transit:'In Transit',delivered:'Delivered'};
-const STATUS_BG={assigned:'rgba(10,124,186,.08)',in_transit:'rgba(109,63,214,.08)',delivered:'rgba(13,122,3,.08)'};
-const STATUS_COLOR={assigned:'#0a7cba',in_transit:'#6d3fd6',delivered:'#0d7a03'};
+const STATUS_LABEL={assigned:'At Pickup',in_transit:'In Transit',delivered:'Delivered',completed_with_exceptions:'Finished · problems'};
+const STATUS_BG={assigned:'rgba(10,124,186,.08)',in_transit:'rgba(109,63,214,.08)',delivered:'rgba(13,122,3,.08)',completed_with_exceptions:'rgba(200,90,0,.1)'};
+const STATUS_COLOR={assigned:'#0a7cba',in_transit:'#6d3fd6',delivered:'#0d7a03',completed_with_exceptions:'#c85a00'};
 
 // ── GPS FRESHNESS ─────────────────────────────────────────────────────
 function gpsFresh(driverName){
@@ -283,6 +300,7 @@ function gpsFresh(driverName){
 // ── ETA DISPLAY ───────────────────────────────────────────────────────
 function etaDisplay(j){
   if(j.status==='delivered')return{text:'Complete',color:'var(--green)'};
+  if(j.status==='completed_with_exceptions')return{text:'Finished · problems',color:'#c85a00'};
   if(!j.estimated_delivery_at)return{text:'Calculating...',color:'var(--faint)'};
   const ms=new Date(j.estimated_delivery_at).getTime()-Date.now();
   const mins=Math.round(ms/60000);
@@ -314,7 +332,7 @@ function renderLive(){
   let active=0,onPace=0,attn=0,late=0,done=0;
   drivers.forEach(([,j])=>{
     const h=health(j);
-    if(j.status==='delivered'){done++;}
+    if(j.status==='delivered'||j.status==='completed_with_exceptions'){done++;}
     else{
       active++;
       if(h==='good')onPace++;
@@ -356,7 +374,7 @@ function renderLive(){
     if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
     const totalStops=stops&&Array.isArray(stops)?stops.length:1;
     const doneCount=j.stops_completed||0;
-    const pct=j.status==='delivered'?100:Math.min(100,Math.round((doneCount/totalStops)*100));
+    const pct=(j.status==='delivered'||j.status==='completed_with_exceptions')?100:Math.min(100,Math.round((doneCount/totalStops)*100));
 
     const currentStop=stops&&Array.isArray(stops)?stops[Math.min(doneCount,totalStops-1)]:null;
     const addr=currentStop&&currentStop.address?currentStop.address:(j.pickup_address||'—');
@@ -383,7 +401,7 @@ function renderLive(){
         <div class="dc-prog-pct">${pct}%</div>
       </div>
       <div class="dc-bar"><div class="dc-bar-fill" style="width:${pct}%;background:${hColor};"></div></div>
-      ${j.status!=='delivered'?`
+      ${(j.status!=='delivered'&&j.status!=='completed_with_exceptions')?`
       <div class="dc-stop-lbl">${j.status==='assigned'?'Pickup':'Current Stop'}</div>
       <div class="dc-stop-addr" title="${addr}">${shortAddr}</div>`:'<div style="height:32px;"></div>'}
       <div class="dc-eta-row">
@@ -412,8 +430,7 @@ function setTab(name,btn){
 async function loadPerformance(){
   let driftRecords=[];
   try{
-    const r=await fetch(SB+'/rest/v1/messages?sender_role=eq.dispatcher&order=created_at.desc&limit=1000&apikey='+KEY,{headers:H});
-    const msgs=await r.json();
+    const msgs=await tpOrg('messages',{sender_role:'dispatcher',limit:1000});
     driftRecords=(Array.isArray(msgs)?msgs:[])
       .filter(m=>m.body&&m.body.startsWith('STOP_DRIFT::'))
       .map(m=>{try{return JSON.parse(m.body.replace('STOP_DRIFT::',''));}catch(e){return null;}})

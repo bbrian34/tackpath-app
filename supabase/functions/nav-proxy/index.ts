@@ -10,6 +10,7 @@
 // the key from the APK bundle entirely.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { guardRequest, serviceRpc } from "../_shared/tp_security.js";
 
 const GKEY = Deno.env.get("GOOGLE_MAPS_KEY") || "";
 
@@ -18,8 +19,15 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  // Security hardening 2026-10: only company or driver sessions (same code as smooth-api) may call this.
+  const guard = await guardRequest(req, {
+    rpc: serviceRpc("https://hofijsiphyjpdvujjzfi.supabase.co", Deno.env.get("SERVICE_ROLE_KEY") || ""),
+  }, { kinds: ["org", "driver"], cors: cors });
+  if (guard.response) return guard.response;
+  req = guard.req;
 
   try {
     const { action, params } = await req.json();

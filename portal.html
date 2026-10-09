@@ -193,6 +193,22 @@ const SB_URL='https://hofijsiphyjpdvujjzfi.supabase.co';
 const SB_KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
 
+// ── SECURED SIGN-IN (security hardening 2026-10) ──
+// The company code is checked by the server (tp_org_sign_in), never in the
+// browser, and the access code is no longer readable by anyone. The session
+// token is shared with the dispatcher, fleet and PathIQ pages on this site.
+async function tpRpc(fn,args){
+  const r=await fetch(SB_URL+'/rest/v1/rpc/'+fn,{method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(args||{})});
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok)throw new Error((d&&d.message)||t||('HTTP '+r.status));
+  return d;
+}
+function tpSession(){
+  try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
+}
+
 async function doPortalLogin(){
   const codeInput=document.getElementById('loginOrgCode');
   const passInput=document.getElementById('loginOrgPassword');
@@ -202,18 +218,14 @@ async function doPortalLogin(){
   if(!code)return;
   errEl.style.display='none';
   try{
-    const r=await fetch(SB_URL+'/rest/v1/organizations?slug=eq.'+encodeURIComponent(code),{headers:H});
-    const rows=await r.json();
-    if(!rows||!rows[0]){
+    const res=await tpRpc('tp_org_sign_in',{p_slug:code,p_code:pass});
+    if(!res||!res.ok){
+      if(res&&/TP_RATE/.test(res.error||''))errEl.textContent='Too many attempts. Try again in 15 minutes.';
       errEl.style.display='block';
       return;
     }
-    const org=rows[0];
-    if(org.access_code&&org.access_code!==pass){
-      errEl.style.display='block';
-      return;
-    }
-    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:org.id,slug:org.slug,name:org.name}));
+    const org=res.org;
+    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:org.id,slug:org.slug,name:org.name,token:res.token}));
     showDashboard();
   }catch(e){
     errEl.textContent='Something went wrong. Please try again.';
@@ -222,6 +234,8 @@ async function doPortalLogin(){
 }
 
 function portalSignOut(){
+  const s=tpSession();
+  if(s)tpRpc('tp_sign_out',{p_token:s.token}).catch(()=>{});
   localStorage.removeItem('tp_dispatch_org');
   document.getElementById('dashScreen').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
@@ -241,8 +255,8 @@ function showDashboard(){
 }
 
 (function(){
-  let sessionOrg=null;
-  try{ sessionOrg=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null'); }catch(e){}
+  // A saved company from before secured sign-in has no token: sign in again.
+  const sessionOrg=tpSession();
   if(sessionOrg&&sessionOrg.name){ showDashboard(); }
 })();
 </script>

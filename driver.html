@@ -449,11 +449,13 @@ button,a,input,textarea{font-family:var(--sans);}
 <div class="screen on" id="scLogin">
   <div class="lbox">
     <div class="lbox-top" style="text-align:center;padding-bottom:4px;">
-      <svg width="24" height="41" viewBox="0 0 36 70" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 10px;">
-        <defs><linearGradient id="tpgd" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#5dd4f4"/><stop offset="100%" stop-color="#0e7abf"/></linearGradient></defs>
-        <rect x="0" y="22" width="6" height="26" rx="3" fill="url(#tpgd)"/>
-        <rect x="12" y="12" width="6" height="46" rx="3" fill="url(#tpgd)" opacity=".75"/>
-        <rect x="24" y="4" width="6" height="62" rx="3" fill="url(#tpgd)" opacity=".5"/>
+      <svg id="tpSymbol" width="35" height="41" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 10px;">
+        <defs><linearGradient id="tpgd" x1="8" y1="48" x2="40" y2="5" gradientUnits="userSpaceOnUse"><stop stop-color="#0e7abf"/><stop offset="1" stop-color="#5dd4f4"/></linearGradient></defs>
+        <g stroke="url(#tpgd)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 47V34Q7 30 11 26" opacity=".62"/>
+          <path d="M21 47V24Q21 20 25 16" opacity=".82"/>
+          <path d="M35 47V14Q35 10 39 6"/>
+        </g>
       </svg>
       <div class="wm"><span style="font-family:'Montserrat',sans-serif;font-size:1.19rem;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
       <div class="lbox-badge">Driver Portal</div>
@@ -464,6 +466,9 @@ button,a,input,textarea{font-family:var(--sans);}
       <button class="fb" onclick="requestCode()" id="loginPhoneBtn" style="margin-top:16px;">Send Code</button>
       <div class="fn" style="text-align:center;margin-top:14px;">New driver? <a href="driversignup.html" style="color:#19b7ef;font-weight:700;">Sign up here</a></div>
       <div class="fn">TackPath Driver &middot; Atlanta Metro</div>
+      <!-- Google / Apple sign-in: HIDDEN until real Google and Apple sign-in exist (Stage B).
+           To restore: remove the "hidden" attribute below and give each button a real handler. -->
+      <div id="socialSignIn" hidden>
       <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.08);"></div>
         <div style="font-family:var(--mono);font-size:0.5625rem;color:#4a6e88;letter-spacing:.1em;">or continue with</div>
@@ -478,6 +483,7 @@ button,a,input,textarea{font-family:var(--sans);}
           <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" fill="#fff"/></svg>
           <span style="color:rgba(255,255,255,.7);font-size:0.75rem;font-weight:600;">Apple</span>
         </button>
+      </div>
       </div>
     </div>
 
@@ -879,9 +885,7 @@ button,a,input,textarea{font-family:var(--sans);}
     </div>
     <div class="stats-g">
       <div class="stat-b"><div class="stat-l">Today</div><div class="stat-v" style="color:var(--green);" id="statEarn">$0</div></div>
-      <div class="stat-b"><div class="stat-l">Deliveries</div><div class="stat-v" style="color:var(--blue);" id="statJobs">0</div></div>
-      <div class="stat-b"><div class="stat-l">Rating</div><div class="stat-v" style="color:var(--yellow);">4.9&#9733;</div></div>
-      <div class="stat-b"><div class="stat-l">YTD</div><div class="stat-v" style="color:var(--orange);" id="statYTD">$0</div></div>
+      <div class="stat-b"><div class="stat-l">Routes done</div><div class="stat-v" style="color:var(--blue);" id="statJobs">0</div></div>
     </div>
     <div style="display:flex;gap:10px;margin:14px 0;">
       <button onclick="openExternalLink('https://tackpath.com/privacy.html')" style="flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:0.75rem;cursor:pointer;">Privacy Policy</button>
@@ -930,6 +934,112 @@ const sbu=p=>SB+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+KEY;
 const sbGet=async p=>{const r=await fetch(sbu(p),{headers:GH});if(!r.ok)throw Error(await r.text());return r.json();};
 const sbPatch=async(p,b)=>{const r=await fetch(sbu(p),{method:'PATCH',headers:PH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
 const sbPost=async(p,b)=>{const r=await fetch(sbu(p),{method:'POST',headers:PH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
+
+// ══════════════════════════════════════════════════════════════════════
+// SECURED DATA LAYER (security hardening 2026-10)
+// Sign-in uses a real one-time code texted by the driver-login function and
+// checked by the server; the result is a driver session (driver.token).
+// The public key can no longer read or write tables: every /rest/v1/<table>
+// request this app makes is answered by the server-side driver gateway
+// tp_driver, which only lets a driver see open offers and their own routes
+// and change only their own route. Proof-of-delivery photos go to a private
+// bucket through the pod function. A request shape that is not mapped below
+// fails loudly instead of reaching a table.
+// ══════════════════════════════════════════════════════════════════════
+const tpRealFetch=window.fetch.bind(window);
+function tpResp(status,data){
+  const text=typeof data==='string'?data:JSON.stringify(data);
+  return {ok:status>=200&&status<300,status:status,json:async()=>JSON.parse(text),text:async()=>text};
+}
+async function tpRpc(fn,args){
+  const r=await tpRealFetch(SB+'/rest/v1/rpc/'+fn,{method:'POST',
+    headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(args||{})});
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok){const m=(d&&d.message)||t||('HTTP '+r.status);if(/TP_AUTH/.test(m))tpSessionLost();throw new Error(m);}
+  return d;
+}
+function tpToken(){return driver&&driver.token?driver.token:null;}
+async function tpDriver(action,args){
+  if(!tpToken()){tpSessionLost();throw new Error('TP_AUTH: please sign in');}
+  return tpRpc('tp_driver',{p_token:tpToken(),p_action:action,p_args:args||{}});
+}
+let tpLost=false;
+function tpSessionLost(){
+  if(tpLost)return;tpLost=true;
+  try{localStorage.removeItem('tp_drv');}catch(e){}
+  try{if(typeof toast==='function')toast('Please sign in again','warn');}catch(e){}
+  setTimeout(()=>location.reload(),1200);
+}
+function tpVal(v){return decodeURIComponent(v);}
+function tpList(v){return tpVal(v).replace(/^in\.\(/,'').replace(/\)$/,'').split(',').filter(Boolean);}
+async function tpTable(method,table,qs,body){
+  const q={};new URLSearchParams(qs||'').forEach((v,k)=>{if(k!=='apikey'&&k!=='select')q[k]=v;});
+  const eq=(k)=>q[k]&&q[k].startsWith('eq.')?tpVal(q[k].slice(3)):null;
+  const a={};
+  if(q.order)a.order=/\.asc$/.test(q.order)?'asc':'desc';
+  if(q.limit)a.limit=parseInt(q.limit,10);
+  if(method==='GET'){
+    if(table==='jobs'){
+      if(eq('id')){
+        try{const j=await tpDriver('job',{id:eq('id')});return j?[j]:[];}
+        catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+      }
+      if(q.status&&q.status.startsWith('in.'))a.statuses=tpList(q.status);
+      if(eq('status'))a.statuses=[eq('status')];
+      if(eq('job_type'))a.job_type=eq('job_type');
+      if(q.or&&/job_type\.neq\.surge/.test(q.or))a.job_type='not_surge';
+      if(eq('driver_name'))a.mine=true;
+      return tpDriver('jobs',a);
+    }
+    if(table==='messages'&&eq('job_id')){
+      a.job_id=eq('job_id');
+      if(eq('sender_role'))a.sender_role=eq('sender_role');
+      if(!a.order)a.order='asc';
+      try{return await tpDriver('messages',a);}catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+    }
+    if(table==='bin_bindings'&&eq('job_id')){
+      try{return await tpDriver('bin_binding',{job_id:eq('job_id')});}catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+    }
+  }
+  if(method==='PATCH'&&table==='jobs'&&eq('id')){
+    if(eq('status')==='pending'&&body&&body.status==='assigned')return tpDriver('claim',{id:eq('id')});
+    try{return await tpDriver('update_job',{id:eq('id'),patch:body||{}});}
+    catch(e){if(/TP_DENIED/.test(e.message))return [];throw e;}
+  }
+  if(method==='POST'){
+    if(table==='messages'){const r=await tpDriver('post_message',{job_id:body&&body.job_id,body:body&&body.body,sender:body&&body.sender});return [r];}
+    if(table==='driver_locations'){await tpDriver('location',{job_id:body&&body.job_id,lat:body&&body.lat,lng:body&&body.lng,accuracy:body&&body.accuracy,speed:body&&body.speed});return [];}
+    if(table==='driver_fcm_tokens'){await tpDriver('fcm_token',{token:body&&body.token});return [];}
+  }
+  throw new Error('TP_UNMAPPED: '+method+' '+table+' '+JSON.stringify(q));
+}
+window.fetch=async function(input,opts){
+  const url=typeof input==='string'?input:(input&&input.url)||'';
+  const m=url.match(/^[^?]*\/rest\/v1\/([a-z_]+)(?:\?([^#]*))?$/);
+  if(!m||!url.startsWith(SB)||m[1]==='rpc')return tpRealFetch(input,opts);
+  const method=((opts&&opts.method)||'GET').toUpperCase();
+  let body=null;try{body=opts&&opts.body?JSON.parse(opts.body):null;}catch(e){}
+  try{return tpResp(200,await tpTable(method,m[1],m[2],body));}
+  catch(e){
+    if(/TP_UNMAPPED/.test(e.message))console.error('[TackPath] '+e.message);
+    return tpResp(/TP_AUTH/.test(e.message)?401:(/TP_DENIED/.test(e.message)?403:400),{message:e.message});
+  }
+};
+// Proof of delivery -> private bucket. Returns the stored path (dispatch
+// opens it through a signed link), or null so the caller queues a retry.
+async function tpPodUpload(jobId,stop,kind,dataUrl){
+  if(!tpToken())return null;
+  const mime=((String(dataUrl).match(/^data:([^;,]+)/)||[])[1])||'image/png';
+  const r=await tpRealFetch(SB+'/functions/v1/pod',{method:'POST',
+    headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({action:'upload',session:tpToken(),job_id:String(jobId),stop:parseInt(stop,10)||1,
+      kind:kind==='photo'?'photo':'signature',content_type:mime==='image/jpg'?'image/jpeg':mime,data:String(dataUrl)})});
+  if(r.status===401){tpSessionLost();return null;}
+  if(!r.ok)return null;
+  const d=await r.json();
+  return d&&d.path?d.path:null;
+}
 
 // ── STATE ──
 let driver=null,currentJob=null,pendingJob=null;
@@ -1080,10 +1190,18 @@ function showPhoneInput(){
 async function requestCode(){
   const raw=document.getElementById('loginPhone').value.trim();
   if(!raw){toast('Enter your mobile number','warn');return;}
-  const phone=raw.replace(/\D/g,'');
+  const phone=raw.replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
+  if(phone.length!==10){toast('Enter a 10-digit mobile number','warn');return;}
   pendingPhone=phone;
-  pendingCode='000000';
-  document.getElementById('loginCodeHint').textContent='Enter any 6-digit code';
+  pendingCode=null;
+  // A real one-time code, texted by the server (security hardening 2026-10).
+  try{
+    const r=await tpRealFetch(SB+'/functions/v1/driver-login',{method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({phone:phone})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+  }catch(e){toast('Could not send a code. Check your connection and try again.','warn');return;}
+  document.getElementById('loginCodeHint').textContent='Enter the 6-digit code we texted to ('+phone.slice(0,3)+') '+phone.slice(3,6)+'-'+phone.slice(6);
   document.getElementById('loginPhasePhone').style.display='none';
   document.getElementById('loginPhaseCode').style.display='block';
   document.getElementById('loginCode').focus();
@@ -1091,22 +1209,23 @@ async function requestCode(){
 async function verifyCode(){
   const entered=(document.getElementById('loginCode').value||'').trim().replace(/\D/g,'');
   if(entered.length!==6){toast('Enter a 6-digit code','warn');return;}
-  const phone=pendingPhone||'0000000000';
-  let realName='Driver';
-  try{
-    const matches=await sbGet('drivers?phone=eq.'+encodeURIComponent(phone)+'&limit=1');
-    if(matches&&matches.length&&matches[0].name){
-      realName=matches[0].name;
-    }
-  }catch(e){
-    // If the lookup fails for any reason, fall back to the generic placeholder
-    // rather than blocking login entirely
+  if(!pendingPhone){toast('Enter your mobile number first','warn');return;}
+  let res=null;
+  try{res=await tpRpc('tp_driver_sign_in',{p_phone:pendingPhone,p_code:entered});}
+  catch(e){toast('Could not sign in. Check your connection and try again.','warn');return;}
+  if(!res||!res.ok){
+    const err=(res&&res.error)||'';
+    toast(/TP_RATE/.test(err)?'Too many attempts. Try again later.':(/approved/.test(err)?'This number is not an approved TackPath driver yet.':'Wrong or expired code'),'warn');
+    return;
   }
-  driver={id:'drv-'+phone,phone:phone,name:realName,email:'',first:realName.split(' ')[0]||realName};
+  const realName=(res.driver&&res.driver.name)||'Driver';
+  const phone=(res.driver&&res.driver.phone)||pendingPhone;
+  driver={id:'drv-'+phone,phone:phone,name:realName,email:'',first:realName.split(' ')[0]||realName,
+          token:res.token,driver_id:res.driver&&res.driver.id};
   localStorage.setItem('tp_drv',JSON.stringify(driver));
   unlockSpeech();initApp();
 }
-function doLogout(){if(!confirm('Sign out?'))return;localStorage.removeItem('tp_drv');location.reload();}
+function doLogout(){if(!confirm('Sign out?'))return;const t=tpToken();if(t)tpRpc('tp_driver',{p_token:t,p_action:'sign_out',p_args:{}}).catch(()=>{});localStorage.removeItem('tp_drv');location.reload();}
 document.getElementById('loginPhone').addEventListener('keydown',e=>{if(e.key==='Enter')requestCode();});
 document.getElementById('loginCode').addEventListener('keydown',e=>{if(e.key==='Enter')verifyCode();});
 
@@ -2405,16 +2524,9 @@ function dataUrlToBlob(dataUrl){
 // Never throws -- a failed upload must not trap a driver at a doorstep.
 async function uploadPOD(jobId,stopNumber,kind,dataUrl){
   try{
-    const ext=kind==='photo'?'jpg':'png';
-    const path=jobId+'/stop-'+stopNumber+'-'+kind+'-'+Date.now()+'.'+ext;
-    const blob=dataUrlToBlob(dataUrl);
-    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
-      method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
-      body:blob
-    });
-    if(!r.ok)throw new Error('storage '+r.status);
-    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+    const p=await tpPodUpload(jobId,stopNumber,kind,dataUrl);
+    if(!p)throw new Error('pod upload failed');
+    return p;
   }catch(e){
     console.log('POD upload failed, queued for retry:',e.message);
     queuePOD(jobId,stopNumber,kind,dataUrl);
@@ -2455,16 +2567,7 @@ async function flushPODQueue(){
 // loop can never grow the queue it is trying to drain.
 async function uploadPODRaw(item){
   try{
-    const ext=item.kind==='photo'?'jpg':'png';
-    const path=item.jobId+'/stop-'+item.stopNumber+'-'+item.kind+'-'+Date.now()+'.'+ext;
-    const blob=dataUrlToBlob(item.dataUrl);
-    const r=await fetch(SB+'/storage/v1/object/'+POD_BUCKET+'/'+path,{
-      method:'POST',
-      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':blob.type,'x-upsert':'true'},
-      body:blob
-    });
-    if(!r.ok)return null;
-    return SB+'/storage/v1/object/public/'+POD_BUCKET+'/'+path;
+    return await tpPodUpload(item.jobId,item.stopNumber!=null?item.stopNumber:item.stopNum,item.kind,item.dataUrl);
   }catch(e){ return null; }
 }
 
@@ -2546,7 +2649,7 @@ async function submitPOD(){
     }).catch(()=>{});
     stopPODCamera();
     clearJobNotification();
-    const pay=currentJob.price||Math.floor(Math.random()*35+45);
+    const pay=parseFloat(currentJob.price)||0;
     earnings+=pay;jobCount++;
     stopDispatchPoll();clearInterval(jobStatusInterval);
       currentJob=null;clearRouteState();scannedPackages=[];podPhotoData=null;
@@ -2565,7 +2668,6 @@ function refreshMore(){
   document.getElementById('moreAv').textContent=(driver.first||driver.name||'D')[0].toUpperCase();
   document.getElementById('statEarn').textContent='$'+earnings;
   document.getElementById('statJobs').textContent=jobCount;
-  document.getElementById('statYTD').textContent='$'+(earnings+800);
 }
 
 // ── TOAST ──
@@ -3340,7 +3442,11 @@ function handleArrivedFromNotification(){
 
 // ── BOOT ──
 const saved=localStorage.getItem('tp_drv');
-if(saved){driver=JSON.parse(saved);initApp();}
+if(saved){
+  // Only a server-issued session counts as signed in (security hardening 2026-10).
+  let d=null;try{d=JSON.parse(saved);}catch(e){}
+  if(d&&d.token){driver=d;initApp();}else{localStorage.removeItem('tp_drv');}
+}
 if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
 
 // ── KEYBOARD DETECTION -- push login box above keyboard ──
@@ -3365,6 +3471,1128 @@ if(window.visualViewport){
 }
 
 </script>
+<!-- TP-DX:BEGIN  Driver experience layer (2026-10). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). It sits on top of the app above and
+     wraps its functions; the scan gates, loading counts, arrival detection,
+     floating button and voice above are unchanged. -->
+<style id="tpDxStyle">
+:root{--dx-ok:#16c060;--dx-bad:#ef4444;--dx-warn:#f59e0b;--dx-blue:#19b7ef;--dx-ink:#f8fafc;--dx-sub:#cbd5e1;
+  --dx-card:#0c1d31;--dx-card2:#11273f;--dx-line:rgba(255,255,255,.16);}
+/* Readable outdoors: nothing smaller than ~13px, faint text made legible,
+   one-handed tap targets of at least 48px. */
+[style*="font-size:0.5625rem"],[style*="font-size:0.625rem"],[style*="font-size:.72rem"]{font-size:.8125rem!important;}
+[style*="font-size:0.6875rem"],[style*="font-size:0.75rem"],[style*="font-size:.75rem"],[style*="font-size:.78rem"]{font-size:.875rem!important;}
+[style*="color:rgba(255,255,255,.3)"],[style*="color:rgba(255,255,255,.35)"],[style*="color:rgba(255,255,255,.4)"],[style*="color:rgba(255,255,255,.5)"]{color:rgba(255,255,255,.78)!important;}
+.bn-lbl,.stat-l,.wc-lbl,.pod-lbl,.dest-lbl,.jt-lbl,.scan-count-lbl,.c-meta,.fl,.fn{font-size:.8125rem!important;}
+.screen button,#binScanOverlay button,#loadPkgOverlay button,#dlvScanOverlay button,.ruby-cmd{min-height:48px;}
+.c-bubble{font-size:1rem!important;line-height:1.35;}
+[style*="font-size:.8rem"],[style*="font-size:0.8rem"]{font-size:.875rem!important;}
+/* buttons the app restyles from script (inline style rewritten, so matched by place) */
+#scRouteAccepted button:not(.dx-btn){background:linear-gradient(135deg,#0b74bd,#0052b8)!important;color:#fff!important;}
+#scRouteAccepted button:not(.dx-btn)[disabled]{opacity:1!important;background:#1e293b!important;color:#cbd5e1!important;box-shadow:none!important;border:1.5px solid rgba(255,255,255,.18)!important;}
+.profile-av{background:linear-gradient(135deg,#0b74bd,#0052b8)!important;color:#fff!important;}
+.dx-resend[disabled]{color:#94a3b8!important;}
+/* Sun-readable contrast (WCAG AA): darker brand blue/green/orange/red under
+   white text, lighter grey labels on the dark theme. */
+.fb,.check-btn,.pod-tab.on,[style*="linear-gradient(135deg,#19b7ef,#0060cc)"],[style*="linear-gradient(135deg,var(--blue),#0060cc)"]{background:linear-gradient(135deg,#0b74bd,#0052b8)!important;color:#fff!important;}
+[style*="background:#22aa55"]{background:#15803d!important;}
+[style*="background:var(--blue)"]{background:#0b74bd!important;}
+[style*="background:#ff7700"]{background:#c2410c!important;}
+.ruby-btn{background:linear-gradient(135deg,#d42a1f,#a3140c)!important;}
+[style*="color:#4a6e88"],.pod-lbl,.c-sys,.cr-lbl,.stat-l,.profile-email,.comms-hdr-info .sub,#loginCodeHint{color:#a3bccd!important;}
+[style*="color:#0077cc"]{color:#005fa3!important;}
+[style*="color:#64748b"]{color:#475569!important;}
+.cr-lbl,.scan-status,.comms-hdr-info .sub,.c-sys{font-size:.875rem!important;}
+.scan-status{color:rgba(255,255,255,.8)!important;}
+#themeBtn{color:#e2e8f0!important;min-width:48px;}
+.back-btn{min-width:48px;}
+/* scan screens: the heading sits below BACK; the old counter is hidden */
+#binScanOverlay>div:first-child,#loadPkgOverlay>div:first-child,#dlvScanOverlay>div:first-child{padding-top:74px!important;background:rgba(0,0,0,.95)!important;}
+body.dx-scanmode .scan-top,body.dx-scanmode #buildRouteBtn,body.dx-scanmode #scannedMiniList,body.dx-scanmode #doneScanBtn{display:none!important;}
+#surgeMapRoute{display:none!important;}
+#sdPkgBadge{display:none!important;}
+#scSurgeMap button[onclick^="showRouteMapOverlay"]{white-space:nowrap;}
+/* building blocks */
+.dx-eyebrow{font:800 .8125rem/1.2 var(--sans,system-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dx-blue);}
+.dx-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:12px 16px;border-radius:14px;
+  font:800 1rem/1.1 var(--sans,system-ui);border:none;cursor:pointer;text-decoration:none;color:#fff;background:#0b74bd;white-space:nowrap;}
+.dx-btn .i{font-size:1.15em;line-height:1;}
+.dx-btn.ghost{background:rgba(255,255,255,.08);border:1.5px solid var(--dx-line);color:var(--dx-ink);}
+.dx-btn.bad{background:#dc2626;color:#fff;}
+.dx-btn.ok{background:var(--dx-ok);color:#03210f;}
+.dx-btn.wide{width:100%;}
+.dx-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.dx-actions .dx-btn{flex:1 1 0;min-width:0;flex-direction:column;gap:4px;font-size:.95rem;padding:8px 6px;min-height:60px;white-space:normal;text-align:center;line-height:1.1;}
+/* four actions: two rows of two, icon beside the label */
+.dx-actions.n4{display:grid;grid-template-columns:1fr 1fr;}
+.dx-actions.n4 .dx-btn{flex-direction:row;min-height:52px;}
+/* the stop screen keeps Deliver / Problem on screen on short phones */
+#scSurgeDelivery [style*="flex:1"]{min-height:0;overflow-y:auto;}
+@media (max-height:700px){
+  .dx-stop{padding:12px 14px;margin-top:8px;}
+  .dx-name{font-size:1.35rem;margin-top:4px;}
+  .dx-addr{font-size:1rem;}
+  .dx-notes{margin-top:8px;padding:8px 10px;}
+  .dx-stop .dx-actions{margin-top:8px;}
+  .dx-stop .dx-actions .dx-btn{min-height:52px;gap:2px;}
+  #scSurgeDelivery [style*="flex:1"]{padding:12px!important;gap:8px!important;}
+}
+/* start of day */
+.dx-day{width:100%;max-width:420px;text-align:left;background:var(--dx-card);border:1px solid var(--dx-line);border-radius:22px;padding:20px;margin-bottom:18px;color:var(--dx-ink);box-shadow:0 18px 50px rgba(0,0,0,.35);}
+.dx-title{font:900 1.5rem/1.15 var(--sans,system-ui);margin:4px 0 14px;color:#fff;}
+.dx-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.dx-tiles div{background:var(--dx-card2);border-radius:14px;padding:12px 8px;text-align:center;}
+.dx-tiles b{display:block;font:900 1.75rem/1 var(--sans,system-ui);color:#fff;}
+.dx-tiles span{display:block;margin-top:6px;font:700 .8125rem/1 var(--sans,system-ui);color:var(--dx-sub);text-transform:uppercase;letter-spacing:.08em;}
+.dx-kv{display:flex;gap:10px;align-items:baseline;font:600 1rem/1.35 var(--sans,system-ui);color:#fff;margin-bottom:12px;}
+.dx-kv .k{font-weight:800;font-size:.8125rem;color:var(--dx-sub);text-transform:uppercase;letter-spacing:.08em;min-width:62px;}
+.dx-status{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;font:900 1.05rem/1.2 var(--sans,system-ui);letter-spacing:.04em;}
+.dx-status i{width:12px;height:12px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.dx-st-waiting{color:#fbbf24;background:rgba(251,191,36,.14);}
+.dx-st-staging{color:#fb923c;background:rgba(251,146,60,.14);}
+.dx-st-ready{color:#4ade80;background:rgba(74,222,128,.16);}
+.dx-st-ready i{animation:dxPulse 1.2s infinite;}
+.dx-hint{margin-top:8px;font:600 .9375rem/1.35 var(--sans,system-ui);color:var(--dx-sub);}
+@keyframes dxPulse{50%{opacity:.25;}}
+/* stop card */
+.dx-stop{margin:10px 12px 0;padding:16px;border-radius:20px;background:var(--dx-card);border:1px solid var(--dx-line);color:var(--dx-ink);flex-shrink:0;}
+.dx-stop-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.dx-pk{font:900 1rem/1 var(--sans,system-ui);color:#111;background:#fbbf24;border-radius:999px;padding:8px 12px;white-space:nowrap;}
+.dx-name{font:900 1.6rem/1.15 var(--sans,system-ui);color:#fff;margin-top:8px;word-break:break-word;}
+.dx-name.sm{font-size:1.25rem;}
+.dx-unit{display:inline-block;margin-top:6px;font:900 1.1rem/1 var(--sans,system-ui);color:#111;background:#e2e8f0;border-radius:8px;padding:6px 10px;}
+.dx-addr{margin-top:6px;font:600 1.0625rem/1.35 var(--sans,system-ui);color:var(--dx-sub);}
+.dx-notes{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(251,191,36,.14);border-left:4px solid #fbbf24;font:700 1rem/1.35 var(--sans,system-ui);color:#fde68a;}
+.dx-notes b{color:#fbbf24;text-transform:uppercase;font-size:.8125rem;letter-spacing:.08em;margin-right:6px;}
+.dx-flag{display:inline-block;margin-top:10px;padding:6px 10px;border-radius:8px;background:rgba(25,183,239,.16);color:#7dd3fc;font:800 .9375rem/1.2 var(--sans,system-ui);}
+#sdAtStopBtn.dx-primary{font-size:1.15rem!important;padding:16px 8px!important;background:linear-gradient(135deg,#16c060,#0e9a4a)!important;color:#03210f!important;}
+#dxProblemBtn{flex:1;min-width:96px;border-radius:14px;font-size:1.05rem;}
+/* proof of delivery */
+#dxPodTop{margin-bottom:6px;}
+.dx-pod-head{padding:12px 14px;border-radius:16px;background:var(--dx-card);border:1px solid var(--dx-line);margin-bottom:14px;color:var(--dx-ink);}
+.dx-choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 10px;}
+.dx-choice{min-height:64px;padding:10px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid var(--dx-line);color:var(--dx-ink);
+  font:800 1rem/1.2 var(--sans,system-ui);cursor:pointer;display:flex;align-items:center;gap:8px;text-align:left;}
+.dx-choice span{font-size:1.4rem;}
+.dx-choice.on{border-color:var(--dx-ok);background:rgba(22,192,96,.18);color:#fff;}
+.dx-need{font:700 .9375rem/1.4 var(--sans,system-ui);color:var(--dx-sub);min-height:1.4em;margin-bottom:6px;}
+.dx-need .ok{color:#4ade80;} .dx-need .todo{color:#fbbf24;}
+.dx-photo-btn{position:relative;margin-bottom:10px;}
+.dx-photo-prev{display:block;width:100%;max-height:180px;object-fit:cover;border-radius:14px;margin-bottom:10px;}
+.dx-sheet .dx-need{margin:0 4px 14px;}
+.dx-btn.dx-wait{opacity:.45;}
+.dx-link-bad{width:100%;margin:6px 0 12px;background:none;border:1.5px dashed rgba(239,68,68,.6);border-radius:14px;color:#fca5a5;font:800 1rem/1 var(--sans,system-ui);padding:14px;cursor:pointer;}
+body.light-mode .dx-choice{color:#111827;background:#fff;border-color:rgba(0,0,0,.15);}
+body.light-mode .dx-need{color:#374151;}
+/* sheet, next stop, summary */
+.dx-scrim{position:fixed;inset:0;z-index:9000;background:rgba(2,6,14,.72);display:flex;align-items:flex-end;justify-content:center;}
+.dx-sheet{width:100%;max-width:520px;max-height:88dvh;overflow-y:auto;background:#0b1a2b;color:var(--dx-ink);border-radius:24px 24px 0 0;
+  padding:18px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.5);}
+.dx-sheet h3{font:900 1.3rem/1.2 var(--sans,system-ui);margin:4px 4px 14px;color:#fff;}
+.dx-sheet p{font:600 1.0625rem/1.4 var(--sans,system-ui);color:var(--dx-sub);margin:0 4px 14px;}
+.dx-sheet .dx-btn.wide{margin-bottom:10px;}
+.dx-opt{width:100%;display:block;text-align:left;min-height:60px;margin-bottom:10px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.07);
+  border:1.5px solid var(--dx-line);color:#fff;font:800 1.125rem/1.2 var(--sans,system-ui);cursor:pointer;}
+.dx-opt small{display:block;margin-top:4px;font:600 .875rem/1.2 var(--sans,system-ui);color:var(--dx-sub);}
+.dx-sheet textarea{width:100%;min-height:96px;border-radius:14px;border:1.5px solid var(--dx-line);background:rgba(255,255,255,.06);color:#fff;
+  font:600 1.0625rem/1.4 var(--sans,system-ui);padding:12px;margin-bottom:10px;}
+.dx-full{position:fixed;inset:0;z-index:8500;background:#04101d;color:var(--dx-ink);display:flex;flex-direction:column;align-items:stretch;
+  justify-content:center;padding:28px 20px calc(24px + env(safe-area-inset-bottom));overflow-y:auto;}
+.dx-big-check{width:84px;height:84px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;
+  background:var(--dx-ok);color:#03210f;font:900 2.6rem/1 var(--sans,system-ui);}
+.dx-big-check.warn{background:var(--dx-warn);}
+.dx-center{text-align:center;}
+.dx-count{position:relative;overflow:hidden;}
+.dx-count i{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.22);width:0;}
+.dx-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0;}
+.dx-sum div{background:var(--dx-card2);border-radius:16px;padding:16px;text-align:center;}
+.dx-sum b{display:block;font:900 2.2rem/1 var(--sans,system-ui);}
+.dx-sum span{display:block;margin-top:6px;font:800 .875rem/1.2 var(--sans,system-ui);color:var(--dx-sub);text-transform:uppercase;letter-spacing:.06em;}
+.dx-list{margin:6px 0 18px;}
+.dx-list div{padding:12px 14px;border-radius:14px;background:rgba(239,68,68,.12);border-left:4px solid var(--dx-bad);margin-bottom:8px;font:700 1rem/1.35 var(--sans,system-ui);}
+.dx-list small{display:block;color:var(--dx-sub);font-weight:600;}
+/* route list bar, sync pill, scan feedback */
+.dx-routebar{padding:12px 16px;background:#0c1d31;color:#fff;flex-shrink:0;}
+.dx-prog{height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin:8px 0 10px;}
+.dx-prog i{display:block;height:100%;background:var(--dx-ok);}
+.dx-routebar .dx-line{display:flex;justify-content:space-between;font:800 1rem/1.2 var(--sans,system-ui);}
+.dx-routebar .dx-actions{margin-top:0;}
+.dx-rowflag{margin:8px 0 0 40px;padding:6px 10px;border-radius:8px;background:rgba(239,68,68,.12);color:#b91c1c;font:800 .875rem/1.2 var(--sans,system-ui);}
+#dxSync{position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:9500;padding:8px 14px;border-radius:999px;
+  background:#1e293b;color:#e2e8f0;font:800 .875rem/1.2 var(--sans,system-ui);box-shadow:0 6px 20px rgba(0,0,0,.4);max-width:92vw;text-align:center;}
+#dxSync.off{background:#78350f;color:#fef3c7;}
+.dx-sync-inline{margin:0 0 10px;padding:8px 12px;border-radius:10px;background:#1e293b;color:#e2e8f0;font:800 .9375rem/1.3 var(--sans,system-ui);}
+.dx-sync-inline.off{background:#78350f;color:#fef3c7;}
+#dxFlash{position:fixed;inset:0;z-index:9400;pointer-events:none;border:14px solid transparent;opacity:0;transition:opacity .45s;}
+#dxFlash.ok{border-color:var(--dx-ok);opacity:1;transition:none;}
+#dxFlash.bad{border-color:var(--dx-bad);opacity:1;transition:none;background:rgba(239,68,68,.12);}
+#dxFlash.warn{border-color:var(--dx-warn);opacity:1;transition:none;}
+.dx-bigstop{font:900 2.4rem/1 var(--sans,system-ui);color:#fff;margin:6px 0 2px;}
+.dx-help{margin-top:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:12px;padding:10px 16px;font:800 .9375rem/1 var(--sans,system-ui);cursor:pointer;}
+#dxCompose{padding:10px 12px;border-top:1px solid var(--dx-line);background:var(--card,#071828);}
+.dx-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);}
+.dx-chips::-webkit-scrollbar{display:none;}
+.dx-chips button{flex-shrink:0;min-height:44px;padding:8px 14px;border-radius:999px;background:rgba(25,183,239,.12);border:1.5px solid rgba(25,183,239,.4);
+  color:#7dd3fc;font:800 .9375rem/1 var(--sans,system-ui);cursor:pointer;}
+.dx-send{display:flex;gap:8px;}
+.dx-send input{flex:1;min-height:52px;border-radius:14px;border:1.5px solid var(--dx-line);background:rgba(255,255,255,.06);color:inherit;
+  font:600 1.0625rem/1 var(--sans,system-ui);padding:0 14px;}
+.dx-resend{width:100%;margin-top:10px;min-height:48px;background:none;border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#7dd3fc;font:800 .9375rem/1 var(--sans,system-ui);cursor:pointer;}
+
+</style>
+<div id="dxSync" hidden></div>
+<div id="dxFlash"></div>
+<script id="tpDxScript">
+(function(){
+'use strict';
+var W=window;
+// ══ POLICY — what a courier company may require. Bryan decides the final
+// lists (see README "Driver experience"); a page may set window.TP_DX_POLICY
+// before this script to change them. ══
+var POLICY=W.TP_DX_POLICY||{
+  choices:[
+    {id:'handed',label:'Handed to customer',icon:'\u{1F91D}',photo:false,signature:true},
+    {id:'front_door',label:'Front door',icon:'\u{1F6AA}',photo:true,signature:false},
+    {id:'mailroom',label:'Mailroom / front desk',icon:'\u{1F3E2}',photo:true,signature:false},
+    {id:'back_door',label:'Back door',icon:'\u{1F3E0}',photo:true,signature:false}
+  ],
+  problems:[
+    {id:'no_access',label:'No access',hint:'Gate, door or building is locked'},
+    {id:'business_closed',label:'Business closed',hint:'Closed, or nobody to receive it'},
+    {id:'refused',label:'Refused',hint:'The customer would not accept it'},
+    {id:'damaged',label:'Damaged',hint:'The package is damaged \u2014 take a photo',photo:true},
+    {id:'wrong_address',label:'Wrong address',hint:'Address is wrong or does not exist'},
+    {id:'unsafe',label:'Unsafe to deliver',hint:'Leave now \u2014 no photo needed'}
+  ],
+  problemOutcome:'return_to_station',
+  autoAdvanceSeconds:5,
+  quickReplies:['On my way','Running about 10 minutes late','Can’t find the address','Customer not answering','Need help at the warehouse']
+};
+var DX={choice:null,sigDrawn:false,pod:null,confirming:null,stage:null,binding:null,fix:null,lastSent:null,spoke:false,timer:null};
+var dx=W.dx={policy:POLICY,state:DX};
+
+// ── small helpers ──
+function $(id){try{return document.getElementById(id);}catch(e){return null;}}
+function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function ls(k,v){
+  try{
+    if(v===undefined){var r=localStorage.getItem(k);return r?JSON.parse(r):null;}
+    if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));
+  }catch(e){}
+  return null;
+}
+function uid(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
+function plural(n,w){return n+' '+w+(n===1?'':'s');}
+function isNative(){try{return !!(W.Capacitor&&W.Capacitor.isNativePlatform&&W.Capacitor.isNativePlatform());}catch(e){return false;}}
+function stops(){return (typeof surgeStops!=='undefined'&&surgeStops)||[];}
+function stopAt(i){return stops()[i]||null;}
+function me(){return (typeof driver!=='undefined'&&driver)||null;}
+function who(){var d=me();return d&&d.phone?String(d.phone):'';}
+function job(){return (typeof currentJob!=='undefined'&&currentJob)||null;}
+function stopPkgs(i){
+  try{var p=dsStopPieces(i);if(p&&p.length)return p.reduce(function(n,x){return n+x.required;},0);}catch(e){}
+  var s=stopAt(i);return Math.max(1,parseInt(s&&s.packages,10)||1);
+}
+function routePkgs(){var n=0;for(var i=0;i<stops().length;i++)n+=stopPkgs(i);return n;}
+function stopInfo(s){
+  s=s||{};
+  var notes=[s.access_notes,s.gate_code?('Gate code '+s.gate_code):'',s.delivery_notes||s.notes||s.instructions].filter(Boolean).join(' · ');
+  return {phone:s.phone||s.recipient_phone||s.customer_phone||'',unit:s.unit||s.apt||s.suite||s.address2||'',notes:notes,
+          sig:s.signature_required===true||/^(true|yes|y|1)$/i.test(String(s.signature_required||''))};
+}
+function tel(p){var d=String(p||'').replace(/[^\d+]/g,'');return d?'tel:'+d:'';}
+function dispatchPhone(){return DX.dispatchPhone||ls('tp_dx_dispatch_phone')||'';}
+function say(t){try{speak(t);}catch(e){}}
+function note(m,t){try{toast(m,t||'ok');}catch(e){}}
+function getLoaded(){
+  if(typeof loadedPackages!=='undefined')return loadedPackages;
+  if(typeof loadedCounts!=='undefined')return loadedCounts;
+  return null;
+}
+function setLoaded(m){
+  if(typeof loadedPackages!=='undefined'){loadedPackages=m;return;}
+  if(typeof loadedCounts!=='undefined'){loadedCounts=m;}
+}
+function loadProgress(){
+  try{if(typeof loadedUnitsFor==='function')return {done:loadedUnitsFor(routePackageList()),total:totalRoutePackages()};}catch(e){}
+  try{if(typeof loadedUnits==='function')return {done:loadedUnits(),total:realPackageTotal()};}catch(e){}
+  return {done:0,total:0};
+}
+function wrap(name,fn){var orig=W[name];if(typeof orig!=='function')return;W[name]=fn(orig);}
+dx.esc=h;
+
+// ══ 1. NEVER LOSE WORK: every delivery write is saved on the phone first ══
+// Route updates and messages (delivery records, problems, chat) go through an
+// outbox kept on the phone. With no signal they wait there and are sent, in
+// order, when signal returns. Each carries a client_id, so a write that is
+// sent twice is applied once by the server (tp_driver).
+var OB='tp_outbox',QUEUED={update_job:1,post_message:1};
+function obAll(){return ls(OB)||[];}
+function obMine(){var w=who();return obAll().filter(function(x){return !x.who||x.who===w;});}
+function obSave(q){ls(OB,q);renderSync();}
+async function rpcRaw(action,args){
+  var r,t='',d=null;
+  try{
+    r=await tpRealFetch(SB+'/rest/v1/rpc/tp_driver',{method:'POST',
+      headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({p_token:tpToken(),p_action:action,p_args:args||{}})});
+    t=await r.text();
+  }catch(e){return {kind:'net'};}
+  try{d=t?JSON.parse(t):null;}catch(e){}
+  if(r.ok)return {kind:'ok',data:d};
+  if(!r.status||r.status>=500||r.status===408||r.status===429)return {kind:'net'};
+  var m=(d&&d.message)||t||('HTTP '+r.status);
+  return {kind:/TP_AUTH/.test(m)?'auth':'reject',msg:m};
+}
+function optimistic(action,args){
+  if(action==='post_message')return {id:'local-'+args.client_id,job_id:args.job_id,body:args.body,
+    sender:me()&&me().name,sender_role:'driver',created_at:new Date().toISOString(),pending:true};
+  return [Object.assign({id:args.id,pending:true},args.patch||{})];
+}
+function enqueue(action,args){
+  var q=obAll();q.push({id:args.client_id,action:action,args:args,who:who(),at:Date.now()});obSave(q);
+}
+var flushing=false;
+async function flush(){
+  if(flushing||!tpToken())return;
+  flushing=true;
+  try{
+    for(;;){
+      var q=obAll(),w=who(),idx=-1;
+      for(var i=0;i<q.length;i++){if(!q[i].who||q[i].who===w){idx=i;break;}}
+      if(idx<0)break;
+      var it=q[idx],r=await rpcRaw(it.action,it.args);
+      if(r.kind==='net')break;
+      if(r.kind==='auth'){tpSessionLost();break;}
+      q=obAll();q=q.filter(function(x){return x.id!==it.id;});
+      if(r.kind==='reject'){
+        var dead=ls('tp_outbox_rejected')||[];dead.push({item:it,error:r.msg,at:Date.now()});ls('tp_outbox_rejected',dead.slice(-50));
+      }
+      obSave(q);
+    }
+  }finally{flushing=false;renderSync();}
+}
+dx.flush=flush;dx.outbox=obAll;
+// Delivery records also carry how it was delivered and the driver's notes.
+function augment(args){
+  var b=String(args.body||'');
+  if(b.indexOf('STOP_DELIVERED::')!==0)return args;
+  var o;try{o=JSON.parse(b.slice(16));}catch(e){return args;}
+  var p=DX.pod;
+  if(p&&(!o.stop_number||o.stop_number===p.stop)){
+    o.delivery_choice=p.choice;o.delivery_choice_label=p.label;
+    if(p.notes)o.notes=p.notes;
+    if(!o.signed_by&&p.signedBy)o.signed_by=p.signedBy;
+    o.proof=p.proof;
+  }
+  o.client_id=args.client_id;
+  return Object.assign({},args,{body:'STOP_DELIVERED::'+JSON.stringify(o)});
+}
+// A route with any stop reported as a problem never finishes as "delivered":
+// it finishes as completed_with_exceptions (accepted by tp_driver).
+function routeHadProblem(jobId){
+  var s=ls(RS);if(!s||String(s.job)!==String(jobId))return false;
+  var oc=s.outcomes||{};return Object.keys(oc).some(function(k){return oc[k].kind==='problem';});
+}
+wrap('tpDriver',function(orig){return async function(action,args){
+  if(!QUEUED[action]||!tpToken())return orig.apply(this,arguments);
+  args=Object.assign({},args||{});
+  if(!args.client_id)args.client_id=uid();
+  if(action==='post_message')args=augment(args);
+  if(action==='update_job'&&args.patch&&args.patch.status==='delivered'&&routeHadProblem(args.id)){
+    args.patch=Object.assign({},args.patch,{status:'completed_with_exceptions'});
+  }
+  if(obMine().length){enqueue(action,args);flush();return optimistic(action,args);}   // keep order
+  var r=await rpcRaw(action,args);
+  if(r.kind==='ok')return r.data;
+  if(r.kind==='net'){enqueue(action,args);return optimistic(action,args);}
+  if(r.kind==='auth'){tpSessionLost();}
+  throw new Error(r.msg);
+};});
+
+// Proof photos/signatures waiting for signal live in IndexedDB (room for a
+// full day of photos), not the small localStorage area.
+function idbOpen(){
+  return new Promise(function(res,rej){
+    if(!W.indexedDB)return rej(new Error('no indexedDB'));
+    var r=indexedDB.open('tackpath_driver',1);
+    r.onupgradeneeded=function(){r.result.createObjectStore('pod',{keyPath:'id'});};
+    r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};
+  });
+}
+function idbDo(db,mode,fn){
+  return new Promise(function(res,rej){
+    var tx=db.transaction('pod',mode),st=tx.objectStore('pod'),out=fn(st);
+    tx.oncomplete=function(){res(out&&out.result!==undefined?out.result:undefined);};tx.onerror=function(){rej(tx.error);};
+  });
+}
+DX.podWaiting=0;
+function countPod(){
+  var legacy=(ls('tp_pod_queue')||[]).length;
+  idbOpen().then(function(db){return idbDo(db,'readonly',function(st){return st.count();});})
+    .then(function(n){DX.podWaiting=legacy+(n||0);renderSync();},function(){DX.podWaiting=legacy;renderSync();});
+}
+wrap('queuePOD',function(orig){return function(jobId,stopNum,kind,dataUrl){
+  var item={id:uid(),jobId:jobId,stopNum:stopNum,kind:kind,dataUrl:dataUrl,who:who(),at:new Date().toISOString()};
+  idbOpen().then(function(db){return idbDo(db,'readwrite',function(st){st.put(item);});})
+    .then(countPod,function(){orig(jobId,stopNum,kind,dataUrl);countPod();});
+};});
+wrap('flushPODQueue',function(orig){return async function(){
+  try{await orig.apply(this,arguments);}catch(e){}
+  var db;try{db=await idbOpen();}catch(e){countPod();return;}
+  var items=[];try{items=await idbDo(db,'readonly',function(st){return st.getAll();})||[];}catch(e){}
+  for(var i=0;i<items.length;i++){
+    var it=items[i];
+    if(it.who&&it.who!==who())continue;
+    var path=null;try{path=await tpPodUpload(it.jobId,it.stopNum,it.kind,it.dataUrl);}catch(e){}
+    if(!path)break;
+    try{await idbDo(db,'readwrite',function(st){st.delete(it.id);});}catch(e){}
+    sbPost('messages',{job_id:it.jobId,sender:(me()&&me().name)||'Driver',sender_role:'driver',
+      body:'POD_ATTACHED::'+JSON.stringify({stop:it.stopNum,kind:it.kind,url:path,recovered:true})}).catch(function(){});
+  }
+  countPod();
+};});
+// Smaller proof photos upload faster on a weak signal.
+wrap('capturePODPhoto',function(orig){return function(){
+  var r=orig.apply(this,arguments);
+  try{
+    var img=new Image();img.onload=function(){
+      var max=1280,sc=Math.min(1,max/Math.max(img.width,img.height));if(sc>=1)return;
+      var c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);podPhotoData=c.toDataURL('image/jpeg',0.72);
+    };img.src=podPhotoData;
+  }catch(e){}
+  return r;
+};});
+
+// Scans and stop results survive the app being closed or the phone restarting.
+var RS='tp_dx_route';
+function rs(){var k=job()&&job().id?String(job().id):null,s=ls(RS);if(!k)return s;if(!s||s.job!==k)s={job:k,outcomes:{},startedAt:Date.now()};return s;}
+function rsSave(s){if(s)ls(RS,s);}
+function saveScans(){
+  var s=rs();if(!s||!job())return;
+  try{var m=getLoaded();if(m)s.loaded=Array.from(m.entries());}catch(e){}
+  try{s.delivery=Array.from(deliveryScans.entries());s.damaged=Array.from(deliveryDamaged.entries());}catch(e){}
+  rsSave(s);
+}
+function restoreScans(){
+  var s=ls(RS);if(!s||!job()||s.job!==String(job().id))return;
+  try{var m=getLoaded();if(s.loaded&&s.loaded.length&&(!m||!m.size))setLoaded(new Map(s.loaded));}catch(e){}
+  try{if(s.delivery&&s.delivery.length&&!deliveryScans.size)deliveryScans=new Map(s.delivery);}catch(e){}
+  try{if(s.damaged&&s.damaged.length&&!deliveryDamaged.size)deliveryDamaged=new Map(s.damaged);}catch(e){}
+}
+function record(i,o){var s=rs();if(!s)s=ls(RS);if(!s)return;s.outcomes=s.outcomes||{};s.outcomes[i]=o;rsSave(s);}
+function outcomes(){var s=ls(RS);return (s&&job()&&s.job===String(job().id)&&s.outcomes)||{};}
+dx.outcomes=outcomes;
+
+// Signal indicator: visible only while offline or while saved work is waiting.
+function renderSync(){
+  var el=$('dxSync');if(!el)return;
+  var n=obMine().length+(DX.podWaiting||0),off=navigator.onLine===false;
+  var inl=document.querySelectorAll('.dx-sync-inline'),on=document.querySelector('.screen.on'),shown=false;
+  var txt=!n&&!off?'':(off?('No signal \u00b7 '+(n?plural(n,'update')+' saved on this phone':'your work is saved on this phone'))
+                    :('Sending '+plural(n,'saved update')+'\u2026'));
+  Array.prototype.forEach.call(inl,function(b){
+    b.hidden=!txt;b.textContent=txt;b.className='dx-sync-inline'+(off?' off':'');
+    if(txt&&((on&&on.contains(b))||b.closest('#dxNext')))shown=true;
+  });
+  // full-screen panels (next stop, summary) say it themselves or cover the screen
+  if(!txt||shown||$('dxSummary')){el.hidden=true;return;}
+  el.hidden=false;el.className=off?'off':'';
+  el.textContent=off?('No signal · '+(n?plural(n,'update')+' saved on this phone':'your work is saved on this phone'))
+                    :('Sending '+plural(n,'saved update')+'…');
+}
+W.addEventListener('online',function(){renderSync();flush();try{flushPODQueue();}catch(e){}});
+W.addEventListener('offline',renderSync);
+document.addEventListener('visibilitychange',function(){if(!document.hidden){flush();try{flushPODQueue();}catch(e){}}});
+setInterval(function(){if(obMine().length)flush();},15000);
+
+// ══ 2. CLEAR SCAN FEEDBACK: distinct sound, buzz and colour for right,
+// wrong and duplicate; the voice says what matters ══
+var FEEL={
+  ok:{t:[[988,0,.09],[1319,.1,.14]],w:'sine',v:[80],c:'ok'},
+  done:{t:[[784,0,.1],[988,.11,.1],[1319,.22,.26]],w:'sine',v:[90,60,90,60,260],c:'ok'},
+  dup:{t:[[740,0,.1],[740,.2,.1]],w:'triangle',v:[60,90,60],c:'warn'},
+  wrong:{t:[[196,0,.3],[147,.34,.45]],w:'square',v:[450,120,450,120,450],c:'bad'}
+};
+function tone(seq,type){
+  var ctx=null;try{ctx=getAudioCtx();}catch(e){}
+  if(!ctx)return;
+  seq.forEach(function(t){try{
+    var o=ctx.createOscillator(),g=ctx.createGain(),s=ctx.currentTime+t[1];
+    o.type=type;o.frequency.value=t[0];o.connect(g);g.connect(ctx.destination);
+    g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.9,s+.01);g.gain.linearRampToValueAtTime(0,s+t[2]);
+    o.start(s);o.stop(s+t[2]+.05);
+  }catch(e){}});
+}
+function flash(c){
+  var f=$('dxFlash');if(!f)return;
+  f.className=c;clearTimeout(f._t);f._t=setTimeout(function(){f.className='';},450);
+}
+function feel(kind){
+  var f=FEEL[kind];if(!f)return;
+  tone(f.t,f.w);try{if(navigator.vibrate)navigator.vibrate(f.v);}catch(e){}
+  flash(f.c);DX.lastFeel=kind;
+}
+dx.feel=feel;
+wrap('speak',function(orig){return function(){DX.spoke=true;return orig.apply(this,arguments);};});
+function scanMode(){
+  if(W._deliveryScan)return 'delivery';
+  if(W._scanMode==='bin'||W._scanningBin)return 'bin';
+  if(W._scanMode==='package'||W._loadingPackages)return 'package';
+  return null;
+}
+var RESULT_EL={bin:'binScanLastResult',package:'loadPkgLastScan',delivery:'dlvScanResult'};
+wrap('processScan',function(orig){return function(barcode){
+  var mode=scanMode(),el=mode&&$(RESULT_EL[mode]),mark=null;
+  if(el){mark=document.createElement('i');mark.setAttribute('data-dx-mark','');mark.hidden=true;el.appendChild(mark);}
+  DX.spoke=false;
+  var r=orig.apply(this,arguments);
+  try{
+    if(el&&mark){
+      var rewritten=!el.contains(mark);
+      if(!rewritten)mark.remove();
+      else afterScan(mode,el,String(barcode||'').trim().toUpperCase());
+    }
+  }catch(e){}
+  saveScans();
+  return r;
+};});
+function afterScan(mode,el,code){
+  var txt=(el.textContent||'').toUpperCase(),kind;
+  if(/WRONG|NOT ON THIS ROUTE|NOT ON ROUTE/.test(txt))kind='wrong';
+  else if(/ALREADY/.test(txt))kind='dup';
+  else if(/TAP (OK|NEXT)/.test(txt))return;
+  else kind='ok';
+  if(kind==='ok'&&mode==='package'){var lp=loadProgress();if(lp.total&&lp.done>=lp.total)kind='done';}
+  if(kind==='ok'&&mode==='delivery'){try{if(dsStopDone(W._deliveryScan?W._deliveryScan.stop:currentSurgeStop))kind='done';}catch(e){}}
+  feel(kind);
+  var where=[];try{where=dsStopsFor(code)||[];}catch(e){}
+  if(kind==='ok'&&mode==='package'&&where.length&&!/STOP\s*\d/.test(txt)){
+    el.insertAdjacentHTML('afterbegin','<div class="dx-bigstop">STOP '+(where[0]+1)+'</div>');
+  }
+  if(DX.spoke)return;   // the app already said it
+  if(kind==='wrong')say(mode==='bin'?'Wrong bin.':'Not on this route.');
+  else if(kind==='dup')say('Already scanned.');
+  else if(kind==='done'&&mode==='package')say('All packages loaded.');
+  else if(kind==='ok'&&mode==='package'){var p=loadProgress();say((where.length?'Stop '+(where[0]+1)+'. ':'')+p.done+' of '+p.total+'.');}
+}
+wrap('dsLabelDamaged',function(orig){return function(){var r=orig.apply(this,arguments);saveScans();return r;};});
+// Never stuck while scanning: every scan screen has a way to reach dispatch.
+function addHelp(overlayId,topic){
+  var o=$(overlayId);if(!o||o.querySelector('.dx-help'))return;
+  var panel=o.firstElementChild;if(!panel)return;
+  var b=document.createElement('button');b.type='button';b.className='dx-help';b.textContent='Problem? Tell dispatch';
+  b.onclick=function(){dx.messageDispatch(topic);};panel.appendChild(b);
+}
+
+// ══ 3. START OF DAY: route, stops, packages, pickup and warehouse status ══
+var STAGE={waiting:['Waiting for warehouse','We will alert you when your bin is ready.'],
+           staging:['Staging in progress','Your packages are being put in your bin.'],
+           ready:['Ready for pickup','Go to your bin and tap AT PICKUP.']};
+function renderDay(){
+  var scr=$('scRouteAccepted'),j=job();if(!scr||!j)return;
+  var col=scr.firstElementChild;if(!col)return;
+  var card=$('dxDayCard'),btn=col.querySelector('button:not(.dx-btn)');
+  if(!card){card=document.createElement('div');card.id='dxDayCard';card.className='dx-day';col.insertBefore(card,btn||null);}
+  Array.prototype.forEach.call(col.children,function(c){if(c!==card&&c!==btn)c.style.display='none';});
+  col.style.overflowY='auto';col.style.justifyContent='flex-start';col.style.paddingTop='calc(24px + env(safe-area-inset-top))';
+  var b=DX.binding,st=DX.stage||'waiting',lab=STAGE[st]||STAGE.waiting;
+  var bin=(b&&b.bin_code)||j.bin_label||'';
+  var where=[];
+  if(j.pickup_location||j.hub_address||j.station_name)where.push(j.pickup_location||j.hub_address||j.station_name);
+  if(bin)where.push('Bin '+bin);
+  if(b&&b.location_code)where.push('Location '+b.location_code);
+  var ph=dispatchPhone();
+  card.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-eyebrow">Today\u2019s route</div>'
+    +'<div class="dx-title">'+h(j.title||'Your route')+'</div>'
+    +'<div class="dx-tiles"><div><b>'+stops().length+'</b><span>stops</span></div><div><b>'+routePkgs()+'</b><span>packages</span></div>'
+    +'<div><b>'+h(bin||'—')+'</b><span>bin</span></div></div>'
+    +'<div class="dx-kv"><span class="k">Pickup</span><span>'+h(where.length?where.join(' · '):'Your station — bin location shows once staged')+'</span></div>'
+    +'<div class="dx-status dx-st-'+st+'" id="dxStage"><i></i>'+lab[0]+'</div>'
+    +'<div class="dx-hint">'+lab[1]+'</div>'
+    // links, not buttons: the native warehouse poll drives the first <button> here (AT PICKUP)
+    +'<div class="dx-actions"><a href="#" role="button" class="dx-btn ghost" onclick="dx.messageDispatch();return false;"><span class="i">\u{1F4AC}</span>Message</a>'
+    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'"><span class="i">\u{1F4DE}</span>Call dispatch</a>':'')+'</div>';
+}
+dx.renderDay=renderDay;
+// The native app already polls the warehouse (tpRefreshStage); listen to it.
+wrap('tpSetAcceptedUi',function(orig){return function(state,b){
+  var r=orig.apply(this,arguments);DX.stage=state;DX.binding=b||null;renderDay();return r;
+};});
+// The web app has no warehouse poll of its own: read the bin status here.
+async function pollStage(){
+  var scr=$('scRouteAccepted'),j=job();
+  if(!scr||!scr.classList.contains('on')||!j||typeof tpSetAcceptedUi==='function')return;
+  try{
+    var rows=await sbGet('bin_bindings?select=bin_code,location_code,state&job_id=eq.'+encodeURIComponent(j.id)+'&state=in.(open,ready)&limit=1');
+    var b=Array.isArray(rows)&&rows.length?rows[0]:null,st=b&&b.state==='ready'?'ready':(b?'staging':'waiting');
+    if(st==='ready'&&DX.stage!=='ready'){feel('done');say('Route ready for pickup.');}
+    DX.stage=st;DX.binding=b;renderDay();
+  }catch(e){}
+}
+setInterval(pollStage,6000);
+dx.pollStage=pollStage;
+
+// ══ 4. AT THE STOP: who, where, how many, access notes, call buttons ══
+function sigRequired(i){var s=stopAt(i);return stopInfo(s).sig;}
+function mapsUrl(s){
+  var d=s&&s.coords&&s.coords.lat?(s.coords.lat+','+s.coords.lng):encodeURIComponent((s&&s.address)||'');
+  return 'https://www.google.com/maps/dir/?api=1&destination='+d+'&travelmode=driving';
+}
+function renderStopCard(){
+  var scr=$('scSurgeDelivery'),i=currentSurgeStop,s=stopAt(i);if(!scr||!s)return;
+  var col=scr.firstElementChild,hdr=col&&col.firstElementChild;if(!hdr)return;
+  var card=$('dxStopCard');
+  if(!card){
+    card=document.createElement('div');card.id='dxStopCard';card.className='dx-stop';col.insertBefore(card,hdr.nextSibling);
+    var lbl=$('sdStopLabel');if(lbl&&lbl.parentNode)lbl.parentNode.style.display='none';
+    hdr.style.justifyContent='flex-end';
+  }
+  var info=stopInfo(s),n=stopPkgs(i),ph=dispatchPhone();
+  card.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-stop-top"><span class="dx-eyebrow">Stop '+(i+1)+' of '+stops().length+'</span>'
+    +'<span class="dx-pk">'+plural(n,'package')+'</span></div>'
+    +'<div class="dx-name">'+h(s.recipient||'Customer')+'</div>'
+    +(info.unit?'<div class="dx-unit">Unit '+h(info.unit)+'</div>':'')
+    +'<div class="dx-addr">'+h(s.address||'')+'</div>'
+    +(info.notes?'<div class="dx-notes"><b>Access</b>'+h(info.notes)+'</div>':'')
+    +(info.sig?'<div class="dx-flag">✍ Signature required</div>':'')
+    +'<div class="dx-actions">'
+    +(isNative()?'':'<a class="dx-btn" target="_blank" rel="noopener" href="'+h(mapsUrl(s))+'"><span class="i">\u{1F5FA}</span>Maps</a>')
+    +(info.phone?'<a class="dx-btn ghost" href="'+tel(info.phone)+'"><span class="i">\u{1F4DE}</span>Customer</a>':'')
+    +'<button type="button" class="dx-btn ghost" onclick="dx.messageDispatch()"><span class="i">\u{1F4AC}</span>Message</button>'
+    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'"><span class="i">\u{1F4DE}</span>Dispatch</a>':'')
+    +'</div>';
+  var row=card.querySelector('.dx-actions');if(row)row.classList.toggle('n4',row.children.length===4);
+  var at=$('sdAtStopBtn');
+  if(at){
+    at.textContent='Deliver ›';at.classList.add('dx-primary');
+    if(!$('dxProblemBtn')){
+      var pb=document.createElement('button');pb.id='dxProblemBtn';pb.type='button';pb.className='dx-btn bad';pb.textContent='Problem';
+      pb.onclick=function(){dx.problem();};at.parentNode.insertBefore(pb,at.nextSibling);
+    }
+  }
+}
+dx.renderStopCard=renderStopCard;
+
+// ══ 5. PROOF OF DELIVERY: one-tap delivery choice; photo and signature
+// when the choice or the stop needs them ══
+function choiceById(id){for(var i=0;i<POLICY.choices.length;i++)if(POLICY.choices[i].id===id)return POLICY.choices[i];return null;}
+function podNeeds(){
+  var c=choiceById(DX.choice)||{},stopSig=W._surgePODMode&&sigRequired(currentSurgeStop);
+  return {photo:!!c.photo,signature:!!c.signature||!!stopSig};
+}
+function renderNeeds(){
+  var el=$('dxPodNeed');if(!el)return;
+  if(!DX.choice){el.innerHTML='<span class="todo">Tap how it was delivered.</span>';return;}
+  var n=podNeeds(),bits=[];
+  if(n.photo)bits.push(typeof podPhotoData!=='undefined'&&podPhotoData?'<span class="ok">✓ Photo</span>':'<span class="todo">Photo needed</span>');
+  if(n.signature)bits.push(DX.sigDrawn?'<span class="ok">✓ Signature</span>':'<span class="todo">Signature needed</span>');
+  el.innerHTML=bits.length?bits.join(' · '):'<span class="ok">Ready to confirm</span>';
+}
+function renderPod(){
+  var body=document.querySelector('#scPOD .pod-body');if(!body)return;
+  DX.choice=null;DX.sigDrawn=false;
+  var box=$('dxPodTop');
+  if(!box){box=document.createElement('div');box.id='dxPodTop';body.insertBefore(box,body.firstChild);}
+  var i=currentSurgeStop,s=W._surgePODMode?stopAt(i):null;
+  box.innerHTML=(s?'<div class="dx-pod-head"><div class="dx-eyebrow">Stop '+(i+1)+' of '+stops().length+'</div>'
+      +'<div class="dx-name sm">'+h(s.recipient||'')+'</div><div class="dx-addr">'+h(s.address||'')+' · '+plural(stopPkgs(i),'package')+'</div></div>':'')
+    +'<div class="pod-lbl">How was it delivered?</div><div class="dx-choices">'
+    +POLICY.choices.map(function(c){return '<button type="button" class="dx-choice" data-c="'+h(c.id)+'" onclick="dx.choose(\''+h(c.id)+'\')"><span>'+c.icon+'</span>'+h(c.label)+'</button>';}).join('')
+    +'</div><div id="dxPodNeed" class="dx-need"></div>'
+    +(W._surgePODMode?'<button type="button" class="dx-link-bad" onclick="dx.problem()">Can’t deliver? Report a problem</button>':'');
+  try{switchPODTab('photo');}catch(e){}
+  // The app's signature setup writes the route title into "Delivered to";
+  // on a stop it is the recipient's name.
+  var rec=$('podRecipient');if(rec&&s)rec.value=s.recipient||'';
+  // Order: how it was delivered -> proof -> who received it -> notes.
+  var secs=body.querySelectorAll(':scope > .pod-sec');
+  if(secs.length>=2&&rec&&secs[0].contains(rec)&&!secs[0]._dxMoved){secs[0]._dxMoved=1;body.insertBefore(secs[0],secs[1].nextSibling);}
+  renderNeeds();
+}
+dx.choose=function(id){
+  DX.choice=id;
+  Array.prototype.forEach.call(document.querySelectorAll('.dx-choice'),function(b){b.classList.toggle('on',b.getAttribute('data-c')===id);});
+  var n=podNeeds();
+  try{switchPODTab(n.signature&&!DX.sigDrawn&&!n.photo?'sig':(n.photo?'photo':(n.signature?'sig':'photo')));}catch(e){}
+  renderNeeds();
+};
+function watchSig(){
+  var c=$('sigPad');if(!c||c._dx)return;c._dx=1;
+  ['mousedown','touchstart','pointerdown'].forEach(function(ev){c.addEventListener(ev,function(){DX.sigDrawn=true;setTimeout(renderNeeds,0);},{passive:true});});
+}
+wrap('clearSig',function(orig){return function(){DX.sigDrawn=false;var r=orig.apply(this,arguments);renderNeeds();return r;};});
+wrap('submitPOD',function(orig){return async function(){
+  if(DX.submitting)return;
+  // A manifest stop reached without its own proof screen goes back through
+  // the stop's scan gate first, exactly as the app itself does.
+  try{if(dsIsManifestRoute()&&!W._surgePODMode){openSurgePOD();return;}}catch(e){}
+  var n=podNeeds();
+  if(!DX.choice){note('Tap how it was delivered','warn');feel('dup');return;}
+  if(n.photo&&!podPhotoData){note('Take a photo of the package','warn');try{switchPODTab('photo');}catch(e){}return;}
+  if(n.signature&&!DX.sigDrawn){note('Get the customer’s signature','warn');try{switchPODTab('sig');}catch(e){}return;}
+  var c=choiceById(DX.choice),notesEl=$('podNotes'),recEl=$('podRecipient');
+  DX.pod={stop:W._surgePODMode?currentSurgeStop+1:1,choice:DX.choice,label:c&&c.label,
+          notes:notesEl?notesEl.value.trim():'',signedBy:recEl?recEl.value.trim():'',
+          proof:{photo:!!podPhotoData,signature:!!DX.sigDrawn}};
+  // The app stores the proof on the active tab; when both exist, the photo
+  // goes that way and the signature is stored here.
+  var extraSig=null;
+  if(podPhotoData&&DX.sigDrawn){try{extraSig=$('sigPad').toDataURL('image/png');}catch(e){}}
+  try{switchPODTab(podPhotoData?'photo':'sig');}catch(e){}
+  if(extraSig&&job()){
+    var jid=job().id,sn=DX.pod.stop;
+    uploadPOD(jid,sn,'signature',extraSig).then(function(p){
+      if(p)sbPost('messages',{job_id:jid,sender:me().name,sender_role:'driver',body:'POD_ATTACHED::'+JSON.stringify({stop:sn,kind:'signature',url:p})}).catch(function(){});
+    }).catch(function(){});
+  }
+  DX.submitting=true;
+  try{return await orig.apply(this,arguments);}finally{DX.submitting=false;}
+};});
+
+// ══ 6. PROBLEMS: one tap, dispatch told, packages go back, next stop ══
+function sheet(title,html,buttons){
+  closeSheet();
+  var s=document.createElement('div');s.className='dx-scrim';s.id='dxSheet';
+  s.addEventListener('click',function(e){if(e.target===s)closeSheet();});
+  var box=document.createElement('div');box.className='dx-sheet';box.setAttribute('role','dialog');
+  box.innerHTML='<h3>'+h(title)+'</h3>'+(html||'');
+  (buttons||[]).forEach(function(b){
+    var el=document.createElement('button');el.type='button';el.className=b.cls||'dx-opt';
+    el.innerHTML=h(b.label)+(b.hint?'<small>'+h(b.hint)+'</small>':'');
+    el.onclick=b.fn;box.appendChild(el);
+  });
+  s.appendChild(box);document.body.appendChild(s);return box;
+}
+function closeSheet(){var s=$('dxSheet');if(s)s.remove();}
+dx.closeSheet=closeSheet;
+dx.problem=function(){
+  var i=currentSurgeStop,s=stopAt(i);if(!job()||!s){note('No stop is open','warn');return;}
+  sheet('What went wrong at stop '+(i+1)+'?','',POLICY.problems.map(function(p){
+    return {label:p.label,hint:p.hint,fn:function(){confirmProblem(p);}};
+  }).concat([{label:'Cancel',cls:'dx-btn ghost wide',fn:closeSheet}]));
+};
+function confirmProblem(p){
+  var i=currentSurgeStop,n=stopPkgs(i);
+  DX.problemPhoto=null;
+  var box=sheet(p.label+' \u00b7 Stop '+(i+1),
+    '<p>'+h(plural(n,'package'))+' for '+h((stopAt(i)||{}).recipient||'this stop')+' will go back to the station. Dispatch is told right away.</p>'
+    +(p.photo?'<label class="dx-btn ghost wide dx-photo-btn" id="dxProbPhotoBtn"><span>\u{1F4F7} Take a photo of the damage</span>'
+      +'<input id="dxProbPhoto" type="file" accept="image/*" capture="environment" hidden></label>'
+      +'<img id="dxProbPhotoPrev" class="dx-photo-prev" alt="" hidden><p class="dx-need" id="dxProbNeed"><span class="todo">A photo is required for damaged packages.</span></p>':''),
+    [{label:'Report and go to the next stop',cls:'dx-btn bad wide',fn:function(){
+       if(p.photo&&!DX.problemPhoto){note('Take a photo of the damage first','warn');feel('dup');return;}
+       reportProblem(p);}},
+     {label:'Back',cls:'dx-opt',fn:dx.problem}]);
+  var inp=$('dxProbPhoto');
+  if(p.photo&&inp)inp.addEventListener('change',function(){
+    var f=inp.files&&inp.files[0];if(!f)return;
+    var r=new FileReader();r.onload=function(){shrink(String(r.result),function(d){dx.setProblemPhoto(d);});};r.readAsDataURL(f);
+  });
+  var go=box&&box.querySelector('.dx-btn.bad');if(go&&p.photo)go.classList.add('dx-wait');
+}
+function shrink(dataUrl,done){
+  try{
+    var img=new Image();img.onload=function(){
+      try{var max=1280,sc=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');
+        c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        done(c.toDataURL('image/jpeg',0.72));}catch(e){done(dataUrl);}
+    };img.onerror=function(){done(dataUrl);};img.src=dataUrl;
+  }catch(e){done(dataUrl);}
+}
+dx.setProblemPhoto=function(d){
+  DX.problemPhoto=d;
+  var pv=$('dxProbPhotoPrev');if(pv){pv.src=d;pv.hidden=false;}
+  var nd=$('dxProbNeed');if(nd)nd.innerHTML='<span class="ok">\u2713 Photo taken</span>';
+  var b=$('dxProbPhotoBtn');if(b&&b.firstChild)b.firstChild.textContent='\u{1F4F7} Retake photo';
+  var go=document.querySelector('#dxSheet .dx-btn.bad');if(go)go.classList.remove('dx-wait');
+};
+async function reportProblem(p){
+  closeSheet();
+  var i=currentSurgeStop,s=stopAt(i)||{},j=job(),n=stopPkgs(i);
+  if(!j||DX.confirming===i)return;
+  DX.confirming=i;
+  try{
+    var rec={stop_number:i+1,stop_total:stops().length,recipient:s.recipient||'',address:s.address||'',
+             order_id:s.smart_id||s.order_id||'',reason:p.id,reason_label:p.label,outcome:POLICY.problemOutcome,
+             packages:n,reported_at:new Date().toISOString()};
+    if(DX.fix){rec.lat=DX.fix.lat;rec.lng=DX.fix.lng;}
+    if(p.photo&&DX.problemPhoto){
+      rec.photo=true;
+      var ph=DX.problemPhoto,jid=j.id,sn=i+1;DX.problemPhoto=null;
+      uploadPOD(jid,sn,'photo',ph).then(function(path){
+        if(path)sbPost('messages',{job_id:jid,sender:me().name,sender_role:'driver',body:'POD_ATTACHED::'+JSON.stringify({stop:sn,kind:'photo',url:path,problem:p.id})}).catch(function(){});
+      }).catch(function(){});
+    }
+    sbPost('messages',{job_id:j.id,sender:me().name,sender_role:'driver',body:'STOP_EXCEPTION::'+JSON.stringify(rec)}).catch(function(){});
+    feel('dup');say(p.label+' reported. Dispatch has been told.');
+    if(W._deliveryScan){
+      W._deliveryScan=null;var o=$('dlvScanOverlay');if(o)o.style.display='none';
+      try{stopCamera();restoreLegacyScanControls();}catch(e){}
+    }
+    try{stopPODCamera();}catch(e){}
+    try{if(typeof stopArrivalService==='function')stopArrivalService();}catch(e){}
+    W._surgePODMode=false;
+    var snap=snapshot();
+    record(i,{kind:'problem',reason:p.id,label:p.label,pkgs:n,at:Date.now()});
+    await advance(i,snap);
+  }finally{DX.confirming=null;}
+}
+function nextIndex(i){var a=stops(),k=i+1;while(k<a.length&&a[k]&&a[k].cancelled)k++;return k;}
+function snapshot(){var j=job();return {job:j&&{id:j.id,title:j.title},stops:stops().slice()};}
+async function advance(i,snap){
+  var j=job(),total=stops().length,k=nextIndex(i),path='jobs?id=eq.'+j.id+'&driver_name=eq.'+encodeURIComponent(me().name);
+  if(k>=total){
+    try{await sbPatch(path,{status:'completed_with_exceptions',driver_name:me().name,stops_completed:total});}catch(e){}
+    endRoute();finishRoute(snap);return;
+  }
+  currentSurgeStop=k;
+  var done=stops().slice(0,k).filter(function(s){return !s.cancelled;}).length;
+  j.stops_completed=done;
+  try{await sbPatch(path,{stops_completed:done});}catch(e){}
+  try{saveRouteState('list');}catch(e){}
+  showScreen('scSurgeMap');try{renderSurgeList();}catch(e){}
+  showNext(i);
+}
+// Same clean-up as the end of the app's own last-stop confirmation.
+function endRoute(){
+  try{clearJobNotification();}catch(e){}
+  try{stopDispatchPoll();}catch(e){}
+  try{clearInterval(jobStatusInterval);}catch(e){}
+  try{var pay=parseFloat(currentJob.price)||0;earnings+=pay;jobCount++;}catch(e){}
+  currentJob=null;try{clearRouteState();}catch(e){}
+  scannedPackages=[];surgeStops=[];isSurgeJob=false;currentSurgeStop=0;
+  stopGPS();
+  try{showHome();}catch(e){}
+}
+
+// ══ 7. AFTER EACH STOP: auto-advance to the next one; at the end, a summary ══
+wrap('confirmSurgeStop',function(orig){return function(){
+  var i=currentSurgeStop,j=job(),snap=snapshot(),n=stopPkgs(i);
+  if(DX.confirming===i)return;   // a double tap never closes two stops
+  DX.confirming=i;
+  var ret;
+  try{ret=orig.apply(this,arguments);}catch(e){DX.confirming=null;throw e;}
+  Promise.resolve(ret).then(function(){
+    if(job()===j&&currentSurgeStop===i)return;   // the scan gate sent the driver back
+    var s=ls(RS)||{job:String(j.id),outcomes:{}};
+    if(s.job===String(j.id)){s.outcomes=s.outcomes||{};s.outcomes[i]={kind:'delivered',choice:DX.pod&&DX.pod.choice,pkgs:n,at:Date.now()};ls(RS,s);}
+    DX.pod=null;
+    if(!job()){stopGPS();finishRoute(snap);return;}
+    showNext(i);
+  },function(){}).then(function(){DX.confirming=null;});
+  return ret;
+};});
+function showNext(i){
+  var k=currentSurgeStop,s=stopAt(k);if(!s)return;
+  var old=$('dxNext');if(old)old.remove();
+  var secs=POLICY.autoAdvanceSeconds,info=stopInfo(s),last=outcomes()[i];
+  var el=document.createElement('div');el.id='dxNext';el.className='dx-full';
+  el.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-center"><div class="dx-big-check'+(last&&last.kind==='problem'?' warn':'')+'">'+(last&&last.kind==='problem'?'!':'✓')+'</div>'
+    +'<div class="dx-eyebrow">Stop '+(i+1)+(last&&last.kind==='problem'?' · '+h(last.label):' delivered')+'</div></div>'
+    +'<div class="dx-stop" style="margin:22px 0;"><div class="dx-stop-top"><span class="dx-eyebrow">Next · stop '+(k+1)+' of '+stops().length+'</span>'
+    +'<span class="dx-pk">'+plural(stopPkgs(k),'package')+'</span></div><div class="dx-name">'+h(s.recipient||'')+'</div>'
+    +(info.unit?'<div class="dx-unit">Unit '+h(info.unit)+'</div>':'')+'<div class="dx-addr">'+h(s.address||'')+'</div></div>'
+    +'<button type="button" class="dx-btn ok wide dx-count" id="dxNextGo"><i></i><span>Go to stop '+(k+1)+' ›</span></button>'
+    +'<button type="button" class="dx-btn ghost wide" id="dxNextList" style="margin-top:10px;">Route list</button>';
+  document.body.appendChild(el);renderSync();
+  var go=function(){clearInterval(DX.timer);el.remove();renderSync();if(job()&&currentSurgeStop===k)surgeTapStop(k);};
+  $('dxNextGo').onclick=go;
+  $('dxNextList').onclick=function(){clearInterval(DX.timer);el.remove();renderSync();};
+  say((last&&last.kind==='problem'?'':'Delivered. ')+'Next, stop '+(k+1)+', '+(s.recipient||'')+'.');
+  var bar=el.querySelector('.dx-count i'),t0=Date.now();
+  clearInterval(DX.timer);
+  if(secs>0)DX.timer=setInterval(function(){
+    var f=(Date.now()-t0)/(secs*1000);if(bar)bar.style.width=Math.min(100,f*100)+'%';
+    if(f>=1)go();
+  },100);
+}
+function finishRoute(snap){
+  var s=ls(RS)||{},oc=(snap.job&&s.job===String(snap.job.id)&&s.outcomes)||{};
+  var sum={title:snap.job&&snap.job.title||'Route',stops:snap.stops.length,delivered:0,deliveredPkgs:0,problems:[],returns:0,at:Date.now()};
+  snap.stops.forEach(function(st,i){
+    var o=oc[i];if(st&&st.cancelled)return;
+    if(o&&o.kind==='problem'){sum.problems.push({stop:i+1,recipient:st.recipient||'',address:st.address||'',label:o.label,pkgs:o.pkgs});sum.returns+=o.pkgs||0;}
+    else if(o&&o.kind==='delivered'){sum.delivered++;sum.deliveredPkgs+=o.pkgs||0;}
+  });
+  ls('tp_dx_summary',sum);ls(RS,null);
+  showSummary(sum);
+}
+function showSummary(sum){
+  var old=$('dxSummary');if(old)old.remove();
+  var el=document.createElement('div');el.id='dxSummary';el.className='dx-full';
+  var waiting=obMine().length+(DX.podWaiting||0);
+  el.innerHTML='<div class="dx-center"><div class="dx-big-check'+(sum.problems.length?' warn':'')+'">'+(sum.problems.length?'!':'\u2713')+'</div>'
+    +'<div class="dx-eyebrow">'+(sum.problems.length?'Route finished with problems':'Route complete')+'</div>'
+    +'<div class="dx-title" style="margin-top:6px;">'+h(sum.title)+'</div></div>'
+    +'<div class="dx-sum"><div><b style="color:#4ade80">'+sum.delivered+'</b><span>stops delivered</span></div>'
+    +'<div><b>'+sum.deliveredPkgs+'</b><span>packages delivered</span></div>'
+    +'<div><b style="color:'+(sum.problems.length?'#f87171':'#fff')+'">'+sum.problems.length+'</b><span>problems</span></div>'
+    +'<div><b style="color:'+(sum.returns?'#fbbf24':'#fff')+'">'+sum.returns+'</b><span>packages to return</span></div></div>'
+    +(sum.problems.length?'<div class="dx-eyebrow" style="margin-bottom:8px;">Bring these back to the station</div><div class="dx-list">'
+      +sum.problems.map(function(p){return '<div>Stop '+p.stop+' · '+h(p.label)+' · '+plural(p.pkgs||0,'package')+'<small>'+h(p.recipient)+' · '+h(p.address)+'</small></div>';}).join('')+'</div>':'')
+    +(waiting?'<div class="dx-hint" style="text-align:center;margin-bottom:12px;">'+plural(waiting,'update')+' saved on this phone — they send when you have signal.</div>':'')
+    +'<button type="button" class="dx-btn ok wide" id="dxSummaryDone">Done</button>';
+  document.body.appendChild(el);
+  $('dxSummaryDone').onclick=function(){ls('tp_dx_summary',null);el.remove();try{showHome();}catch(e){}};
+  say((sum.problems.length?'Route finished. ':'Route complete. ')+plural(sum.delivered,'stop')+' delivered'+(sum.returns?', '+plural(sum.returns,'package')+' to return.':'.'));
+}
+dx.showSummary=showSummary;
+
+// Problem stops in the route list, and progress at the top of it.
+wrap('renderSurgeList',function(orig){return function(){
+  var r=orig.apply(this,arguments);
+  try{
+    var oc=outcomes();
+    Object.keys(oc).forEach(function(i){
+      var o=oc[i],row=$('surgeRow'+i);
+      if(o.kind!=='problem'||!row||row.querySelector('.dx-rowflag'))return;
+      row.insertAdjacentHTML('beforeend','<div class="dx-rowflag">'+h(o.label)+' · return to station</div>');
+    });
+    renderRouteBar();
+  }catch(e){}
+  return r;
+};});
+function renderRouteBar(){
+  var list=$('surgeStopList');if(!list||!job())return;
+  var bar=$('dxRouteBar');
+  if(!bar){bar=document.createElement('div');bar.id='dxRouteBar';bar.className='dx-routebar';list.parentNode.insertBefore(bar,list);}
+  var oc=outcomes(),total=stops().length,prob=0,del=0;
+  Object.keys(oc).forEach(function(k){if(oc[k].kind==='problem')prob++;else del++;});
+  var doneN=Math.min(total,currentSurgeStop),ph=dispatchPhone(),inTransit=job().status==='in_transit';
+  bar.innerHTML='<div class="dx-sync-inline" hidden></div><div class="dx-line"><span>'+(inTransit?'Next: stop '+(currentSurgeStop+1)+' of '+total:plural(total,'stop'))+'</span>'
+    +'<span>'+del+' delivered'+(prob?' · '+prob+' problem'+(prob>1?'s':''):'')+'</span></div>'
+    +'<div class="dx-prog"><i style="width:'+(total?Math.round(100*doneN/total):0)+'%"></i></div>'
+    +'<div class="dx-actions">'+(inTransit?'<button type="button" class="dx-btn ok" onclick="surgeTapStop(currentSurgeStop)"><span class="i">\u{1F4CD}</span>Stop '+(currentSurgeStop+1)+'</button>':'')
+    +'<button type="button" class="dx-btn ghost" onclick="dx.messageDispatch()"><span class="i">\u{1F4AC}</span>Message</button>'
+    +(ph?'<a class="dx-btn ghost" href="'+tel(ph)+'"><span class="i">\u{1F4DE}</span>Call</a>':'')+'</div>';
+}
+
+// ══ 8. DISPATCH: typed messages, quick replies, call buttons ══
+function msgHtml(m){
+  var b=String(m.body||''),t='';
+  try{t=new Date(m.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});}catch(e){}
+  if(b.indexOf('POD_ATTACHED::')===0)return '';
+  if(b.indexOf('STOP_DELIVERED::')===0){var d={};try{d=JSON.parse(b.slice(16));}catch(e){}return '<div class="c-sys">✓ Stop '+h(d.stop_number||'')+' delivered'+(d.delivery_choice_label?' · '+h(d.delivery_choice_label):'')+'</div>';}
+  if(b.indexOf('STOP_EXCEPTION::')===0){var x={};try{x=JSON.parse(b.slice(16));}catch(e){}return '<div class="c-sys">⚠ Stop '+h(x.stop_number||'')+' · '+h(x.reason_label||'Problem')+'</div>';}
+  var mine=m.sender_role==='driver';
+  return '<div class="c-wrap"><div class="c-meta'+(mine?' r':'')+'">'+(mine?'You':'Dispatch')+' · '+h(t)+(m.pending?' · saved, sends when online':'')+'</div>'
+    +'<div class="c-bubble '+(mine?'c-out':'c-in')+'">'+h(b)+'</div></div>';
+}
+wrap('loadMessages',function(){return async function(){
+  var el=$('commsBody');if(!el)return;
+  var j=job(),ph=dispatchPhone();
+  if(!j||!j.id){el.innerHTML='<div class="c-sys">Dispatch chat opens when you have a route.'+(ph?' <a href="'+tel(ph)+'" style="color:#7dd3fc;font-weight:800;">Call dispatch</a>':'')+'</div>';return;}
+  var msgs;try{msgs=await sbGet('messages?job_id=eq.'+j.id+'&order=created_at.asc');}catch(e){return;}
+  var atBottom=el.scrollHeight-el.scrollTop<=el.clientHeight+60;
+  var pending=obMine().filter(function(x){return x.action==='post_message'&&String(x.args.job_id)===String(j.id);})
+    .map(function(x){return {sender_role:'driver',body:x.args.body,created_at:new Date(x.at).toISOString(),pending:true};});
+  var list=(Array.isArray(msgs)?msgs:[]).concat(pending);
+  el.innerHTML='<div class="c-sys">'+h(j.title||'Active route')+'</div>'+(list.length?list.map(msgHtml).join(''):'<div class="c-sys">No messages yet</div>');
+  if(atBottom)el.scrollTop=el.scrollHeight;
+};});
+wrap('sendCommsMsg',function(){return async function(text){
+  text=String(text||'').trim();if(!text)return;
+  var j=job();if(!j||!j.id){note('Messages open when you have a route','warn');return;}
+  var body=$('commsBody');
+  if(body){
+    var d=document.createElement('div');d.className='c-wrap';
+    d.innerHTML='<div class="c-meta r">You · now</div><div class="c-bubble c-out">'+h(text)+'</div>';
+    body.appendChild(d);body.scrollTop=body.scrollHeight;
+  }
+  try{
+    var r=await sbPost('messages',{sender:me().name,sender_role:'driver',body:text,job_id:j.id});
+    note(r&&r[0]&&r[0].pending?'Saved — sends when you have signal':'Sent to dispatch','ok');
+  }catch(e){note('Send failed','warn');}
+};});
+wrap('showDispatchNotif',function(){return function(text){
+  text=String(text||'');var old=$('dispNotif');if(old)old.remove();
+  var n=document.createElement('div');n.id='dispNotif';n.className='dispatch-notif';
+  n.innerHTML='<div class="dn-icon">\u{1F4AC}</div><div class="dn-info"><div class="dn-from">Dispatch says \u00b7 tap to open</div><div class="dn-body">'+h(text.slice(0,160))+'</div></div>';
+  n.onclick=function(){n.remove();try{showComms();}catch(e){}};
+  document.body.appendChild(n);
+  setTimeout(function(){if(n.parentNode)n.remove();},9000);
+};});
+function renderCompose(){
+  var scr=$('scComms');if(!scr)return;
+  if(!$('dxCompose')){
+    var c=document.createElement('div');c.id='dxCompose';
+    c.innerHTML='<div class="dx-chips">'+POLICY.quickReplies.map(function(q,i){return '<button type="button" data-q="'+i+'">'+h(q)+'</button>';}).join('')+'</div>'
+      +'<div class="dx-send"><input id="dxMsgInput" type="text" placeholder="Message dispatch…" autocomplete="off" enterkeyhint="send"/>'
+      +'<button type="button" class="dx-btn" id="dxMsgSend">Send</button></div>';
+    var ruby=scr.querySelector('.comms-ruby');scr.insertBefore(c,ruby||null);
+    c.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('[data-q]');if(q)sendCommsMsg(POLICY.quickReplies[+q.getAttribute('data-q')]);});
+    var send=function(){var i=$('dxMsgInput');var v=i.value;i.value='';sendCommsMsg(v);};
+    $('dxMsgSend').onclick=send;
+    $('dxMsgInput').addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  }
+  var hdr=scr.querySelector('.comms-hdr'),ph=dispatchPhone(),call=$('dxCallDispatch');
+  if(hdr&&ph&&!call){hdr.insertAdjacentHTML('beforeend','<a id="dxCallDispatch" class="dx-btn ghost" style="margin-left:auto;" href="'+tel(ph)+'">\u{1F4DE} Call</a>');}
+}
+dx.messageDispatch=function(topic){
+  var presets=topic==='scan'?['The bin is not where it should be','A package is missing','A label will not scan','I have a package that is not on my route']
+                            :POLICY.quickReplies;
+  var box=sheet('Message dispatch','<textarea id="dxSheetMsg" placeholder="Type a message…"></textarea>',
+    presets.map(function(q){return {label:q,fn:function(){closeSheet();sendCommsMsg(q);}};}).concat([
+      {label:'Send typed message',cls:'dx-btn wide',fn:function(){var v=$('dxSheetMsg').value;closeSheet();sendCommsMsg(v);}},
+      {label:'Cancel',cls:'dx-btn ghost wide',fn:closeSheet}]));
+  var ph=dispatchPhone();
+  if(ph&&box)box.insertAdjacentHTML('beforeend','<a class="dx-btn ghost wide" style="margin-top:10px;" href="'+tel(ph)+'">\u{1F4DE} Call dispatch</a>');
+};
+async function loadDispatchPhone(){
+  if(!tpToken())return;
+  try{var m=await tpDriver('me',{});if(m&&m.dispatch_phone){DX.dispatchPhone=m.dispatch_phone;ls('tp_dx_dispatch_phone',m.dispatch_phone);}}catch(e){}
+}
+
+// ══ 9. BATTERY-FRIENDLY GPS: one watcher, positions sent at most every 15 s
+// (or 60 m), paused while the app is hidden (the native arrival service keeps
+// watching while Google Maps is in front), stopped when the route ends ══
+function stopGPS(){
+  try{if(typeof gpsWatcher!=='undefined'&&gpsWatcher!=null){navigator.geolocation.clearWatch(gpsWatcher);gpsWatcher=null;}}catch(e){}
+  try{if(W._gpsInterval){clearInterval(W._gpsInterval);W._gpsInterval=null;}}catch(e){}
+}
+dx.stopGPS=stopGPS;
+function hvM(a,b){
+  var R=6371000,r=Math.PI/180,dLa=(b.lat-a.lat)*r,dLn=(b.lng-a.lng)*r;
+  var x=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLn/2)*Math.sin(dLn/2);
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+wrap('startGPS',function(){return function(){
+  if(!navigator.geolocation||!job())return;
+  stopGPS();
+  gpsWatcher=navigator.geolocation.watchPosition(function(pos){
+    var j=job();if(!j)return;
+    var c=pos.coords,p={lat:c.latitude,lng:c.longitude},now=Date.now();DX.fix=p;
+    var last=DX.lastSent;
+    if(!last||now-last.at>=15000||hvM(last,p)>=60){
+      DX.lastSent={lat:p.lat,lng:p.lng,at:now};
+      sbPost('driver_locations',{job_id:j.id,driver_name:me().name,lat:p.lat,lng:p.lng,accuracy:c.accuracy,speed:c.speed}).catch(function(){});
+    }
+    if(j.status==='in_transit'){
+      try{if(typeof onNavPositionUpdate==='function')onNavPositionUpdate(p.lat,p.lng);else if(typeof onNavPosition==='function')onNavPosition(p.lat,p.lng,c.heading);}catch(e){}
+    }
+  },function(){},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+};});
+document.addEventListener('visibilitychange',function(){
+  var j=job();
+  if(document.hidden)stopGPS();
+  else if(j&&j.status==='in_transit')startGPS();
+});
+// The web app's arrival check calls this; it was never defined there, so
+// arrival detection threw on every GPS update. Miles, as that code expects.
+if(typeof W.haversineDistance!=='function')W.haversineDistance=function(a,b){return hvM(a,b)/1609.34;};
+// Called by Begin Route in the native app but never defined.
+if(typeof W.startGPSTracking!=='function')W.startGPSTracking=function(){};
+// Ruby has no AI key in the app (by design): skip the call that can only fail
+// and go straight to Ruby's built-in commands, without sending what was said.
+(function(){
+  var f=W.fetch;
+  W.fetch=function(input){
+    var u=typeof input==='string'?input:(input&&input.url)||'';
+    if(/api\.anthropic\.com/.test(u))return Promise.reject(new TypeError('Ruby works offline'));
+    return f.apply(this,arguments);
+  };
+})();
+
+// ══ 10. SIGN IN ONCE: remember the number, code keyboard, auto-submit, resend ══
+function setupLogin(){
+  var code=$('loginCode'),phone=$('loginPhone');
+  if(code&&!code._dx){
+    code._dx=1;code.type='text';code.setAttribute('inputmode','numeric');code.setAttribute('autocomplete','one-time-code');
+    code.setAttribute('maxlength','6');code.setAttribute('pattern','[0-9]*');
+    code.addEventListener('input',function(){var v=code.value.replace(/\D/g,'').slice(0,6);if(v!==code.value)code.value=v;if(v.length===6)verifyCode();});
+    var rb=document.createElement('button');rb.type='button';rb.id='dxResend';rb.className='dx-resend';rb.textContent='Resend code';
+    rb.onclick=function(){requestCode();};
+    var phase=$('loginPhaseCode');if(phase)phase.appendChild(rb);
+  }
+  if(phone&&!phone.value){var last=ls('tp_dx_last_phone');if(last)phone.value=last;}
+}
+function resendCountdown(){
+  var b=$('dxResend');if(!b)return;var left=30;b.disabled=true;
+  clearInterval(b._t);b.textContent='Resend code in '+left+'s';
+  b._t=setInterval(function(){left--;if(left<=0){clearInterval(b._t);b.disabled=false;b.textContent='Resend code';}else b.textContent='Resend code in '+left+'s';},1000);
+}
+wrap('requestCode',function(orig){return async function(){
+  var p=$('loginPhone');if(p&&p.value.trim())ls('tp_dx_last_phone',p.value.trim());
+  var r=await orig.apply(this,arguments);
+  if($('loginPhaseCode')&&$('loginPhaseCode').style.display!=='none')resendCountdown();
+  return r;
+};});
+// After sign-in: say up front what the app will ask for, so no permission
+// screen is a surprise (native app, once).
+wrap('initApp',function(orig){return function(){
+  var self=this,args=arguments,go=function(){var r=orig.apply(self,args);afterBoot();return r;};
+  if(!isNative()||ls('tp_dx_perm_intro')){return go();}
+  ls('tp_dx_perm_intro',1);
+  sheet('Before your first route',
+    '<p>TackPath will ask for a few things. Allow them so the app can do its job:</p>'
+    +'<p><b>Notifications</b> — new routes and messages from dispatch.<br><b>Location</b> — only during a route, to detect arrival and share your position with dispatch.<br>'
+    +'<b>Camera</b> — to scan packages and take proof photos.<br><b>Appear on top</b> — the Back to TackPath button while you drive in Google Maps.</p>',
+    [{label:'Continue',cls:'dx-btn ok wide',fn:function(){closeSheet();go();}}]);
+};});
+
+// Native: ask for "Appear on top" the first time the driver navigates, with
+// an explanation, instead of on every app start.
+wrap('startTurnByTurn',function(orig){return function(){
+  var self=this,args=arguments;
+  var AP=W.Capacitor&&W.Capacitor.Plugins&&W.Capacitor.Plugins.ArrivalPlugin;
+  if(typeof _tpSuppressAutoNav!=='undefined'&&_tpSuppressAutoNav)return orig.apply(self,args);
+  if(!isNative()||!AP||!AP.overlayStatus||ls('tp_dx_overlay_asked'))return orig.apply(self,args);
+  return AP.overlayStatus().then(function(s){
+    if(s&&s.granted)return orig.apply(self,args);
+    ls('tp_dx_overlay_asked',1);
+    sheet('Back to TackPath button','<p>While you drive in Google Maps, TackPath can show a button you tap to come straight back. Turn on “Appear on top” for TackPath Driver on the next screen.</p>',
+      [{label:'Turn it on',cls:'dx-btn ok wide',fn:function(){closeSheet();AP.openOverlaySettings().catch(function(){});}},
+       {label:'Not now — start navigation',cls:'dx-btn ghost wide',fn:function(){closeSheet();orig.apply(self,args);}}]);
+  },function(){return orig.apply(self,args);});
+};});
+
+// ══ Screen hooks ══
+// cards carry the signal banner: refresh it whenever a card is redrawn
+(function(){
+  var d=renderDay,c=renderStopCard,b=renderRouteBar;
+  renderDay=function(){d();renderSync();};renderStopCard=function(){c();renderSync();};renderRouteBar=function(){b();renderSync();};
+  dx.renderDay=renderDay;dx.renderStopCard=renderStopCard;
+})();
+function renderScreen(id){
+  try{
+    if(id==='scRouteAccepted'){renderDay();pollStage();}
+    else if(id==='scSurgeDelivery')renderStopCard();
+    else if(id==='scPOD'){renderPod();watchSig();}
+    else if(id==='scSurgeMap')renderRouteBar();
+    else if(id==='scComms')renderCompose();
+    else if(id==='scScan'){addHelp('binScanOverlay','scan');addHelp('loadPkgOverlay','scan');addHelp('dlvScanOverlay','scan');}
+    // the bin/loading/delivery overlays replace the old counter at the top
+    document.body.classList.toggle('dx-scanmode',id==='scScan'&&['binScanOverlay','loadPkgOverlay','dlvScanOverlay'].some(function(o){var e=$(o);return e&&e.style.display==='block';}));
+  }catch(e){}
+}
+wrap('showScreen',function(orig){return function(id){var r=orig.apply(this,arguments);renderScreen(id);renderSync();return r;};});
+wrap('surgeTapStop',function(orig){return function(){var r=orig.apply(this,arguments);try{if($('scSurgeDelivery').classList.contains('on'))renderStopCard();}catch(e){}return r;};});
+wrap('switchPODTab',function(orig){return function(){var r=orig.apply(this,arguments);setTimeout(renderNeeds,0);return r;};});
+
+// Errors never strand the driver silently: log them, keep the work saved.
+W.addEventListener('error',function(e){try{ls('tp_dx_last_error',{m:String(e.message||e.error||''),at:Date.now()});}catch(x){}});
+W.addEventListener('unhandledrejection',function(e){try{ls('tp_dx_last_error',{m:String(e.reason&&e.reason.message||e.reason||''),at:Date.now()});}catch(x){}});
+
+// ══ Start: this layer loads after the app has already booted ══
+function afterBoot(){
+  restoreScans();
+  loadDispatchPhone();
+  var j=job();
+  if(j&&j.status==='in_transit')startGPS();
+  renderScreen((document.querySelector('.screen.on')||{}).id);
+  var sum=ls('tp_dx_summary');if(sum&&me())showSummary(sum);
+  flush();countPod();renderSync();
+}
+dx.boot=afterBoot;
+setupLogin();
+if(me()&&tpToken())afterBoot();else{countPod();renderSync();}
+})();
+</script>
+<!-- TP-DX:END -->
 </body>
 </html>
 

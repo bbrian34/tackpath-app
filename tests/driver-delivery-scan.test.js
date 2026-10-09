@@ -36,6 +36,16 @@ function boot({ jobType = 'surge', stops = ROUTE, stop = 0 } = {}) {
       w.Element.prototype.scrollIntoView = () => {};
       w.fetch = async (url, opts) => {
         if (String(url).includes('anthropic.com')) throw new TypeError('offline');   // forces Ruby's keyword path
+        // Writes reach the server as tp_driver RPCs (security hardening 2026-10);
+        // record them in the same shape the assertions below read.
+        const m = String(url).match(/\/rest\/v1\/rpc\/(tp_driver)$/);
+        if (m && opts && opts.body) {
+          const c = JSON.parse(opts.body);
+          if (c.p_action === 'post_message') posts.push({ url: String(url), method: 'POST', body: c.p_args });
+          if (c.p_action === 'update_job') posts.push({ url: String(url), method: 'PATCH', body: c.p_args.patch });
+          const list = ['jobs', 'messages', 'bin_binding', 'update_job', 'claim'].includes(c.p_action);
+          return { ok: true, json: async () => (list ? [] : {}), text: async () => (list ? '[]' : '{}') };
+        }
         if (opts && opts.method) posts.push({ url: String(url), method: opts.method, body: opts.body ? JSON.parse(opts.body) : null });
         return { ok: true, json: async () => ([]), text: async () => '' };
       };
@@ -56,7 +66,7 @@ function boot({ jobType = 'surge', stops = ROUTE, stop = 0 } = {}) {
     window._screens = [];
     const _ss = showScreen; showScreen = function(id){ window._screens.push(id); return _ss.apply(this, arguments); };
   `);
-  w.eval(`driver = {name:'Dana', id:'drv-1'};
+  w.eval(`driver = {name:'Dana', id:'drv-1', token:'driver-session'};
     currentJob = {id:'job-1', job_type:${JSON.stringify(jobType)}, status:'in_transit', stops_completed:${stop}, title:'Route'};
     isSurgeJob = true; surgeStops = ${JSON.stringify(stops)}; currentSurgeStop = ${stop};
     deliveryScans = new Map(); deliveryDamaged = new Map(); window._deliveryScan = null; window._surgePODMode = false;`);
@@ -271,6 +281,7 @@ test('full stop: scan, POD, confirm closes it and records the verified count', a
     a.scan('TND');
     a.proceed().click();
     a.w.document.getElementById('podRecipient').value = 'Cy';
+    a.w.eval("dx.choose('handed'); dx.state.sigDrawn = true;");   // delivery choice + signature are required (driver experience 2026-10)
     await a.w.eval('submitPOD()');
     const d = a.delivered();
     assert.strictEqual(d.length, 1);

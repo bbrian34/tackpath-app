@@ -4,6 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyShopifyHmac } from "../_shared/tp_security.js";
 
 const SB_URL = "https://hofijsiphyjpdvujjzfi.supabase.co";
 const SB_KEY = Deno.env.get("SERVICE_ROLE_KEY") || "";
@@ -22,8 +23,19 @@ serve(async (req) => {
   const shopDomain = req.headers.get("X-Shopify-Shop-Domain");
   const topic = req.headers.get("X-Shopify-Topic");
 
+  // Security hardening: only Shopify can call this. Shopify signs every
+  // webhook with the app's client secret; anything unsigned or altered is
+  // rejected before it can create a job.
+  const rawBody = await req.text();
+  if (!(await verifyShopifyHmac(rawBody, req.headers.get("X-Shopify-Hmac-Sha256") || "", Deno.env.get("SHOPIFY_API_SECRET") || ""))) {
+    return new Response(JSON.stringify({ success: false, error: "Invalid signature" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
-    const payload = await req.json();
+    const payload = JSON.parse(rawBody);
     const supabase = createClient(SB_URL, SB_KEY);
 
     // Look up this shop's connection to get org_id and access token
