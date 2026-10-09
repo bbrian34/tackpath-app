@@ -5429,6 +5429,10 @@ function twoOptImprove(stops,maxPasses=10){
 async function runSmartSortSelfCheck(routes, audit){
   const checks=[];
   const add=(name,ok,detail)=>checks.push({name,ok,detail});
+  // A route the publication gate refused is not in the database; say why,
+  // instead of only "could not match" below.
+  const publishFailures=window._ssPublishFailures||[];
+  if(publishFailures.length)add('Every route published',false,'not published: '+publishFailures.join(' \u00b7 '));
 
   // ── Read back what was actually persisted ──
   let persisted=[];
@@ -5449,7 +5453,7 @@ async function runSmartSortSelfCheck(routes, audit){
     // Only fall back if the match genuinely found nothing AND we have rows;
     // a bad fallback previously verified an unrelated older job.
     persisted=matched.length?matched:[];
-    if(!persisted.length&&all.length){
+    if(!persisted.length&&all.length&&!publishFailures.length){
       add('Routes matched by master code',false,
         'could not match this build\'s routes in the database — verifying nothing');
     }
@@ -5717,6 +5721,7 @@ async function buildAndAutoDispatch(){
   toast('Route built — dispatching to drivers...','ok');
   const routesToAssign=[...ssRoutes];
   console.log('[SmartSort] routesToAssign snapshot: '+routesToAssign.length+' routes');
+  window._ssPublishFailures=[];
   const assignedIds=[];
   try{
     for(const route of routesToAssign){
@@ -6969,6 +6974,7 @@ async function assignSSRoute(routeId){
     if(!resp.ok){
       const err=await resp.text();
       console.log('[SmartSort] assignSSRoute FAILED (transport): '+route.id+' error='+err.slice(0,160));
+      ssNotePublishFailure(route.id,err);
       toast('Could not assign: '+err.slice(0,60),'warn');
       return;
     }
@@ -6976,6 +6982,7 @@ async function assignSSRoute(routeId){
     if(!gateResult||gateResult.ok!==true){
       const reason=gateResult&&gateResult.error?gateResult.error:'publication gate rejected the plan';
       console.log('[SmartSort] assignSSRoute REJECTED by publication gate: '+route.id+' reason='+reason);
+      ssNotePublishFailure(route.id,reason);
       toast('Routing blocked: '+reason,'warn');
       return;
     }
@@ -6999,7 +7006,13 @@ async function assignSSRoute(routeId){
     }
   }catch(e){
     toast('Could not assign route','warn');
+    ssNotePublishFailure(routeId,e&&e.message?e.message:String(e));
   }
+}
+// Why a route was not published, kept until the self-check has shown it
+// (the toast that also says it disappears after a few seconds).
+function ssNotePublishFailure(routeId,reason){
+  (window._ssPublishFailures=window._ssPublishFailures||[]).push(routeId+': '+String(reason||'unknown reason').slice(0,160));
 }
 
 </script>
