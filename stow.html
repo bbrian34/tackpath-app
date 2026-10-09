@@ -644,10 +644,13 @@ function renderBinsPanel(){
     const complete=isDone(n);
     const noBin=String(n).startsWith('JOB:');
     const chip=noBin?'No bin yet':('BIN '+n);
+    const stg=complete&&p.jobId?stagingOf(p.jobId):null;
     return '<div class="bin-row '+(complete?'staged-row':'')+'">'
       +'<span><span class="bin-num-chip">'+chip+'</span> '+p.jobTitle+'</span>'
       +(complete
-        ? '<span class="staged-badge">&#10003; STAGED &middot; READY FOR PICKUP</span>'
+        ? (stg
+            ? '<span class="staged-badge">&#10003; STAGED AT '+esc(stg)+' &middot; READY FOR PICKUP</span>'
+            : '<span class="staged-badge" style="color:var(--orange);">ROUTE COMPLETE &middot; SCAN STG TO STAGE</span>')
         : noBin
           ? '<span class="bin-progress" style="opacity:.6">Scan a package to open a bin</span>'
           : '<span class="bin-progress">'+p.sorted+' of '+p.total+' packages sorted'
@@ -823,7 +826,7 @@ async function loadBinBindings(){
     const rows=await r.json();
     binBindings={};
     (Array.isArray(rows)?rows:[]).forEach(b=>{
-      if(b.job_id)binBindings[b.job_id]={bin_code:b.bin_code,location_code:b.location_code,state:b.state};
+      if(b.job_id)binBindings[b.job_id]={bin_code:b.bin_code,location_code:b.location_code,state:b.state,staging_code:b.staging_code||null};
     });
   }catch(e){}
 }
@@ -837,6 +840,76 @@ function normalizeLocCode(s){ return String(s||'').replace(/^(LOC|LOCATION)[:\s-
 function binCodeInUse(binCode, exceptJobId){
   return Object.entries(binBindings).some(([jid,b])=>
     b.bin_code===binCode && jid!==exceptJobId && (b.state==='open'||b.state==='ready'));
+}
+
+// ═════════════════════════════════════════════════════════════
+// STAGING (2026-10): a completed route is "ready to stage" until the worker
+// scans a staging spot QR, STG:<code> (e.g. STG:S-01). The server records
+// the spot on the route's bin binding and refuses a spot that already holds
+// another live route. When the driver picks the route up, the server frees
+// its BIN, LOC and STG spot (migration 60).
+// ═════════════════════════════════════════════════════════════
+// The route the next STG scan stages: {jobId, bin, title, ready:Promise}
+let stageTarget=null;
+const STG_RE=/^(STG|STAGE|STAGING)[:\s-]/i;
+const LOC_RE=/^(LOC|LOCATION)[:\s-]/i;
+const BIN_RE=/^BIN[:\s-]/i;
+function normalizeStgCode(raw){
+  return String(raw||'').trim().toUpperCase().replace(/^(STG|STAGE|STAGING)[:\s-]*/,'').trim();
+}
+function stagingOf(jobId){ const b=binBindings[jobId]; return (b&&b.staging_code)||null; }
+// A complete route whose bin is waiting for a staging spot, found by its bin
+function readyToStageByBin(bin){
+  const n=Object.keys(binProgress).find(k=>k===bin);
+  if(!n) return null;
+  const p=binProgress[n];
+  if(!p||!p.jobId||p.sorted<p.total||stagingOf(p.jobId)) return null;
+  return {jobId:p.jobId, bin:n, title:p.jobTitle, ready:null};
+}
+function stageCard(card,cls,head,big,detail){
+  card.className='result-card '+cls;
+  card.innerHTML='<div class="result-bin"'+(cls==='staged'?' style="color:var(--green);"':'')+'>'+head+'</div>'
+    +(big?'<div class="result-bin-num '+(cls==='error'?'error':cls==='staged'?'success':'')+'" style="font-size:1.8rem;">'+big+'</div>':'')
+    +(detail?'<div class="result-detail">'+detail+'</div>':'');
+}
+async function stageRoute(card,raw){
+  const code=normalizeStgCode(raw);
+  if(!code){ playErrorSound(); stageCard(card,'error','Not A Staging Code','', 'Scan a STG code, for example STG:S-01.'); return; }
+  const t=stageTarget;
+  try{ if(t.ready) await t.ready; }catch(e){}
+  let res=null;
+  try{
+    const r=await tpOrgResp('stage_binding',{id:t.jobId,staging_code:code});
+    res=await r.json();
+    if(!r.ok) throw new Error(res&&res.message||'error');
+  }catch(e){
+    playErrorSound();
+    stageCard(card,'error','Could Not Stage','BIN '+esc(t.bin),'The staging did not save. Check connection and scan the STG code again.');
+    return;
+  }
+  if(res&&res.ok){
+    if(binBindings[t.jobId]) binBindings[t.jobId].staging_code=res.staging_code||code;
+    else binBindings[t.jobId]={bin_code:t.bin,location_code:null,state:'ready',staging_code:res.staging_code||code};
+    stageTarget=null;
+    playSuccessSound();
+    logEvent('bin.staged',{org_id:(binProgress[t.bin]||{}).orgId, job_id:t.jobId,
+      payload:{bin:t.bin, route:t.title, staging:res.staging_code||code},
+      idem:'binstaged:'+t.jobId+':'+(res.staging_code||code)});
+    stageCard(card,'staged','&#10003; Staged','STG '+esc(res.staging_code||code),
+      'BIN '+esc(t.bin)+' &middot; '+esc(t.title)+'<br><b>READY FOR PICKUP</b>');
+    renderBinsPanel();
+    return;
+  }
+  playErrorSound();
+  const err=res&&res.error;
+  if(err==='spot_taken'){
+    stageCard(card,'error','Staging Spot Taken','STG '+esc(res.staging_code||code),
+      esc(res.route||'Another route')+' is already staged there. Scan a different STG code for BIN '+esc(t.bin)+'.');
+  }else if(err==='not_complete'){
+    stageCard(card,'error','Route Not Complete','BIN '+esc(t.bin),'Every package must be stowed before the bin is staged.');
+  }else{
+    stageCard(card,'error','Could Not Stage','BIN '+esc(t.bin),'This route has no open bin to stage.');
+  }
 }
 
 async function persistBinBinding(jobId, binCode, locCode, orgId){
@@ -922,6 +995,48 @@ async function handleStowScan(code){
   const card=document.getElementById('stowResult');
   card.style.display='flex';
 
+  // ── STAGING: STG codes, and the wrong kind of code while a bin waits ──
+  const isStg=STG_RE.test(clean);
+  if(isStg&&pendingPlacement){
+    playErrorSound();
+    stageCard(card,'error','That Is A Staging Code','BIN '+esc(pendingPlacement.binNum),
+      'This package goes into its bin first. Scan the BIN'+(pendingPlacement.location?' or LOCATION':'')+' QR. Nothing was changed.');
+    return;
+  }
+  if(isStg&&openingBin){
+    playErrorSound();
+    stageCard(card,'error','That Is A Staging Code','',
+      'You are opening a bin. Scan the '+(!openingBin.binCode?'BIN':'LOCATION')+' QR. Nothing was changed.');
+    return;
+  }
+  if(!pendingPlacement&&!openingBin){
+    if(BIN_RE.test(clean)){
+      const pick=readyToStageByBin(normalizeBinCode(clean));
+      if(pick){
+        stageTarget=pick;
+        playSuccessSound();
+        stageCard(card,'','Ready To Stage','BIN '+esc(pick.bin),esc(pick.title)+'<br><b>Scan a STG code to stage this bin.</b>');
+        return;
+      }
+    }
+    if(isStg){
+      if(!stageTarget){
+        playErrorSound();
+        stageCard(card,'error','Nothing To Stage','STG '+esc(normalizeStgCode(clean)),
+          'No route is waiting to be staged. Finish stowing a route, or scan the BIN of a completed route, then scan the STG code.');
+        return;
+      }
+      await stageRoute(card,clean);
+      return;
+    }
+    if(stageTarget&&(LOC_RE.test(clean)||BIN_RE.test(clean))){
+      playErrorSound();
+      stageCard(card,'error','Wrong Code',esc(clean),
+        'That is a '+(LOC_RE.test(clean)?'location (LOC)':'bin (BIN)')+' code. Scan a STG code to stage BIN '+esc(stageTarget.bin)+'. Nothing was changed.');
+      return;
+    }
+  }
+
   // ── STEP 2: confirming placement, expecting the bin's own QR code ──
   // A package was already scanned and is waiting on its bin confirmation.
   // This scan is checked against THAT specific pending bin, not looked up
@@ -996,7 +1111,7 @@ async function handleStowScan(code){
 
       if(justCompleted){
         card.className='result-card staged';
-        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">BIN '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>'+pieceLine;
+        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">BIN '+binNum+'</div><div class="result-detail" style="font-weight:800;">Route complete. Scan a STG code to stage this bin.</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>'+pieceLine;
         const stagedJobId=binProgress[binNum].jobId;
         logEvent('bin.completed',{
           org_id:binProgress[binNum].orgId,
@@ -1005,12 +1120,13 @@ async function handleStowScan(code){
           idem:'bincomplete:'+stagedJobId+':'+(resetEpoch[binNum]||'r0')
         });
         if(stagedJobId){
-          tpOrgResp('set_staged',{id:stagedJobId,staged:true}).catch(()=>{});
-          // The bin now holds a complete route. It stays bound to that
-          // route — state moves open → ready, and only the driver pickup
-          // releases it. A ready bin cannot be reused for another route.
-          tpOrgResp('binding_ready',{id:stagedJobId}).then(()=>{ if(binBindings[stagedJobId])binBindings[stagedJobId].state='ready'; })
+          // The bin now holds a complete route: state open → ready ("ready
+          // to stage"). It is staged when the worker scans a STG code, and
+          // only the driver pickup releases it. A ready bin cannot be reused
+          // for another route.
+          const ready=tpOrgResp('binding_ready',{id:stagedJobId}).then(()=>{ if(binBindings[stagedJobId])binBindings[stagedJobId].state='ready'; })
             .catch(()=>{});
+          stageTarget={jobId:stagedJobId, bin:binNum, title:jobTitle, ready:ready};
         }
       } else {
         card.className='result-card success';
