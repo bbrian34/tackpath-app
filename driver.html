@@ -4593,6 +4593,371 @@ if(me()&&tpToken())afterBoot();else{countPod();renderSync();}
 })();
 </script>
 <!-- TP-DX:END -->
+<!-- TP-SCAN:BEGIN  Scanner + delivery scan screen (2026-10). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). It wraps the functions above; the
+     delivery gate rules (one scan per physical package, shared barcodes need
+     every unit, label damaged) are unchanged.
+     1. One normalisation for every scan, camera or typed, loading or delivery.
+     2. The barcode reader: the ZXing fallback was handed raw RGBA bytes as
+        if they were brightness values and could not decode anything; it is
+        now fed real brightness, told which formats to look for, bundled with
+        the app instead of downloaded, and every code in the frame is used.
+     3. Delivery scan screen: camera over the top of the screen with a scan
+        frame, torch, tap-to-focus and Cancel; the package list sits in a
+        sheet at the bottom; "Type the number instead"; a rejected scan says
+        what was read and why, and is logged on the job (SCAN_REJECTED::). -->
+<style id="tpScanStyle">
+#tpScanUi{display:none;position:fixed;inset:0;z-index:49;pointer-events:none;font-family:var(--sans,system-ui);}
+body.tp-dlv #tpScanUi{display:block;}
+body.tp-dlv #scScan .scan-top,body.tp-dlv #scScan .scan-frame,body.tp-dlv #scScan .scan-bottom,body.tp-dlv #scScan .scan-vignette,
+body.tp-dlv #scScan .scan-confirm{display:none!important;}
+body.tp-dlv #dlvScanOverlay>div:first-child{top:auto!important;bottom:var(--tp-kb,0px)!important;max-height:40%!important;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))!important;border-radius:18px 18px 0 0;
+  background:rgba(6,12,22,.97)!important;box-shadow:0 -8px 30px rgba(0,0,0,.45);}
+body.tp-dlv.tp-typing #dlvScanOverlay>div:first-child{max-height:62%!important;}
+body.tp-dlv #dlvScanOverlay [onclick^="cancelDeliveryScan"]{display:none!important;}
+body.tp-dlv #dlvScanHeading{font-size:1rem!important;}
+.tp-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;pointer-events:auto;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 12px 12px;background:linear-gradient(rgba(0,0,0,.72),rgba(0,0,0,0));}
+.tp-top button{min-height:48px;min-width:48px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.55);
+  color:#fff;font:800 1rem/1 var(--sans,system-ui);padding:0 16px;cursor:pointer;}
+.tp-top .tp-title{flex:1;min-width:0;text-align:center;color:#fff;font:800 1rem/1.25 var(--sans,system-ui);text-shadow:0 1px 3px rgba(0,0,0,.8);}
+.tp-top .tp-title small{display:block;font-weight:700;font-size:.875rem;color:#e2e8f0;}
+#tpTorchBtn[hidden]{display:none;}
+#tpTorchBtn.on{background:#fde68a;color:#111;border-color:#fde68a;}
+.tp-cam{position:absolute;left:0;right:0;top:0;bottom:var(--tp-sheet,40%);pointer-events:auto;}
+.tp-frame{position:absolute;left:8%;right:8%;top:50%;height:min(36%,180px);transform:translateY(-38%);border-radius:14px;
+  border:1px solid rgba(255,255,255,.35);}
+.tp-frame i{position:absolute;width:34px;height:34px;border:4px solid #4ade80;}
+.tp-frame i:nth-child(1){top:-2px;left:-2px;border-right:0;border-bottom:0;border-radius:12px 0 0 0;}
+.tp-frame i:nth-child(2){top:-2px;right:-2px;border-left:0;border-bottom:0;border-radius:0 12px 0 0;}
+.tp-frame i:nth-child(3){bottom:-2px;left:-2px;border-right:0;border-top:0;border-radius:0 0 0 12px;}
+.tp-frame i:nth-child(4){bottom:-2px;right:-2px;border-left:0;border-top:0;border-radius:0 0 12px 0;}
+.tp-frame b{position:absolute;left:6%;right:6%;top:50%;height:2px;background:#ef4444;box-shadow:0 0 8px #ef4444;}
+.tp-hint{position:absolute;left:12px;right:12px;bottom:10px;text-align:center;color:#fff;font:700 .9375rem/1.3 var(--sans,system-ui);
+  text-shadow:0 1px 3px rgba(0,0,0,.9);}
+.tp-focus{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border:2px solid #fde68a;border-radius:50%;opacity:0;transition:opacity .25s;}
+.tp-focus.on{opacity:1;}
+.tp-type{margin-top:10px;}
+.tp-type>button{width:100%;min-height:48px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);
+  color:#fff;font:800 1rem/1 var(--sans,system-ui);cursor:pointer;}
+.tp-type-row{display:none;gap:8px;margin-top:8px;}
+body.tp-typing .tp-type-row{display:flex;}
+body.tp-typing .tp-type>button{display:none;}
+.tp-type-row input{flex:1;min-width:0;min-height:52px;border-radius:12px;border:2px solid #60a5fa;background:#0b1626;color:#fff;
+  font:800 1.15rem/1 var(--mono,monospace);padding:0 12px;letter-spacing:.04em;}
+.tp-type-row button{min-height:52px;border-radius:12px;border:none;background:#2563eb;color:#fff;font:900 1rem/1 var(--sans,system-ui);padding:0 18px;cursor:pointer;}
+.tp-why{margin-top:6px;padding:8px 10px;border-radius:10px;background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.45);
+  color:#fecaca;font:700 .875rem/1.35 var(--sans,system-ui);text-align:left;word-break:break-word;}
+.tp-why b{color:#fff;font-family:var(--mono,monospace);}
+</style>
+<script>
+(function(){
+var W=window;
+function $(id){return document.getElementById(id);}
+function h(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+var T={source:'camera',decoder:null,logged:{},zx:null,zxLoading:null};
+W.tpScan=T;
+
+// ── 1. ONE NORMALISATION ─────────────────────────────────────────────
+// Same rules for every scan: control characters (GS/FNC1), the AIM
+// symbology prefix (]C0, ]E0 ...), spaces and invisible characters are
+// removed. Letter case is left to each page's own rule (the app upper-cases,
+// the web page matches exactly). If the result is not exactly one of the
+// route's codes but is the same number apart from leading zeros (a UPC read
+// as EAN-13, a zero-padded label), and only one route code fits, that code
+// is used. Nothing else is guessed: no prefix or partial matches.
+function norm(v){
+  v=String(v==null?'':v).replace(/^\][A-Za-z][0-9A-Za-z]/,'');
+  return v.replace(/[\u0000-\u001f\u007f\u00a0\u200b-\u200d\u2060\ufeff\s]+/g,'');
+}
+function sameCode(a,b){
+  a=norm(a);b=norm(b);
+  if(a===b)return true;
+  return /^\d+$/.test(a)&&/^\d+$/.test(b)&&a.replace(/^0+/,'')===b.replace(/^0+/,'');
+}
+function stopCodes(si){
+  var out=[];
+  try{dsStopPieces(si).forEach(function(p){(p.aliases||[p.key]).forEach(function(a){if(a&&out.indexOf(String(a))<0)out.push(String(a));});});}catch(e){}
+  return out;
+}
+function routeCodes(){
+  var out=[],n=(W.surgeStops&&surgeStops.length)||0;
+  try{n=surgeStops.length;}catch(e){}
+  for(var i=0;i<n;i++)stopCodes(i).forEach(function(c){if(out.indexOf(c)<0)out.push(c);});
+  return out;
+}
+function scanMode(){
+  if(W._deliveryScan)return 'delivery';
+  if(W._scanMode==='package'||W._loadingPackages)return 'package';
+  return null;
+}
+function canonical(raw){
+  var c=norm(raw),mode=scanMode();
+  if(!mode||!c)return c;
+  var codes=mode==='delivery'?stopCodes(W._deliveryScan.stop).concat(routeCodes()):routeCodes();
+  for(var i=0;i<codes.length;i++)if(norm(codes[i])===c)return codes[i];
+  var fits=codes.filter(function(x,k){return codes.indexOf(x)===k&&sameCode(x,c);});
+  return fits.length===1?fits[0]:c;
+}
+T.norm=norm;T.sameCode=sameCode;T.canonical=canonical;
+
+var _ps=processScan;
+processScan=function(barcode){
+  if(barcode==null)return;
+  var c=canonical(barcode);
+  if(!c)return;
+  return _ps.call(this,c);
+};
+
+// ── 2. THE READER ───────────────────────────────────────────────────
+var ZX_LOCAL='vendor/zxing.min.js',ZX_CDN='https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
+function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+function loadZX(){
+  if(W.ZXing&&W.ZXing.MultiFormatReader)return Promise.resolve(W.ZXing);
+  if(!T.zxLoading)T.zxLoading=loadScript(ZX_LOCAL).catch(function(){return loadScript(ZX_CDN);})
+    .then(function(){return W.ZXing;}).catch(function(e){T.zxLoading=null;throw e;});
+  return T.zxLoading;
+}
+function zxReader(){
+  if(T.zx)return T.zx;
+  var Z=W.ZXing,F=Z.BarcodeFormat,hints=new Map();
+  hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.ITF,F.CODABAR,F.QR_CODE,F.DATA_MATRIX,F.PDF_417]);
+  hints.set(Z.DecodeHintType.TRY_HARDER,true);
+  var r=new Z.MultiFormatReader();r.setHints(hints);T.zx=r;return r;
+}
+// ZXing's RGBLuminanceSource reads a Uint8ClampedArray as ONE brightness
+// byte per pixel. Canvas pixels are 4 bytes (RGBA), so convert first.
+function luminance(rgba,w,h){
+  var L=new Uint8ClampedArray(w*h);
+  for(var i=0,j=0;j<L.length;i+=4,j++)L[j]=(rgba[i]*77+rgba[i+1]*150+rgba[i+2]*29)>>8;
+  return L;
+}
+function zxDecode(rgba,w,h){
+  var Z=W.ZXing,L=luminance(rgba,w,h),bins=[Z.HybridBinarizer,Z.GlobalHistogramBinarizer];
+  for(var i=0;i<bins.length;i++){
+    try{return zxReader().decodeWithState(new Z.BinaryBitmap(new bins[i](new Z.RGBLuminanceSource(L,w,h)))).getText();}catch(e){}
+  }
+  return null;
+}
+T.decodeRGBA=function(rgba,w,h){return loadZX().then(function(){return zxDecode(rgba,w,h);});};
+// The part of the camera picture that sits under the on-screen scan frame
+// (the video is shown with object-fit:cover).
+function frameRegion(video){
+  var vw=video.videoWidth,vh=video.videoHeight,r=video.getBoundingClientRect(),f=document.querySelector('body.tp-dlv .tp-frame');
+  if(!f||!vw||!r.width)return {x:0,y:Math.round(vh*.3),w:vw,h:Math.round(vh*.4)};
+  var fr=f.getBoundingClientRect(),s=Math.max(r.width/vw,r.height/vh),ox=(r.width-vw*s)/2,oy=(r.height-vh*s)/2,pad=24;
+  var x=Math.max(0,Math.floor((fr.left-pad-r.left-ox)/s)),y=Math.max(0,Math.floor((fr.top-pad-r.top-oy)/s));
+  var x2=Math.min(vw,Math.ceil((fr.right+pad-r.left-ox)/s)),y2=Math.min(vh,Math.ceil((fr.bottom+pad-r.top-oy)/s));
+  return {x:x,y:y,w:Math.max(1,x2-x),h:Math.max(1,y2-y)};
+}
+// Several codes in view: prefer one this screen is waiting for.
+function pick(values){
+  values=values.filter(Boolean);
+  if(!values.length)return null;
+  var mode=scanMode(),want=mode==='delivery'?stopCodes(W._deliveryScan.stop):mode==='package'?routeCodes():[];
+  for(var i=0;i<values.length;i++)for(var k=0;k<want.length;k++)if(sameCode(values[i],want[k]))return values[i];
+  return values[0];
+}
+T.pick=pick;
+function handOver(value){
+  if(!value)return;
+  try{if(scannedPackages.find(function(p){return p.barcode===value;}))return;}catch(e){}
+  T.source='camera';
+  processScan(value);
+}
+function loopFor(video,step){
+  if(barcodeInterval)clearInterval(barcodeInterval);
+  var busy=false;
+  barcodeInterval=setInterval(function(){
+    if(busy||!scanStream||video.readyState<2||!video.videoWidth)return;
+    busy=true;
+    Promise.resolve().then(step).catch(function(){}).then(function(){busy=false;});
+  },250);
+}
+startBarcodeDetector=async function(video){
+  var ok=false;
+  try{var f=await BarcodeDetector.getSupportedFormats();ok=f.indexOf('code_128')>=0;}catch(e){}
+  if(!ok)return startZXing(video);
+  T.decoder='barcode_detector';
+  var want=['code_128','code_39','code_93','ean_13','ean_8','upc_a','upc_e','itf','codabar','qr_code','data_matrix','pdf417','aztec'];
+  var det;try{det=new BarcodeDetector({formats:want});}catch(e){try{det=new BarcodeDetector();}catch(e2){return startZXing(video);}}
+  var canvas=$('scanCanvas'),ctx=canvas.getContext('2d');
+  loopFor(video,async function(){
+    canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);
+    var codes=await det.detect(canvas);
+    handOver(pick((codes||[]).map(function(c){return c.rawValue;})));
+  });
+};
+startZXing=async function(video){
+  var st=$('scanStatus');
+  try{await loadZX();}
+  catch(e){
+    T.decoder=null;
+    if(st){st.textContent='Scanner could not start - type the number instead';st.style.color='var(--orange)';}
+    if(W._deliveryScan)openTyping();
+    return;
+  }
+  T.decoder='zxing';
+  var canvas=$('scanCanvas'),ctx=canvas.getContext('2d',{willReadFrequently:true}),n=0;
+  loopFor(video,function(){
+    var vw=video.videoWidth,vh=video.videoHeight,text=null;
+    // alternate: the area under the scan frame at full camera resolution,
+    // then the whole picture at up to 1280 px
+    if(n++%2===0){
+      var r=frameRegion(video);canvas.width=r.w;canvas.height=r.h;ctx.drawImage(video,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
+    }else{
+      var s=Math.min(1,1280/Math.max(vw,vh));canvas.width=Math.round(vw*s);canvas.height=Math.round(vh*s);ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    }
+    text=zxDecode(ctx.getImageData(0,0,canvas.width,canvas.height).data,canvas.width,canvas.height);
+    handOver(text);
+  });
+};
+
+// ── 3. DELIVERY SCAN SCREEN ─────────────────────────────────────────
+var ui=null;
+function buildUi(){
+  if(ui)return ui;
+  ui=document.createElement('div');ui.id='tpScanUi';
+  ui.innerHTML='<div class="tp-cam" id="tpCam"><div class="tp-frame"><i></i><i></i><i></i><i></i><b></b></div>'
+    +'<div class="tp-focus" id="tpFocus"></div><div class="tp-hint" id="tpHint">Hold the barcode inside the frame</div></div>'
+    +'<div class="tp-top"><button type="button" id="tpCancelBtn">Cancel</button>'
+    +'<div class="tp-title" id="tpTitle">Scan packages</div>'
+    +'<button type="button" id="tpTorchBtn" hidden aria-label="Torch">&#128294; Light</button></div>';
+  document.body.appendChild(ui);
+  $('tpCancelBtn').onclick=function(){cancelDeliveryScan();};
+  $('tpTorchBtn').onclick=function(){setTorch(!T.torch);};
+  $('tpCam').addEventListener('click',function(e){tapFocus(e);});
+  return ui;
+}
+function buildTyping(){
+  var panel=$('dlvScanOverlay')&&$('dlvScanOverlay').firstElementChild;
+  if(!panel||$('tpType'))return;
+  var d=document.createElement('div');d.className='tp-type';d.id='tpType';
+  d.innerHTML='<button type="button" id="tpTypeBtn">&#9000; Type the number instead</button>'
+    +'<div class="tp-type-row"><input id="tpTypeInp" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Number on the label" aria-label="Number on the label">'
+    +'<button type="button" id="tpTypeGo">Check</button></div>';
+  var res=$('dlvScanResult');
+  panel.insertBefore(d,res?res.nextSibling:null);
+  $('tpTypeBtn').onclick=openTyping;
+  $('tpTypeGo').onclick=submitTyped;
+  $('tpTypeInp').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitTyped();}});
+  $('tpTypeInp').addEventListener('focus',function(){setTimeout(fitKeyboard,250);});
+}
+function openTyping(){
+  buildTyping();
+  document.body.classList.add('tp-typing');
+  var i=$('tpTypeInp');if(i){i.focus();}
+}
+function submitTyped(){
+  var i=$('tpTypeInp');if(!i)return;
+  var v=i.value;if(!norm(v))return;
+  i.value='';T.source='typed';
+  try{processScan(v);}finally{T.source='camera';}
+}
+T.openTyping=openTyping;T.submitTyped=submitTyped;
+function fitKeyboard(){
+  var vv=W.visualViewport,kb=0;
+  if(vv)kb=Math.max(0,Math.round(W.innerHeight-vv.height-vv.offsetTop));
+  document.body.style.setProperty('--tp-kb',kb+'px');
+}
+if(W.visualViewport){W.visualViewport.addEventListener('resize',fitKeyboard);W.visualViewport.addEventListener('scroll',fitKeyboard);}
+function track(){try{return scanStream&&scanStream.getVideoTracks()[0];}catch(e){return null;}}
+function caps(){var t=track();try{return (t&&t.getCapabilities)?t.getCapabilities():{};}catch(e){return {};}}
+function setTorch(on){
+  var t=track();if(!t)return;
+  t.applyConstraints({advanced:[{torch:!!on}]}).then(function(){T.torch=!!on;var b=$('tpTorchBtn');if(b)b.classList.toggle('on',T.torch);}).catch(function(){});
+}
+function tapFocus(e){
+  var cam=$('tpCam'),r=cam.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height,f=$('tpFocus');
+  if(f){f.style.left=(e.clientX-r.left)+'px';f.style.top=(e.clientY-r.top)+'px';f.classList.add('on');setTimeout(function(){f.classList.remove('on');},700);}
+  var t=track(),c=caps();if(!t)return;
+  var adv={};
+  if(c.pointsOfInterest!==undefined||'pointsOfInterest' in c)adv.pointsOfInterest=[{x:x,y:y}];
+  var modes=c.focusMode||[];
+  if(modes.indexOf('single-shot')>=0)adv.focusMode='single-shot';else if(modes.indexOf('continuous')>=0)adv.focusMode='continuous';
+  if(!Object.keys(adv).length)return;
+  t.applyConstraints({advanced:[adv]}).then(function(){
+    if(adv.focusMode==='single-shot'&&modes.indexOf('continuous')>=0)setTimeout(function(){t.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){});},1500);
+  }).catch(function(){});
+}
+function cameraReady(){
+  if(!W._deliveryScan)return;
+  var c=caps(),b=$('tpTorchBtn');
+  if(b)b.hidden=!c.torch;
+  T.torch=false;
+  var modes=c.focusMode||[];
+  var t=track();if(t&&modes.indexOf('continuous')>=0)t.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){});
+  var hint=$('tpHint');
+  if(hint)hint.textContent=(modes.length||c.pointsOfInterest!==undefined)?'Hold the barcode inside the frame · tap to focus':'Hold the barcode inside the frame';
+  var st=$('scanStatus');
+  if(st&&/unavailable|could not/i.test(st.textContent)){if(hint)hint.textContent='Camera unavailable - type the number instead';openTyping();}
+}
+var _sc=startCamera;
+startCamera=async function(){var r=await _sc.apply(this,arguments);try{cameraReady();}catch(e){}return r;};
+function renderTitle(){
+  var st=W._deliveryScan,t=$('tpTitle');if(!st||!t)return;
+  var pr=dsProgress(st.stop);
+  t.innerHTML='Stop '+(st.stop+1)+'<small>'+pr.done+' of '+pr.total+' package'+(pr.total!==1?'s':'')+' scanned</small>';
+}
+function sync(){
+  var o=$('dlvScanOverlay'),on=!!(o&&o.style.display==='block'&&W._deliveryScan);
+  if(on){buildUi();buildTyping();renderTitle();}
+  document.body.classList.toggle('tp-dlv',on);
+  if(!on){document.body.classList.remove('tp-typing');if(T.torch)setTorch(false);}
+  var p=o&&o.firstElementChild;
+  if(on&&p)document.body.style.setProperty('--tp-sheet',Math.round(p.getBoundingClientRect().height)+'px');
+}
+T.sync=sync;
+function watch(){
+  var o=$('dlvScanOverlay');if(!o)return;
+  new MutationObserver(sync).observe(o,{attributes:true,attributeFilter:['style'],childList:true,subtree:true});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
+var _rd=renderDeliveryScan;
+renderDeliveryScan=function(){var r=_rd.apply(this,arguments);try{sync();}catch(e){}return r;};
+
+// A rejected delivery scan says what was read and why, and is logged once
+// per stop and code on the job's messages (SCAN_REJECTED::).
+var _hd=handleDeliveryScan;
+handleDeliveryScan=function(barcode){
+  var st=W._deliveryScan;
+  if(!st||st.paused)return _hd.apply(this,arguments);
+  var si=st.stop,read=String(barcode==null?'':barcode),pieces=[];
+  try{pieces=dsStopPieces(si);}catch(e){}
+  var r=_hd.apply(this,arguments);
+  var box=$('dlvScanResult');
+  if(!box||!/WRONG STOP|NOT ON THIS ROUTE/i.test(box.textContent||''))return r;
+  var others=[];try{others=dsStopsFor(read)||[];}catch(e){}
+  var expected=pieces.map(function(p){return String(p.key);});
+  {
+    var d=document.createElement('div');d.className='tp-why';
+    d.innerHTML='Read <b>'+h(read)+'</b> · expected one of '+(expected.length===1?'this package':'these '+expected.length+' packages')+': '
+      +expected.map(function(x){return '<b>'+h(x)+'</b>';}).join(', ')+' · not matched'
+      +(T.source==='typed'?' (typed)':'')+'. Check the label, or type the number instead.';
+    box.appendChild(d);
+  }
+  logRejected(si,read,expected,others);
+  return r;
+};
+function logRejected(si,read,expected,others){
+  var key=si+'|'+read;
+  T.logged[si]=T.logged[si]||0;
+  if(T.logged[key]||T.logged[si]>=10)return;
+  T.logged[key]=1;T.logged[si]++;
+  var rec={stop_number:si+1,stop_total:(W.surgeStops||[]).length,read:read,expected:expected,
+    reason:others.length?'wrong_stop':'not_on_route',source:T.source,decoder:T.source==='typed'?null:T.decoder,at:new Date().toISOString()};
+  if(others.length)rec.belongs_to_stop=others[0]+1;
+  try{rec.stop_total=surgeStops.length;}catch(e){}
+  try{
+    if(currentJob&&currentJob.id)sbPost('messages',{job_id:currentJob.id,sender:(driver&&driver.name)||'Driver',sender_role:'driver',
+      body:'SCAN_REJECTED::'+JSON.stringify(rec)}).catch(function(){});
+  }catch(e){}
+}
+})();
+</script>
+<!-- TP-SCAN:END -->
 </body>
 </html>
 

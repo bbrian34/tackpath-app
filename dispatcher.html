@@ -2557,7 +2557,7 @@ async function runRuby(){
     const todayStart=new Date();todayStart.setHours(0,0,0,0);
     const driverMsgs=await sbGet('messages?sender_role=eq.driver&created_at=gte.'+todayStart.toISOString()+'&order=created_at.desc&limit=100');
 
-    const newMsgs=(driverMsgs||[]).filter(m=>!m.body.startsWith('STOP_DELIVERED::')&&!RUBY_CATEGORIZED.has(m.id));
+    const newMsgs=(driverMsgs||[]).filter(m=>!m.body.startsWith('STOP_DELIVERED::')&&!m.body.startsWith('SCAN_REJECTED::')&&!RUBY_CATEGORIZED.has(m.id));
     if(!newMsgs.length)return;
 
     const categoryCounts={};
@@ -2900,7 +2900,7 @@ async function loadJobs(){
         if(lastSeenDriverMsgTs===null){
           // First poll after login -- set baseline so we don't pulse on old messages
           lastSeenDriverMsgTs=latestTs;
-        } else if(latestTs&&latestTs!==lastSeenDriverMsgTs&&latestMsg&&!latestMsg.body.startsWith('STOP_DELIVERED::')){
+        } else if(latestTs&&latestTs!==lastSeenDriverMsgTs&&latestMsg&&!latestMsg.body.startsWith('STOP_DELIVERED::')&&!latestMsg.body.startsWith('SCAN_REJECTED::')){
           // Genuinely new message since login
           if(fab) fab.classList.add('has-unread');
         }
@@ -4296,7 +4296,8 @@ async function loadDriverMessages(){
     const atBottom=container.scrollHeight-container.scrollTop<=container.clientHeight+60;
     container.innerHTML='<div class="msg-bubble msg-system">'+activeJob.title+'</div>';
     if(msgs&&msgs.length){
-      const displayMsgs=msgs.filter(m=>m.body&&!m.body.startsWith('STOP_DELIVERED::')&&!m.body.startsWith('STOP_DRIFT::'));
+      // SCAN_REJECTED:: is the driver app's diagnostic log of a failed package scan, kept on the job, not a chat message
+      const displayMsgs=msgs.filter(m=>m.body&&!m.body.startsWith('STOP_DELIVERED::')&&!m.body.startsWith('STOP_DRIFT::')&&!m.body.startsWith('SCAN_REJECTED::'));
       displayMsgs.forEach(m=>{
         const isMe=m.sender_role==='dispatcher';
         const wrap=document.createElement('div');wrap.className='oc-msg-wrap';
@@ -4320,7 +4321,7 @@ async function loadDriverMessages(){
     }
     if(atBottom) container.scrollTop=container.scrollHeight;
     // Pulse FAB if there are unread driver messages and chat is closed
-    const driverMsgs=(msgs||[]).filter(m=>m.sender_role==='driver'&&!m.body.startsWith('STOP_DELIVERED::'));
+    const driverMsgs=(msgs||[]).filter(m=>m.sender_role==='driver'&&!m.body.startsWith('STOP_DELIVERED::')&&!m.body.startsWith('SCAN_REJECTED::'));
     const latestMsg=driverMsgs.length?driverMsgs[driverMsgs.length-1]:null;
     const latestTs=latestMsg?latestMsg.created_at:null;
     const chatOpen=document.getElementById('opsChat')&&document.getElementById('opsChat').classList.contains('open');
