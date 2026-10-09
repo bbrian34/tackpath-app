@@ -232,6 +232,18 @@ body::after{content:'';position:fixed;inset:0;
 .pipe-hdr{padding:10px 12px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;}
 .pipe-title{font-family:var(--mono);font-size:0.615rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
 .pipe-cnt{font-family:var(--mono);font-size:0.769rem;font-weight:700;padding:2px 8px;border-radius:5px;}
+/* Status card headers: a solid status colour with white text. The colours are
+   the page's status accents, darkened so white text passes WCAG AA (>=5:1);
+   the light theme sets its own values below. Card bodies are unchanged. */
+:root{--st-assigned:#0b6fa4;--st-transit:#6d3fd1;--st-delivered:#15803d;--st-cancelled:#c0271d;--st-exceptions:#b45309;}
+.pipe-st-assigned{--st:var(--st-assigned);}
+.pipe-st-transit{--st:var(--st-transit);}
+.pipe-st-delivered{--st:var(--st-delivered);}
+.pipe-st-cancelled{--st:var(--st-cancelled);}
+.pipe-st-exceptions{--st:var(--st-exceptions);}
+.pipe-st>.pipe-hdr{background:var(--st);border-bottom-color:transparent;gap:8px;}
+.pipe-st>.pipe-hdr .pipe-title{color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pipe-st>.pipe-hdr .pipe-cnt{background:rgba(0,0,0,.22);color:#fff;flex-shrink:0;}
 .pipe-body{padding:8px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
 .pipe-body::-webkit-scrollbar{width:10px;}
 .pipe-body::-webkit-scrollbar-track{background:var(--lt-bg-white-03,rgba(255,255,255,.03));border-radius:5px;}
@@ -1020,6 +1032,7 @@ html[data-theme="light"]{
   --lt-sh-red-8:rgba(192,39,29,0.28);
 }
 /* delivered work is dimmed with opacity in dark; in light that drops text below AA, so tint instead */
+html[data-theme="light"]{--st-assigned:#0a6496;--st-transit:#6d3fd1;--st-delivered:#116b37;--st-cancelled:#b0241b;--st-exceptions:#a14a08;}
 html[data-theme="light"] #pp-delivered{opacity:1!important;}
 html[data-theme="light"] .tbl tbody tr[style*="opacity:.55"]{opacity:1!important;background:rgba(27,36,48,.03);}
 html[data-theme="light"] .fleet-map iframe,html[data-theme="light"] .dr-map iframe{filter:none;}
@@ -1214,26 +1227,26 @@ html[data-theme="light"] .tb-theme .ic-moon{display:block;}
           <div class="pipeline-lbl">Signal Pipeline · Live</div>
           <div class="pipeline">
 
-            <div class="pipe-col">
-              <div class="pipe-hdr"><div class="pipe-title" style="color:var(--blue);">Assigned</div><div class="pipe-cnt" style="background:var(--lt-bg-blue-1,rgba(25,183,239,.1));color:var(--blue);" id="pc-assigned">0</div></div>
+            <div class="pipe-col pipe-st pipe-st-assigned">
+              <div class="pipe-hdr"><div class="pipe-title">Assigned</div><div class="pipe-cnt" id="pc-assigned">0</div></div>
               <div class="pipe-body" id="pp-assigned"><div class="pipe-empty">No assigned jobs</div></div>
             </div>
-            <div class="pipe-col">
-              <div class="pipe-hdr"><div class="pipe-title" style="color:var(--purple);">In Transit</div><div class="pipe-cnt" style="background:var(--lt-bg-purple-1,rgba(141,92,255,.1));color:var(--purple);" id="pc-transit">0</div></div>
+            <div class="pipe-col pipe-st pipe-st-transit">
+              <div class="pipe-hdr"><div class="pipe-title">In Transit</div><div class="pipe-cnt" id="pc-transit">0</div></div>
               <div class="pipe-body" id="pp-transit"><div class="pipe-empty">No active transit</div></div>
             </div>
-            <div class="pipe-col">
-              <div class="pipe-hdr"><div class="pipe-title" style="color:var(--green);">Delivered</div><div class="pipe-cnt" style="background:var(--lt-bg-green-08,rgba(83,255,136,.08));color:var(--green);" id="pc-delivered">0</div></div>
+            <div class="pipe-col pipe-st pipe-st-delivered">
+              <div class="pipe-hdr"><div class="pipe-title">Delivered</div><div class="pipe-cnt" id="pc-delivered">0</div></div>
               <div class="pipe-body" id="pp-delivered" style="opacity:.65;"><div class="pipe-empty">None yet today</div></div>
             </div>
-            <div class="pipe-col">
-              <div class="pipe-hdr"><div class="pipe-title" style="color:var(--red);">Cancelled</div><div class="pipe-cnt" style="background:var(--lt-bg-red-08,rgba(255,59,48,.08));color:var(--red);" id="pc-cancelled">0</div></div>
+            <div class="pipe-col pipe-st pipe-st-cancelled">
+              <div class="pipe-hdr"><div class="pipe-title">Cancelled</div><div class="pipe-cnt" id="pc-cancelled">0</div></div>
               <div class="pipe-body" id="pp-cancelled"><div class="pipe-empty">None</div></div>
             </div>
-            <div class="pipe-col" style="border-color:var(--lt-bd-orange-2,rgba(255,150,30,.2));">
-              <div class="pipe-hdr" style="background:linear-gradient(135deg,var(--lt-bg-orange-04,rgba(255,150,30,.04)),transparent);">
-                <div class="pipe-title" style="color:var(--orange);">&#9888; Exceptions</div>
-                <div class="pipe-cnt" style="background:var(--lt-bg-orange-1,rgba(255,150,30,.1));color:var(--orange);" id="excBadge">0 OPEN</div>
+            <div class="pipe-col pipe-st pipe-st-exceptions" style="border-color:var(--lt-bd-orange-2,rgba(255,150,30,.2));">
+              <div class="pipe-hdr">
+                <div class="pipe-title">&#9888; Exceptions</div>
+                <div class="pipe-cnt" id="excBadge">0 OPEN</div>
               </div>
               <div class="pipe-body" id="excList">
                 <div class="pipe-empty">No exceptions</div>
