@@ -1409,7 +1409,11 @@ function doResetBin(binNum){
     idem:'binreset:'+(info.jobId||binNum)+':'+now
   });
   if(info.jobId){
-    tpOrgResp('set_staged',{id:info.jobId,staged:false}).catch(function(){});
+    // The server frees the route's STG spot in the same step (migration 61)
+    // and reopens its bin from zero; mirror that here, then re-read it.
+    if(binBindings[info.jobId]){ binBindings[info.jobId].staging_code=null; binBindings[info.jobId].state='open'; }
+    if(stageTarget&&stageTarget.jobId===info.jobId) stageTarget=null;
+    tpOrgResp('set_staged',{id:info.jobId,staged:false}).then(function(){ return loadBinBindings(); }).catch(function(){});
   }
   document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">BIN '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
   renderResetBinsPanel();
