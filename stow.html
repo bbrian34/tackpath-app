@@ -138,7 +138,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     <div class="app-footer"></div>
     <div class="utility-row">
       <button class="utility-btn" onclick="alert('Login: still deciding exactly what this does')">Login</button>
-      <button class="utility-btn" onclick="alert('Settings: still deciding exactly what this does')">Settings</button>
+      <button class="utility-btn" onclick="tpShowMenu()">Settings</button>
     </div>
   </div>
 
@@ -235,45 +235,194 @@ function tpSession(){
   try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
 }
 function tpFakeResp(status,text){return {ok:false,status:status,json:async()=>({message:text}),text:async()=>text};}
+
+// ── HELD WRITES (2026-10) ──
+// When the session has expired (or the device is signed out), writes that
+// are safe to replay are held on the device, tagged with the company they
+// belong to, and sent after the next sign-in to that company: stow events
+// (idempotency key), bin ready, bin label, staged flag. Nothing secret is
+// held. Interactive steps (open a bin, stage) show their failure instead.
+const TP_PENDING_KEY='tp_piq_pending', TP_LAST_ORG_KEY='tp_piq_last_org';
+const TP_REPLAYABLE=['log_event','binding_ready','set_bin_label','set_staged'];
+let _tpFlushing=false;
+function tpQueueLoad(){try{const q=JSON.parse(localStorage.getItem(TP_PENDING_KEY)||'[]');return Array.isArray(q)?q:[];}catch(e){return [];}}
+function tpQueueSave(q){try{if(q.length)localStorage.setItem(TP_PENDING_KEY,JSON.stringify(q.slice(-500)));else localStorage.removeItem(TP_PENDING_KEY);}catch(e){}}
+function tpLastOrg(){try{return localStorage.getItem(TP_LAST_ORG_KEY)||null;}catch(e){return null;}}
+function tpHold(action,args){
+  if(_tpFlushing||TP_REPLAYABLE.indexOf(action)<0)return;
+  const org=tpLastOrg(); if(!org)return;
+  const q=tpQueueLoad(); q.push({org:org,a:action,g:args||{}}); tpQueueSave(q);
+}
+async function tpFlushHeld(){
+  const s=tpSession(); if(!s)return;
+  const q=tpQueueLoad(); if(!q.length)return;
+  const mine=q.filter(it=>it.org===s.id), others=q.filter(it=>it.org!==s.id), retry=[];
+  tpQueueSave(others);
+  _tpFlushing=true;
+  try{
+    for(const it of mine){
+      try{ const r=await tpOrgResp(it.a,it.g); if(!r.ok&&r.status===401)retry.push(it); }catch(e){ retry.push(it); }
+    }
+  }finally{ _tpFlushing=false; }
+  if(retry.length)tpQueueSave(tpQueueLoad().concat(retry));
+}
+
 async function tpOrgResp(action,args){
   const s=tpSession();
-  if(!s){tpShowSignIn();return tpFakeResp(401,'TP_AUTH: please sign in');}
+  if(!s){tpHold(action,args);tpShowSignIn();return tpFakeResp(401,'TP_AUTH: please sign in');}
+  try{localStorage.setItem(TP_LAST_ORG_KEY,s.id);}catch(e){}
   const r=await fetch(SB+'/rest/v1/rpc/tp_org',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
     body:JSON.stringify({p_token:s.token,p_action:action,p_args:args||{}})});
   if(!r.ok){
     const t=await r.text();
-    if(/TP_AUTH/.test(t)){localStorage.removeItem('tp_dispatch_org');tpShowSignIn();}
+    if(/TP_AUTH/.test(t)){localStorage.removeItem('tp_dispatch_org');tpHold(action,args);tpShowSignIn();}
     return tpFakeResp(r.status,t);
   }
   return r;
+}
+
+// ── BADGE SIGN-IN (2026-10) ──
+// The worker scans a badge, TP|<company-slug>|<company-code> (Code 128 or
+// QR), and is signed in with the same company sign-in as before
+// (tp_org_sign_in). Only the session is stored, exactly as before
+// (localStorage tp_dispatch_org); the company code is never stored, shown
+// or logged. Badge values are caught before any scan logging.
+// "Type instead" keeps the typed company + code form for emergencies.
+function tpLooksLikeBadge(raw){ return /^\s*TP\|/i.test(String(raw==null?'':raw)); }
+function tpParseBadge(raw){
+  const v=String(raw==null?'':raw).replace(/[\u0000-\u001f\u007f]/g,'').trim();
+  const p=v.split('|');
+  if(p.length!==3||p[0].trim().toUpperCase()!=='TP')return null;
+  const slug=p[1].trim().toLowerCase(), code=p[2].trim();
+  if(!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(slug)||code.length<8||code.length>200)return null;
+  return {slug:slug,code:code};
+}
+function tpNotABadgeReason(raw){
+  const v=String(raw==null?'':raw).trim().toUpperCase();
+  if(/^BIN[:\s-]/.test(v))return 'That is a BIN code.';
+  if(/^(LOC|LOCATION)[:\s-]/.test(v))return 'That is a location (LOC) code.';
+  if(/^(STG|STAGE|STAGING)[:\s-]/.test(v))return 'That is a staging (STG) code.';
+  if(tpLooksLikeBadge(v))return 'The badge could not be read.';
+  return 'That looks like a package or other barcode.';
+}
+function tpBadgeMsg(text,isError){
+  const m=document.getElementById('tpBadgeMsg'); if(!m)return;
+  m.textContent=text||''; m.style.color=isError?'#ff8a80':'#9fdcff';
+}
+function tpBadgeFocus(){
+  const typing=document.getElementById('tpTypeForm');
+  if(typing&&typing.style.display!=='none')return;
+  const i=document.getElementById('tpBadgeInput'); if(i&&document.activeElement!==i)i.focus();
 }
 function tpShowSignIn(){
   if(document.getElementById('tpSignIn'))return;
   const d=document.createElement('div');
   d.id='tpSignIn';
   d.setAttribute('style','position:fixed;inset:0;z-index:9999;background:#010e21;display:flex;align-items:center;justify-content:center;padding:24px;');
-  d.innerHTML='<div style="width:100%;max-width:340px;color:#fff;font-family:inherit;">'
-    +'<div style="font-size:1.3rem;font-weight:800;margin-bottom:6px;">PathIQ sign-in</div>'
-    +'<div style="opacity:.7;font-size:.9rem;margin-bottom:16px;">Enter your company and company code.</div>'
+  d.innerHTML='<div style="width:100%;max-width:360px;color:#fff;font-family:inherit;text-align:center;">'
+    +'<div style="font-size:1.1rem;font-weight:700;opacity:.75;margin-bottom:18px;">PathIQ</div>'
+    +'<div id="tpBadgeTitle" style="font-size:1.9rem;font-weight:900;line-height:1.2;">Scan your badge to start</div>'
+    +'<div id="tpBadgeMsg" role="status" aria-live="polite" style="min-height:3em;margin-top:18px;font-size:1.05rem;font-weight:700;"></div>'
+    +'<input id="tpBadgeInput" type="text" inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false" aria-hidden="true" tabindex="-1"'
+    +' style="position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;">'
+    +'<div id="tpTypeForm" style="display:none;text-align:left;margin-top:10px;">'
     +'<input id="tpSiSlug" placeholder="Company (e.g. quickhaul)" autocapitalize="off" style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #234;background:#0b1a2e;color:#fff;font-size:1rem;box-sizing:border-box;">'
     +'<input id="tpSiCode" type="password" placeholder="Company code" style="width:100%;padding:12px;margin-bottom:12px;border-radius:8px;border:1px solid #234;background:#0b1a2e;color:#fff;font-size:1rem;box-sizing:border-box;">'
     +'<button id="tpSiBtn" style="width:100%;padding:13px;border:0;border-radius:8px;background:#19b7ef;color:#fff;font-weight:800;font-size:1rem;">Sign in</button>'
-    +'<div id="tpSiErr" style="color:#ff6b6b;margin-top:10px;display:none;"></div></div>';
+    +'<div id="tpSiErr" style="color:#ff6b6b;margin-top:10px;display:none;"></div></div>'
+    +'<button id="tpTypeLink" type="button" style="margin-top:28px;background:none;border:0;color:#7fa6c4;font-size:.85rem;text-decoration:underline;cursor:pointer;">Type instead</button>'
+    +'</div>';
   document.body.appendChild(d);
+  const inp=document.getElementById('tpBadgeInput');
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){ e.preventDefault(); const v=inp.value; inp.value=''; tpBadgeSubmit(v); }
+  });
+  d.addEventListener('click',function(e){ if(!e.target.closest('#tpTypeForm'))setTimeout(tpBadgeFocus,0); });
+  document.getElementById('tpTypeLink').onclick=function(){
+    const f=document.getElementById('tpTypeForm'); f.style.display='block';
+    this.style.display='none'; document.getElementById('tpSiSlug').focus();
+  };
   document.getElementById('tpSiBtn').onclick=tpDoSignIn;
   document.getElementById('tpSiCode').onkeydown=function(e){if(e.key==='Enter')tpDoSignIn();};
+  setTimeout(tpBadgeFocus,0);
+}
+async function tpOrgSignIn(slug,code){
+  const r=await fetch(SB+'/rest/v1/rpc/tp_org_sign_in',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+    body:JSON.stringify({p_slug:slug,p_code:code})});
+  let res=null; try{res=await r.json();}catch(e){}
+  if(!r.ok||!res||!res.ok)throw new Error(res&&/TP_RATE/.test(res.error||'')?'Too many attempts. Try again in 15 minutes.':'');
+  return res;
+}
+// Signed in: store the session (as before), close the sign-in screen, keep
+// whatever the worker was doing, send held writes, refresh.
+function tpSignedIn(res){
+  localStorage.setItem('tp_dispatch_org',JSON.stringify({id:res.org.id,slug:res.org.slug,name:res.org.name,token:res.token}));
+  try{localStorage.setItem(TP_LAST_ORG_KEY,res.org.id);}catch(e){}
+  const d=document.getElementById('tpSignIn'); if(d)d.remove();
+  const home=document.getElementById('scHome');
+  if(home&&home.classList.contains('on')&&typeof goTo==='function')goTo('stow');
+  else{ const si=document.getElementById('stowInput'); if(si&&document.getElementById('scStow').classList.contains('on'))si.focus(); }
+  tpFlushHeld().catch(function(){}).then(function(){ if(typeof loadRoutes==='function')loadRoutes(); });
+}
+let _tpBadgeBusy=false;
+async function tpBadgeSubmit(raw){
+  if(_tpBadgeBusy)return;
+  const b=tpParseBadge(raw);
+  if(!b){
+    tpBadgeMsg('That is not a badge. '+tpNotABadgeReason(raw)+' Scan your TackPath badge.',true);
+    if(typeof playErrorSound==='function')try{playErrorSound();}catch(e){}
+    return;
+  }
+  _tpBadgeBusy=true;
+  tpBadgeMsg('Signing in…',false);
+  try{
+    const res=await tpOrgSignIn(b.slug,b.code);
+    tpSignedIn(res);
+  }catch(e){
+    tpBadgeMsg(e.message||'Badge not accepted. Ask your manager for a current badge.',true);
+    if(typeof playErrorSound==='function')try{playErrorSound();}catch(e2){}
+  }finally{ _tpBadgeBusy=false; }
+}
+// Every scan entry point asks this first, before any logging. While the
+// sign-in screen is up, every scan is a badge attempt. A badge scanned while
+// signed in is swallowed (never logged, never treated as a package).
+function tpBadgeIntercept(value){
+  if(document.getElementById('tpSignIn')){ tpBadgeSubmit(value); return true; }
+  return tpLooksLikeBadge(value);
 }
 async function tpDoSignIn(){
   const err=document.getElementById('tpSiErr');
   err.style.display='none';
   try{
-    const r=await fetch(SB+'/rest/v1/rpc/tp_org_sign_in',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
-      body:JSON.stringify({p_slug:document.getElementById('tpSiSlug').value.trim(),p_code:document.getElementById('tpSiCode').value})});
-    const res=await r.json();
-    if(!r.ok||!res||!res.ok)throw new Error(res&&/TP_RATE/.test(res.error||'')?'Too many attempts. Try again in 15 minutes.':'Company or code not recognised.');
-    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:res.org.id,slug:res.org.slug,name:res.org.name,token:res.token}));
-    location.reload();
-  }catch(e){err.textContent=e.message;err.style.display='block';}
+    const res=await tpOrgSignIn(document.getElementById('tpSiSlug').value.trim(),document.getElementById('tpSiCode').value);
+    document.getElementById('tpSiCode').value='';
+    tpSignedIn(res);
+  }catch(e){err.textContent=e.message||'Company or code not recognised.';err.style.display='block';}
+}
+// Sign out: from the Settings menu on the home screen.
+async function tpSignOut(){
+  const s=tpSession();
+  if(typeof confirm==='function'&&!confirm('Sign out of PathIQ on this device?'))return;
+  if(s){ try{ await fetch(SB+'/rest/v1/rpc/tp_sign_out',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+    body:JSON.stringify({p_token:s.token})}); }catch(e){} }
+  localStorage.removeItem('tp_dispatch_org');
+  const m=document.getElementById('tpMenu'); if(m)m.remove();
+  tpShowSignIn();
+}
+function tpShowMenu(){
+  if(document.getElementById('tpMenu'))return;
+  const s=tpSession();
+  const m=document.createElement('div'); m.id='tpMenu';
+  m.setAttribute('style','position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;');
+  m.innerHTML='<div style="width:100%;max-width:480px;background:#fff;color:#111;border-radius:16px 16px 0 0;padding:18px 18px 24px;">'
+    +'<div style="font-weight:800;font-size:1.05rem;margin-bottom:4px;">Settings</div>'
+    +'<div style="opacity:.7;margin-bottom:16px;" id="tpMenuWho"></div>'
+    +'<button id="tpSignOutBtn" style="width:100%;padding:14px;border:0;border-radius:10px;background:#b3261e;color:#fff;font-weight:800;font-size:1rem;margin-bottom:10px;">Sign out</button>'
+    +'<button id="tpMenuClose" style="width:100%;padding:14px;border:1px solid #ccc;border-radius:10px;background:#fff;color:#111;font-weight:700;font-size:1rem;">Close</button></div>';
+  document.body.appendChild(m);
+  document.getElementById('tpMenuWho').textContent=s?('Signed in: '+(s.name||s.slug)):'Not signed in';
+  document.getElementById('tpSignOutBtn').onclick=tpSignOut;
+  document.getElementById('tpMenuClose').onclick=function(){m.remove();};
 }
 if(!tpSession())setTimeout(tpShowSignIn,0);
 
@@ -445,12 +594,16 @@ function goTo(screen){
 }
 
 async function loadRoutes(){
+  // Signed out (or the session just expired): keep the board as it is.
+  if(!tpSession())return;
   // Bindings first — loadRoutes keys progress by the bound bin code.
   await loadBinBindings();
   let fetchErrorOccurred=false;
   try{
     const r=await tpOrgResp('jobs',{statuses:['pending','assigned','in_transit'],order:'asc',limit:50});
-    jobs=await r.json();
+    const got=await r.json();
+    if(!Array.isArray(got)&&!tpSession())return;      // expired mid-poll: keep the board
+    jobs=got;
     if(!Array.isArray(jobs)){
       fetchErrorOccurred=true;
       const dbgElBad=document.getElementById('debugPanel');
@@ -964,6 +1117,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 async function handleStowScan(code){
+  if(tpBadgeIntercept(code))return;
   const clean=code.trim().toUpperCase();
 
   // ── DIAGNOSTIC: full chain from raw input through lookup result.
@@ -1420,23 +1574,26 @@ function doResetBin(binNum){
 }
 
 document.getElementById('assignBinInput').addEventListener('keydown', function(e){
-  if(e.key==='Enter'){ handleAssignBinScan(e.target.value); e.target.value=''; }
+  if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; if(tpBadgeIntercept(v))return; handleAssignBinScan(v); }
 });
 document.getElementById('stowInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){
     const dbgClear=document.getElementById('debugPanel');
     if(dbgClear) dbgClear.textContent='';
-    handleStowScan(e.target.value); e.target.value='';
+    const v=e.target.value; e.target.value='';
+    handleStowScan(v);
   }
 });
 document.getElementById('receiveInput').addEventListener('keydown', function(e){
-  if(e.key==='Enter'){ handleReceiveScan(e.target.value); e.target.value=''; }
+  if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; if(tpBadgeIntercept(v))return; handleReceiveScan(v); }
 });
 document.addEventListener('click', function(){
   if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
   if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
 });
 
+// Signed in: open straight into Stow.
+if(tpSession())goTo('stow');
 loadRoutes();
 setInterval(loadRoutes, 5000);
 
@@ -1461,6 +1618,7 @@ window.addEventListener('online', loadRoutes);
 // existing scan-handling logic itself changes.
 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner) {
   window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+    if(tpBadgeIntercept(data&&data.value))return;   // badges: never logged
     // ── DIAGNOSTIC: exact raw shape from the native plugin, before
     // anything touches it ──
     const bridgeDbg = 'NATIVE BRIDGE EVENT RECEIVED\n'
@@ -1495,6 +1653,7 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Far
     if (window._zebraAttached) return;
     window._zebraAttached = true;
     window.Capacitor.Plugins.ZebraScanner.addListener('scan', function(data){
+      if(tpBadgeIntercept(data&&data.value))return;   // badges: never logged
       const value = data && data.value;
       const dbg=document.getElementById('debugPanel');
       if(dbg) dbg.textContent='SCAN RAW: '+JSON.stringify(value)+
