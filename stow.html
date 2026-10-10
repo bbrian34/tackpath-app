@@ -996,7 +996,8 @@ async function loadBinBindings(){
     const rows=await r.json();
     binBindings={};
     (Array.isArray(rows)?rows:[]).forEach(b=>{
-      if(b.job_id)binBindings[b.job_id]={bin_code:b.bin_code,location_code:b.location_code,state:b.state,staging_code:b.staging_code||null};
+      if(b.job_id)binBindings[b.job_id]={bin_code:b.bin_code,location_code:b.location_code,state:b.state,staging_code:b.staging_code||null,
+        job_title:b.job_title||null,job_status:b.job_status||null};
     });
   }catch(e){}
 }
@@ -1008,8 +1009,26 @@ function normalizeLocCode(s){ return String(s||'').replace(/^(LOC|LOCATION)[:\s-
 
 // Is this code already bound to a DIFFERENT live route?
 function binCodeInUse(binCode, exceptJobId){
-  return Object.entries(binBindings).some(([jid,b])=>
+  return !!binHolder(binCode, exceptJobId);
+}
+// The live route holding this bin, if any: {jobId, title, status}
+function binHolder(binCode, exceptJobId){
+  const hit=Object.entries(binBindings).find(([jid,b])=>
     b.bin_code===binCode && jid!==exceptJobId && (b.state==='open'||b.state==='ready'));
+  if(!hit)return null;
+  const [jid,b]=hit, j=(Array.isArray(jobs)?jobs:[]).find(x=>String(x.id)===String(jid));
+  return {jobId:jid, title:b.job_title||(j&&j.title)||null, status:b.job_status||(j&&j.status)||null};
+}
+// "Route 7 (assigned)" for the refusal message
+function holderText(title,status){
+  return esc(title||'Another route')+(status?' ('+esc(String(status).replace(/_/g,' '))+')':'');
+}
+function binInUseCard(card,bin,title,status){
+  playErrorSound();
+  card.className='result-card error';
+  card.innerHTML='<div class="result-bin">Bin In Use</div>'
+    +'<div class="result-bin-num error" style="font-size:1.6rem;">BIN '+esc(bin)+'</div>'
+    +'<div class="result-detail">BIN '+esc(bin)+' holds '+holderText(title,status)+'. Scan an empty bin.</div>';
 }
 
 // ═════════════════════════════════════════════════════════════
@@ -1074,7 +1093,7 @@ async function stageRoute(card,raw){
   const err=res&&res.error;
   if(err==='spot_taken'){
     stageCard(card,'error','Staging Spot Taken','STG '+esc(res.staging_code||code),
-      esc(res.route||'Another route')+' is already staged there. Scan a different STG code for BIN '+esc(t.bin)+'.');
+      holderText(res.route||'Another route',res.status)+' is already staged there. Scan a different STG code for BIN '+esc(t.bin)+'.');
   }else if(err==='not_complete'){
     stageCard(card,'error','Route Not Complete','BIN '+esc(t.bin),'Every package must be stowed before the bin is staged.');
   }else{
@@ -1088,6 +1107,8 @@ async function persistBinBinding(jobId, binCode, locCode, orgId){
       id:jobId, bin_code:binCode, location_code:locCode, opened_by:ensureWorker()
     });
     if(!r.ok)throw new Error(await r.text());
+    const res=await r.json().catch(()=>null);
+    if(res&&res.error==='bin_taken')return {taken:res};
     binBindings[jobId]={bin_code:binCode,location_code:locCode,state:'open'};
     // Mirror onto the job so the dispatcher and driver see the bin too
     tpOrgResp('set_bin_label',{id:jobId,bin_label:binCode}).catch(()=>{});
@@ -1343,14 +1364,11 @@ async function handleStowScan(code){
     }else{
       const bin=normalizeBinCode(clean);
       if(!bin){playErrorSound();return;}
-      if(binCodeInUse(bin,openingBin.jobId)){
-        playErrorSound();
-        card.className='result-card error';
-        card.innerHTML='<div class="result-bin">Bin In Use</div>'
-          +'<div class="result-bin-num error" style="font-size:1.6rem;">BIN '+esc(bin)+'</div>'
-          +'<div class="result-detail">That bin already holds another route. Scan an empty bin.</div>';
-        return;
-      }
+      // Held on this device's copy? Ask the server again first: it frees
+      // spots of routes that have moved on (migration 65) before answering.
+      if(binCodeInUse(bin,openingBin.jobId)) await loadBinBindings();
+      const held=binHolder(bin,openingBin.jobId);
+      if(held){ binInUseCard(card,bin,held.title,held.status); return; }
       openingBin.binCode=bin;
     }
 
@@ -1368,6 +1386,13 @@ async function handleStowScan(code){
 
     // Both scanned — bind the bin to the route
     const ok=await persistBinBinding(openingBin.jobId,openingBin.binCode,openingBin.locCode,openingBin.orgId);
+    if(ok&&ok.taken){
+      // the server says a live route holds it (another device opened it meanwhile)
+      binInUseCard(card,openingBin.binCode,ok.taken.route,ok.taken.status);
+      openingBin.binCode=null;
+      loadBinBindings();
+      return;
+    }
     if(!ok){
       playErrorSound();
       card.className='result-card error';
