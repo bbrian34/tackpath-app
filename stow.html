@@ -58,6 +58,23 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 .result-card.error{border-color:var(--red);background:#fbeceb;}
 .result-card.dupe{border-color:#e69500;background:#fff4dc;}
 .flip-bin-loc{color:#fff;font-size:1rem;font-weight:600;opacity:.75;margin-top:4px;}
+/* STOW STEPS (2026-10): PACKAGE > BIN > LOCATION > STAGE, the current step highlighted */
+.stow-steps{display:flex;align-items:center;gap:4px;margin:0 16px 10px;font-family:'DM Mono',monospace;}
+.stow-steps .st{flex:1;text-align:center;padding:9px 2px;border-radius:8px;font-size:.74rem;font-weight:800;letter-spacing:.05em;color:#7a8592;background:#dfe3e8;border:2px solid transparent;}
+.stow-steps .st.done{color:#1b7f45;background:#e3f5e6;}
+.stow-steps .st.on{color:#fff;background:#111418;border-color:#111418;transform:scale(1.06);}
+.stow-steps .st.on.st-stage{background:#c96a00;border-color:#c96a00;}
+.stow-steps .sep{color:#9aa3ad;font-weight:800;font-size:.8rem;}
+/* STAGE step: the same big panel as the BIN step, in its own colour */
+.flip-card-container.tall{height:236px;}
+.flip-card-back.stage-mode{background-color:#c96a00;border-color:#c96a00;}
+.flip-card-back.staged-mode{background-color:#22a559;border-color:#22a559;}
+.flip-card-back.stage-mode .flip-bin-number,.flip-card-back.staged-mode .flip-bin-number{font-size:2.6rem;letter-spacing:.04em;line-height:1.05;text-align:center;}
+.flip-card-back.stage-mode .flip-bin-loc,.flip-card-back.staged-mode .flip-bin-loc{font-size:1.45rem;font-weight:800;opacity:1;text-align:center;padding:0 10px;}
+.flip-card-back.stage-mode .flip-bin-instruction,.flip-card-back.staged-mode .flip-bin-instruction{font-size:1.15rem;text-align:center;padding:0 10px;}
+.flip-card-back.staged-mode .flip-bin-number{font-size:2.1rem;}
+.flip-card-back.stage-mode #flipBinStop,.flip-card-back.staged-mode #flipBinStop{font-size:1rem!important;font-weight:700!important;opacity:.95;text-align:center;padding:0 12px;margin-top:8px!important;}
+.stage-later{display:none;margin:-6px auto 14px;background:none;border:0;color:#5b6672;font-size:.85rem;text-decoration:underline;}
 .result-bin{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:700;}
 .result-bin-num{font-size:2.6rem;font-weight:800;color:var(--blue);line-height:1;margin-bottom:8px;}
 .result-bin-num.success{color:var(--green);}
@@ -154,6 +171,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 
   <!-- STOW -->
   <div class="screen" id="scStow">
+    <div class="stow-steps" id="stowSteps" role="list" aria-label="Stow steps"></div>
     <div class="flip-card-container" id="scanFlipContainer">
       <div class="flip-card-inner" id="scanFlipInner">
         <div class="flip-card-face flip-card-front">
@@ -187,6 +205,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
         </div>
       </div>
     </div>
+    <button type="button" class="stage-later" id="stageLaterBtn" onclick="stageLater()">Stage later (scan this bin&rsquo;s BIN to stage it)</button>
     <input type="text" id="stowInput" class="hidden-scan-input" inputmode="none" placeholder="Scan here"/>
     <div class="result-card" id="stowResult" style="display:none;"></div>
     <div id="debugPanel" style="display:none;background:#000;color:#0f0;font-family:monospace;font-size:0.7rem;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;"></div>
@@ -587,7 +606,7 @@ function goTo(screen){
     topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
   }
   if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
-  if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
+  if(id==='scStow'){ resetStowResult(); renderBinsPanel(); if(typeof renderStowSteps==='function')renderStowSteps(); document.getElementById('stowInput').focus(); }
   if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
   if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
   if(id==='scInduct'){ renderInductSummary(); }
@@ -1080,6 +1099,8 @@ async function stageRoute(card,raw){
     if(binBindings[t.jobId]) binBindings[t.jobId].staging_code=res.staging_code||code;
     else binBindings[t.jobId]={bin_code:t.bin,location_code:null,state:'ready',staging_code:res.staging_code||code};
     stageTarget=null;
+    stageConfirm={spot:res.staging_code||code, bin:t.bin, title:t.title, until:Date.now()+STAGE_CONFIRM_MS};
+    setTimeout(renderStowSteps,STAGE_CONFIRM_MS+50);
     playSuccessSound();
     logEvent('bin.staged',{org_id:(binProgress[t.bin]||{}).orgId, job_id:t.jobId,
       payload:{bin:t.bin, route:t.title, staging:res.staging_code||code},
@@ -1225,6 +1246,13 @@ async function handleStowScan(code){
       playErrorSound();
       stageCard(card,'error','Wrong Code',esc(clean),
         'That is a '+(LOC_RE.test(clean)?'location (LOC)':'bin (BIN)')+' code. Scan a STG code to stage BIN '+esc(stageTarget.bin)+'. Nothing was changed.');
+      return;
+    }
+    if(stageTarget){
+      // STAGE step: a package (or any other barcode) is not a STG code
+      playErrorSound();
+      stageCard(card,'error','STG Code Needed','STAGE BIN '+esc(stageTarget.bin),
+        'That is '+(binMap[clean]?'a package barcode':'not a STG code')+'. Scan a STG code, like STG:S-01, to stage BIN '+esc(stageTarget.bin)+'. Nothing was changed.');
       return;
     }
   }
@@ -1614,6 +1642,85 @@ function doResetBin(binNum){
   document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">BIN '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
   renderResetBinsPanel();
 }
+
+// ── STOW STEPS + STAGE PANEL (2026-10) ──
+// The step bar shows PACKAGE > BIN > LOCATION > STAGE with the current step
+// highlighted. When a route's last package is stowed, the big panel turns
+// into the STAGE step (same panel and size as the BIN step); a successful
+// STG scan shows STAGED at <spot> there, then the normal flow returns.
+const STAGE_CONFIRM_MS=3500;
+let stageConfirm=null;
+function stowStepNow(){
+  if(openingBin) return openingBin.binCode&&!openingBin.locCode?'location':'bin';
+  if(pendingPlacement) return 'bin';
+  if(stageTarget) return 'stage';
+  return 'package';
+}
+function waitingToStage(){
+  return Object.keys(binProgress).filter(n=>{const p=binProgress[n];return p&&p.jobId&&p.total>0&&p.sorted>=p.total&&!stagingOf(p.jobId);});
+}
+function setText(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+function renderStowSteps(){
+  const bar=document.getElementById('stowSteps');
+  const step=stowStepNow(), order=['package','bin','location','stage'];
+  const names={package:'PACKAGE',bin:'BIN',location:'LOCATION',stage:'STAGE'};
+  const cur=order.indexOf(step);
+  if(bar) bar.innerHTML=order.map((k,i)=>'<div role="listitem" class="st st-'+k+(i===cur?' on':i<cur?' done':'')+'"'
+    +(i===cur?' aria-current="step"':'')+'>'+names[k]+'</div>').join('<span class="sep">&rsaquo;</span>');
+  const inner=document.getElementById('scanFlipInner'), cont=document.getElementById('scanFlipContainer');
+  const back=document.querySelector('#scanFlipInner .flip-card-back');
+  const later=document.getElementById('stageLaterBtn');
+  if(!inner||!back) return;
+  const confirming=stageConfirm&&Date.now()<stageConfirm.until&&step==='package';
+  if(step==='stage'){
+    const t=stageTarget, waiting=waitingToStage();
+    back.classList.add('stage-mode'); back.classList.remove('staged-mode');
+    cont&&cont.classList.add('tall');
+    setText('flipBinNumber','STAGE');
+    setText('flipBinLoc','BIN '+t.bin+' \u00b7 '+(t.title||'Route'));
+    setText('flipBinInstr','Scan a STG code to stage this bin');
+    setText('flipBinStop',waiting.length>1
+      ? waiting.length+' bins waiting to stage. This STG scan stages BIN '+t.bin+'.'
+      : 'STG codes look like STG:S-01');
+    inner.classList.add('flipped');
+    if(later) later.style.display='block';
+    return;
+  }
+  if(later) later.style.display='none';
+  if(confirming){
+    const c=stageConfirm, more=waitingToStage();
+    back.classList.add('staged-mode'); back.classList.remove('stage-mode');
+    cont&&cont.classList.add('tall');
+    setText('flipBinNumber','STAGED at '+c.spot);
+    setText('flipBinLoc','BIN '+c.bin+' \u00b7 '+(c.title||'Route'));
+    setText('flipBinInstr','Ready for pickup.');
+    setText('flipBinStop',more.length?('Still to stage: BIN '+more.join(', BIN ')+'. Scan its BIN, then a STG code.'):'');
+    inner.classList.add('flipped');
+    return;
+  }
+  if(back.classList.contains('stage-mode')||back.classList.contains('staged-mode')){
+    back.classList.remove('stage-mode','staged-mode');
+    cont&&cont.classList.remove('tall');
+    if(!pendingPlacement){ inner.classList.remove('flipped'); setText('flipBinStop',''); }
+  }
+}
+// Leave the STAGE step without staging: the route stays ready to stage
+// (its bin is listed as SCAN STG TO STAGE); scan its BIN later to stage it.
+function stageLater(){
+  if(!stageTarget) return;
+  stageTarget=null;
+  const card=document.getElementById('stowResult');
+  if(card){ card.style.display='flex'; card.className='result-card';
+    card.innerHTML='<div class="result-bin">Stage Later</div><div class="result-detail">Scan the bin\u2019s BIN QR, then a STG code, to stage it.</div>'; }
+  renderStowSteps();
+  const si=document.getElementById('stowInput'); if(si) si.focus();
+}
+handleStowScan=(function(orig){return async function(code){
+  if(stageConfirm&&String(code||'').trim()) stageConfirm=null;
+  try{ return await orig.apply(this,arguments); }
+  finally{ renderStowSteps(); }
+};})(handleStowScan);
+renderStowSteps();
 
 document.getElementById('assignBinInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; if(tpBadgeIntercept(v))return; handleAssignBinScan(v); }
