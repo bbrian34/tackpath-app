@@ -218,6 +218,7 @@ test('d. stale bindings of archived, cancelled, delivered, completed/closed with
     for (const [k, [bin, loc, stg]] of Object.entries(spots)) {
       await p.stow([tns[i++]], bin, loc);
       if (stg) assert.match(await p.stage(stg), new RegExp('Staged STG ' + stg), k + ' spot ' + stg);
+      else p.w.eval('stageLater()');          // the worker taps "Stage later" for this bin
     }
     // the live route's bin is still refused, naming the route and its status
     await t.build([{ title: 'One more', tns: ['X1'] }]);
