@@ -4625,18 +4625,38 @@ if(me()&&tpToken())afterBoot();else{countPod();renderSync();}
      3. Delivery scan screen: camera over the top of the screen with a scan
         frame, torch, tap-to-focus and Cancel; the package list sits in a
         sheet at the bottom; "Type the number instead"; a rejected scan says
-        what was read and why, and is logged on the job (SCAN_REJECTED::). -->
+        what was read and why, and is logged on the job (SCAN_REJECTED::).
+     4. Camera size (2026-10-11): the camera gets most of the screen at
+        pickup (loading) and delivery. Delivery: the sheet is at most 26% of
+        the height, without the heading and count the top bar already shows,
+        and the video ends where the sheet begins. Pickup: the loading panel
+        is one compact row at the top (BACK, count, Problem), the typed-entry
+        bar stays at the bottom, and the scan frame is larger. -->
 <style id="tpScanStyle">
 #tpScanUi{display:none;position:fixed;inset:0;z-index:49;pointer-events:none;font-family:var(--sans,system-ui);}
 body.tp-dlv #tpScanUi{display:block;}
 body.tp-dlv #scScan .scan-top,body.tp-dlv #scScan .scan-frame,body.tp-dlv #scScan .scan-bottom,body.tp-dlv #scScan .scan-vignette,
 body.tp-dlv #scScan .scan-confirm{display:none!important;}
-body.tp-dlv #dlvScanOverlay>div:first-child{top:auto!important;bottom:var(--tp-kb,0px)!important;max-height:40%!important;
+body.tp-dlv #dlvScanOverlay>div:first-child{top:auto!important;bottom:var(--tp-kb,0px)!important;max-height:26%!important;
   padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))!important;border-radius:18px 18px 0 0;
   background:rgba(6,12,22,.97)!important;box-shadow:0 -8px 30px rgba(0,0,0,.45);}
 body.tp-dlv.tp-typing #dlvScanOverlay>div:first-child{max-height:62%!important;}
 body.tp-dlv #dlvScanOverlay [onclick^="cancelDeliveryScan"]{display:none!important;}
-body.tp-dlv #dlvScanHeading{font-size:1rem!important;}
+body.tp-dlv #dlvScanHeading,body.tp-dlv #dlvScanCount{display:none!important;}
+body.tp-dlv #dlvScanResult{min-height:0!important;margin-top:4px!important;}
+body.tp-dlv #scanVideo{top:0!important;bottom:auto!important;height:calc(100% - var(--tp-sheet,26%))!important;}
+body.tp-load #scScan .scan-top,body.tp-load #scScan .scan-vignette,body.tp-load #scScan .scan-confirm{display:none!important;}
+body.tp-load #loadPkgOverlay>div:first-child{padding:calc(8px + env(safe-area-inset-top,0px)) 114px 8px 96px!important;min-height:60px;
+  max-height:46%;overflow-y:auto;text-align:left!important;background:rgba(0,0,0,.9)!important;}
+body.tp-load #loadPkgOverlay [onclick^="cancelPackageScan"]{top:calc(8px + env(safe-area-inset-top,0px))!important;left:10px!important;min-height:44px;}
+body.tp-load #loadPkgOverlay .dx-help{position:absolute!important;top:calc(8px + env(safe-area-inset-top,0px));right:10px;margin:0!important;
+  width:96px!important;min-height:44px;padding:4px 8px!important;font-size:.75rem!important;line-height:1.15!important;white-space:normal!important;}
+body.tp-load #loadPkgInstruction,body.tp-load #loadPkgCount+div{display:none!important;}
+body.tp-load #loadPkgHeading{font-size:1rem!important;}
+body.tp-load #loadPkgCount{font-size:1.15rem!important;margin-top:2px!important;line-height:1.2!important;}
+body.tp-load #loadPkgLastScan{min-height:0!important;margin-top:4px!important;}
+body.tp-load #scScan .scan-bottom{background:rgba(0,0,0,.9)!important;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 8px)!important;}
+body.tp-load #scScan .scan-frame-inner{width:88vw;max-width:440px;height:min(34vh,240px);}
 .tp-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;pointer-events:auto;
   padding:calc(10px + env(safe-area-inset-top,0px)) 12px 12px;background:linear-gradient(rgba(0,0,0,.72),rgba(0,0,0,0));}
 .tp-top button{min-height:48px;min-width:48px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.55);
@@ -4927,11 +4947,16 @@ function sync(){
   if(!on){document.body.classList.remove('tp-typing');if(T.torch)setTorch(false);}
   var p=o&&o.firstElementChild;
   if(on&&p)document.body.style.setProperty('--tp-sheet',Math.round(p.getBoundingClientRect().height)+'px');
+  var lo=$('loadPkgOverlay'),sc=$('scScan');
+  document.body.classList.toggle('tp-load',!on&&!!(lo&&lo.style.display==='block'&&sc&&sc.classList.contains('on')));
 }
 T.sync=sync;
 function watch(){
   var o=$('dlvScanOverlay');if(!o)return;
   new MutationObserver(sync).observe(o,{attributes:true,attributeFilter:['style'],childList:true,subtree:true});
+  var lo=$('loadPkgOverlay'),sc=$('scScan');
+  if(lo)new MutationObserver(sync).observe(lo,{attributes:true,attributeFilter:['style']});
+  if(sc)new MutationObserver(sync).observe(sc,{attributes:true,attributeFilter:['class']});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
 var _rd=renderDeliveryScan;
@@ -5097,6 +5122,248 @@ check();
 })();
 </script>
 <!-- TP-GONE:END -->
+<!-- TP-ROUTEMAP:BEGIN  Route map of numbered stops (2026-10-11). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). The Route Map button shows every
+     delivery stop as ONE numbered dot at its location (several packages at a
+     stop are still one dot), numbered by stop_number in delivery order: done
+     stops gray with a check, the current stop highlighted, the rest blue. The
+     base map is the Google Maps Embed map the app already used (view mode
+     instead of directions; no new service, no new library); the dots are drawn
+     over it and the map pans (drag) and zooms (pinch, wheel, + / -). A stop
+     without coordinates is geocoded the way the app already does it
+     (resolveNavDest on the phone app, the Maps geocoder on the web app); one
+     that still has no spot is listed under "Not on map", so dots + not on map
+     = stops. Tapping a dot shows its number, recipient, address and packages. -->
+<style>
+#routeMapOverlay .tprm{position:relative;flex:1;overflow:hidden;background:#e5e3df;touch-action:none;user-select:none;-webkit-user-select:none;}
+#routeMapOverlay .tprm-base{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none;transform-origin:0 0;}
+#routeMapOverlay .tprm-dots{position:absolute;inset:0;transform-origin:0 0;}
+#routeMapOverlay .tprm-dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;padding:0;border-radius:50%;
+  border:2px solid #fff;background:#0a58ca;color:#fff;font:800 12px/22px system-ui,-apple-system,sans-serif;text-align:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.55);cursor:pointer;z-index:2;letter-spacing:-.5px;}
+#routeMapOverlay .tprm-dot.st-done{background:#8a8f98;color:#fff;z-index:1;}
+#routeMapOverlay .tprm-dot.st-done::after{content:'\2713';position:absolute;right:-6px;top:-6px;width:14px;height:14px;border-radius:50%;
+  background:#3a3f47;color:#fff;font:900 9px/14px system-ui,sans-serif;border:1px solid #fff;}
+#routeMapOverlay .tprm-dot.st-cur{width:34px;height:34px;margin:-17px 0 0 -17px;background:#ff8a00;color:#000;font-size:14px;line-height:30px;
+  border-color:#000;box-shadow:0 0 0 4px rgba(255,138,0,.45),0 1px 5px rgba(0,0,0,.6);z-index:3;}
+#routeMapOverlay .tprm-dot.sel{outline:3px solid #000;outline-offset:1px;}
+#routeMapOverlay .tprm-ctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:5;}
+#routeMapOverlay .tprm-ctl button{width:44px;height:44px;border-radius:10px;border:0;background:#fff;color:#0f172a;font:800 1.25rem/1 system-ui,sans-serif;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer;}
+#routeMapOverlay .tprm-ctl button.fit{font-size:.75rem;}
+#routeMapOverlay .tprm-bar{flex-shrink:0;background:#0f172a;color:#fff;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));font:600 .8125rem/1.35 system-ui,sans-serif;}
+#routeMapOverlay .tprm-key{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+#routeMapOverlay .tprm-key i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid #fff;}
+#routeMapOverlay .tprm-off{margin-top:6px;color:#ffd27a;}
+#routeMapOverlay .tprm-off b{display:inline-block;min-width:22px;margin:2px 4px 0 0;padding:1px 6px;border-radius:11px;background:#fff;color:#000;text-align:center;}
+#routeMapOverlay .tprm-card{position:absolute;left:10px;right:64px;bottom:10px;z-index:6;background:#fff;color:#0f172a;border-radius:12px;padding:10px 40px 10px 12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.4);font:500 .875rem/1.35 system-ui,sans-serif;}
+#routeMapOverlay .tprm-card b{font-size:1rem;}
+#routeMapOverlay .tprm-card button{position:absolute;right:6px;top:6px;width:32px;height:32px;border:0;border-radius:50%;background:#eef1f5;font-size:1rem;cursor:pointer;}
+</style>
+<script>
+(function(){
+var W=window,D=document,TILE=256,ZMIN=3,ZMAX=19;
+function $(id){return D.getElementById(id);}
+function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+var orig=W.showRouteMapOverlay;
+// The Embed key the app already used for this map (web: GKEY; phone app: the one in its Route Map function).
+function embedKey(){
+  try{if(typeof GKEY!=='undefined'&&GKEY)return GKEY;}catch(e){}
+  var m=/key=([\w-]{30,})/.exec(String(orig||''));return m?m[1]:'';
+}
+function list(){try{return (typeof surgeStops!=='undefined'&&surgeStops)||[];}catch(e){return [];}}
+function curIdx(){try{return typeof currentSurgeStop!=='undefined'?(currentSurgeStop|0):0;}catch(e){return 0;}}
+function num(s,i){var n=parseInt(s&&s.stop_number,10);return n>0?n:i+1;}
+function pkgCount(s){
+  if(s&&Array.isArray(s.pkgs)&&s.pkgs.length)return s.pkgs.reduce(function(a,p){return a+Math.max(1,parseInt(p&&p.required_count,10)||1);},0);
+  var n=parseInt(s&&s.packages,10);return n>0?n:1;
+}
+function ll(c){
+  if(!c)return null;var la=+c.lat,ln=+c.lng;
+  return isFinite(la)&&isFinite(ln)&&(la||ln)&&Math.abs(la)<=85&&Math.abs(ln)<=180?{lat:la,lng:ln}:null;
+}
+var geo={};   // address -> {lat,lng} | null (not found) | 'wait'
+function geocode(addr){
+  var p;
+  if(typeof resolveNavDest==='function')p=resolveNavDest({address:addr});
+  else if(typeof loadMapsApi==='function')p=loadMapsApi().then(function(){return new Promise(function(res){
+    new google.maps.Geocoder().geocode({address:addr},function(r,st){
+      res(st==='OK'&&r&&r[0]?{lat:r[0].geometry.location.lat(),lng:r[0].geometry.location.lng()}:null);});});});
+  else p=Promise.resolve(null);
+  return Promise.race([Promise.resolve(p).catch(function(){return null;}),new Promise(function(r){setTimeout(function(){r(null);},10000);})]);
+}
+// Every stop, in delivery order, with where it goes on the map (or null).
+function model(){
+  var st=list(),ci=curIdx(),out={};
+  try{out=(W.dx&&W.dx.outcomes&&W.dx.outcomes())||{};}catch(e){}
+  return st.map(function(s,i){
+    var a=(s&&s.address)||'',pos=ll(s&&s.coords)||(a&&geo[a]&&geo[a]!=='wait'?geo[a]:null);
+    var done=!!out[i]||i<ci;
+    return {i:i,n:num(s,i),s:s,pos:pos,wait:!pos&&a&&geo[a]==='wait',
+      state:done?'done':(i===ci?'cur':'up'),pk:pkgCount(s)};
+  });
+}
+// Web Mercator, in CSS pixels at zoom z (the Embed map's own projection).
+function px(p,z){var w=TILE*Math.pow(2,z),s=Math.sin(p.lat*Math.PI/180);
+  s=Math.min(Math.max(s,-0.9999),0.9999);
+  return {x:(p.lng+180)/360*w,y:(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*w};}
+function unpx(x,y,z){var w=TILE*Math.pow(2,z),n=Math.PI-2*Math.PI*y/w;
+  return {lat:180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))),lng:x/w*360-180};}
+var V={z:12,c:null},M=[],sel=-1,frames=[],act=0,pendingSrc='';
+function size(){var el=$('tprmMap');var r=el?el.getBoundingClientRect():{width:0,height:0};
+  return {w:r.width||el&&el.clientWidth||W.innerWidth||360,h:r.height||el&&el.clientHeight||(W.innerHeight||640)-120};}
+function fit(){
+  var pts=M.filter(function(m){return m.pos;}).map(function(m){return m.pos;});
+  if(!pts.length){V.c=V.c||{lat:39.5,lng:-98.35};V.z=V.c.lat===39.5?4:V.z;return;}
+  var sz=size(),pad=26,ctl=60,z;   // ctl: room for the zoom buttons on the right
+  for(z=17;z>ZMIN;z--){
+    var xs=pts.map(function(p){return px(p,z);});
+    var w=Math.max.apply(null,xs.map(function(q){return q.x;}))-Math.min.apply(null,xs.map(function(q){return q.x;}));
+    var hh=Math.max.apply(null,xs.map(function(q){return q.y;}))-Math.min.apply(null,xs.map(function(q){return q.y;}));
+    if(w<=sz.w-ctl-2*pad&&hh<=sz.h-2*pad)break;
+  }
+  var q=pts.map(function(p){return px(p,z);});
+  var cx=(Math.max.apply(null,q.map(function(a){return a.x;}))+Math.min.apply(null,q.map(function(a){return a.x;})))/2;
+  var cy=(Math.max.apply(null,q.map(function(a){return a.y;}))+Math.min.apply(null,q.map(function(a){return a.y;})))/2;
+  V.z=z;V.c=unpx(cx+ctl/2,cy,z);
+}
+function base(){
+  var k=embedKey();if(!k||!V.c)return;
+  var src='https://www.google.com/maps/embed/v1/view?key='+k+'&center='+V.c.lat.toFixed(6)+','+V.c.lng.toFixed(6)+'&zoom='+V.z+'&maptype=roadmap';
+  var cur=frames[act];
+  if(cur.getAttribute('src')===src){cur.style.transform='';return;}
+  if(!cur.getAttribute('src')){cur.src=src;return;}
+  if(pendingSrc===src)return;
+  // Load the next view behind the shown one, then swap: no blank flash while panning.
+  var nx=frames[1-act];pendingSrc=src;
+  nx.onload=function(){if(pendingSrc!==src)return;pendingSrc='';nx.style.transform='';nx.style.opacity='1';cur.style.opacity='0';act=1-act;};
+  nx.style.opacity='0';nx.src=src;
+}
+function draw(){
+  var lay=$('tprmDots');if(!lay)return;
+  var sz=size(),c=px(V.c,V.z),placed=[];
+  M.forEach(function(m){if(m.pos){var p=px(m.pos,V.z);placed.push({m:m,x:p.x-c.x+sz.w/2,y:p.y-c.y+sz.h/2});}});
+  // Spread dots that would sit on top of each other (same building, close
+  // neighbours) in a small spiral around their middle, so every number shows.
+  var used=[];
+  placed.forEach(function(d){
+    if(used.indexOf(d)>=0)return;
+    var grp=placed.filter(function(o){return used.indexOf(o)<0&&Math.abs(o.x-d.x)<22&&Math.abs(o.y-d.y)<22;});
+    grp.forEach(function(o){used.push(o);});
+    if(grp.length<2)return;
+    var mx=0,my=0;grp.forEach(function(o){mx+=o.x;my+=o.y;});mx/=grp.length;my/=grp.length;
+    grp.forEach(function(o,j){var r=15*Math.sqrt(j+0.6),a=j*2.39996;o.x=mx+r*Math.cos(a);o.y=my+r*Math.sin(a);});
+  });
+  // then nudge any two dots still closer than a dot apart away from each other.
+  for(var it=0;it<40;it++){var hit=0;
+    for(var a=0;a<placed.length;a++)for(var b=a+1;b<placed.length;b++){
+      var p=placed[a],q=placed[b],dx=q.x-p.x,dy=q.y-p.y,dd=Math.sqrt(dx*dx+dy*dy);
+      if(dd>=27)continue;hit=1;if(dd<0.01){dx=Math.cos(b);dy=Math.sin(b);dd=1;}
+      var k=(27-dd)/2/dd;p.x-=dx*k;p.y-=dy*k;q.x+=dx*k;q.y+=dy*k;}
+    if(!hit)break;}
+  lay.style.transform='';
+  lay.innerHTML=placed.map(function(d){var m=d.m;
+    return '<button type="button" class="tprm-dot st-'+m.state+(m.i===sel?' sel':'')+'" data-i="'+m.i+'" data-stop="'+m.n+'"'
+      +' aria-label="Stop '+m.n+'" style="left:'+d.x.toFixed(1)+'px;top:'+d.y.toFixed(1)+'px">'+m.n+'</button>';}).join('');
+  var off=M.filter(function(m){return !m.pos;});
+  var bar=$('tprmOff');
+  bar.style.display=off.length?'':'none';
+  bar.innerHTML=off.length?('Not on map: '+off.map(function(m){return '<b data-i="'+m.i+'" data-stop="'+m.n+'">'+m.n+'</b>';}).join('')
+    +(off.some(function(m){return m.wait;})?' <span>(finding)</span>':'')):'';
+  base();
+}
+function card(i){
+  var el=$('tprmCard'),m=M[i];sel=m?i:-1;
+  if(!m){el.style.display='none';draw();return;}
+  el.innerHTML='<b>Stop '+m.n+'</b> · '+(m.state==='done'?'Done':m.state==='cur'?'Current stop':'Upcoming')
+    +'<div>'+h(m.s&&m.s.recipient||'')+'</div><div>'+h(m.s&&m.s.address||'')+'</div>'
+    +'<div>'+m.pk+' package'+(m.pk===1?'':'s')+'</div><button type="button" aria-label="Close">✕</button>';
+  el.style.display='';
+  el.querySelector('button').onclick=function(){card(-1);};
+  draw();
+}
+function zoomBy(dz,ax,ay){
+  var nz=Math.min(ZMAX,Math.max(ZMIN,V.z+dz));if(nz===V.z||!V.c)return;
+  var sz=size();ax=ax==null?sz.w/2:ax;ay=ay==null?sz.h/2:ay;
+  var c=px(V.c,V.z),ox=c.x+ax-sz.w/2,oy=c.y+ay-sz.h/2,k=Math.pow(2,nz-V.z);
+  V.z=nz;V.c=unpx(ox*k-(ax-sz.w/2),oy*k-(ay-sz.h/2),nz);draw();
+}
+function panBy(dx,dy){var c=px(V.c,V.z);V.c=unpx(c.x-dx,c.y-dy,V.z);draw();}
+function build(){
+  var ov=$('routeMapOverlay');if(!ov)return null;
+  var wrap=$('tprmMap');if(wrap)return wrap;
+  var fr=$('routeMapFrame');if(fr)fr.style.display='none';
+  wrap=D.createElement('div');wrap.className='tprm';wrap.id='tprmMap';
+  wrap.innerHTML='<iframe class="tprm-base" title="Map" referrerpolicy="no-referrer-when-downgrade"></iframe>'
+    +'<iframe class="tprm-base" title="Map" referrerpolicy="no-referrer-when-downgrade" style="opacity:0"></iframe>'
+    +'<div class="tprm-dots" id="tprmDots"></div>'
+    +'<div class="tprm-ctl"><button type="button" data-z="1" aria-label="Zoom in">+</button><button type="button" data-z="-1" aria-label="Zoom out">−</button>'
+    +'<button type="button" class="fit" aria-label="Show all stops">ALL</button></div>'
+    +'<div class="tprm-card" id="tprmCard" style="display:none"></div>';
+  var bar=D.createElement('div');bar.className='tprm-bar';bar.id='tprmBar';
+  bar.innerHTML='<div class="tprm-key"><span><i style="background:#ff8a00"></i>Current</span><span><i style="background:#0a58ca"></i>Upcoming</span>'
+    +'<span><i style="background:#8a8f98"></i>Done ✓</span></div><div class="tprm-off" id="tprmOff" style="display:none"></div>';
+  if(fr&&fr.parentNode===ov){ov.insertBefore(wrap,fr);ov.insertBefore(bar,fr);}else{ov.appendChild(wrap);ov.appendChild(bar);}
+  frames=[].slice.call(wrap.querySelectorAll('iframe'));
+  bar.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('b[data-i]');if(t)card(+t.getAttribute('data-i'));});
+  wrap.querySelectorAll('.tprm-ctl button').forEach(function(b){
+    b.onclick=function(){if(b.className==='fit'){fit();draw();}else zoomBy(+b.getAttribute('data-z'));};});
+  wrap.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.tprm-dot');if(t&&!moved)card(+t.getAttribute('data-i'));});
+  // Drag to pan; two fingers to pinch-zoom (snaps to the map's whole zoom steps).
+  var pts={},start=null,moved=false;
+  function two(){var k=Object.keys(pts);return k.length===2?[pts[k[0]],pts[k[1]]]:null;}
+  function dist(p){return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}
+  function shift(tx,ty,s,ox,oy){var t='translate('+tx+'px,'+ty+'px)'+(s?' translate('+ox+'px,'+oy+'px) scale('+s+') translate('+(-ox)+'px,'+(-oy)+'px)':'');
+    $('tprmDots').style.transform=t;frames[act].style.transform=t;}
+  wrap.addEventListener('pointerdown',function(e){
+    if(e.target.closest&&e.target.closest('.tprm-ctl,.tprm-card'))return;
+    pts[e.pointerId]={x:e.clientX,y:e.clientY};moved=false;
+    var r=wrap.getBoundingClientRect(),p=two();
+    start=p?{pinch:true,d:dist(p),ox:(p[0].x+p[1].x)/2-r.left,oy:(p[0].y+p[1].y)/2-r.top}:{x:e.clientX,y:e.clientY};
+  });
+  wrap.addEventListener('pointermove',function(e){
+    if(!start||!pts[e.pointerId])return;pts[e.pointerId]={x:e.clientX,y:e.clientY};
+    var p=two();
+    if(start.pinch&&p){start.s=dist(p)/start.d;moved=true;shift(0,0,start.s,start.ox,start.oy);return;}
+    if(start.pinch)return;
+    var dx=e.clientX-start.x,dy=e.clientY-start.y;
+    if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
+    if(moved){start.dx=dx;start.dy=dy;shift(dx,dy);}
+  });
+  function end(e){
+    delete pts[e.pointerId];if(!start)return;var s=start;start=null;
+    if(s.pinch&&s.s){var dz=Math.round(Math.log(s.s)/Math.LN2);if(dz)zoomBy(dz,s.ox,s.oy);else draw();}
+    else if(!s.pinch&&moved)panBy(s.dx||0,s.dy||0);
+    if(moved)setTimeout(function(){moved=false;},0);
+  }
+  wrap.addEventListener('pointerup',end);wrap.addEventListener('pointercancel',end);
+  var wt=0;
+  wrap.addEventListener('wheel',function(e){e.preventDefault();var now=Date.now();if(now-wt<250)return;wt=now;
+    var r=wrap.getBoundingClientRect();zoomBy(e.deltaY<0?1:-1,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  W.addEventListener('resize',function(){if(ov.classList.contains('on'))draw();});
+  return wrap;
+}
+function open(){
+  if(!list().length)return;
+  var ov=$('routeMapOverlay');if(!ov||!build())return;
+  ov.classList.add('on');
+  M=model();sel=-1;$('tprmCard').style.display='none';
+  fit();draw();
+  // Stops without coordinates: geocode once, then place them (or leave them in "Not on map").
+  M.forEach(function(m){
+    var a=m.s&&m.s.address;if(m.pos||!a||a in geo)return;
+    geo[a]='wait';
+    geocode(a).then(function(p){geo[a]=ll(p);if(ov.classList.contains('on')){M=model();fit();draw();}});
+  });
+  M=model();draw();
+}
+W.showRouteMapOverlay=open;
+W.tpRouteMap={open:open,model:function(){return model();},key:embedKey,view:function(){return {z:V.z,c:V.c};}};
+})();
+</script>
+<!-- TP-ROUTEMAP:END -->
 </body>
 </html>
 
