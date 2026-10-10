@@ -1,8 +1,10 @@
 // A local stand-in for TackPath's production database AS IT IS TODAY
 // (before hardening): Supabase roles, pgcrypto in schema extensions, the
 // storage schema, the live tables with the anon key granted everything and
-// always-true RLS policies, a public "pod" bucket, and a publish_surge_route
-// gate. Columns are what the live pages read and write.
+// always-true RLS policies, a public "pod" bucket, a publish_surge_route
+// gate, the public functions anon can execute today, the two restrictive
+// policies and the operations.routes trigger on jobs left by the September
+// operations repair. Columns are what the live pages read and write.
 //
 // The security migrations run on top of this, so the tests prove both that
 // the lockdown closes the holes and that every flow still works.
@@ -84,6 +86,36 @@ begin
 end $$;
 create function public.increment_address_failures(p text) returns void language sql as $$ select $$;
 
+-- Other public functions that anon may execute today (production 2026-10-07)
+create function public.ops_command(p_token text, p_id uuid, p_kind text, p_payload jsonb default '{}')
+  returns jsonb language sql security definer set search_path = '' as $$ select '{}'::jsonb $$;
+create function public.ops_state(p_token text) returns jsonb language sql security definer set search_path = '' as $$ select '{}'::jsonb $$;
+create function public.ops_revoke_session(p_token text) returns void language sql security definer set search_path = '' as $$ select $$;
+create function public.materialize_package_state(p_id uuid) returns void language sql as $$ select $$;
+create function public.rls_auto_enable() returns event_trigger language plpgsql as $$ begin end $$;
+create function public.touch_updated_at() returns trigger language plpgsql as $$ begin new.updated_at := now(); return new; end $$;
+create function public.events_block_mutation() returns trigger language plpgsql as $$
+begin raise exception 'events are append-only'; end $$;
+
+-- Leftovers of the September "operations repair" that are live: the routes
+-- table and the trigger that protects their jobs (copied from
+-- supabase/migrations/202609180006_legacy_security.sql).
+create schema operations;
+revoke all on schema operations from public;
+create table operations.routes (id uuid primary key references public.jobs(id), org_id uuid not null,
+  status text not null default 'planned');
+create function operations.protect_job_projection() returns trigger language plpgsql security definer set search_path=pg_catalog,operations as $$
+begin
+ if exists(select 1 from operations.routes where id=old.id) then
+  if tg_op='DELETE' then raise exception 'Operational history cannot be deleted'; end if;
+  if current_setting('tackpath.operational_write',true) is distinct from 'on' and (to_jsonb(new)-array['exception_flag','exception_detected_at','eta_minutes','estimated_delivery_at','original_eta_at']) is distinct from (to_jsonb(old)-array['exception_flag','exception_detected_at','eta_minutes','estimated_delivery_at','original_eta_at']) then raise exception 'Use authoritative operational commands'; end if;
+ end if;
+ if tg_op='DELETE' then return old; end if;
+ return new;
+end $$;
+create trigger protect_operational_projection before update or delete on public.jobs for each row execute function operations.protect_job_projection();
+revoke all on function operations.protect_job_projection() from public,anon,authenticated;
+
 -- Today: RLS on with always-true policies, everything granted to anon.
 do $$ declare t text; begin
   foreach t in array array['organizations','drivers','jobs','messages','driver_locations','driver_fcm_tokens',
@@ -92,6 +124,11 @@ do $$ declare t text; begin
     execute format('create policy "allow all" on public.%I for all using (true) with check (true)', t);
   end loop;
 end $$;
+create trigger events_append_only before update or delete on public.events
+  for each row execute function public.events_block_mutation();
+-- restrictive policies from the operations repair (production 2026-10-07)
+create policy protect_scoped_drivers on public.drivers as restrictive for all to anon,authenticated using (org_id is null) with check (org_id is null);
+create policy protect_operational_memory on public.agent_memory as restrictive for all to anon,authenticated using (org_id is null) with check (org_id is null);
 grant all on all tables in schema public to anon, authenticated, service_role;
 grant all on all sequences in schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;

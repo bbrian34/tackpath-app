@@ -21,9 +21,16 @@ $chk$;
 do $replay$
 declare b record; p record;
 begin
-  -- remove any policy on public tables created after the lockdown, then replay
-  for p in select policyname, schemaname, tablename from pg_policies where schemaname = 'public' loop
-    execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
+  -- Remove every policy on public tables that is not exactly as recorded
+  -- before the lockdown (i.e. created or changed after it), then replay.
+  -- The restrictive policies the lockdown kept (protect_scoped_drivers,
+  -- protect_operational_memory) match their recorded statement and are left
+  -- untouched; replaying them is skipped as duplicate_object.
+  for p in select pp.policyname, pp.schemaname, pp.tablename, tp_sec.policy_sql(pp) as stmt
+             from pg_policies pp where pp.schemaname = 'public' loop
+    if not exists (select 1 from tp_sec.lockdown_backup where step = 30 and statement = p.stmt) then
+      execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
+    end if;
   end loop;
   for b in select statement from tp_sec.lockdown_backup order by step, id loop
     begin
@@ -36,5 +43,6 @@ end
 $replay$;
 
 drop table tp_sec.lockdown_backup;
+drop function tp_sec.policy_sql(pg_catalog.pg_policies);
 delete from tp_sec.settings where key = 'lockdown_applied';
 commit;

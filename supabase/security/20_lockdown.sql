@@ -12,11 +12,22 @@
 --   2. Removes ALL table, view, column and sequence privileges from anon and
 --      authenticated: no SELECT, INSERT, UPDATE or DELETE with the public key
 --      on any table. Every live page uses the tp_* RPCs from migration 10.
---   3. Turns RLS on for every table and drops every policy (the always-true
---      "allow all" ones included). With no policy, only the service role and
+--   3. Turns RLS on for every table and drops every PERMISSIVE policy (the
+--      always-true "allow all" ones included). RESTRICTIVE policies only ever
+--      narrow access and are left exactly as they are (production:
+--      protect_scoped_drivers on drivers, protect_operational_memory on
+--      agent_memory). With no permissive policy, only the service role and
 --      the tp_* functions (owned by postgres) can touch rows.
 --   4. Removes EXECUTE on every other public function from anon and
---      authenticated (publish_surge_route is now reached through tp_org).
+--      authenticated, PUBLIC included (publish_surge_route is now reached
+--      through tp_org). Production 2026-10-07: publish_surge_route,
+--      ops_command, ops_state, ops_revoke_session, increment_address_failures,
+--      materialize_package_state, rls_auto_enable, touch_updated_at,
+--      events_block_mutation. Trigger and event-trigger functions keep
+--      firing (EXECUTE is not checked when a trigger fires). The migration
+--      then checks that the ONLY public functions anon or authenticated can
+--      execute are the nine tp_* entry points, and stops (changing nothing)
+--      otherwise, e.g. for a function owned by another role.
 --   5. Stops future tables/functions in public from being granted to anon
 --      and authenticated automatically.
 --   6. Makes the "pod" bucket private and drops its anonymous policies.
@@ -77,14 +88,15 @@ select 11, format('grant %s (%I) on table %s to %s', a.privilege_type, att.attna
  where n.nspname = 'public' and att.attnum > 0 and not att.attisdropped and att.attacl is not null
    and (a.grantee = 0 or pg_get_userbyid(a.grantee) in ('anon','authenticated'));
 
--- 1c. function EXECUTE privileges (a NULL acl means "PUBLIC may execute")
+-- 1c. function EXECUTE privileges (a NULL acl means "PUBLIC may execute").
+-- Functions of extensions installed in public are included: step 4 revokes
+-- on every function in the schema.
 insert into tp_sec.lockdown_backup (step, statement)
-select 12, format('grant execute on function %s to %s', p.oid::regprocedure,
+select 12, format('grant execute on routine %s to %s', p.oid::regprocedure,
          case when a.grantee = 0 then 'public' else quote_ident(pg_get_userbyid(a.grantee)) end)
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace,
        lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
- where n.nspname = 'public' and p.prokind in ('f','p')
-   and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+ where n.nspname = 'public' and p.prokind in ('f','p','a','w')
    and (a.grantee = 0 or pg_get_userbyid(a.grantee) in ('anon','authenticated'));
 
 -- 1d. RLS flags
@@ -96,12 +108,20 @@ select 20, format('alter table %s %s row level security; alter table %s %s row l
  where n.nspname = 'public' and c.relkind in ('r','p');
 
 -- 1e. policies on public tables and the pod policies on storage.objects
-insert into tp_sec.lockdown_backup (step, statement)
-select 30, format('create policy %I on %I.%I as %s for %s to %s%s%s',
+-- (restrictive ones are not dropped; they are recorded so the rollback can
+-- tell them apart from policies created after the lockdown)
+create function tp_sec.policy_sql(p pg_catalog.pg_policies) returns text
+language sql stable set search_path = '' as $$
+  select format('create policy %I on %I.%I as %s for %s to %s%s%s',
          p.policyname, p.schemaname, p.tablename, p.permissive, p.cmd,
          (select string_agg(case when r = 'public' then 'public' else quote_ident(r) end, ', ') from unnest(p.roles) r),
          case when p.qual is not null then ' using (' || p.qual || ')' else '' end,
          case when p.with_check is not null then ' with check (' || p.with_check || ')' else '' end)
+$$;
+revoke all on function tp_sec.policy_sql(pg_catalog.pg_policies) from public, anon, authenticated;
+
+insert into tp_sec.lockdown_backup (step, statement)
+select 30, tp_sec.policy_sql(p)
   from pg_policies p
  where p.schemaname = 'public'
     or (p.schemaname = 'storage' and p.tablename = 'objects'
@@ -144,14 +164,32 @@ begin
             where n.nspname = 'public' and c.relkind in ('r','p') loop
     execute format('alter table %s enable row level security', t.rel);
   end loop;
-  for p in select policyname, schemaname, tablename from pg_policies where schemaname = 'public' loop
+  for p in select policyname, schemaname, tablename from pg_policies
+            where schemaname = 'public' and permissive = 'PERMISSIVE' loop
     execute format('drop policy %I on %I.%I', p.policyname, p.schemaname, p.tablename);
   end loop;
 end
 $rls$;
 
 -- ── 4. FUNCTIONS: ONLY THE tp_* ENTRY POINTS ARE CALLABLE ────────────────
-revoke execute on all functions in schema public from public, anon, authenticated;
+-- The service role (edge functions: smartsort calls increment_address_failures)
+-- keeps EXECUTE wherever it had it only through PUBLIC: it gets an explicit
+-- grant, recorded so the rollback takes it back.
+do $svc$
+declare f record;
+begin
+  for f in select p.oid::regprocedure as fn from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.prokind in ('f','p','a','w')
+              and has_function_privilege('service_role', p.oid, 'EXECUTE')
+              and not exists (select 1 from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                               where a.grantee = 'service_role'::regrole and a.privilege_type = 'EXECUTE') loop
+    insert into tp_sec.lockdown_backup (step, statement)
+    values (13, format('revoke execute on routine %s from service_role', f.fn));
+    execute format('grant execute on routine %s to service_role', f.fn);
+  end loop;
+end
+$svc$;
+revoke execute on all routines in schema public from public, anon, authenticated;  -- functions, procedures, aggregates
 grant execute on function public.tp_org_lookup(text), public.tp_org_sign_in(text,text), public.tp_sign_out(text),
   public.tp_org(text,text,jsonb), public.tp_driver_sign_in(text,text), public.tp_driver(text,text,jsonb),
   public.tp_customer(text,jsonb), public.tp_track(text,jsonb), public.tp_driver_signup(jsonb)
@@ -176,6 +214,35 @@ begin
   end loop;
 end
 $pod$;
+
+-- ── 7. CHECK: only the tp_* entry points are callable with the public key ─
+do $post$
+declare extra text; missing text;
+  entry constant text[] := array['tp_org_lookup(text)', 'tp_org_sign_in(text,text)', 'tp_sign_out(text)',
+    'tp_org(text,text,jsonb)', 'tp_driver_sign_in(text,text)', 'tp_driver(text,text,jsonb)',
+    'tp_customer(text,jsonb)', 'tp_track(text,jsonb)', 'tp_driver_signup(jsonb)'];
+begin
+  select string_agg(p.oid::regprocedure::text || ' (owner ' || pg_get_userbyid(p.proowner) || ')', ', ') into extra
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prokind in ('f','p','a','w')
+     and (has_function_privilege('anon', p.oid, 'EXECUTE') or has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+     and replace(p.oid::regprocedure::text, 'public.', '') <> all(entry);
+  if extra is not null then
+    raise exception 'Migration 20 stopped, nothing was changed: still executable by anon/authenticated: %. Run this as the owner of those functions (or revoke execute from them first) and send this message for review.', extra;
+  end if;
+  select string_agg(e, ', ') into missing from unnest(entry) e
+   where not has_function_privilege('anon', ('public.' || e)::regprocedure, 'EXECUTE');
+  if missing is not null then
+    raise exception 'Migration 20 stopped, nothing was changed: tp_* entry points not executable by anon: %', missing;
+  end if;
+  -- restrictive policies are untouched
+  if exists (select 1 from tp_sec.lockdown_backup b where b.step = 30 and b.statement like '% as RESTRICTIVE %'
+              and b.statement not like 'create policy % on storage.%'
+              and b.statement not in (select tp_sec.policy_sql(p) from pg_policies p where p.schemaname = 'public')) then
+    raise exception 'Migration 20 stopped, nothing was changed: a restrictive policy was altered';
+  end if;
+end
+$post$;
 
 insert into tp_sec.settings values ('lockdown_applied', to_jsonb(now()));
 commit;

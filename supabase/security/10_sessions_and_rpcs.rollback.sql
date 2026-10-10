@@ -12,6 +12,11 @@ begin
   if to_regclass('tp_sec.lockdown_backup') is not null then
     raise exception 'Roll back migration 20 first (20_lockdown.rollback.sql). Nothing was changed.';
   end if;
+  if to_regclass('tp_sec.settings') is not null then
+    if exists (select 1 from tp_sec.settings where key = 'swarm_watch_cron_before') then
+      raise exception 'Roll back migration 40 first (40_swarm_watch_cron.rollback.sql). Nothing was changed.';
+    end if;
+  end if;
 end
 $chk$;
 

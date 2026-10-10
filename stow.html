@@ -58,6 +58,23 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 .result-card.error{border-color:var(--red);background:#fbeceb;}
 .result-card.dupe{border-color:#e69500;background:#fff4dc;}
 .flip-bin-loc{color:#fff;font-size:1rem;font-weight:600;opacity:.75;margin-top:4px;}
+/* STOW STEPS (2026-10): PACKAGE > BIN > LOCATION > STAGE, the current step highlighted */
+.stow-steps{display:flex;align-items:center;gap:4px;margin:0 16px 10px;font-family:'DM Mono',monospace;}
+.stow-steps .st{flex:1;text-align:center;padding:9px 2px;border-radius:8px;font-size:.74rem;font-weight:800;letter-spacing:.05em;color:#7a8592;background:#dfe3e8;border:2px solid transparent;}
+.stow-steps .st.done{color:#1b7f45;background:#e3f5e6;}
+.stow-steps .st.on{color:#fff;background:#111418;border-color:#111418;transform:scale(1.06);}
+.stow-steps .st.on.st-stage{background:#c96a00;border-color:#c96a00;}
+.stow-steps .sep{color:#9aa3ad;font-weight:800;font-size:.8rem;}
+/* STAGE step: the same big panel as the BIN step, in its own colour */
+.flip-card-container.tall{height:236px;}
+.flip-card-back.stage-mode{background-color:#c96a00;border-color:#c96a00;}
+.flip-card-back.staged-mode{background-color:#22a559;border-color:#22a559;}
+.flip-card-back.stage-mode .flip-bin-number,.flip-card-back.staged-mode .flip-bin-number{font-size:2.6rem;letter-spacing:.04em;line-height:1.05;text-align:center;}
+.flip-card-back.stage-mode .flip-bin-loc,.flip-card-back.staged-mode .flip-bin-loc{font-size:1.45rem;font-weight:800;opacity:1;text-align:center;padding:0 10px;}
+.flip-card-back.stage-mode .flip-bin-instruction,.flip-card-back.staged-mode .flip-bin-instruction{font-size:1.15rem;text-align:center;padding:0 10px;}
+.flip-card-back.staged-mode .flip-bin-number{font-size:2.1rem;}
+.flip-card-back.stage-mode #flipBinStop,.flip-card-back.staged-mode #flipBinStop{font-size:1rem!important;font-weight:700!important;opacity:.95;text-align:center;padding:0 12px;margin-top:8px!important;}
+.stage-later{display:none;margin:-6px auto 14px;background:none;border:0;color:#5b6672;font-size:.85rem;text-decoration:underline;}
 .result-bin{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:700;}
 .result-bin-num{font-size:2.6rem;font-weight:800;color:var(--blue);line-height:1;margin-bottom:8px;}
 .result-bin-num.success{color:var(--green);}
@@ -138,7 +155,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     <div class="app-footer"></div>
     <div class="utility-row">
       <button class="utility-btn" onclick="alert('Login: still deciding exactly what this does')">Login</button>
-      <button class="utility-btn" onclick="alert('Settings: still deciding exactly what this does')">Settings</button>
+      <button class="utility-btn" onclick="tpShowMenu()">Settings</button>
     </div>
   </div>
 
@@ -154,6 +171,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 
   <!-- STOW -->
   <div class="screen" id="scStow">
+    <div class="stow-steps" id="stowSteps" role="list" aria-label="Stow steps"></div>
     <div class="flip-card-container" id="scanFlipContainer">
       <div class="flip-card-inner" id="scanFlipInner">
         <div class="flip-card-face flip-card-front">
@@ -187,6 +205,7 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
         </div>
       </div>
     </div>
+    <button type="button" class="stage-later" id="stageLaterBtn" onclick="stageLater()">Stage later (scan this bin&rsquo;s BIN to stage it)</button>
     <input type="text" id="stowInput" class="hidden-scan-input" inputmode="none" placeholder="Scan here"/>
     <div class="result-card" id="stowResult" style="display:none;"></div>
     <div id="debugPanel" style="display:none;background:#000;color:#0f0;font-family:monospace;font-size:0.7rem;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;word-break:break-all;"></div>
@@ -235,45 +254,194 @@ function tpSession(){
   try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
 }
 function tpFakeResp(status,text){return {ok:false,status:status,json:async()=>({message:text}),text:async()=>text};}
+
+// ── HELD WRITES (2026-10) ──
+// When the session has expired (or the device is signed out), writes that
+// are safe to replay are held on the device, tagged with the company they
+// belong to, and sent after the next sign-in to that company: stow events
+// (idempotency key), bin ready, bin label, staged flag. Nothing secret is
+// held. Interactive steps (open a bin, stage) show their failure instead.
+const TP_PENDING_KEY='tp_piq_pending', TP_LAST_ORG_KEY='tp_piq_last_org';
+const TP_REPLAYABLE=['log_event','binding_ready','set_bin_label','set_staged'];
+let _tpFlushing=false;
+function tpQueueLoad(){try{const q=JSON.parse(localStorage.getItem(TP_PENDING_KEY)||'[]');return Array.isArray(q)?q:[];}catch(e){return [];}}
+function tpQueueSave(q){try{if(q.length)localStorage.setItem(TP_PENDING_KEY,JSON.stringify(q.slice(-500)));else localStorage.removeItem(TP_PENDING_KEY);}catch(e){}}
+function tpLastOrg(){try{return localStorage.getItem(TP_LAST_ORG_KEY)||null;}catch(e){return null;}}
+function tpHold(action,args){
+  if(_tpFlushing||TP_REPLAYABLE.indexOf(action)<0)return;
+  const org=tpLastOrg(); if(!org)return;
+  const q=tpQueueLoad(); q.push({org:org,a:action,g:args||{}}); tpQueueSave(q);
+}
+async function tpFlushHeld(){
+  const s=tpSession(); if(!s)return;
+  const q=tpQueueLoad(); if(!q.length)return;
+  const mine=q.filter(it=>it.org===s.id), others=q.filter(it=>it.org!==s.id), retry=[];
+  tpQueueSave(others);
+  _tpFlushing=true;
+  try{
+    for(const it of mine){
+      try{ const r=await tpOrgResp(it.a,it.g); if(!r.ok&&r.status===401)retry.push(it); }catch(e){ retry.push(it); }
+    }
+  }finally{ _tpFlushing=false; }
+  if(retry.length)tpQueueSave(tpQueueLoad().concat(retry));
+}
+
 async function tpOrgResp(action,args){
   const s=tpSession();
-  if(!s){tpShowSignIn();return tpFakeResp(401,'TP_AUTH: please sign in');}
+  if(!s){tpHold(action,args);tpShowSignIn();return tpFakeResp(401,'TP_AUTH: please sign in');}
+  try{localStorage.setItem(TP_LAST_ORG_KEY,s.id);}catch(e){}
   const r=await fetch(SB+'/rest/v1/rpc/tp_org',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
     body:JSON.stringify({p_token:s.token,p_action:action,p_args:args||{}})});
   if(!r.ok){
     const t=await r.text();
-    if(/TP_AUTH/.test(t)){localStorage.removeItem('tp_dispatch_org');tpShowSignIn();}
+    if(/TP_AUTH/.test(t)){localStorage.removeItem('tp_dispatch_org');tpHold(action,args);tpShowSignIn();}
     return tpFakeResp(r.status,t);
   }
   return r;
+}
+
+// ── BADGE SIGN-IN (2026-10) ──
+// The worker scans a badge, TP|<company-slug>|<company-code> (Code 128 or
+// QR), and is signed in with the same company sign-in as before
+// (tp_org_sign_in). Only the session is stored, exactly as before
+// (localStorage tp_dispatch_org); the company code is never stored, shown
+// or logged. Badge values are caught before any scan logging.
+// "Type instead" keeps the typed company + code form for emergencies.
+function tpLooksLikeBadge(raw){ return /^\s*TP\|/i.test(String(raw==null?'':raw)); }
+function tpParseBadge(raw){
+  const v=String(raw==null?'':raw).replace(/[\u0000-\u001f\u007f]/g,'').trim();
+  const p=v.split('|');
+  if(p.length!==3||p[0].trim().toUpperCase()!=='TP')return null;
+  const slug=p[1].trim().toLowerCase(), code=p[2].trim();
+  if(!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(slug)||code.length<8||code.length>200)return null;
+  return {slug:slug,code:code};
+}
+function tpNotABadgeReason(raw){
+  const v=String(raw==null?'':raw).trim().toUpperCase();
+  if(/^BIN[:\s-]/.test(v))return 'That is a BIN code.';
+  if(/^(LOC|LOCATION)[:\s-]/.test(v))return 'That is a location (LOC) code.';
+  if(/^(STG|STAGE|STAGING)[:\s-]/.test(v))return 'That is a staging (STG) code.';
+  if(tpLooksLikeBadge(v))return 'The badge could not be read.';
+  return 'That looks like a package or other barcode.';
+}
+function tpBadgeMsg(text,isError){
+  const m=document.getElementById('tpBadgeMsg'); if(!m)return;
+  m.textContent=text||''; m.style.color=isError?'#ff8a80':'#9fdcff';
+}
+function tpBadgeFocus(){
+  const typing=document.getElementById('tpTypeForm');
+  if(typing&&typing.style.display!=='none')return;
+  const i=document.getElementById('tpBadgeInput'); if(i&&document.activeElement!==i)i.focus();
 }
 function tpShowSignIn(){
   if(document.getElementById('tpSignIn'))return;
   const d=document.createElement('div');
   d.id='tpSignIn';
   d.setAttribute('style','position:fixed;inset:0;z-index:9999;background:#010e21;display:flex;align-items:center;justify-content:center;padding:24px;');
-  d.innerHTML='<div style="width:100%;max-width:340px;color:#fff;font-family:inherit;">'
-    +'<div style="font-size:1.3rem;font-weight:800;margin-bottom:6px;">PathIQ sign-in</div>'
-    +'<div style="opacity:.7;font-size:.9rem;margin-bottom:16px;">Enter your company and company code.</div>'
+  d.innerHTML='<div style="width:100%;max-width:360px;color:#fff;font-family:inherit;text-align:center;">'
+    +'<div style="font-size:1.1rem;font-weight:700;opacity:.75;margin-bottom:18px;">PathIQ</div>'
+    +'<div id="tpBadgeTitle" style="font-size:1.9rem;font-weight:900;line-height:1.2;">Scan your badge to start</div>'
+    +'<div id="tpBadgeMsg" role="status" aria-live="polite" style="min-height:3em;margin-top:18px;font-size:1.05rem;font-weight:700;"></div>'
+    +'<input id="tpBadgeInput" type="text" inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false" aria-hidden="true" tabindex="-1"'
+    +' style="position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;">'
+    +'<div id="tpTypeForm" style="display:none;text-align:left;margin-top:10px;">'
     +'<input id="tpSiSlug" placeholder="Company (e.g. quickhaul)" autocapitalize="off" style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #234;background:#0b1a2e;color:#fff;font-size:1rem;box-sizing:border-box;">'
     +'<input id="tpSiCode" type="password" placeholder="Company code" style="width:100%;padding:12px;margin-bottom:12px;border-radius:8px;border:1px solid #234;background:#0b1a2e;color:#fff;font-size:1rem;box-sizing:border-box;">'
     +'<button id="tpSiBtn" style="width:100%;padding:13px;border:0;border-radius:8px;background:#19b7ef;color:#fff;font-weight:800;font-size:1rem;">Sign in</button>'
-    +'<div id="tpSiErr" style="color:#ff6b6b;margin-top:10px;display:none;"></div></div>';
+    +'<div id="tpSiErr" style="color:#ff6b6b;margin-top:10px;display:none;"></div></div>'
+    +'<button id="tpTypeLink" type="button" style="margin-top:28px;background:none;border:0;color:#7fa6c4;font-size:.85rem;text-decoration:underline;cursor:pointer;">Type instead</button>'
+    +'</div>';
   document.body.appendChild(d);
+  const inp=document.getElementById('tpBadgeInput');
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){ e.preventDefault(); const v=inp.value; inp.value=''; tpBadgeSubmit(v); }
+  });
+  d.addEventListener('click',function(e){ if(!e.target.closest('#tpTypeForm'))setTimeout(tpBadgeFocus,0); });
+  document.getElementById('tpTypeLink').onclick=function(){
+    const f=document.getElementById('tpTypeForm'); f.style.display='block';
+    this.style.display='none'; document.getElementById('tpSiSlug').focus();
+  };
   document.getElementById('tpSiBtn').onclick=tpDoSignIn;
   document.getElementById('tpSiCode').onkeydown=function(e){if(e.key==='Enter')tpDoSignIn();};
+  setTimeout(tpBadgeFocus,0);
+}
+async function tpOrgSignIn(slug,code){
+  const r=await fetch(SB+'/rest/v1/rpc/tp_org_sign_in',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+    body:JSON.stringify({p_slug:slug,p_code:code})});
+  let res=null; try{res=await r.json();}catch(e){}
+  if(!r.ok||!res||!res.ok)throw new Error(res&&/TP_RATE/.test(res.error||'')?'Too many attempts. Try again in 15 minutes.':'');
+  return res;
+}
+// Signed in: store the session (as before), close the sign-in screen, keep
+// whatever the worker was doing, send held writes, refresh.
+function tpSignedIn(res){
+  localStorage.setItem('tp_dispatch_org',JSON.stringify({id:res.org.id,slug:res.org.slug,name:res.org.name,token:res.token}));
+  try{localStorage.setItem(TP_LAST_ORG_KEY,res.org.id);}catch(e){}
+  const d=document.getElementById('tpSignIn'); if(d)d.remove();
+  const home=document.getElementById('scHome');
+  if(home&&home.classList.contains('on')&&typeof goTo==='function')goTo('stow');
+  else{ const si=document.getElementById('stowInput'); if(si&&document.getElementById('scStow').classList.contains('on'))si.focus(); }
+  tpFlushHeld().catch(function(){}).then(function(){ if(typeof loadRoutes==='function')loadRoutes(); });
+}
+let _tpBadgeBusy=false;
+async function tpBadgeSubmit(raw){
+  if(_tpBadgeBusy)return;
+  const b=tpParseBadge(raw);
+  if(!b){
+    tpBadgeMsg('That is not a badge. '+tpNotABadgeReason(raw)+' Scan your TackPath badge.',true);
+    if(typeof playErrorSound==='function')try{playErrorSound();}catch(e){}
+    return;
+  }
+  _tpBadgeBusy=true;
+  tpBadgeMsg('Signing in…',false);
+  try{
+    const res=await tpOrgSignIn(b.slug,b.code);
+    tpSignedIn(res);
+  }catch(e){
+    tpBadgeMsg(e.message||'Badge not accepted. Ask your manager for a current badge.',true);
+    if(typeof playErrorSound==='function')try{playErrorSound();}catch(e2){}
+  }finally{ _tpBadgeBusy=false; }
+}
+// Every scan entry point asks this first, before any logging. While the
+// sign-in screen is up, every scan is a badge attempt. A badge scanned while
+// signed in is swallowed (never logged, never treated as a package).
+function tpBadgeIntercept(value){
+  if(document.getElementById('tpSignIn')){ tpBadgeSubmit(value); return true; }
+  return tpLooksLikeBadge(value);
 }
 async function tpDoSignIn(){
   const err=document.getElementById('tpSiErr');
   err.style.display='none';
   try{
-    const r=await fetch(SB+'/rest/v1/rpc/tp_org_sign_in',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
-      body:JSON.stringify({p_slug:document.getElementById('tpSiSlug').value.trim(),p_code:document.getElementById('tpSiCode').value})});
-    const res=await r.json();
-    if(!r.ok||!res||!res.ok)throw new Error(res&&/TP_RATE/.test(res.error||'')?'Too many attempts. Try again in 15 minutes.':'Company or code not recognised.');
-    localStorage.setItem('tp_dispatch_org',JSON.stringify({id:res.org.id,slug:res.org.slug,name:res.org.name,token:res.token}));
-    location.reload();
-  }catch(e){err.textContent=e.message;err.style.display='block';}
+    const res=await tpOrgSignIn(document.getElementById('tpSiSlug').value.trim(),document.getElementById('tpSiCode').value);
+    document.getElementById('tpSiCode').value='';
+    tpSignedIn(res);
+  }catch(e){err.textContent=e.message||'Company or code not recognised.';err.style.display='block';}
+}
+// Sign out: from the Settings menu on the home screen.
+async function tpSignOut(){
+  const s=tpSession();
+  if(typeof confirm==='function'&&!confirm('Sign out of PathIQ on this device?'))return;
+  if(s){ try{ await fetch(SB+'/rest/v1/rpc/tp_sign_out',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),
+    body:JSON.stringify({p_token:s.token})}); }catch(e){} }
+  localStorage.removeItem('tp_dispatch_org');
+  const m=document.getElementById('tpMenu'); if(m)m.remove();
+  tpShowSignIn();
+}
+function tpShowMenu(){
+  if(document.getElementById('tpMenu'))return;
+  const s=tpSession();
+  const m=document.createElement('div'); m.id='tpMenu';
+  m.setAttribute('style','position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;');
+  m.innerHTML='<div style="width:100%;max-width:480px;background:#fff;color:#111;border-radius:16px 16px 0 0;padding:18px 18px 24px;">'
+    +'<div style="font-weight:800;font-size:1.05rem;margin-bottom:4px;">Settings</div>'
+    +'<div style="opacity:.7;margin-bottom:16px;" id="tpMenuWho"></div>'
+    +'<button id="tpSignOutBtn" style="width:100%;padding:14px;border:0;border-radius:10px;background:#b3261e;color:#fff;font-weight:800;font-size:1rem;margin-bottom:10px;">Sign out</button>'
+    +'<button id="tpMenuClose" style="width:100%;padding:14px;border:1px solid #ccc;border-radius:10px;background:#fff;color:#111;font-weight:700;font-size:1rem;">Close</button></div>';
+  document.body.appendChild(m);
+  document.getElementById('tpMenuWho').textContent=s?('Signed in: '+(s.name||s.slug)):'Not signed in';
+  document.getElementById('tpSignOutBtn').onclick=tpSignOut;
+  document.getElementById('tpMenuClose').onclick=function(){m.remove();};
 }
 if(!tpSession())setTimeout(tpShowSignIn,0);
 
@@ -438,19 +606,40 @@ function goTo(screen){
     topBar.innerHTML='<button class="back-btn" onclick="goTo(\'' + backTo + '\')">&#8249; Back</button><span id="topTitle" class="top-title">'+(TITLES[id]||'')+'</span>';
   }
   if(id==='scAssignbins'){ resetAssignBinResult(); loadUnassignedRoutes(); document.getElementById('assignBinInput').focus(); }
-  if(id==='scStow'){ resetStowResult(); renderBinsPanel(); document.getElementById('stowInput').focus(); }
+  if(id==='scStow'){ resetStowResult(); renderBinsPanel(); if(typeof renderStowSteps==='function')renderStowSteps(); document.getElementById('stowInput').focus(); }
   if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
   if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
   if(id==='scInduct'){ renderInductSummary(); }
 }
 
+// ── OPEN ROUTES (2026-10) ──
+// The routes on the board: pending / assigned / in_transit, not archived.
+// Asked newest first with a limit of 500, so a route just uploaded is always
+// in the answer (oldest first with a limit of 50 left new manifests out once
+// a company had 50 archived routes: Clear board archives, the status stays).
+// Archived routes are dropped here, and by the server too once migration 63
+// is applied (exclude_archived; ignored before it). Shown oldest first.
+const TP_ROUTE_LIMIT=500;
+function tpRouteArgs(extra){
+  return Object.assign({statuses:['pending','assigned','in_transit'],order:'desc',limit:TP_ROUTE_LIMIT,exclude_archived:true},extra||{});
+}
+function tpBoardRoutes(list){
+  if(!Array.isArray(list))return list;
+  return list.filter(function(j){return j&&j.archived!==true;}).reverse()
+    .sort(function(a,b){return (Date.parse(a.created_at)||0)-(Date.parse(b.created_at)||0);});
+}
+
 async function loadRoutes(){
+  // Signed out (or the session just expired): keep the board as it is.
+  if(!tpSession())return;
   // Bindings first — loadRoutes keys progress by the bound bin code.
   await loadBinBindings();
   let fetchErrorOccurred=false;
   try{
-    const r=await tpOrgResp('jobs',{statuses:['pending','assigned','in_transit'],order:'asc',limit:50});
-    jobs=await r.json();
+    const r=await tpOrgResp('jobs',tpRouteArgs());
+    const got=tpBoardRoutes(await r.json());
+    if(!Array.isArray(got)&&!tpSession())return;      // expired mid-poll: keep the board
+    jobs=got;
     if(!Array.isArray(jobs)){
       fetchErrorOccurred=true;
       const dbgElBad=document.getElementById('debugPanel');
@@ -644,10 +833,13 @@ function renderBinsPanel(){
     const complete=isDone(n);
     const noBin=String(n).startsWith('JOB:');
     const chip=noBin?'No bin yet':('BIN '+n);
+    const stg=complete&&p.jobId?stagingOf(p.jobId):null;
     return '<div class="bin-row '+(complete?'staged-row':'')+'">'
       +'<span><span class="bin-num-chip">'+chip+'</span> '+p.jobTitle+'</span>'
       +(complete
-        ? '<span class="staged-badge">&#10003; STAGED &middot; READY FOR PICKUP</span>'
+        ? (stg
+            ? '<span class="staged-badge">&#10003; STAGED AT '+esc(stg)+' &middot; READY FOR PICKUP</span>'
+            : '<span class="staged-badge" style="color:var(--orange);">ROUTE COMPLETE &middot; SCAN STG TO STAGE</span>')
         : noBin
           ? '<span class="bin-progress" style="opacity:.6">Scan a package to open a bin</span>'
           : '<span class="bin-progress">'+p.sorted+' of '+p.total+' packages sorted'
@@ -680,8 +872,8 @@ let pendingBinScan=null;
 
 async function loadUnassignedRoutes(){
   try{
-    const r=await tpOrgResp('jobs',{unbinned:true,statuses:['pending','assigned','in_transit'],order:'asc',limit:2000});
-    unassignedRoutes=await r.json();
+    const r=await tpOrgResp('jobs',tpRouteArgs({unbinned:true}));
+    unassignedRoutes=tpBoardRoutes(await r.json());
     if(!Array.isArray(unassignedRoutes)) unassignedRoutes=[];
   }catch(e){ unassignedRoutes=[]; }
   renderAssignRouteList();
@@ -823,7 +1015,8 @@ async function loadBinBindings(){
     const rows=await r.json();
     binBindings={};
     (Array.isArray(rows)?rows:[]).forEach(b=>{
-      if(b.job_id)binBindings[b.job_id]={bin_code:b.bin_code,location_code:b.location_code,state:b.state};
+      if(b.job_id)binBindings[b.job_id]={bin_code:b.bin_code,location_code:b.location_code,state:b.state,staging_code:b.staging_code||null,
+        job_title:b.job_title||null,job_status:b.job_status||null};
     });
   }catch(e){}
 }
@@ -835,8 +1028,98 @@ function normalizeLocCode(s){ return String(s||'').replace(/^(LOC|LOCATION)[:\s-
 
 // Is this code already bound to a DIFFERENT live route?
 function binCodeInUse(binCode, exceptJobId){
-  return Object.entries(binBindings).some(([jid,b])=>
+  return !!binHolder(binCode, exceptJobId);
+}
+// The live route holding this bin, if any: {jobId, title, status}
+function binHolder(binCode, exceptJobId){
+  const hit=Object.entries(binBindings).find(([jid,b])=>
     b.bin_code===binCode && jid!==exceptJobId && (b.state==='open'||b.state==='ready'));
+  if(!hit)return null;
+  const [jid,b]=hit, j=(Array.isArray(jobs)?jobs:[]).find(x=>String(x.id)===String(jid));
+  return {jobId:jid, title:b.job_title||(j&&j.title)||null, status:b.job_status||(j&&j.status)||null};
+}
+// "Route 7 (assigned)" for the refusal message
+function holderText(title,status){
+  return esc(title||'Another route')+(status?' ('+esc(String(status).replace(/_/g,' '))+')':'');
+}
+function binInUseCard(card,bin,title,status){
+  playErrorSound();
+  card.className='result-card error';
+  card.innerHTML='<div class="result-bin">Bin In Use</div>'
+    +'<div class="result-bin-num error" style="font-size:1.6rem;">BIN '+esc(bin)+'</div>'
+    +'<div class="result-detail">BIN '+esc(bin)+' holds '+holderText(title,status)+'. Scan an empty bin.</div>';
+}
+
+// ═════════════════════════════════════════════════════════════
+// STAGING (2026-10): a completed route is "ready to stage" until the worker
+// scans a staging spot QR, STG:<code> (e.g. STG:S-01). The server records
+// the spot on the route's bin binding and refuses a spot that already holds
+// another live route. When the driver picks the route up, the server frees
+// its BIN, LOC and STG spot (migration 60).
+// ═════════════════════════════════════════════════════════════
+// The route the next STG scan stages: {jobId, bin, title, ready:Promise}
+let stageTarget=null;
+const STG_RE=/^(STG|STAGE|STAGING)[:\s-]/i;
+const LOC_RE=/^(LOC|LOCATION)[:\s-]/i;
+const BIN_RE=/^BIN[:\s-]/i;
+function normalizeStgCode(raw){
+  return String(raw||'').trim().toUpperCase().replace(/^(STG|STAGE|STAGING)[:\s-]*/,'').trim();
+}
+function stagingOf(jobId){ const b=binBindings[jobId]; return (b&&b.staging_code)||null; }
+// A complete route whose bin is waiting for a staging spot, found by its bin
+function readyToStageByBin(bin){
+  const n=Object.keys(binProgress).find(k=>k===bin);
+  if(!n) return null;
+  const p=binProgress[n];
+  if(!p||!p.jobId||p.sorted<p.total||stagingOf(p.jobId)) return null;
+  return {jobId:p.jobId, bin:n, title:p.jobTitle, ready:null};
+}
+function stageCard(card,cls,head,big,detail){
+  card.className='result-card '+cls;
+  card.innerHTML='<div class="result-bin"'+(cls==='staged'?' style="color:var(--green);"':'')+'>'+head+'</div>'
+    +(big?'<div class="result-bin-num '+(cls==='error'?'error':cls==='staged'?'success':'')+'" style="font-size:1.8rem;">'+big+'</div>':'')
+    +(detail?'<div class="result-detail">'+detail+'</div>':'');
+}
+async function stageRoute(card,raw){
+  const code=normalizeStgCode(raw);
+  if(!code){ playErrorSound(); stageCard(card,'error','Not A Staging Code','', 'Scan a STG code, for example STG:S-01.'); return; }
+  const t=stageTarget;
+  try{ if(t.ready) await t.ready; }catch(e){}
+  let res=null;
+  try{
+    const r=await tpOrgResp('stage_binding',{id:t.jobId,staging_code:code});
+    res=await r.json();
+    if(!r.ok) throw new Error(res&&res.message||'error');
+  }catch(e){
+    playErrorSound();
+    stageCard(card,'error','Could Not Stage','BIN '+esc(t.bin),'The staging did not save. Check connection and scan the STG code again.');
+    return;
+  }
+  if(res&&res.ok){
+    if(binBindings[t.jobId]) binBindings[t.jobId].staging_code=res.staging_code||code;
+    else binBindings[t.jobId]={bin_code:t.bin,location_code:null,state:'ready',staging_code:res.staging_code||code};
+    stageTarget=null;
+    stageConfirm={spot:res.staging_code||code, bin:t.bin, title:t.title, until:Date.now()+STAGE_CONFIRM_MS};
+    setTimeout(renderStowSteps,STAGE_CONFIRM_MS+50);
+    playSuccessSound();
+    logEvent('bin.staged',{org_id:(binProgress[t.bin]||{}).orgId, job_id:t.jobId,
+      payload:{bin:t.bin, route:t.title, staging:res.staging_code||code},
+      idem:'binstaged:'+t.jobId+':'+(res.staging_code||code)});
+    stageCard(card,'staged','&#10003; Staged','STG '+esc(res.staging_code||code),
+      'BIN '+esc(t.bin)+' &middot; '+esc(t.title)+'<br><b>READY FOR PICKUP</b>');
+    renderBinsPanel();
+    return;
+  }
+  playErrorSound();
+  const err=res&&res.error;
+  if(err==='spot_taken'){
+    stageCard(card,'error','Staging Spot Taken','STG '+esc(res.staging_code||code),
+      holderText(res.route||'Another route',res.status)+' is already staged there. Scan a different STG code for BIN '+esc(t.bin)+'.');
+  }else if(err==='not_complete'){
+    stageCard(card,'error','Route Not Complete','BIN '+esc(t.bin),'Every package must be stowed before the bin is staged.');
+  }else{
+    stageCard(card,'error','Could Not Stage','BIN '+esc(t.bin),'This route has no open bin to stage.');
+  }
 }
 
 async function persistBinBinding(jobId, binCode, locCode, orgId){
@@ -845,6 +1128,8 @@ async function persistBinBinding(jobId, binCode, locCode, orgId){
       id:jobId, bin_code:binCode, location_code:locCode, opened_by:ensureWorker()
     });
     if(!r.ok)throw new Error(await r.text());
+    const res=await r.json().catch(()=>null);
+    if(res&&res.error==='bin_taken')return {taken:res};
     binBindings[jobId]={bin_code:binCode,location_code:locCode,state:'open'};
     // Mirror onto the job so the dispatcher and driver see the bin too
     tpOrgResp('set_bin_label',{id:jobId,bin_label:binCode}).catch(()=>{});
@@ -891,6 +1176,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 async function handleStowScan(code){
+  if(tpBadgeIntercept(code))return;
   const clean=code.trim().toUpperCase();
 
   // ── DIAGNOSTIC: full chain from raw input through lookup result.
@@ -921,6 +1207,55 @@ async function handleStowScan(code){
   if(!clean)return;
   const card=document.getElementById('stowResult');
   card.style.display='flex';
+
+  // ── STAGING: STG codes, and the wrong kind of code while a bin waits ──
+  const isStg=STG_RE.test(clean);
+  if(isStg&&pendingPlacement){
+    playErrorSound();
+    stageCard(card,'error','That Is A Staging Code','BIN '+esc(pendingPlacement.binNum),
+      'This package goes into its bin first. Scan the BIN'+(pendingPlacement.location?' or LOCATION':'')+' QR. Nothing was changed.');
+    return;
+  }
+  if(isStg&&openingBin){
+    playErrorSound();
+    stageCard(card,'error','That Is A Staging Code','',
+      'You are opening a bin. Scan the '+(!openingBin.binCode?'BIN':'LOCATION')+' QR. Nothing was changed.');
+    return;
+  }
+  if(!pendingPlacement&&!openingBin){
+    if(BIN_RE.test(clean)){
+      const pick=readyToStageByBin(normalizeBinCode(clean));
+      if(pick){
+        stageTarget=pick;
+        playSuccessSound();
+        stageCard(card,'','Ready To Stage','BIN '+esc(pick.bin),esc(pick.title)+'<br><b>Scan a STG code to stage this bin.</b>');
+        return;
+      }
+    }
+    if(isStg){
+      if(!stageTarget){
+        playErrorSound();
+        stageCard(card,'error','Nothing To Stage','STG '+esc(normalizeStgCode(clean)),
+          'No route is waiting to be staged. Finish stowing a route, or scan the BIN of a completed route, then scan the STG code.');
+        return;
+      }
+      await stageRoute(card,clean);
+      return;
+    }
+    if(stageTarget&&(LOC_RE.test(clean)||BIN_RE.test(clean))){
+      playErrorSound();
+      stageCard(card,'error','Wrong Code',esc(clean),
+        'That is a '+(LOC_RE.test(clean)?'location (LOC)':'bin (BIN)')+' code. Scan a STG code to stage BIN '+esc(stageTarget.bin)+'. Nothing was changed.');
+      return;
+    }
+    if(stageTarget){
+      // STAGE step: a package (or any other barcode) is not a STG code
+      playErrorSound();
+      stageCard(card,'error','STG Code Needed','STAGE BIN '+esc(stageTarget.bin),
+        'That is '+(binMap[clean]?'a package barcode':'not a STG code')+'. Scan a STG code, like STG:S-01, to stage BIN '+esc(stageTarget.bin)+'. Nothing was changed.');
+      return;
+    }
+  }
 
   // ── STEP 2: confirming placement, expecting the bin's own QR code ──
   // A package was already scanned and is waiting on its bin confirmation.
@@ -996,7 +1331,7 @@ async function handleStowScan(code){
 
       if(justCompleted){
         card.className='result-card staged';
-        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">BIN '+binNum+'</div><div class="result-detail" style="color:var(--green);font-weight:700;">STAGED &middot; READY FOR PICKUP</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>'+pieceLine;
+        card.innerHTML='<div class="result-bin" style="color:var(--green);">&#10003; Bin Complete</div><div class="result-bin-num success" style="font-size:2.1rem;">BIN '+binNum+'</div><div class="result-detail" style="font-weight:800;">Route complete. Scan a STG code to stage this bin.</div><div class="result-detail" style="margin-top:4px;">'+jobTitle+' &middot; all '+binProgress[binNum].total+' packages sorted</div>'+pieceLine;
         const stagedJobId=binProgress[binNum].jobId;
         logEvent('bin.completed',{
           org_id:binProgress[binNum].orgId,
@@ -1005,12 +1340,13 @@ async function handleStowScan(code){
           idem:'bincomplete:'+stagedJobId+':'+(resetEpoch[binNum]||'r0')
         });
         if(stagedJobId){
-          tpOrgResp('set_staged',{id:stagedJobId,staged:true}).catch(()=>{});
-          // The bin now holds a complete route. It stays bound to that
-          // route — state moves open → ready, and only the driver pickup
-          // releases it. A ready bin cannot be reused for another route.
-          tpOrgResp('binding_ready',{id:stagedJobId}).then(()=>{ if(binBindings[stagedJobId])binBindings[stagedJobId].state='ready'; })
+          // The bin now holds a complete route: state open → ready ("ready
+          // to stage"). It is staged when the worker scans a STG code, and
+          // only the driver pickup releases it. A ready bin cannot be reused
+          // for another route.
+          const ready=tpOrgResp('binding_ready',{id:stagedJobId}).then(()=>{ if(binBindings[stagedJobId])binBindings[stagedJobId].state='ready'; })
             .catch(()=>{});
+          stageTarget={jobId:stagedJobId, bin:binNum, title:jobTitle, ready:ready};
         }
       } else {
         card.className='result-card success';
@@ -1056,14 +1392,11 @@ async function handleStowScan(code){
     }else{
       const bin=normalizeBinCode(clean);
       if(!bin){playErrorSound();return;}
-      if(binCodeInUse(bin,openingBin.jobId)){
-        playErrorSound();
-        card.className='result-card error';
-        card.innerHTML='<div class="result-bin">Bin In Use</div>'
-          +'<div class="result-bin-num error" style="font-size:1.6rem;">BIN '+esc(bin)+'</div>'
-          +'<div class="result-detail">That bin already holds another route. Scan an empty bin.</div>';
-        return;
-      }
+      // Held on this device's copy? Ask the server again first: it frees
+      // spots of routes that have moved on (migration 65) before answering.
+      if(binCodeInUse(bin,openingBin.jobId)) await loadBinBindings();
+      const held=binHolder(bin,openingBin.jobId);
+      if(held){ binInUseCard(card,bin,held.title,held.status); return; }
       openingBin.binCode=bin;
     }
 
@@ -1081,6 +1414,13 @@ async function handleStowScan(code){
 
     // Both scanned — bind the bin to the route
     const ok=await persistBinBinding(openingBin.jobId,openingBin.binCode,openingBin.locCode,openingBin.orgId);
+    if(ok&&ok.taken){
+      // the server says a live route holds it (another device opened it meanwhile)
+      binInUseCard(card,openingBin.binCode,ok.taken.route,ok.taken.status);
+      openingBin.binCode=null;
+      loadBinBindings();
+      return;
+    }
     if(!ok){
       playErrorSound();
       card.className='result-card error';
@@ -1293,30 +1633,116 @@ function doResetBin(binNum){
     idem:'binreset:'+(info.jobId||binNum)+':'+now
   });
   if(info.jobId){
-    tpOrgResp('set_staged',{id:info.jobId,staged:false}).catch(function(){});
+    // The server frees the route's STG spot in the same step (migration 61)
+    // and reopens its bin from zero; mirror that here, then re-read it.
+    if(binBindings[info.jobId]){ binBindings[info.jobId].staging_code=null; binBindings[info.jobId].state='open'; }
+    if(stageTarget&&stageTarget.jobId===info.jobId) stageTarget=null;
+    tpOrgResp('set_staged',{id:info.jobId,staged:false}).then(function(){ return loadBinBindings(); }).catch(function(){});
   }
   document.getElementById('resetConfirmArea').innerHTML='<div class="result-card success"><div class="result-bin">Reset</div><div class="result-bin-num success">BIN '+binNum+'</div><div class="result-detail">Ready to be sorted again.</div></div>';
   renderResetBinsPanel();
 }
 
+// ── STOW STEPS + STAGE PANEL (2026-10) ──
+// The step bar shows PACKAGE > BIN > LOCATION > STAGE with the current step
+// highlighted. When a route's last package is stowed, the big panel turns
+// into the STAGE step (same panel and size as the BIN step); a successful
+// STG scan shows STAGED at <spot> there, then the normal flow returns.
+const STAGE_CONFIRM_MS=3500;
+let stageConfirm=null;
+function stowStepNow(){
+  if(openingBin) return openingBin.binCode&&!openingBin.locCode?'location':'bin';
+  if(pendingPlacement) return 'bin';
+  if(stageTarget) return 'stage';
+  return 'package';
+}
+function waitingToStage(){
+  return Object.keys(binProgress).filter(n=>{const p=binProgress[n];return p&&p.jobId&&p.total>0&&p.sorted>=p.total&&!stagingOf(p.jobId);});
+}
+function setText(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+function renderStowSteps(){
+  const bar=document.getElementById('stowSteps');
+  const step=stowStepNow(), order=['package','bin','location','stage'];
+  const names={package:'PACKAGE',bin:'BIN',location:'LOCATION',stage:'STAGE'};
+  const cur=order.indexOf(step);
+  if(bar) bar.innerHTML=order.map((k,i)=>'<div role="listitem" class="st st-'+k+(i===cur?' on':i<cur?' done':'')+'"'
+    +(i===cur?' aria-current="step"':'')+'>'+names[k]+'</div>').join('<span class="sep">&rsaquo;</span>');
+  const inner=document.getElementById('scanFlipInner'), cont=document.getElementById('scanFlipContainer');
+  const back=document.querySelector('#scanFlipInner .flip-card-back');
+  const later=document.getElementById('stageLaterBtn');
+  if(!inner||!back) return;
+  const confirming=stageConfirm&&Date.now()<stageConfirm.until&&step==='package';
+  if(step==='stage'){
+    const t=stageTarget, waiting=waitingToStage();
+    back.classList.add('stage-mode'); back.classList.remove('staged-mode');
+    cont&&cont.classList.add('tall');
+    setText('flipBinNumber','STAGE');
+    setText('flipBinLoc','BIN '+t.bin+' \u00b7 '+(t.title||'Route'));
+    setText('flipBinInstr','Scan a STG code to stage this bin');
+    setText('flipBinStop',waiting.length>1
+      ? waiting.length+' bins waiting to stage. This STG scan stages BIN '+t.bin+'.'
+      : 'STG codes look like STG:S-01');
+    inner.classList.add('flipped');
+    if(later) later.style.display='block';
+    return;
+  }
+  if(later) later.style.display='none';
+  if(confirming){
+    const c=stageConfirm, more=waitingToStage();
+    back.classList.add('staged-mode'); back.classList.remove('stage-mode');
+    cont&&cont.classList.add('tall');
+    setText('flipBinNumber','STAGED at '+c.spot);
+    setText('flipBinLoc','BIN '+c.bin+' \u00b7 '+(c.title||'Route'));
+    setText('flipBinInstr','Ready for pickup.');
+    setText('flipBinStop',more.length?('Still to stage: BIN '+more.join(', BIN ')+'. Scan its BIN, then a STG code.'):'');
+    inner.classList.add('flipped');
+    return;
+  }
+  if(back.classList.contains('stage-mode')||back.classList.contains('staged-mode')){
+    back.classList.remove('stage-mode','staged-mode');
+    cont&&cont.classList.remove('tall');
+    if(!pendingPlacement){ inner.classList.remove('flipped'); setText('flipBinStop',''); }
+  }
+}
+// Leave the STAGE step without staging: the route stays ready to stage
+// (its bin is listed as SCAN STG TO STAGE); scan its BIN later to stage it.
+function stageLater(){
+  if(!stageTarget) return;
+  stageTarget=null;
+  const card=document.getElementById('stowResult');
+  if(card){ card.style.display='flex'; card.className='result-card';
+    card.innerHTML='<div class="result-bin">Stage Later</div><div class="result-detail">Scan the bin\u2019s BIN QR, then a STG code, to stage it.</div>'; }
+  renderStowSteps();
+  const si=document.getElementById('stowInput'); if(si) si.focus();
+}
+handleStowScan=(function(orig){return async function(code){
+  if(stageConfirm&&String(code||'').trim()) stageConfirm=null;
+  try{ return await orig.apply(this,arguments); }
+  finally{ renderStowSteps(); }
+};})(handleStowScan);
+renderStowSteps();
+
 document.getElementById('assignBinInput').addEventListener('keydown', function(e){
-  if(e.key==='Enter'){ handleAssignBinScan(e.target.value); e.target.value=''; }
+  if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; if(tpBadgeIntercept(v))return; handleAssignBinScan(v); }
 });
 document.getElementById('stowInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){
     const dbgClear=document.getElementById('debugPanel');
     if(dbgClear) dbgClear.textContent='';
-    handleStowScan(e.target.value); e.target.value='';
+    const v=e.target.value; e.target.value='';
+    handleStowScan(v);
   }
 });
 document.getElementById('receiveInput').addEventListener('keydown', function(e){
-  if(e.key==='Enter'){ handleReceiveScan(e.target.value); e.target.value=''; }
+  if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; if(tpBadgeIntercept(v))return; handleReceiveScan(v); }
 });
 document.addEventListener('click', function(){
   if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
   if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
 });
 
+// Signed in: open straight into Stow.
+if(tpSession())goTo('stow');
 loadRoutes();
 setInterval(loadRoutes, 5000);
 
@@ -1341,6 +1767,7 @@ window.addEventListener('online', loadRoutes);
 // existing scan-handling logic itself changes.
 if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FarsetScanner) {
   window.Capacitor.Plugins.FarsetScanner.addListener('scan', function(data){
+    if(tpBadgeIntercept(data&&data.value))return;   // badges: never logged
     // ── DIAGNOSTIC: exact raw shape from the native plugin, before
     // anything touches it ──
     const bridgeDbg = 'NATIVE BRIDGE EVENT RECEIVED\n'
@@ -1375,6 +1802,7 @@ if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Far
     if (window._zebraAttached) return;
     window._zebraAttached = true;
     window.Capacitor.Plugins.ZebraScanner.addListener('scan', function(data){
+      if(tpBadgeIntercept(data&&data.value))return;   // badges: never logged
       const value = data && data.value;
       const dbg=document.getElementById('debugPanel');
       if(dbg) dbg.textContent='SCAN RAW: '+JSON.stringify(value)+

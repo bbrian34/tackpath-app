@@ -45,8 +45,10 @@ test('after the lockdown the public key cannot read, add, change or delete anyth
     assert.equal(await denied(db, role, `select public.publish_surge_route('{}'::jsonb)`), true, 'publish gate only via tp_org');
     assert.equal(await denied(db, role, `select public.increment_address_failures('x')`), true);
   }
-  // no policies left on public tables; RLS on everywhere
-  assert.equal((await db.query(`select count(*)::int n from pg_policies where schemaname = 'public'`)).rows[0].n, 0);
+  // no permissive policy left on public tables (the restrictive ones stay); RLS on everywhere
+  assert.deepEqual((await db.query(`select policyname, permissive from pg_policies where schemaname = 'public' order by 1`)).rows,
+    [{ policyname: 'protect_operational_memory', permissive: 'RESTRICTIVE' },
+     { policyname: 'protect_scoped_drivers', permissive: 'RESTRICTIVE' }]);
   assert.equal((await db.query(`select count(*)::int n from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity`)).rows[0].n, 0);
   // tables created later are not handed to the public key
@@ -126,4 +128,76 @@ test('migration 20 refuses to run twice or before 10', async () => {
   await db.exec(sqlFile('20_lockdown.sql'));
   await assert.rejects(db.exec(sqlFile('20_lockdown.sql')), /already applied/);
   await db.exec('rollback');
+});
+
+// Public functions anon could execute in production on 2026-10-07 (besides tp_*).
+const TODAY_ANON_FUNCTIONS = ['publish_surge_route', 'ops_command', 'ops_state', 'ops_revoke_session',
+  'increment_address_failures', 'materialize_package_state', 'rls_auto_enable', 'touch_updated_at',
+  'events_block_mutation'];
+const ENTRY_POINTS = ['tp_customer(text,jsonb)', 'tp_driver(text,text,jsonb)', 'tp_driver_sign_in(text,text)',
+  'tp_driver_signup(jsonb)', 'tp_org(text,text,jsonb)', 'tp_org_lookup(text)', 'tp_org_sign_in(text,text)',
+  'tp_sign_out(text)', 'tp_track(text,jsonb)'];
+const anonExec = async (db, role = 'anon') => (await db.query(`select replace(p.oid::regprocedure::text, 'public.', '') as f
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and has_function_privilege('${role}', p.oid, 'EXECUTE') order by 1`)).rows.map((r) => r.f);
+const execBy = async (db, name, role) => (await db.query(`select bool_and(has_function_privilege('${role}', p.oid, 'EXECUTE')) b
+   from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = $1`, [name])).rows[0].b;
+
+test('migration 20 closes every function anon can execute today; only the nine tp_* entry points remain; rollback reopens them', async () => {
+  const db = await freshDb({ migrate: ['10_sessions_and_rpcs.sql'] });
+  // procedures and aggregates are covered too
+  await db.exec(`create procedure public.some_proc() language sql as $$ select 1 $$;
+    create aggregate public.some_agg(int) (sfunc = int4pl, stype = int);`);
+  const others = ['some_proc', 'some_agg'];
+  for (const f of [...TODAY_ANON_FUNCTIONS, ...others]) {
+    assert.equal(await execBy(db, f, 'anon'), true, `${f} executable by anon today`);
+  }
+  await db.exec(sqlFile('20_lockdown.sql'));
+  for (const f of TODAY_ANON_FUNCTIONS) {
+    for (const role of ['anon', 'authenticated']) assert.equal(await execBy(db, f, role), false, `${role} ${f} after 20`);
+    assert.equal(await execBy(db, f, 'service_role'), true, `service_role keeps ${f}`);
+  }
+  assert.deepEqual(await anonExec(db, 'anon'), ENTRY_POINTS, 'final anon-executable functions');
+  assert.deepEqual(await anonExec(db, 'authenticated'), ENTRY_POINTS);
+  // trigger functions still fire for a writer that has no EXECUTE on them
+  await db.exec(`insert into public.events (event_type) values ('t');
+    create role probe nologin bypassrls; grant usage on schema public to probe; grant update on public.events to probe;`);
+  assert.equal(await execBy(db, 'events_block_mutation', 'probe'), false);
+  await assert.rejects(as(db, 'probe', `update public.events set actor = 'x'`), /append-only/);
+  for (const f of others) assert.equal(await execBy(db, f, 'anon'), false, `${f} after 20`);
+  await db.exec(sqlFile('20_lockdown.rollback.sql'));
+  for (const f of [...TODAY_ANON_FUNCTIONS, ...others]) {
+    for (const role of ['anon', 'authenticated']) assert.equal(await execBy(db, f, role), true, `${role} ${f} after rollback`);
+  }
+});
+
+test('migration 20 stops, changing nothing, if another public function would stay executable by anon', async () => {
+  const db = await freshDb({ migrate: ['10_sessions_and_rpcs.sql'] });
+  await db.exec(`create role helper nologin; grant helper to anon;
+    create function public.sneaky() returns int language sql as $$ select 1 $$;
+    revoke all on function public.sneaky() from public, anon, authenticated; grant execute on function public.sneaky() to helper;`);
+  await assert.rejects(db.exec(sqlFile('20_lockdown.sql')), /still executable by anon\/authenticated: sneaky\(\)/);
+  await db.exec('rollback');
+  assert.equal((await db.query(`select to_regclass('tp_sec.lockdown_backup') t`)).rows[0].t, null);
+  assert.equal(await execBy(db, 'ops_state', 'anon'), true, 'nothing was revoked');
+});
+
+test('restrictive policies protect_scoped_drivers and protect_operational_memory are untouched by 20 and its rollback', async () => {
+  const db = await freshDb({ migrate: ['10_sessions_and_rpcs.sql'] });
+  const pols = async () => (await db.query(`select p.oid::int as oid, p.polname, c.relname, p.polpermissive, p.polcmd,
+      p.polroles::regrole[]::text as roles, pg_get_expr(p.polqual, p.polrelid) as q, pg_get_expr(p.polwithcheck, p.polrelid) as wc
+    from pg_policy p join pg_class c on c.oid = p.polrelid where not p.polpermissive order by p.polname`)).rows;
+  const before = await pols();
+  assert.deepEqual(before.map((r) => [r.polname, r.relname, r.polcmd, r.roles, r.q, r.wc]), [
+    ['protect_operational_memory', 'agent_memory', '*', '{anon,authenticated}', '(org_id IS NULL)', '(org_id IS NULL)'],
+    ['protect_scoped_drivers', 'drivers', '*', '{anon,authenticated}', '(org_id IS NULL)', '(org_id IS NULL)']]);
+  await db.exec(sqlFile('20_lockdown.sql'));
+  assert.deepEqual(await pols(), before, 'same objects (same oid), same definition after 20');
+  await db.exec(sqlFile('20_lockdown.rollback.sql'));
+  assert.deepEqual(await pols(), before, 'same objects (same oid), same definition after the rollback');
+  // a restrictive policy added after the lockdown is removed by the rollback like any other new policy
+  await db.exec(sqlFile('20_lockdown.sql'));
+  await db.exec(`create policy later_restrictive on public.jobs as restrictive for select to anon using (false)`);
+  await db.exec(sqlFile('20_lockdown.rollback.sql'));
+  assert.deepEqual(await pols(), before);
 });
