@@ -4958,6 +4958,126 @@ function logRejected(si,read,expected,others){
 })();
 </script>
 <!-- TP-SCAN:END -->
+<!-- TP-GONE:BEGIN  Removed routes (2026-10). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). When dispatch removes the driver's
+     route (Clear board archives it, or it is cancelled, deleted or given to
+     another driver), the phone forgets it everywhere (the saved route, the
+     saved scans, the Waiting for warehouse screen, the active-delivery
+     notification, the native arrival service) and goes back home. Checked on
+     app open and on every poll. A removed route is remembered by id so
+     nothing on the phone can bring it back; only the server can, by giving
+     it out again un-archived. -->
+<script>
+(function(){
+var W=window;
+var GONE_KEY='tp_removed_jobs';
+var MSG_REMOVED='This route was removed by dispatch.';
+var MSG_CANCELLED='This route was cancelled by dispatch.';
+function lsGet(k){try{var r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch(e){return null;}}
+function lsSet(k,v){try{if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function removedList(){var l=lsGet(GONE_KEY);return Array.isArray(l)?l:[];}
+function isRemoved(id){return id!=null&&removedList().indexOf(String(id))>=0;}
+function markRemoved(id){if(id==null)return;var k=String(id),l=removedList().filter(function(x){return x!==k;});l.push(k);lsSet(GONE_KEY,l.slice(-100));}
+function unmark(id){var k=String(id);lsSet(GONE_KEY,removedList().filter(function(x){return x!==k;}));}
+function active(){try{return (typeof currentJob!=='undefined'&&currentJob)||null;}catch(e){return null;}}
+function call(fn){try{if(typeof W[fn]==='function')W[fn]();}catch(e){}}
+function hide(id){try{var e=document.getElementById(id);if(e)e.style.display='none';}catch(x){}}
+// The route is gone: stop everything that works on it, forget it, go home.
+function forget(id,msg){
+  markRemoved(id);
+  try{clearInterval(jobStatusInterval);jobStatusInterval=null;}catch(e){}
+  ['tpStopStagePoll','stopDispatchPoll','stopCamera','stopGPS','stopArrivalService','clearJobNotification','stopOfferAlert'].forEach(call);
+  ['binScanOverlay','loadPkgOverlay','dlvScanOverlay','routeMapOverlay'].forEach(hide);
+  try{var sh=document.getElementById('dxSheet');if(sh)sh.remove();}catch(e){}
+  W._scanningBin=false;W._binConfirmedHolding=false;W._restoredScreenContext=null;W._deliveryScan=null;
+  try{currentJob=null;pendingJob=null;surgeStops=[];currentSurgeStop=0;isSurgeJob=false;scannedPackages=[];}catch(e){}
+  try{if(typeof loadedCounts!=='undefined')loadedCounts=new Map();}catch(e){}
+  try{if(typeof loadedPackages!=='undefined')loadedPackages=new Map();}catch(e){}
+  try{deliveryScans=new Map();deliveryDamaged=new Map();}catch(e){}
+  try{if(typeof _tpReadyAnnounced!=='undefined')_tpReadyAnnounced=false;}catch(e){}
+  try{W._loadedPackageIds=new Set();}catch(e){}
+  try{clearRouteState();}catch(e){lsSet('tp_route_state',null);}
+  var rs=lsGet('tp_dx_route');if(rs&&String(rs.job)===String(id))lsSet('tp_dx_route',null);
+  try{if(W.dx&&W.dx.state){W.dx.state.stage=null;W.dx.state.binding=null;}}catch(e){}
+  try{showScreen('scHome');}catch(e){}
+  try{toast(msg||MSG_REMOVED,'warn');}catch(e){}
+  try{if(typeof isOnline==='undefined'||isOnline)startPolling();}catch(e){}
+}
+// Ask the server about the active route. Removed: archived, gone (nothing
+// returned, or refused as not this driver's), or cancelled. No signal or a
+// server error: keep it, ask again on the next poll.
+var checking=false;
+async function check(){
+  var j=active();if(!j||!j.id||checking)return;
+  if(isRemoved(j.id)){forget(j.id,MSG_REMOVED);return;}
+  if(navigator.onLine===false||typeof tpDriver!=='function')return;
+  checking=true;
+  try{
+    var row;
+    try{row=await tpDriver('job',{id:j.id});}
+    catch(e){
+      if(/TP_DENIED/.test(String(e&&e.message||e))&&active()&&String(active().id)===String(j.id))forget(j.id,MSG_REMOVED);
+      return;
+    }
+    if(!active()||String(active().id)!==String(j.id))return;
+    if(!row||row.archived===true)forget(j.id,MSG_REMOVED);
+    else if(row.status==='cancelled')forget(j.id,MSG_CANCELLED);
+  }finally{checking=false;}
+}
+function wrapFn(name,fn){var orig=W[name];if(typeof orig!=='function')return;W[name]=fn(orig);}
+// Nothing on the phone restores or re-saves a removed route.
+wrapFn('saveRouteState',function(orig){return function(){var j=active();if(j&&isRemoved(j.id))return;return orig.apply(this,arguments);};});
+wrapFn('restoreRouteState',function(orig){return function(){
+  var ok=orig.apply(this,arguments),j=active();
+  if(ok&&j&&isRemoved(j.id)){try{currentJob=null;}catch(e){}try{clearRouteState();}catch(e){}return false;}
+  return ok;
+};});
+// The server's list never brings an archived route back as the driver's
+// route (native app) or as an offer (both apps). A route the server gives out
+// again un-archived is a new assignment: it is no longer remembered as removed.
+function archived(job){return !!(job&&job.archived===true);}
+wrapFn('tpAdoptAssignedRoute',function(orig){return function(job){
+  if(!job||archived(job))return false;
+  if(isRemoved(job.id))unmark(job.id);
+  return orig.apply(this,arguments);
+};});
+wrapFn('showOffer',function(orig){return function(job){
+  if(archived(job)){
+    try{rejectedIds.add(job.id);}catch(e){}
+    try{if(pendingJob&&String(pendingJob.id)===String(job.id))pendingJob=null;}catch(e){}
+    return;
+  }
+  if(job&&isRemoved(job.id))unmark(job.id);
+  return orig.apply(this,arguments);
+};});
+// On every poll: the offer poll, the native warehouse poll, the job status poll.
+// The job status poll asks first whether the route was removed, so a removed
+// route is always cleared here, the same way, with the same message.
+wrapFn('startJobStatusPoll',function(orig){return function(){
+  var realSet=W.setInterval,tick=null,r;
+  W.setInterval=function(fn){tick=fn;return 0;};
+  try{r=orig.apply(this,arguments);}finally{W.setInterval=realSet;}
+  try{clearInterval(jobStatusInterval);}catch(e){}
+  if(typeof tick==='function'){
+    var t=realSet(async function(){await check();if(active())return tick();},5000);
+    try{jobStatusInterval=t;}catch(e){}
+  }
+  return r;
+};});
+wrapFn('pollJobs',function(orig){return function(){if(active())check();return orig.apply(this,arguments);};});
+wrapFn('tpRefreshStage',function(orig){return async function(){await check();if(!active())return;return orig.apply(this,arguments);};});
+setInterval(check,5000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)check();});
+W.addEventListener('online',check);
+W.tpGone={check:check,forget:forget,isRemoved:isRemoved};
+// On app open: the app has already booted (and may have restored a route,
+// starting the job status poll before this block loaded: restart it wrapped).
+try{if(jobStatusInterval&&active())startJobStatusPoll();}catch(e){}
+check();
+})();
+</script>
+<!-- TP-GONE:END -->
 </body>
 </html>
 
