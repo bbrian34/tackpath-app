@@ -9,6 +9,8 @@
   const D = root.DEMO_DATA, M = root.DEMO_MAP;
   const S = {};
   root.SHOW = S;
+  // presentation timers stretch when the demo runs below 1× (used for recording)
+  const rt = (ms) => ms / Math.min(1, (root.__TPDEMO__ && root.__TPDEMO__.clock.speed()) || 1);
 
   // ── stage: 1920×1080 scaled to the window ──
   const stage = $('stage');
@@ -60,7 +62,7 @@
     if (!html) { c.classList.remove('show'); return; }
     if (c.classList.contains('show') && c.innerHTML !== html) {
       c.classList.remove('show');
-      capTimer = setTimeout(() => { c.innerHTML = html; c.classList.add('show'); }, 220);
+      capTimer = setTimeout(() => { c.innerHTML = html; c.classList.add('show'); }, rt(220));
     } else { c.innerHTML = html; c.classList.add('show'); }
   };
 
@@ -100,7 +102,7 @@
   S.ripple = function (x, y) {
     if (S.quiet) return;
     const r = document.createElement('div'); r.className = 'ripple'; r.style.left = x + 'px'; r.style.top = y + 'px';
-    $('ripples').appendChild(r); setTimeout(() => r.remove(), 700);
+    $('ripples').appendChild(r); setTimeout(() => r.remove(), rt(700));
   };
   // Tap a real control inside an app: show the touch, then click it.
   S.tap = function (app, sel) {
@@ -119,7 +121,7 @@
     const d = DEV.tc56; if (S.quiet) return;
     d.classList.remove('scan', 'err'); void d.offsetWidth;
     d.classList.add('scan'); if (ok === false) d.classList.add('err');
-    setTimeout(() => d.classList.remove('scan', 'err'), 260);
+    setTimeout(() => d.classList.remove('scan', 'err'), rt(260));
   };
 
   // ── warehouse rack illustration ──
@@ -136,7 +138,7 @@
     open(code, route, total) { const b = bins[code]; if (!b) return; b.total = total; b.el.classList.add('open'); b.el.querySelector('.b-state').textContent = 'OPEN'; b.el.querySelector('.b-route').textContent = route; this.count(code); },
     add(code) { const b = bins[code]; if (!b) return; b.n++; const i = document.createElement('i'); b.el.querySelector('.b-fill').appendChild(i); this.count(code); this.flash(code); },
     count(code) { const b = bins[code]; b.el.querySelector('.b-count').textContent = b.n + (b.total ? ' of ' + b.total : '') + ' packages'; },
-    ready(code) { const b = bins[code]; if (!b) return; b.el.classList.remove('open'); b.el.classList.add('ready'); b.el.querySelector('.b-state').textContent = 'READY'; },
+    ready(code, stg) { const b = bins[code]; if (!b) return; b.el.classList.remove('open'); b.el.classList.add('ready'); b.el.querySelector('.b-state').textContent = stg ? 'STAGED · ' + stg : 'READY'; },
     take(code) { const b = bins[code]; if (!b) return; const f = b.el.querySelector('.b-fill'); if (f.lastChild) f.lastChild.remove(); b.n = Math.max(0, b.n - 1); b.el.querySelector('.b-count').textContent = b.n + ' left in bin'; },
     clearFeed() { $('rackFeed').innerHTML = '<span class="lbl">Scanned</span>'; },
     picked(code) { const b = bins[code]; if (!b) return; b.el.classList.remove('ready', 'open'); b.el.classList.add('picked'); b.el.querySelector('.b-state').textContent = 'PICKED UP'; },
@@ -173,13 +175,13 @@
     const n = $('notif');
     n.innerHTML = '<div class="n-app"><b>●</b> ' + (app || 'TackPath') + ' · now</div><div class="n-t">' + title + '</div>' + (body ? '<div class="n-b">' + body + '</div>' : '') + (action ? '<div class="n-act">' + action + '</div>' : '');
     n.hidden = false; void n.offsetWidth; n.classList.add('show');
-    clearTimeout(notifT); notifT = setTimeout(() => { n.classList.remove('show'); setTimeout(() => { n.hidden = true; }, 500); }, 3600);
+    clearTimeout(notifT); notifT = setTimeout(() => { n.classList.remove('show'); setTimeout(() => { n.hidden = true; }, rt(500)); }, rt(3600));
   };
   let speechT = null;
   S.speak = function (text) {
     if (S.quiet || !text) return;
     const s = $('speech'); s.textContent = text; s.hidden = false; void s.offsetWidth; s.classList.add('show');
-    clearTimeout(speechT); speechT = setTimeout(() => { s.classList.remove('show'); }, 2600);
+    clearTimeout(speechT); speechT = setTimeout(() => { s.classList.remove('show'); }, rt(2600));
   };
 
   // ── phone: the navigation app (simulated) + the native floating button ──
@@ -277,6 +279,18 @@
     $('phoneTime').textContent = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(/ [AP]M/, '');
   };
 
+  // Time-skip card: shown while repeat work runs at full speed.
+  let skipEl = null, skipT = null;
+  S.skipCard = function (title, sub) {
+    if (!title) { clearInterval(skipT); if (skipEl) { skipEl.classList.remove('show'); const e = skipEl; setTimeout(() => e.remove(), 400); skipEl = null; } return; }
+    skipEl = document.createElement('div'); skipEl.className = 'skip';
+    skipEl.innerHTML = '<div class="skip-in"><div class="skip-ff">⏩ Time skip</div><div class="skip-t"></div><div class="skip-s"></div><div class="skip-c"></div></div>';
+    skipEl.querySelector('.skip-t').textContent = title; skipEl.querySelector('.skip-s').textContent = sub || '';
+    stage.appendChild(skipEl); void skipEl.offsetWidth; skipEl.classList.add('show');
+    const c = skipEl.querySelector('.skip-c');
+    const tick = () => { c.textContent = new Date(root.__TPDEMO__.clock.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+    tick(); skipT = setInterval(tick, 100);
+  };
   S.busy = function (text) { const b = $('busy'); if (!text) { b.hidden = true; return; } $('busyText').textContent = text; b.hidden = false; };
   S.title = function (on) { $('titleCard').classList.toggle('gone', !on); };
 })(window);

@@ -59,24 +59,40 @@
   // Short UI delays follow the presentation speed; polls and waits longer
   // than 1.5 s follow demo time (so a 10 s poll fires after 10 demo seconds).
   function scaled(ms) { ms = +ms || 0; return Math.max(0, ms / H.clock.speed() / (ms > 1500 ? H.clock.rate() : 1)); }
+  // Long waits are measured in demo time while they run, so a change of
+  // pace (driving faster, pausing) applies to timers already waiting.
+  function demoWait(ms, done) {
+    var start = H.clock.now(), h;
+    var check = function () {
+      var left = ms - (H.clock.now() - start);
+      if (left <= 0 && !H.clock.paused()) return done();
+      h = rST(check, Math.max(16, Math.min(250, scaled(Math.max(left, 0)) || 16)));
+      return h;
+    };
+    return check;
+  }
+  function schedule(id, ms, fire) {
+    if ((+ms || 0) > 1500) { var c = demoWait(+ms, fire); timers.set(id, rST(c, Math.min(250, scaled(ms)))); }
+    else timers.set(id, rST(function chk() { if (H.clock.paused()) { timers.set(id, rST(chk, 120)); return; } fire(); }, scaled(ms)));
+  }
   W.setTimeout = function (fn, ms) {
     var args = Array.prototype.slice.call(arguments, 2), id = nextId++;
-    var run = function () {
-      if (H.clock.paused()) { timers.set(id, rST(run, 120)); return; }
+    schedule(id, ms, function () {
+      if (!timers.has(id)) return;
       timers.delete(id);
       try { typeof fn === 'function' ? fn.apply(W, args) : W.eval(fn); } catch (e) { H.report('error', APP, String(e && e.message || e), 'timer'); }
-    };
-    timers.set(id, rST(run, scaled(ms)));
+    });
     return id;
   };
   W.setInterval = function (fn, ms) {
     var args = Array.prototype.slice.call(arguments, 2), id = nextId++;
+    ms = Math.max(16, +ms || 0);
     var tick = function () {
       if (!timers.has(id)) return;
-      if (!H.clock.paused()) { try { fn.apply(W, args); } catch (e) { H.report('error', APP, String(e && e.message || e), 'interval'); } }
-      if (timers.has(id)) timers.set(id, rST(tick, Math.max(16, scaled(ms))));
+      try { fn.apply(W, args); } catch (e) { H.report('error', APP, String(e && e.message || e), 'interval'); }
+      if (timers.has(id)) schedule(id, ms, tick);
     };
-    timers.set(id, rST(tick, Math.max(16, scaled(ms))));
+    timers.set(id, 0); schedule(id, ms, tick);
     return id;
   };
   W.clearTimeout = W.clearInterval = function (id) { if (timers.has(id)) { rCT(timers.get(id)); timers.delete(id); } };

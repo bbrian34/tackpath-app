@@ -50,6 +50,7 @@
       const keys = Object.keys(patch || {}).filter((k) => allowed.includes(k));
       if (!keys.length) throw new Error('TP_INVALID: nothing to change');
       rows.forEach((r) => { keys.forEach((k) => { r[k] = patch[k]; }); });
+      if (table === 'jobs') rows.forEach((r) => releaseOnChange(r, patch));
       rows.forEach((r) => emit('row', { table, row: r, patch }));
       return clone(rows);
     }
@@ -57,12 +58,30 @@
     const jobById = (id) => T.jobs.find((j) => String(j.id) === String(id));
     const byCreatedDesc = (a, b) => String(b.created_at).localeCompare(String(a.created_at));
 
+    // Migration 65: a binding holds its BIN/LOC/STG only while its route is live.
+    const LIVE_DONE = ['archived', 'cancelled', 'delivered', 'completed_with_exceptions', 'closed_with_exceptions', 'in_transit'];
+    function healSpots() {
+      T.bin_bindings.forEach((b) => {
+        if (!['open', 'ready'].includes(b.state)) return;
+        const j = jobById(b.job_id);
+        if (!j || j.archived || LIVE_DONE.includes(j.status)) { b.state = 'released'; b.released_at = iso(); emit('row', { table: 'bin_bindings', row: b }); }
+      });
+    }
+    // Migrations 60/61: pickup (in_transit / picked_up_at) or finishing frees the route's spots.
+    function releaseOnChange(j, patch) {
+      if (!patch) return;
+      const done = patch.status && ['in_transit', 'cancelled', 'delivered', 'completed_with_exceptions'].includes(patch.status);
+      if (!done && !patch.picked_up_at) return;
+      T.bin_bindings.forEach((b) => { if (String(b.job_id) === String(j.id) && ['open', 'ready'].includes(b.state)) { b.state = 'released'; b.released_at = iso(); emit('row', { table: 'bin_bindings', row: b }); } });
+    }
+
     // ── tp_org ──
     function tpOrg(tok, action, a) {
       const s = session(tok, 'org');
       a = a || {};
       const jid = a.id;
-      if (jid != null && ['job', 'update_job', 'set_bin_label', 'set_staged', 'open_binding', 'binding_ready'].includes(action)) {
+      if (['bindings', 'open_binding', 'stage_binding'].includes(action) || (action === 'jobs' && a.exclude_archived)) healSpots();
+      if (jid != null && ['job', 'update_job', 'set_bin_label', 'set_staged', 'open_binding', 'binding_ready', 'stage_binding'].includes(action)) {
         if (!jobById(jid)) throw new Error('TP_DENIED: not one of your jobs');
       }
       switch (action) {
@@ -73,6 +92,7 @@
             (!a.statuses || a.statuses.includes(j.status)) &&
             (!a.ids || a.ids.map(String).includes(String(j.id))) &&
             (!a.source || j.source === a.source) &&
+            (!a.exclude_archived || !j.archived) &&
             (!a.unbinned || j.bin_label == null));
           rows.sort(byCreatedDesc);
           rows = rows.slice(0, Math.min(a.limit || 1000, 2000));
@@ -112,8 +132,24 @@
         case 'set_staged': return updateRows('jobs', jid, { staged_at: a.staged ? iso() : null }, ['staged_at'], {});
         case 'bindings': return clone(T.bin_bindings.filter((b) => ['open', 'ready'].includes(b.state) && (!a.job_id || String(b.job_id) === String(a.job_id))));
         case 'open_binding': {
+          const held = T.bin_bindings.find((x) => ['open', 'ready'].includes(x.state) && x.bin_code === a.bin_code && String(x.job_id) !== String(jid));
+          if (held) { const hj = jobById(held.job_id) || {}; return { ok: false, error: 'bin_taken', bin_code: a.bin_code, route: hj.title, status: hj.status, job_id: held.job_id }; }
           const b = { id: uuid(), org_id: org.id, bin_code: a.bin_code, location_code: a.location_code, job_id: jid, state: 'open', opened_by: String(a.opened_by || '').slice(0, 80), opened_at: iso(), ready_at: null, released_at: null };
           T.bin_bindings.push(b); emit('row', { table: 'bin_bindings', row: b }); return clone(b);
+        }
+        case 'stage_binding': {
+          const code = String(a.staging_code || '').trim().toUpperCase().replace(/^(STG|STAGE|STAGING)[:\s-]*/, '').trim();
+          if (!code || code.length > 40) throw new Error('TP_INVALID: a staging code is required');
+          const b = T.bin_bindings.filter((x) => String(x.job_id) === String(jid) && ['open', 'ready'].includes(x.state)).pop();
+          if (!b) return { ok: false, error: 'no_bin' };
+          if (b.state !== 'ready') return { ok: false, error: 'not_complete', bin_code: b.bin_code };
+          if (b.staging_code === code) return { ok: true, idempotent: true, staging_code: code, bin_code: b.bin_code };
+          const other = T.bin_bindings.find((x) => x !== b && x.staging_code === code && ['open', 'ready'].includes(x.state));
+          if (other) { const oj = jobById(other.job_id) || {}; return { ok: false, error: 'spot_taken', staging_code: code, route: oj.title, status: oj.status }; }
+          b.staging_code = code; b.staged_at = iso();
+          const j = jobById(jid); j.staged_at = iso();
+          emit('row', { table: 'bin_bindings', row: b }); emit('row', { table: 'jobs', row: j, patch: { staged_at: j.staged_at } });
+          return { ok: true, staging_code: code, bin_code: b.bin_code };
         }
         case 'binding_ready': {
           T.bin_bindings.forEach((b) => { if (String(b.job_id) === String(jid) && b.state === 'open') { b.state = 'ready'; b.ready_at = iso(); emit('row', { table: 'bin_bindings', row: b }); } });

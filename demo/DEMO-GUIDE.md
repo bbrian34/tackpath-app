@@ -17,7 +17,7 @@ python3 -m http.server 8765
 
 Open **http://localhost:8765/demo/** in Chrome or Edge (a laptop screen is fine;
 the stage scales to any window — use full screen, F11, for presenting). Press
-**▶ START DEMO**. It runs by itself: about 5½ minutes at 1×.
+**▶ START DEMO**. It runs by itself: about 3 minutes at 1×.
 
 Any static file server works; the demo needs no build step, no install and no
 internet connection.
@@ -50,16 +50,15 @@ Times are the demo clock (the operation's own morning).
 
 | # | Scene | What you see | Apps on screen |
 |---|---|---|---|
-| 1 | **Intake · SmartSort** (7:52) | The client's manifest (21 lines, 30 packages, 17 addresses) arrives. The dispatcher uploads it; SmartSort geocodes, measures road time between every pair of stops, builds 3 routes, passes the package-accounting gate and publishes them as *pending*. | Dispatcher |
-| 2 | **Dispatch assigns drivers** | The dispatcher opens RT-001 and assigns Andre Coleman, then Priya Nair (RT-002) and Luis Ortega (RT-003). Andre's phone picks up *his* route: 7 stops, 16 packages, pickup locked — **Waiting for warehouse**. | Dispatcher + driver app |
-| 3 | **PathIQ · sort and stage** (8:04) | Keisha sorts on the TC56: scan the package → card flips to its bin → scan the bin (or location). Each route's first package opens a bin (BIN QR + LOCATION QR). One wrong-bin scan is rejected. The pace speeds up. RT-003 and RT-002 complete: *bin ready for pickup*. Andre's app turns **Staging in progress**. | PathIQ + staging-rack illustration + driver app |
-| 4 | **Route ready for pickup** | The last three RT-001 packages. PathIQ: *Bin complete · staged · ready for pickup*; seconds later Andre's app turns **Ready for pickup — bin 1A · A-01** and unlocks pickup. | PathIQ + driver app |
-| 5 | **Driver pickup** | AT PICKUP → bin scan: Andre grabs bin 2A by mistake → **Wrong bin**; bin 1A → confirmed. He scans all 16 packages into the van (each shows its stop), *Pickup complete*, START ROUTE → **in transit**. | Driver app + rack illustration |
-| 6 | **On the road · live map** | Dispatch opens SmartTrack. Andre taps stop 1: TackPath hands navigation to Google Maps (simulated) and starts its arrival watcher. One GPS stream moves the phone's navigation and Andre's dot on the dispatcher's map; Priya and Luis are already out. | Driver phone + dispatcher |
-| 7 | **Arrival · back to TackPath** | Inside ½ mile the floating *↩ TackPath* button appears faded over Maps; inside 80 m it turns green, *ARRIVED — tap here to deliver*, with a heads-up notification. One tap returns to TackPath on that stop. | Driver phone + dispatcher |
-| 8 | **Delivery · proof** | Mark arrived → scan every package for the stop → proof of delivery (front door + photo, or handed to customer + signature where the stop needs one) → *Delivered*; the next stop opens itself after 5 seconds. Stops 2–5 repeat faster. | Driver phone + dispatcher |
-| 9 | **Exception · business closed** | Stop 6, Gilbert Street Bakery, is closed. Andre taps Problem → *Business closed* → *Report and go to the next stop*. Dispatch's driver chat shows **⚠ PROBLEM — Stop 6: Business closed · 3 packages returning to station**. Andre delivers the last stop. | Driver phone + dispatcher |
-| 10 | **Route complete · the day reconciled** | Andre's summary: 6 stops / 13 packages delivered, 1 problem, 3 packages to bring back. The board: RT-002 and RT-003 delivered, RT-001 *finished · problems*. A reconciliation card counted from what the apps recorded: **30 received = 27 delivered + 3 returning**. | Driver app, dispatcher |
+| 1 | **Intake · SmartSort** (7:52) | The client's manifest (21 lines, 30 packages, 17 addresses) arrives. The dispatcher (light theme) uploads it; SmartSort geocodes, measures road time between every pair of stops, builds 3 routes, passes the package-accounting gate and publishes them as *pending*. | Dispatcher |
+| 2 | **Dispatch assigns drivers** | The dispatcher assigns Andre Coleman to RT-001, then Priya Nair (RT-002) and Luis Ortega (RT-003). Andre's phone picks up *his* route: 7 stops, 16 packages, pickup locked: **Waiting for warehouse**. | Dispatcher + driver app |
+| 3 | **PathIQ · sort and stage** (8:04) | Keisha sorts on the TC56 (step bar PACKAGE › BIN › LOCATION › STAGE): scan the package → card flips to its bin → scan the bin. A route's first package opens a bin (BIN QR + LOCATION QR). One wrong-bin scan is rejected. When a route is complete PathIQ asks for a staging spot and she scans **STG S-0x**. The pace speeds up. Andre's app reads **Staging in progress**. | PathIQ + staging-rack illustration + driver app |
+| 4 | **Route ready for pickup** | RT-001's last package: bin 1A complete. Andre's app turns **Ready for pickup — bin 1A · A-01**; Keisha stages the bin at S-01. | PathIQ + driver app |
+| 5 | **Driver pickup** | AT PICKUP → bin scan: bin 2A by mistake → **Wrong bin**; bin 1A → confirmed. All 16 packages scanned into the van (each shows its stop), START ROUTE → **in transit** (the bin, location and staging spot are released). | Driver app + rack illustration |
+| 6 | **On the road · back to TackPath** | Dispatch opens SmartTrack. Andre taps stop 1: TackPath hands navigation to Google Maps (simulated). One GPS stream moves the phone's navigation and Andre's dot on the dispatcher's map. Inside ½ mile the floating *↩ TackPath* button appears; inside 80 m it turns green, *ARRIVED — tap here to deliver*; one tap returns to TackPath. | Driver phone + dispatcher |
+| 7 | **Delivery · proof** | Mark arrived → scan the stop's packages → proof of delivery (front door + photo) → *Delivered*; the next stop opens by itself and Maps starts guiding to stop 2. Stops 2–5 are the same steps, so they run behind a **time-skip** card. | Driver phone + dispatcher |
+| 8 | **Exception · business closed** | Stop 6, Gilbert Street Bakery, is closed. Andre taps Problem → *Business closed* → *Report and go to the next stop*. Dispatch's driver chat shows **⚠ PROBLEM — Stop 6: Business closed · 3 packages returning to station**. Stop 7 runs behind a time-skip card. | Driver phone + dispatcher |
+| 9 | **Route complete · the day reconciled** | Andre's summary: 6 stops / 13 packages delivered, 1 problem, 3 packages to bring back. The board: RT-002 and RT-003 delivered, RT-001 *finished · problems*. Reconciliation counted from what the apps recorded: **30 received = 27 delivered + 3 returning**. | Driver app, dispatcher |
 
 **Order note.** In the brief, staging (Act 3) came before assignment (Act 4).
 The demo assigns first, because that is the only order in which the driver app

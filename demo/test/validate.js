@@ -69,7 +69,7 @@ async function snapshot(p) {
 }
 function checkRun(tag, s, net, cons) {
   const r = s.rec;
-  ok(tag + ' finished all 10 scenes', s.trace.scenes.join(',') === '1,2,3,4,5,6,7,8,9,10', s.trace.scenes.join(','));
+  ok(tag + ' finished all 9 scenes', s.trace.scenes.join(',') === '1,2,3,4,5,6,7,8,9', s.trace.scenes.join(','));
   ok(tag + ' packages reconcile (received = delivered + returning)', r.received === 30 && r.routed === 30 && r.stowed === 30 && r.delivered + r.returning === r.received && r.returning === 3, JSON.stringify({ received: r.received, routed: r.routed, stowed: r.stowed, delivered: r.delivered, returning: r.returning }));
   ok(tag + ' final route states', JSON.stringify(r.routes.map((x) => x.s)) === JSON.stringify(['completed_with_exceptions', 'delivered', 'delivered']), r.routes.map((x) => x.t + '=' + x.s).join(', '));
   // status transitions
@@ -77,7 +77,7 @@ function checkRun(tag, s, net, cons) {
   s.trace.status.forEach(([t, st]) => { const prev = last[t]; if (prev !== undefined && prev !== st && !(LEGAL[prev] || []).includes(st)) bad.push(t + ': ' + prev + '→' + st); last[t] = st; });
   ok(tag + ' every status change is legal', !bad.length, bad.join('; ') || s.trace.status.length + ' changes');
   const sync = s.trace.sync; const worst = sync.length ? Math.max.apply(null, sync) : NaN;
-  ok(tag + ' driver app location = demo GPS stream', sync.length > 50 && worst < 1, sync.length + ' fixes, worst gap ' + worst.toFixed(2) + ' m');
+  ok(tag + ' driver app location = demo GPS stream', sync.length > 20 && worst < 1, sync.length + ' fixes, worst gap ' + worst.toFixed(2) + ' m');
   ok(tag + ' no outside network requests', !net.external.length && !s.blocked.length, net.external.slice(0, 3).join(' ') || 'none');
   ok(tag + ' no failed local requests', !net.failed.length, net.failed.slice(0, 3).join(' ') || 'none');
   ok(tag + ' no app or console errors', !s.errors.length && !cons.length, JSON.stringify(s.errors.slice(0, 3)) + ' ' + cons.slice(0, 3).join(' | '));

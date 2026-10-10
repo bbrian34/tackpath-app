@@ -294,7 +294,7 @@
     constructor(view, pos, html, opts) {
       this.view = view; this.pos = pos; this.opts = opts || {};
       this.el = view.doc.createElement('div');
-      this.el.style.cssText = 'position:absolute;left:0;top:0;transform:translate(-50%,-50%);will-change:transform;' + (this.opts.style || '');
+      this.el.style.cssText = 'position:absolute;left:0;top:0;transform:translate(-50%,-50%);' + (this.opts.style || '');
       this.el.innerHTML = html;
       view.overlay.appendChild(this.el); view.markers.add(this); this.place();
     }
@@ -317,7 +317,9 @@
     class LatLng { constructor(a, b) { this._a = +a; this._b = +b; } lat() { return this._a; } lng() { return this._b; } }
     class GMap {
       constructor(div, opts) {
-        this.view = new MapView(div, { theme: 'dark', center: opts && opts.center ? ll(opts.center) : null, mpp: 4.2 });
+        // follow the page's theme (the dispatcher has a light theme)
+        const light = win.document.documentElement.getAttribute('data-theme') === 'light';
+        this.view = new MapView(div, { theme: light ? 'light' : 'dark', center: opts && opts.center ? ll(opts.center) : null, mpp: 4.2 });
         win.__demoFleetMap = this;
         // keep the whole service area (hub + every stop) in view
         const pts = D.STOPS.map((s) => ({ lat: s.lat, lng: s.lng })).concat([{ lat: D.COMPANY.hub.lat, lng: D.COMPANY.hub.lng }]);
