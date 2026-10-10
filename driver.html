@@ -4534,21 +4534,40 @@ wrap('initApp',function(orig){return function(){
     [{label:'Continue',cls:'dx-btn ok wide',fn:function(){closeSheet();go();}}]);
 };});
 
-// Native: ask for "Appear on top" the first time the driver navigates, with
-// an explanation, instead of on every app start.
+// Native: "Appear on top" lets the Back to TackPath / Arrived button show
+// over Google Maps. Checked EVERY time the driver navigates (2026-10, v14:
+// it was asked once ever, so a driver who said "not now", or whose app was
+// reinstalled, never had the button again). While it is off the driver is
+// told, can open the setting (navigation starts by itself on the way back
+// once it is on), or can navigate anyway with the Return to TackPath
+// notification as the way back.
+var navAfterSettings=null;
 wrap('startTurnByTurn',function(orig){return function(){
   var self=this,args=arguments;
   var AP=W.Capacitor&&W.Capacitor.Plugins&&W.Capacitor.Plugins.ArrivalPlugin;
   if(typeof _tpSuppressAutoNav!=='undefined'&&_tpSuppressAutoNav)return orig.apply(self,args);
-  if(!isNative()||!AP||!AP.overlayStatus||ls('tp_dx_overlay_asked'))return orig.apply(self,args);
+  if(!isNative()||!AP||!AP.overlayStatus)return orig.apply(self,args);
   return AP.overlayStatus().then(function(s){
     if(s&&s.granted)return orig.apply(self,args);
-    ls('tp_dx_overlay_asked',1);
-    sheet('Back to TackPath button','<p>While you drive in Google Maps, TackPath can show a button you tap to come straight back. Turn on “Appear on top” for TackPath Driver on the next screen.</p>',
-      [{label:'Turn it on',cls:'dx-btn ok wide',fn:function(){closeSheet();AP.openOverlaySettings().catch(function(){});}},
-       {label:'Not now — start navigation',cls:'dx-btn ghost wide',fn:function(){closeSheet();orig.apply(self,args);}}]);
+    navAfterSettings=null;
+    sheet('Turn on the Back to TackPath button',
+      '<p>“Appear on top” is off for TackPath Driver, so the <b>Back to TackPath</b> and <b>Arrived</b> button cannot show over Google Maps.</p>'
+      +'<p>Tap <b>Turn it on</b>, switch on TackPath Driver, then come back with the back button.</p>'
+      +'<p>Until it is on: pull down the notification bar and tap <b>Return to TackPath</b>.</p>',
+      [{label:'Turn it on',cls:'dx-btn ok wide',fn:function(){closeSheet();navAfterSettings={orig:orig,self:self,args:args};AP.openOverlaySettings().catch(function(){});}},
+       {label:'Start navigation without it',cls:'dx-btn ghost wide',fn:function(){closeSheet();orig.apply(self,args);}}]);
   },function(){return orig.apply(self,args);});
 };});
+// Back from the "Appear on top" screen: navigate if it is on, otherwise say so again.
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden||!navAfterSettings)return;
+  var p=navAfterSettings,AP=W.Capacitor&&W.Capacitor.Plugins&&W.Capacitor.Plugins.ArrivalPlugin;navAfterSettings=null;
+  if(!AP||!AP.overlayStatus)return;
+  setTimeout(function(){AP.overlayStatus().then(function(s){
+    if(s&&s.granted){try{toast('Back to TackPath button is on','ok');}catch(e){}p.orig.apply(p.self,p.args);}
+    else W.startTurnByTurn.apply(p.self,p.args);
+  },function(){});},300);
+});
 
 // ══ Screen hooks ══
 // cards carry the signal banner: refresh it whenever a card is redrawn
