@@ -593,6 +593,23 @@ function goTo(screen){
   if(id==='scInduct'){ renderInductSummary(); }
 }
 
+// ── OPEN ROUTES (2026-10) ──
+// The routes on the board: pending / assigned / in_transit, not archived.
+// Asked newest first with a limit of 500, so a route just uploaded is always
+// in the answer (oldest first with a limit of 50 left new manifests out once
+// a company had 50 archived routes: Clear board archives, the status stays).
+// Archived routes are dropped here, and by the server too once migration 63
+// is applied (exclude_archived; ignored before it). Shown oldest first.
+const TP_ROUTE_LIMIT=500;
+function tpRouteArgs(extra){
+  return Object.assign({statuses:['pending','assigned','in_transit'],order:'desc',limit:TP_ROUTE_LIMIT,exclude_archived:true},extra||{});
+}
+function tpBoardRoutes(list){
+  if(!Array.isArray(list))return list;
+  return list.filter(function(j){return j&&j.archived!==true;}).reverse()
+    .sort(function(a,b){return (Date.parse(a.created_at)||0)-(Date.parse(b.created_at)||0);});
+}
+
 async function loadRoutes(){
   // Signed out (or the session just expired): keep the board as it is.
   if(!tpSession())return;
@@ -600,8 +617,8 @@ async function loadRoutes(){
   await loadBinBindings();
   let fetchErrorOccurred=false;
   try{
-    const r=await tpOrgResp('jobs',{statuses:['pending','assigned','in_transit'],order:'asc',limit:50});
-    const got=await r.json();
+    const r=await tpOrgResp('jobs',tpRouteArgs());
+    const got=tpBoardRoutes(await r.json());
     if(!Array.isArray(got)&&!tpSession())return;      // expired mid-poll: keep the board
     jobs=got;
     if(!Array.isArray(jobs)){
@@ -836,8 +853,8 @@ let pendingBinScan=null;
 
 async function loadUnassignedRoutes(){
   try{
-    const r=await tpOrgResp('jobs',{unbinned:true,statuses:['pending','assigned','in_transit'],order:'asc',limit:2000});
-    unassignedRoutes=await r.json();
+    const r=await tpOrgResp('jobs',tpRouteArgs({unbinned:true}));
+    unassignedRoutes=tpBoardRoutes(await r.json());
     if(!Array.isArray(unassignedRoutes)) unassignedRoutes=[];
   }catch(e){ unassignedRoutes=[]; }
   renderAssignRouteList();
