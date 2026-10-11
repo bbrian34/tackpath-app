@@ -5643,7 +5643,12 @@ W.tpPickup={state:function(){return {tab:P.tab,progress:progress()};},showRoute:
      binding without a staging spot (staging_code null) cannot be scanned:
      AT PICKUP shows "Not staged yet. Wait for the warehouse to stage your
      route." with a Refresh button that reads the binding again. A route with
-     no bin binding at all scans exactly as before. -->
+     no bin binding at all scans exactly as before.
+     2026-10 (v23): staged first, then "ready for pickup". While the binding
+     has no staging spot, nothing the driver sees or hears says ready: the
+     status line reads "Waiting for the warehouse to stage your route" (and
+     the ready toast / voice wait). Once staged: "Ready for pickup" with the
+     STG spot and the Bin, and the ready announcement, once. Wording only. -->
 <style>
 #dxDayCard .tp-stg{margin:10px 0 4px;padding:14px 16px;border-radius:14px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);}
 #dxDayCard .tp-stg-loc{font-size:1.1rem;font-weight:900;line-height:1.2;color:#ffffff;}
@@ -5685,6 +5690,7 @@ function apply(){
   var bin=(s.b&&s.b.bin_code)||(j&&j.bin_label)||'';
   var spot=s.b&&s.b.staging_code;
   if(spot)hideGate();                               // staged by now: the wait message goes
+  wording(card,s.b,spot);
   var html=spot
     ?'<div class="tp-stg-loc">Pickup location: STG '+esc(spot)+'</div>'+(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')
     :(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')+'<div class="tp-stg-note">Not staged yet - check with the warehouse</div>';
@@ -5746,6 +5752,38 @@ if(typeof W.startBinScan==='function'){
     return origScan.apply(self,args);
   };
 }
+// 4. Staged first, then "ready for pickup" (v23). Only the words change.
+var WAIT_LINE='Waiting for the warehouse to stage your route';
+var WAIT_HINT='We will alert you when your route is staged.';
+var heldFor=null;                                   // the job whose ready announcement is waiting
+function setText(el,t){if(el&&el.textContent!==t)el.textContent=t;}
+function wording(card,b,spot){
+  var pill=document.getElementById('dxStage'),hint=card.querySelector('.dx-hint'),ban=document.getElementById('tpStageBanner');
+  if(b&&!spot){
+    if(pill&&(pill.lastChild&&pill.lastChild.nodeType===3?pill.lastChild.nodeValue:'')!==WAIT_LINE){
+      pill.className='dx-status dx-st-waiting';
+      pill.innerHTML='<i></i>';pill.appendChild(document.createTextNode(WAIT_LINE));
+    }
+    setText(hint,WAIT_HINT);
+    setText(ban,WAIT_LINE.toUpperCase());
+  }else if(spot&&heldFor&&heldFor===jobId()){      // staged now: the held announcement, once
+    heldFor=null;
+    try{origToast('Route ready for pickup','ok');}catch(e){}
+    try{origSpeak('Route ready for pickup.');}catch(e){}
+  }
+}
+function readyWords(m){return /ready for pickup/i.test(String(m||''));}
+function notStagedNow(){var s=state();return s.stage==='ready'&&!!s.b&&!s.b.staging_code;}
+// "Route ready for pickup" (the warehouse poll's toast and voice): held while not staged.
+// Decided a moment later, once the poll has recorded the binding it just read.
+function holdReady(orig){return function(m){
+  var self=this,args=arguments;
+  if(!readyWords(m))return orig.apply(self,args);
+  setTimeout(function(){if(notStagedNow()){heldFor=jobId();return;}orig.apply(self,args);},0);
+};}
+var origToast=typeof W.toast==='function'?W.toast:function(){},origSpeak=typeof W.speak==='function'?W.speak:function(){};
+if(typeof W.toast==='function')W.toast=holdReady(origToast);
+if(typeof W.speak==='function')W.speak=holdReady(origSpeak);
 // The card is redrawn by the warehouse poll (and on screen changes): follow it.
 var scr=document.getElementById('scRouteAccepted');
 if(scr&&W.MutationObserver)new MutationObserver(function(){apply();}).observe(scr,{childList:true,subtree:true});
