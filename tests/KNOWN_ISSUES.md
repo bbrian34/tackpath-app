@@ -5,6 +5,21 @@ The suites are green except for the tests listed here. Each is **skipped**
 deliberately not changed by the test cleanup. Un-skip the test in the same PR
 that fixes the bug.
 
+## Status (2026-10-11): both fixed SERVER-SIDE by migration 68
+
+`supabase/security/68_job_timestamps.sql` is a trigger on `public.jobs`. It
+sets `picked_up_at` when a route goes `in_transit` and `delivered_at` when it
+goes `delivered` or `completed_with_exceptions`, never overwriting a value.
+The app is unchanged.
+
+- Proof that the server writes them: `tests/security/job-timestamps.test.mjs`.
+- Proof that the dispatcher shows them: `tests/dispatcher-job-timestamps.test.js`.
+
+The two tests below stay **skipped**. They check what `driver.html` *sends*
+in its update, and the page still sends no timestamp. They would pass only if
+the app also sent the times, which is not needed now. Delete them, or re-point
+them at the server, once 68 is applied in production.
+
 ## 1. `driver.html: captures picked_up_at when the route is picked up (Start Route)` (tests/driver.test.js)
 
 - **What breaks:** no driver code ever writes `jobs.picked_up_at`. Start Route
