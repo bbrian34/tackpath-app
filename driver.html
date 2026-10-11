@@ -442,6 +442,40 @@ button,a,input,textarea{font-family:var(--sans);}
 .t-info{background:var(--card);border:1.5px solid rgba(25,183,239,.45);color:var(--blue);}
 .t-warn{background:var(--card);border:1.5px solid rgba(255,150,30,.45);color:var(--orange);}
 </style>
+<!-- TP-LOGIN:BEGIN  Sign-in screen look (2026-10). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). Only #scLogin; no behaviour. -->
+<style>
+/* Explicit colours for the wordmark. TACK was an inline #ffffff, so on the
+   light-mode card (white) it was invisible; the light-mode .wm .t rule never
+   applied because the markup had no .t class. */
+#scLogin{padding:max(40px,8vh,calc(env(safe-area-inset-top) + 16px)) 20px max(28px,calc(env(safe-area-inset-bottom) + 16px));}
+#scLogin .lbox{max-width:400px;flex-shrink:0;}
+#scLogin .lbox-top{padding:36px 24px 22px;}
+#scLogin #tpSymbol{margin:0 auto 12px!important;}
+#scLogin .wm{display:block;line-height:1.2;letter-spacing:0;white-space:nowrap;}
+#scLogin .wm-txt{font-family:'Montserrat','DM Sans',sans-serif;font-size:1.5rem;font-weight:600;letter-spacing:3px;}
+#scLogin .wm .t{color:#ffffff;}
+#scLogin .wm .p{color:#19b7ef;}
+body.light-mode #scLogin .wm .t{color:#111827;}
+body.light-mode #scLogin .wm .p{color:#0a6496;}
+#scLogin .lbox-badge{margin-top:12px;padding:5px 16px;font-size:.8125rem;letter-spacing:.14em;text-transform:uppercase;color:#53ff88;}
+body.light-mode #scLogin .lbox-top{border-bottom-color:rgba(0,0,0,.08);}
+body.light-mode #scLogin .lbox-badge{color:#166534;background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.3);}
+#scLogin .lbox-form{padding:24px 24px 28px;}
+#scLogin .fl{margin-bottom:8px;}
+#scLogin .fi{min-height:52px;margin-bottom:16px;}
+#scLogin .fb{min-height:52px;}
+#scLogin #loginPhaseCode button:not(.fb){min-height:48px;}
+#scLogin .fn{line-height:1.5;}
+@media (max-width:360px){
+  #scLogin{padding-left:14px;padding-right:14px;}
+  #scLogin .lbox-top{padding:28px 18px 18px;}
+  #scLogin .lbox-form{padding:20px 18px 24px;}
+  #scLogin .wm-txt{font-size:1.35rem;letter-spacing:2px;}
+}
+</style>
+<!-- TP-LOGIN:END -->
 </head>
 <body>
 
@@ -457,8 +491,8 @@ button,a,input,textarea{font-family:var(--sans);}
           <path d="M35 47V14Q35 10 39 6"/>
         </g>
       </svg>
-      <div class="wm"><span style="font-family:'Montserrat',sans-serif;font-size:1.19rem;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
-      <div class="lbox-badge">Driver Portal</div>
+      <div class="wm" role="img" aria-label="TackPath"><span class="wm-txt"><span class="t">T Ʌ C K </span><span class="p">P Ʌ T H</span></span></div>
+      <div class="lbox-badge">Driver</div>
     </div>
     <div class="lbox-form" id="loginPhasePhone">
       <label class="fl">Mobile Number</label>
