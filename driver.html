@@ -5638,13 +5638,23 @@ W.tpPickup={state:function(){return {tab:P.tab,progress:progress()};},showRoute:
      STAGED (STG, e.g. S-01) and scans the BIN as before; the LOC the PathIQ
      worker used while stowing is never shown (it is dropped from every bin
      answer here, and migration 67 stops sending it). Only the pickup line
-     changes; the BIN scan, Route preview, Load, Start Route are untouched. -->
+     changes; the BIN scan, Route preview, Load, Start Route are untouched.
+     2026-10 (v22): the BIN scan waits for staging. A route that has a bin
+     binding without a staging spot (staging_code null) cannot be scanned:
+     AT PICKUP shows "Not staged yet. Wait for the warehouse to stage your
+     route." with a Refresh button that reads the binding again. A route with
+     no bin binding at all scans exactly as before. -->
 <style>
 #dxDayCard .tp-stg{margin:10px 0 4px;padding:14px 16px;border-radius:14px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);}
 #dxDayCard .tp-stg-loc{font-size:1.1rem;font-weight:900;line-height:1.2;color:#ffffff;}
 #dxDayCard .tp-stg-bin{font-size:1.1rem;font-weight:900;line-height:1.2;margin-top:6px;color:#ffffff;}
 #dxDayCard .tp-stg-note{font-size:1rem;font-weight:700;margin-top:6px;color:#ffb020;}
 body.light-mode #dxDayCard .tp-stg-note{color:#9a5b00;}
+#tpStgGate{width:100%;max-width:340px;margin:0 auto 14px;padding:14px 16px;border-radius:14px;background:rgba(255,176,32,.12);
+  border:1px solid rgba(255,176,32,.55);color:#ffb020;font-weight:800;font-size:1rem;line-height:1.35;text-align:center;box-sizing:border-box;}
+body.light-mode #tpStgGate{color:#7a4800;background:#fff4e0;}
+#tpStgGate button{display:block;width:100%;min-height:48px;margin-top:10px;border-radius:12px;border:0;background:#ffb020;color:#111;
+  font-weight:900;font-size:1rem;cursor:pointer;}
 </style>
 <script>
 (function(){
@@ -5674,6 +5684,7 @@ function apply(){
   var j=null;try{j=(typeof currentJob!=='undefined'&&currentJob)||null;}catch(e){}
   var bin=(s.b&&s.b.bin_code)||(j&&j.bin_label)||'';
   var spot=s.b&&s.b.staging_code;
+  if(spot)hideGate();                               // staged by now: the wait message goes
   var html=spot
     ?'<div class="tp-stg-loc">Pickup location: STG '+esc(spot)+'</div>'+(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')
     :(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')+'<div class="tp-stg-note">Not staged yet - check with the warehouse</div>';
@@ -5683,10 +5694,62 @@ function apply(){
   box.setAttribute('data-k',html);box.innerHTML=html;
   kv.style.display='none';
 }
+// 3. The BIN scan waits for staging (v22). Only a route WITH a bin binding and
+// no staging spot is held; no binding at all = exactly as before.
+var GATE_MSG='Not staged yet. Wait for the warehouse to stage your route.';
+function jobId(){try{return (typeof currentJob!=='undefined'&&currentJob&&currentJob.id)||null;}catch(e){return null;}}
+function liveRow(rows){
+  if(!Array.isArray(rows)||!rows.length)return null;
+  for(var i=0;i<rows.length;i++){var r=rows[i];if(r&&(r.state==='ready'||r.state==='open'))return r;}
+  return rows[0];
+}
+// The job's binding now: a fresh read; offline, the one the warehouse poll last saw.
+async function binding(){
+  var id=jobId();if(!id)return {known:false};
+  try{
+    if(typeof W.tpDriver==='function'){var rows=await W.tpDriver('bin_binding',{job_id:id});return {known:true,row:liveRow(rows)};}
+  }catch(e){}
+  var s=state();return s.b?{known:true,row:s.b}:{known:false};
+}
+function gateEl(){return document.getElementById('tpStgGate');}
+function hideGate(){var g=gateEl();if(g)g.remove();}
+function showGate(){
+  var scr=document.getElementById('scRouteAccepted'),g=gateEl();
+  if(!scr)return;
+  if(!g){
+    g=document.createElement('div');g.id='tpStgGate';g.setAttribute('role','alert');
+    g.innerHTML='<div class="tp-stg-gate-msg"></div><button type="button" id="tpStgRefresh">Refresh</button>';
+    var btn=scr.querySelector('button[onclick^="startBinScan"]');
+    if(btn&&btn.parentNode)btn.parentNode.insertBefore(g,btn);else scr.appendChild(g);
+    g.querySelector('#tpStgRefresh').onclick=refresh;
+  }
+  g.querySelector('.tp-stg-gate-msg').textContent=GATE_MSG;
+  try{toast(GATE_MSG,'warn');}catch(e){}
+}
+function notStaged(b){return !!(b&&b.row&&!b.row.staging_code);}
+function remember(row){try{if(W.dx&&W.dx.state&&row){W.dx.state.binding=row;if(row.state==='ready')W.dx.state.stage='ready';}}catch(e){}}
+async function refresh(){
+  var b=await binding();
+  if(b.known&&b.row)remember(b.row);
+  if(notStaged(b)){showGate();return false;}
+  hideGate();
+  try{if(W.dx&&typeof W.dx.renderDay==='function')W.dx.renderDay();}catch(e){}
+  apply();
+  return true;
+}
+if(typeof W.startBinScan==='function'){
+  var origScan=W.startBinScan;
+  W.startBinScan=async function(){
+    var self=this,args=arguments,b=await binding();
+    if(notStaged(b)){remember(b.row);showGate();return;}
+    hideGate();
+    return origScan.apply(self,args);
+  };
+}
 // The card is redrawn by the warehouse poll (and on screen changes): follow it.
 var scr=document.getElementById('scRouteAccepted');
 if(scr&&W.MutationObserver)new MutationObserver(function(){apply();}).observe(scr,{childList:true,subtree:true});
-W.tpStg={apply:apply,clean:clean};
+W.tpStg={apply:apply,clean:clean,refresh:refresh,message:GATE_MSG};
 apply();
 })();
 </script>

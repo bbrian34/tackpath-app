@@ -219,7 +219,7 @@ for (const n of [2, 30, 75]) {
       let body = '[]';
       try { const act = JSON.parse(r.request().postData() || '{}').p_action;
         if (act === 'job') body = JSON.stringify(JOB); else if (act === 'jobs') body = JSON.stringify([JOB]);
-        else if (act === 'bin_binding') body = JSON.stringify([{ bin_code: '1A', state: 'ready' }]); } catch (e) {}
+        else if (act === 'bin_binding') body = JSON.stringify([{ bin_code: '1A', state: 'ready', staging_code: 'S-01' }]); } catch (e) {}   // bin staged (v22)
       r.fulfill({ status: 200, contentType: 'application/json', body });
     });
     await p.addInitScript(() => { try { localStorage.setItem('tp_dx_perm_intro', '1');

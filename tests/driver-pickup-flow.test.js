@@ -161,6 +161,13 @@ async function toBinScan(staged) {
   if (staged) assert.match(card, /Pickup location: STG S-01\s*Bin 1/); else assert.match(card, /Bin 1\s*Not staged yet - check with the warehouse/);
   a.$('scRouteAccepted').querySelector('button:not(.dx-btn)').click();       // AT PICKUP
   await settle(300);
+  if (!staged) {                                                              // v22: held until the warehouse stages it
+    assert.strictEqual(a.screen(), 'scRouteAccepted', 'not staged: the BIN scan waits');
+    assert.ok(a.$('tpStgGate'), 'the wait message');
+    srv.binding = Object.assign({}, srv.binding, { staging_code: 'S-01' });   // PathIQ stages the route
+    a.$('tpStgRefresh').click(); await settle(300);
+    a.$('scRouteAccepted').querySelector('button:not(.dx-btn)').click(); await settle(300);
+  }
   assert.strictEqual(a.screen(), 'scScan', 'the bin scan opens');
   } catch (e) { a.close(); throw e; }
   return { a, srv };
@@ -171,7 +178,7 @@ async function scanBin(a) {
 }
 
 for (const staged of [true, false]) {
-  test(`${staged ? 'a' : 'b'}. ${staged ? 'staged' : 'not staged'} route, 2 stops / 12 packages: the BIN scan lands on the Route tab (Load next), never Maps`, async () => {
+  test(`${staged ? 'a' : 'b'}. ${staged ? 'staged' : 'not staged at first (held, then staged)'} route, 2 stops / 12 packages: the BIN scan lands on the Route tab (Load next), never Maps`, async () => {
     const { a, srv } = await toBinScan(staged);
     try {
       await scanBin(a);
