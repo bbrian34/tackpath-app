@@ -5644,8 +5644,8 @@ W.tpPickup={state:function(){return {tab:P.tab,progress:progress()};},showRoute:
      changes; the BIN scan, Route preview, Load, Start Route are untouched. -->
 <style>
 #dxDayCard .tp-stg{margin:10px 0 4px;padding:14px 16px;border-radius:14px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);}
-#dxDayCard .tp-stg-loc{font-size:1.4rem;font-weight:900;line-height:1.2;color:#ffffff;}
-#dxDayCard .tp-stg-bin{font-size:1.4rem;font-weight:900;line-height:1.2;margin-top:6px;color:#ffffff;}
+#dxDayCard .tp-stg-loc{font-size:1.1rem;font-weight:900;line-height:1.2;color:#ffffff;}
+#dxDayCard .tp-stg-bin{font-size:1.1rem;font-weight:900;line-height:1.2;margin-top:6px;color:#ffffff;}
 #dxDayCard .tp-stg-note{font-size:1rem;font-weight:700;margin-top:6px;color:#ffb020;}
 body.light-mode #dxDayCard .tp-stg-note{color:#9a5b00;}
 </style>
@@ -5694,6 +5694,108 @@ apply();
 })();
 </script>
 <!-- TP-STG:END -->
+<!-- TP-RSTATE:BEGIN  Per-route saved state belongs to ONE job id (2026-10, v20).
+     Kept IDENTICAL in bbrian34/tackpath-app driver.html and
+     bbrian34/tackpath-driver www/index.html (a test in each repo checks this).
+     Cause fixed: a route finished on the server (delivered, completed, ...)
+     while its state was still saved on the phone came back on every app open
+     as in transit, with every package "loaded" (the next route reuses the
+     same tracking numbers) and the last delivery's arrival service still
+     armed: the BIN scan of the next route then landed in the old route's
+     delivery flow and the old "you have arrived" fired. TP-GONE only let go
+     of REMOVED routes (archived, cancelled, deleted, reassigned).
+     Now: (1) a route the server no longer has as assigned / in transit is let
+     go everywhere, on app open and on every poll (TP-GONE's own clear);
+     (2) on app open, saved scans of any job that is not the active job are
+     dropped; (3) loaded counts and delivery scans in memory are kept only for
+     the job they were made for: a different job id starts from zero, so the
+     BIN scan always opens the Route preview and the Load tab unless THIS job
+     has every package loaded; (4) Google Maps, the arrival service and
+     "you have arrived" only for the current job once it is in transit
+     (Start Route), and an arrival from another job's service is ignored. -->
+<script>
+(function(){
+var W=window;
+var NAV_KEY='tp_nav_job',SCANS_KEY='tp_dx_route';
+var LIVE=['assigned','in_transit'];
+var MSG_DONE='Your last route is finished.';
+function lsGet(k){try{var r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch(e){return null;}}
+function lsSet(k,v){try{if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function active(){try{return (typeof currentJob!=='undefined'&&currentJob)||null;}catch(e){return null;}}
+function id(){var j=active();return j&&j.id!=null?String(j.id):null;}
+function inTransit(){var j=active();return !!(j&&j.status==='in_transit');}
+function notStarted(){var j=active();return !!(j&&j.status!=='in_transit');}
+function wrapFn(name,fn){var orig=W[name];if(typeof orig!=='function')return;W[name]=fn(orig);}
+function call(fn){try{if(typeof W[fn]==='function')W[fn]();}catch(e){}}
+// (3) In-memory scans belong to the job they were made for.
+var owner=id();
+function resetScans(){
+  try{if(typeof loadedPackages!=='undefined')loadedPackages=new Map();}catch(e){}
+  try{if(typeof loadedCounts!=='undefined')loadedCounts=new Map();}catch(e){}
+  try{deliveryScans=new Map();deliveryDamaged=new Map();}catch(e){}
+  W._deliveryScan=null;W._loadedPackageIds=new Set();
+}
+function own(){
+  var k=id();if(!k||k===owner)return;
+  var was=owner;owner=k;
+  if(was!=null)resetScans();          // a different job: its counts start at zero
+  var s=lsGet(SCANS_KEY);if(s&&String(s.job)!==k)lsSet(SCANS_KEY,null);
+  var nav=lsGet(NAV_KEY);if(nav!=null&&String(nav)!==k){lsSet(NAV_KEY,null);call('stopArrivalService');}
+}
+['acceptOffer','tpAdoptAssignedRoute'].forEach(function(n){wrapFn(n,function(orig){return function(){
+  var r=orig.apply(this,arguments);
+  if(r&&typeof r.then==='function')return r.then(function(v){own();return v;});
+  own();return r;
+};});});
+wrapFn('startBinScan',function(orig){return function(){own();return orig.apply(this,arguments);};});
+wrapFn('confirmPickup',function(orig){return function(){own();return orig.apply(this,arguments);};});
+// (4) Navigation and arrival: only the current job, only once it is in transit.
+wrapFn('startTurnByTurn',function(orig){return function(){
+  if(notStarted())return;
+  own();if(id())lsSet(NAV_KEY,id());
+  return orig.apply(this,arguments);
+};});
+wrapFn('startArrivalService',function(orig){return function(){
+  if(notStarted())return Promise.resolve(false);
+  if(id())lsSet(NAV_KEY,id());
+  return orig.apply(this,arguments);
+};});
+wrapFn('showArrivalPrompt',function(orig){return function(){
+  var nav=lsGet(NAV_KEY);
+  if(!inTransit()||(nav!=null&&String(nav)!==id())){call('stopArrivalService');return;}
+  return orig.apply(this,arguments);
+};});
+// (1) A route the server has finished is let go, the same way TP-GONE lets go
+// of a removed one. No signal or a server error: keep it, ask again.
+var checking=false;
+async function check(){
+  var j=active();if(!j||!j.id||checking)return;
+  if(navigator.onLine===false||typeof tpDriver!=='function'||!W.tpGone)return;
+  if(document.getElementById('dxSummary'))return;   // the phone itself just finished it
+  checking=true;
+  try{
+    var row;try{row=await tpDriver('job',{id:j.id});}catch(e){return;}
+    if(!row||!active()||String(active().id)!==String(j.id))return;
+    if(row.archived===true||row.status==='cancelled')return;   // TP-GONE's case
+    if(LIVE.indexOf(row.status)<0){lsSet(NAV_KEY,null);W.tpGone.forget(j.id,MSG_DONE);}
+  }finally{checking=false;}
+}
+wrapFn('pollJobs',function(orig){return function(){if(active())check();return orig.apply(this,arguments);};});
+wrapFn('tpRefreshStage',function(orig){return async function(){await check();if(!active())return;return orig.apply(this,arguments);};});
+setInterval(check,5000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)check();});
+// (2) One-time cleanup on app open: saved state of any job that is not the
+// active job goes (scans, navigation target and its arrival service).
+(function(){
+  var k=id(),s=lsGet(SCANS_KEY),nav=lsGet(NAV_KEY);
+  if(s&&String(s.job)!==k)lsSet(SCANS_KEY,null);
+  if(nav!=null&&String(nav)!==k){lsSet(NAV_KEY,null);call('stopArrivalService');}
+})();
+W.tpRouteState={check:check,owner:function(){return owner;}};
+check();
+})();
+</script>
+<!-- TP-RSTATE:END -->
 </body>
 </html>
 

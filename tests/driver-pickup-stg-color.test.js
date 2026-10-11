@@ -18,8 +18,8 @@ let browser;
 test.before(async () => { browser = await launch(); });
 test.after(async () => { if (browser) await browser.close(); });
 
-async function card(mode, spot) {
-  const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true });
+async function card(mode, spot, vw = 412, vh = 915) {
+  const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, isMobile: true, hasTouch: true });
   const p = await ctx.newPage();
   await p.route(/^https?:\/\//, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await p.addInitScript((m) => { try { localStorage.setItem('tp_theme', m); localStorage.setItem('tp_dx_perm_intro', '1'); } catch (e) {} }, mode);
@@ -39,7 +39,12 @@ async function card(mode, spot) {
     const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
     const info = (sel) => { const e = document.querySelector(sel); if (!e) return null; const cs = getComputedStyle(e), b = bg(e), f = over(rgba(cs.color), b);
       return { text: e.textContent, color: cs.color, size: cs.fontSize, weight: cs.fontWeight, contrast: (Math.max(lum(f), lum(b)) + 0.05) / (Math.min(lum(f), lum(b)) + 0.05), bg: b }; };
-    return { loc: info('#dxDayCard .tp-stg-loc'), bin: info('#dxDayCard .tp-stg-bin'), ink: getComputedStyle(document.getElementById('dxDayCard')).color };
+    const fit = (sel) => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(), c = document.getElementById('dxDayCard').getBoundingClientRect(),
+      bx = e.closest('.tp-stg').getBoundingClientRect(), lh = parseFloat(getComputedStyle(e).lineHeight) || parseFloat(getComputedStyle(e).fontSize) * 1.2;
+      return { clipped: e.scrollWidth > e.clientWidth + 1, inBox: r.left >= bx.left - 0.5 && r.right <= bx.right + 0.5 && bx.left >= c.left - 0.5 && bx.right <= c.right + 0.5 && bx.right <= innerWidth,
+        lines: Math.round(r.height / lh), overflow: document.documentElement.scrollWidth > innerWidth + 1 }; };
+    return { loc: info('#dxDayCard .tp-stg-loc'), bin: info('#dxDayCard .tp-stg-bin'), ink: getComputedStyle(document.getElementById('dxDayCard')).color,
+      fitLoc: fit('#dxDayCard .tp-stg-loc'), fitBin: fit('#dxDayCard .tp-stg-bin') };
   }, spot);
   await ctx.close();
   return m;
@@ -66,5 +71,25 @@ for (const mode of ['dark', 'light']) {
     assert.strictEqual(n.bin.text, 'Bin 1');
     assert.strictEqual(n.bin.color, m.bin.color);
     assert.strictEqual(n.bin.size, m.bin.size);
+  });
+}
+
+// v20: a bit smaller (about 1.1rem), all three parts the same, the whole text inside the card
+for (const [vw, vh] of [[360, 640], [412, 915]]) {
+  test(`${vw}x${vh}: "Pickup location: STG S-01" and "Bin 1" are ~1.1rem, same size and weight, white, and fit inside the card on one line each`, async () => {
+    for (const mode of ['dark', 'light']) {
+      const m = await card(mode, 'S-01', vw, vh);
+      const at = `${mode} ${vw}x${vh}`;
+      assert.strictEqual(m.loc.size, '17.6px', 'about 1.1rem: ' + at);
+      assert.strictEqual(m.bin.size, m.loc.size);
+      assert.strictEqual(m.bin.weight, m.loc.weight);
+      assert.strictEqual(m.loc.color, 'rgb(255, 255, 255)');
+      for (const [k, f] of [['loc', m.fitLoc], ['bin', m.fitBin]]) {
+        assert.ok(!f.clipped, k + ' not clipped: ' + at);
+        assert.ok(f.inBox, k + ' inside the card: ' + at);
+        assert.strictEqual(f.lines, 1, k + ' on one line: ' + at);
+        assert.ok(!f.overflow, 'no sideways scroll: ' + at);
+      }
+    }
   });
 }

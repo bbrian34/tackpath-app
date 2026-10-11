@@ -177,7 +177,7 @@ test('a. staged route: "Pickup location: STG S-01" in large text, then "Bin 1"; 
     assert.strictEqual(txt(bin), 'Bin 1');
     assert.ok(loc.compareDocumentPosition(bin) & a.w.Node.DOCUMENT_POSITION_FOLLOWING, 'STG first, then the bin');
     assert.ok(a.$('scRouteAccepted').classList.contains('on') && !loc.closest('[style*="display: none"],[style*="display:none"],[hidden]'), 'on screen');
-    assert.match(HTML, /#dxDayCard \.tp-stg-loc\{font-size:1\.4rem;font-weight:900/, 'large, clear text');
+    assert.match(HTML, /#dxDayCard \.tp-stg-loc\{font-size:1\.1rem;font-weight:900/, 'large, clear text');
     assert.match(txt(card(a)), /Ready for pickup/);
     noLoc(a);
   } finally { a.close(); }
