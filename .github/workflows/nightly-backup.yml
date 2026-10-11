@@ -1,0 +1,61 @@
+# Nightly encrypted backup of the TackPath database, the storage file list and
+# both code repos, to Backblaze B2 (outside Supabase). Read-only against the
+# database. See docs/backups-runbook.md. Off until the repository variable
+# BACKUP_ENABLED is set to true (after the secrets are in place).
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: '17 7 * * *'        # 07:17 UTC every night (3:17 am Eastern, summer time)
+  workflow_dispatch: {}          # "Run workflow" button, for the first run and tests
+
+permissions:
+  contents: read
+  issues: write                  # only to open the failure alert issue
+
+concurrency:
+  group: nightly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: vars.BACKUP_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install the Postgres 17 client and age
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 age > /dev/null
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+          aws --version
+
+      - name: Back up (dump, encrypt, upload, keep 14 / 8 / 6)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APP_KEY: ${{ secrets.B2_APP_KEY }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: bash backup/backup.sh
+
+      - name: Alert on failure (opens an issue; GitHub emails the repo owner)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create --title "Nightly backup FAILED - $(date -u +%F)" \
+            --body "The nightly backup did not complete. Log: $RUN_URL
+
+          See docs/backups-runbook.md, *If something fails*. Close this issue once a backup has run green again."
