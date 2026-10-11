@@ -5202,8 +5202,6 @@ check();
 .tprm-preview .tprm{position:relative;flex:1;overflow:hidden;background:#eef2f6;background-image:linear-gradient(#dfe5ec 1px,transparent 1px),linear-gradient(90deg,#dfe5ec 1px,transparent 1px);
   background-size:40px 40px;touch-action:none;user-select:none;-webkit-user-select:none;}
 .tprm-preview .tprm-dots{position:absolute;inset:0;transform-origin:0 0;}
-.tprm-preview .tprm-line{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;}
-.tprm-preview .tprm-line polyline{fill:none;stroke:#0a58ca;stroke-width:3;stroke-opacity:.45;stroke-linejoin:round;stroke-dasharray:6 5;}
 .tprm-preview .tprm-dot{position:absolute;width:26px;height:26px;min-height:0;margin:-13px 0 0 -13px;padding:0;border-radius:50%;
   border:2px solid #fff;background:#0a58ca;color:#fff;font:800 12px/22px system-ui,-apple-system,sans-serif;text-align:center;
   box-shadow:0 1px 4px rgba(0,0,0,.55);cursor:pointer;z-index:2;letter-spacing:-.5px;}
@@ -5271,8 +5269,8 @@ function unpx(x,y,z){var w=TILE*Math.pow(2,z),n=Math.PI-2*Math.PI*y/w;
   return {lat:180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))),lng:x/w*360-180};}
 // One map of numbered dots inside `ov` (2026-10-12: one implementation for the
 // Route Map button and the pickup preview). opt.ids: the Route Map's element
-// ids; opt.base: draw the Google Embed map under the dots; opt.line: join the
-// dots in route order; opt.preview: nothing done or current yet.
+// ids; opt.base: draw the Google Embed map under the dots; opt.preview: nothing
+// done or current yet.
 function create(ov,before,opt){
   var V={z:12,c:null},M=[],sel=-1,frames=[],act=0,pendingSrc='',moved=false;
   var id=function(n){return opt.ids?' id="'+n+'"':'';};
@@ -5342,9 +5340,8 @@ function create(ov,before,opt){
         var k=(27-dd)/2/dd;p.x-=dx*k;p.y-=dy*k;q.x+=dx*k;q.y+=dy*k;}
       if(!hit)break;}
     dots.style.transform='';
-    dots.innerHTML=(opt.line&&placed.length>1?'<svg class="tprm-line" width="'+Math.round(sz.w)+'" height="'+Math.round(sz.h)+'"><polyline points="'
-      +placed.map(function(d){return d.x.toFixed(1)+','+d.y.toFixed(1);}).join(' ')+'"/></svg>':'')
-      +placed.map(function(d){var m=d.m;
+    // 2026-10 (v21): no line joining the dots (30-75 stops: it was noise)
+    dots.innerHTML=placed.map(function(d){var m=d.m;
       return '<button type="button" class="tprm-dot st-'+m.state+(m.i===sel?' sel':'')+'" data-i="'+m.i+'" data-stop="'+m.n+'"'
         +' aria-label="Stop '+m.n+'" style="left:'+d.x.toFixed(1)+'px;top:'+d.y.toFixed(1)+'px">'+m.n+'</button>';}).join('');
     var off=M.filter(function(m){return !m.pos;});
@@ -5433,7 +5430,7 @@ function open(){
 // The pickup preview (TP-PICKUP): the same dots, read-only, no Google map under them.
 function mount(host,shown){
   host.classList.add('tprm-preview');
-  var m=create(host,null,{line:true,preview:true,shown:shown||function(){return true;}});
+  var m=create(host,null,{preview:true,shown:shown||function(){return true;}});
   return m;
 }
 W.showRouteMapOverlay=open;
