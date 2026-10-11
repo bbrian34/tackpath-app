@@ -5635,6 +5635,66 @@ W.tpPickup={state:function(){return {tab:P.tab,progress:progress()};},showRoute:
 })();
 </script>
 <!-- TP-PICKUP:END -->
+<!-- TP-STG:BEGIN  Pickup location = the STAGING spot (2026-10). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). The driver walks to where the route is
+     STAGED (STG, e.g. S-01) and scans the BIN as before; the LOC the PathIQ
+     worker used while stowing is never shown (it is dropped from every bin
+     answer here, and migration 67 stops sending it). Only the pickup line
+     changes; the BIN scan, Route preview, Load, Start Route are untouched. -->
+<style>
+#dxDayCard .tp-stg{margin:10px 0 4px;padding:14px 16px;border-radius:14px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);}
+#dxDayCard .tp-stg-loc{font-size:1.5rem;font-weight:900;line-height:1.2;color:#19b7ef;}
+#dxDayCard .tp-stg-bin{font-size:1.15rem;font-weight:800;margin-top:6px;color:inherit;}
+#dxDayCard .tp-stg-note{font-size:1rem;font-weight:700;margin-top:6px;color:#ffb020;}
+body.light-mode #dxDayCard .tp-stg-loc{color:#0a6496;}
+body.light-mode #dxDayCard .tp-stg-note{color:#9a5b00;}
+</style>
+<script>
+(function(){
+var W=window;
+// 1. Bin answers carry the bin, its state and the staging spot only: no LOC.
+function clean(rows){
+  if(!Array.isArray(rows))return rows;
+  return rows.map(function(b){
+    if(!b||typeof b!=='object')return b;
+    return {bin_code:b.bin_code,state:b.state,staging_code:b.staging_code||null};
+  });
+}
+if(typeof W.tpDriver==='function'){
+  var origDriver=W.tpDriver;
+  W.tpDriver=async function(action){
+    var r=await origDriver.apply(this,arguments);
+    return action==='bin_binding'?clean(r):r;
+  };
+}
+// 2. The pickup line on the route card (Waiting for warehouse / Ready for pickup).
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function state(){var d=W.dx&&W.dx.state;return d?{stage:d.stage,b:d.binding||null}:{stage:null,b:null};}
+function apply(){
+  var card=document.getElementById('dxDayCard');if(!card)return;
+  var kv=card.querySelector('.dx-kv'),s=state();
+  if(!kv||s.stage!=='ready')return;                 // not ready: Waiting for warehouse, unchanged
+  var j=null;try{j=(typeof currentJob!=='undefined'&&currentJob)||null;}catch(e){}
+  var bin=(s.b&&s.b.bin_code)||(j&&j.bin_label)||'';
+  var spot=s.b&&s.b.staging_code;
+  var html=spot
+    ?'<div class="tp-stg-loc">Pickup location: STG '+esc(spot)+'</div>'+(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')
+    :(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')+'<div class="tp-stg-note">Not staged yet - check with the warehouse</div>';
+  var box=card.querySelector('.tp-stg');
+  if(box&&box.getAttribute('data-k')===html)return;
+  if(!box){box=document.createElement('div');box.className='tp-stg';kv.parentNode.insertBefore(box,kv);}
+  box.setAttribute('data-k',html);box.innerHTML=html;
+  kv.style.display='none';
+}
+// The card is redrawn by the warehouse poll (and on screen changes): follow it.
+var scr=document.getElementById('scRouteAccepted');
+if(scr&&W.MutationObserver)new MutationObserver(function(){apply();}).observe(scr,{childList:true,subtree:true});
+W.tpStg={apply:apply,clean:clean};
+apply();
+})();
+</script>
+<!-- TP-STG:END -->
 </body>
 </html>
 
