@@ -1,0 +1,28 @@
+# Monthly reminder to run the restore test (docs/backups-runbook.md, part D).
+# Opens an issue on the 1st of every month; close it when the test passes.
+name: Monthly restore test reminder
+
+on:
+  schedule:
+    - cron: '23 14 1 * *'       # the 1st of each month, 14:23 UTC
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Open the reminder issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh issue create \
+            --title "Monthly restore test - $(date -u +'%B %Y')" \
+            --body "Time for the monthly backup restore test (about 30 minutes on the PC).
+
+          Follow **docs/backups-runbook.md, part D (Restore test)**: download last night's set from Backblaze, plug in the key USB stick, run \`bash backup/restore-test.sh\` against the **scratch** project.
+
+          When it prints **RESTORE TEST: PASS**, paste the last lines of \`restore-report-<date>.txt\` here (it holds no secrets) and close this issue. If it fails, leave this open and see the runbook's *If something fails* section."
