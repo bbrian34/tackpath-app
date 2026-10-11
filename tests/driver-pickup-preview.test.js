@@ -154,7 +154,7 @@ const BARCODES = ['720431958206', '720431958213', '720431958220'];   // stop 1 (
 
 // Route accepted, bin ready: AT PICKUP, scan the bin. Lands on the pickup tabs.
 async function atPickup(srv, opts = {}) {
-  srv.binding = { bin_code: '2B', state: 'ready' };
+  srv.binding = { bin_code: '2B', state: 'ready', staging_code: 'S-01' };   // staged (v22: the BIN scan waits for staging)
   const a = boot(srv, Object.assign({ routeState: { currentJob: srv.jobs[0], surgeStops: srv.jobs[0].surge_stops, screenContext: 'accepted' } }, opts));
   await settle(700);
   a.w.eval('startBinScan()');

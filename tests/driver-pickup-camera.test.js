@@ -33,7 +33,7 @@ async function loadTab(width, height) {
     let body = '[]';
     try { const a = JSON.parse(r.request().postData() || '{}').p_action;
       if (a === 'job') body = JSON.stringify(JOB); else if (a === 'jobs') body = JSON.stringify([JOB]);
-      else if (a === 'bin_binding') body = JSON.stringify([{ bin_code: '1A', state: 'ready' }]); } catch (e) {}
+      else if (a === 'bin_binding') body = JSON.stringify([{ bin_code: '1A', state: 'ready', staging_code: 'S-01' }]); } catch (e) {}   // bin staged (v22: the BIN scan waits for staging)
     r.fulfill({ status: 200, contentType: 'application/json', body });
   });
   await p.addInitScript(() => { try { localStorage.setItem('tp_dx_perm_intro', '1');
