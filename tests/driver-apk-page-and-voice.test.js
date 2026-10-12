@@ -185,8 +185,10 @@ test('1. the page built into the APK is the same as www/index.html (no stale cop
   assert.ok(apk === fs.readFileSync(path.join(ROOT, 'www', 'index.html'), 'utf-8'),
     'android/app/src/main/assets/public/index.html differs from www/index.html: a build without "npx cap sync android" would ship an old page. '
     + 'TP-STG in it: ' + /TP-STG:BEGIN/.test(apk));
-  for (const f of fs.readdirSync(path.join(ROOT, 'www', 'vendor'))) {
-    assert.ok(fs.readFileSync(path.join(ROOT, 'www', 'vendor', f)).equals(fs.readFileSync(path.join(path.dirname(APK_PAGE), 'vendor', f))), 'vendor/' + f);
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+  for (const f of walk(path.join(ROOT, 'www', 'vendor')).map((x) => path.relative(path.join(ROOT, 'www'), x))) {
+    const apkFile = path.join(path.dirname(APK_PAGE), f);
+    assert.ok(fs.existsSync(apkFile) && fs.readFileSync(path.join(ROOT, 'www', f)).equals(fs.readFileSync(apkFile)), f + ' is in the APK copy');
   }
 });
 
