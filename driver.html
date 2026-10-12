@@ -4063,7 +4063,8 @@ async function pollStage(){
   try{
     var rows=await sbGet('bin_bindings?select=bin_code,location_code,state&job_id=eq.'+encodeURIComponent(j.id)+'&state=in.(open,ready)&limit=1');
     var b=Array.isArray(rows)&&rows.length?rows[0]:null,st=b&&b.state==='ready'?'ready':(b?'staging':'waiting');
-    if(st==='ready'&&DX.stage!=='ready'){feel('done');say('Route ready for pickup.');}
+    // staged = ready for pickup (2026-10, v25): chime and voice when the STG spot is scanned, not before
+    if(st==='ready'&&b&&b.staging_code&&!(DX.stage==='ready'&&DX.binding&&DX.binding.staging_code)){feel('done');say('Route ready for pickup.');}
     DX.stage=st;DX.binding=b;renderDay();
   }catch(e){}
 }
@@ -5648,7 +5649,10 @@ W.tpPickup={state:function(){return {tab:P.tab,progress:progress()};},showRoute:
      has no staging spot, nothing the driver sees or hears says ready: the
      status line reads "Waiting for the warehouse to stage your route" (and
      the ready toast / voice wait). Once staged: "Ready for pickup" with the
-     STG spot and the Bin, and the ready announcement, once. Wording only. -->
+     STG spot and the Bin, and the ready announcement, once. Wording only.
+     2026-10 (v25): staged = the pickup is ready. No pickup alert of any kind
+     (tones, vibration, toast, voice) before the STG scan; all of it, once,
+     after. -->
 <style>
 #dxDayCard .tp-stg{margin:10px 0 4px;padding:14px 16px;border-radius:14px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);}
 #dxDayCard .tp-stg-loc{font-size:1.1rem;font-weight:900;line-height:1.2;color:#ffffff;}
@@ -5768,6 +5772,7 @@ function wording(card,b,spot){
     setText(ban,WAIT_LINE.toUpperCase());
   }else if(spot&&heldFor&&heldFor===jobId()){      // staged now: the held announcement, once
     heldFor=null;
+    try{origPlayAlert();}catch(e){}
     try{origToast('Route ready for pickup','ok');}catch(e){}
     try{origSpeak('Route ready for pickup.');}catch(e){}
   }
@@ -5783,6 +5788,19 @@ function holdReady(orig){return function(m){
 };}
 var origToast=typeof W.toast==='function'?W.toast:function(){},origSpeak=typeof W.speak==='function'?W.speak:function(){};
 if(typeof W.toast==='function')W.toast=holdReady(origToast);
+// The pickup alert (tones + vibration) the phone app's warehouse check plays when the bin turns
+// ready: held the same way while the route is not staged (v25). Other alerts (a new route,
+// an offer) are not made during that check and play as before.
+var inCheck=0,origPlayAlert=typeof W.playAlert==='function'?W.playAlert:function(){};
+if(typeof W.tpRefreshStage==='function'){
+  var origCheck=W.tpRefreshStage;
+  W.tpRefreshStage=async function(){inCheck++;try{return await origCheck.apply(this,arguments);}finally{inCheck--;}};
+}
+if(typeof W.playAlert==='function')W.playAlert=function(){
+  var self=this,args=arguments;
+  if(!inCheck)return origPlayAlert.apply(self,args);
+  setTimeout(function(){if(notStagedNow()){heldFor=jobId();return;}origPlayAlert.apply(self,args);},0);
+};
 if(typeof W.speak==='function')W.speak=holdReady(origSpeak);
 // The card is redrawn by the warehouse poll (and on screen changes): follow it.
 var scr=document.getElementById('scRouteAccepted');
