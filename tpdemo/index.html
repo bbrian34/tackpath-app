@@ -16,8 +16,9 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;
   font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
 header{width:100%;display:flex;justify-content:center;padding:28px 16px 8px}
 .brand{display:inline-flex;align-items:center;gap:12px;color:var(--text);text-decoration:none}
-.brand img{width:34px;height:40px;display:block}
-.brand span{font-family:'TackPath Montserrat','Segoe UI',sans-serif;font-weight:500;font-size:26px;letter-spacing:1px}
+.brand img{width:30px;height:35px;display:block}
+.wordmark{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;font-size:22px;letter-spacing:1px;white-space:nowrap;line-height:1.2}
+.wordmark .tack{color:#fff}.wordmark .path{color:var(--blue)}
 main{width:100%;max-width:1200px;padding:24px 16px 32px;text-align:center;flex:1}
 h1{font-size:clamp(28px,4.4vw,46px);font-weight:700;letter-spacing:-.5px;line-height:1.15}
 .lede{margin-top:10px;font-size:clamp(16px,2vw,20px);color:var(--muted)}
@@ -31,7 +32,7 @@ footer a:hover{text-decoration:underline}
 </head>
 <body>
 <header>
-  <a class="brand" href="https://tackpath.com"><img src="../logo.svg" alt="" width="34" height="40"><span>TackPath</span></a>
+  <a class="brand" href="https://tackpath.com" aria-label="TackPath home"><img src="../logo.svg" alt="" width="30" height="35"><span class="wordmark"><span class="tack">T &#581; C K </span><span class="path">P &#581; T H</span></span></a>
 </header>
 <main>
   <h1>TackPath in 3 minutes</h1>
