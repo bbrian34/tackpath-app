@@ -35,6 +35,7 @@ for (const sc of scenes) {
 const browser = await launch(['--force-color-profile=srgb', '--font-render-hinting=none']);
 const page = await (await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 })).newPage();
 await page.goto('file://' + path.join(HERE, 'stage.html'));
+await page.evaluate(() => document.fonts.load('500 40px "TackPath Montserrat"'));   // the wordmark font, before the first frame
 for (const [i, s] of shots.entries()) {
   const img = {}; for (const k in s.img || {}) img[k] = 'work/shots/' + s.img[k];
   await page.evaluate((x) => window.render(x), Object.assign({}, s, { img }));

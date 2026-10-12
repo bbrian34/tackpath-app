@@ -14,8 +14,12 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg1);
 .chip{font-size:21px;font-weight:700;padding:9px 18px;border-radius:999px;color:#5b6f86;background:#fff;border:2px solid var(--line)}
 .chip.done{color:var(--blue);border-color:#b9d6e8}
 .chip.on{color:#fff;background:var(--blue);border-color:var(--blue)}
-#brand{position:absolute;left:36px;top:24px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:24px;letter-spacing:.5px}
-#brand img{height:34px}
+/* the TackPath brand exactly as on tackpath.com: logo.svg + the Montserrat wordmark, PATH in brand blue */
+@font-face{font-family:'TackPath Montserrat';font-style:normal;font-weight:500;src:url('../tackpath-montserrat-500.ttf')}
+.wm{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;letter-spacing:.06em;white-space:nowrap;line-height:1.2}
+.wm .tack{color:#010e21}.wm .path{color:#19b7ef}
+#brand{position:absolute;left:36px;top:22px;display:flex;align-items:center;gap:10px;font-size:22px}
+#brand img{width:30px;height:35px}
 /* devices */
 #devs{position:absolute;left:0;right:0;top:84px;height:846px;display:flex;align-items:center;justify-content:center;gap:60px}
 .dev{position:relative;flex:none}
@@ -53,16 +57,18 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg1);
 #cap h1{font-size:54px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
 #cap p{font-size:30px;font-weight:600;color:var(--sub);margin-top:8px}
 /* cards */
-.card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff}
-.card .logo{display:flex;align-items:center;gap:34px}
-.card .logo img{height:190px}
-.card .logo span{font-size:150px;font-weight:800;letter-spacing:-2px;color:var(--ink)}
-.card h2{margin-top:44px;font-size:64px;font-weight:700;color:var(--blue)}
-.card h3{margin-top:30px;font-size:52px;font-weight:700;color:var(--sub)}
+.card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#010e21}
+.card .logo{display:flex;align-items:center;gap:40px}
+.card .logo img{width:150px;height:175px}
+.card .logo .wm{font-size:104px}
+.card .wm .tack{color:#fff}
+.card h2{margin-top:56px;font-size:64px;font-weight:700;color:#edf4fb}
+.card h3{margin-top:30px;font-size:46px;font-weight:600;color:#19b7ef}
 </style></head>
 <body><div id="stage"></div>
 <script>
 const LOGO = '../logo.svg';   // the repo's own logo
+const WORDMARK = '<span class="wm"><span class="tack">T \u0245 C K </span><span class="path">P \u0245 T H</span></span>';   // as in index.html
 const STEPS = ['Upload', 'Assign', 'Stow', 'Stage', 'Pickup', 'Load', 'Route', 'Deliver', 'Track'];
 // which strip chip each storyboard scene lights
 const SCENE_STEP = { 2: 0, 3: 1, 4: 2, 5: 3, 6: 4, 7: 6, 8: 7, 9: 8 };
@@ -99,7 +105,7 @@ function zoomPanel(shot, file, box) {
 window.render = function (shot) {
   const st = document.getElementById('stage');
   if (shot.layout === 'title' || shot.layout === 'end') {
-    st.innerHTML = `<div class="card"><div class="logo"><img src="${LOGO}"><span>TackPath</span></div>`
+    st.innerHTML = `<div class="card"><div class="logo"><img src="${LOGO}">${WORDMARK}</div>`
       + (shot.layout === 'title' ? `<h2>${esc(shot.caption)}</h2>` : `<h2>${esc(shot.caption || '')}</h2><h3>tackpath.com</h3>`) + `</div>`;
     return;
   }
@@ -118,7 +124,7 @@ window.render = function (shot) {
       sub = '';
     }
   }
-  st.innerHTML = `<div id="brand"><img src="${LOGO}">TackPath</div><div id="strip">${strip}</div>${body}`
+  st.innerHTML = `<div id="brand"><img src="${LOGO}">${WORDMARK}</div><div id="strip">${strip}</div>${body}`
     + `<div id="cap"><h1>${esc(shot.caption)}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
 };
 </script>
