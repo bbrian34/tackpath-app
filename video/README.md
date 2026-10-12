@@ -49,7 +49,7 @@ This folder is not part of the website. Keep it off the branch GitHub Pages serv
 | 4 | 0:50 | Warehouse scans every package |
 | 5 | 1:25 | Stage the route. The driver is alerted |
 | 6 | 1:40 | Driver scans the bin and loads the route |
-| 7 | 2:05 | Turn by turn, every stop in order |
+| 7 | 2:05 | Navigate every stop in order |
 | 8 | 2:30 | Proof of delivery, captured at the door |
 | 9 | 2:50 | You see it all, live (then the end card with tackpath.com) |
 

@@ -226,7 +226,7 @@ await shot('phone', ['phone'], { step: 'All 6 loaded. Start Route unlocks', stri
 if (STOP_AFTER <= 6) await done();
 
 // ── 7. Start Route, Route Map, arrival ──
-startScene(7, 'Turn by turn, every stop in order');
+startScene(7, 'Navigate every stop in order');
 await tapShot('phone', ['phone'], 'phone', '#tpPickStart', { step: 'Tap START ROUTE', zoom: await zoom('phone', /START ROUTE/) });
 await wait(2500);
 await D.evaluate(() => { try { closeDrawer(); } catch (e) {} try { loadJobs(); } catch (e) {} }); await wait(1500);
