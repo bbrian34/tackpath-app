@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>TackPath video stage</title>
+<!-- One 1920x1080 frame of the video: the app screenshots in simple device
+     frames, the process strip, the caption. compose.mjs calls render(shot). -->
+<style>
+:root{--ink:#0b1b2e;--sub:#334a63;--blue:#0b6fa4;--line:#d5dde7;--bg1:#f6f8fb;--bg2:#e8eef5;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg1);
+  font-family:"Inter","Segoe UI","Helvetica Neue",Arial,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+#stage{position:absolute;inset:0;background:linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 100%)}
+/* process strip */
+#strip{position:absolute;left:0;right:0;top:22px;display:flex;justify-content:center;gap:10px}
+.chip{font-size:21px;font-weight:700;padding:9px 18px;border-radius:999px;color:#5b6f86;background:#fff;border:2px solid var(--line)}
+.chip.done{color:var(--blue);border-color:#b9d6e8}
+.chip.on{color:#fff;background:var(--blue);border-color:var(--blue)}
+#brand{position:absolute;left:36px;top:24px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:24px;letter-spacing:.5px}
+#brand img{height:34px}
+/* devices */
+#devs{position:absolute;left:0;right:0;top:84px;height:846px;display:flex;align-items:center;justify-content:center;gap:60px}
+.dev{position:relative;flex:none}
+.dev .lbl{position:absolute;left:0;right:0;bottom:-38px;text-align:center;font-size:21px;font-weight:700;color:var(--sub)}
+.screen{position:relative;overflow:hidden;background:#000}
+.screen>img{position:absolute;left:0;top:0;display:block}
+.browser{background:#fff;border-radius:14px;border:2px solid #c3ccd8;box-shadow:0 18px 50px rgba(15,40,70,.18);overflow:hidden}
+.browser .bar{height:34px;background:#eef1f5;border-bottom:1px solid #d3d9e1;display:flex;align-items:center;gap:8px;padding:0 14px}
+.browser .bar i{width:12px;height:12px;border-radius:50%;background:#c8cfd8;display:block}
+.browser .bar b{margin-left:14px;font-size:15px;font-weight:600;color:#5b6f86}
+.phone{padding:14px;border-radius:52px;background:#14181d;box-shadow:0 22px 50px rgba(10,20,40,.35),inset 0 0 0 2px #2b323b}
+.phone .screen{border-radius:38px}
+.tc56{padding:40px 20px 66px;border-radius:30px;background:linear-gradient(180deg,#30353b,#1d2126);box-shadow:0 22px 50px rgba(10,20,40,.35),inset 0 0 0 2px #444b54}
+.tc56 .screen{border-radius:6px}
+.tc56:before{content:"";position:absolute;left:50%;top:16px;width:90px;height:8px;margin-left:-45px;border-radius:4px;background:#111}
+.tc56:after{content:"ZEBRA TC56";position:absolute;left:0;right:0;bottom:24px;text-align:center;font-size:15px;letter-spacing:3px;color:#9aa3ad;font-weight:700}
+.tc56 .side{position:absolute;left:-9px;top:210px;width:9px;height:90px;border-radius:4px 0 0 4px;background:#f2a900}
+.tc56 .side.r{left:auto;right:-9px;border-radius:0 4px 4px 0}
+/* tap and scan marks */
+.tapring{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:5px solid #ff8a00;background:rgba(255,138,0,.22);box-shadow:0 0 0 6px rgba(255,255,255,.65)}
+.scanchip{position:absolute;white-space:nowrap;font-size:34px;font-weight:800;color:#fff;background:#0f8a4b;padding:12px 22px;border-radius:14px;box-shadow:0 8px 20px rgba(0,0,0,.18);z-index:3}
+.scanchip small{display:block;font-weight:700;opacity:.85;font-size:18px;letter-spacing:2px;margin-bottom:2px}
+.scanchip.left{right:calc(100% + 34px);top:170px}
+.scanchip.right{left:calc(100% + 34px);top:170px}
+.scanchip.top{left:50%;transform:translateX(-50%);top:-22px}
+.scanchip.inline{position:static;display:inline-block;margin-bottom:22px}
+.zbox{position:absolute;border:4px solid #ff8a00;border-radius:8px;box-shadow:0 0 0 3px rgba(255,255,255,.6)}
+.zoom{position:relative;overflow:hidden;border-radius:18px;border:4px solid #ff8a00;background:#000;box-shadow:0 18px 44px rgba(10,20,40,.25)}
+.zoom img{position:absolute;display:block}
+/* the text beside a single phone */
+#side{position:absolute;left:720px;right:80px;top:84px;height:846px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.stepbig{margin-top:26px;font-size:46px;font-weight:800;line-height:1.18;color:var(--ink);max-width:1080px}
+/* caption */
+#cap{position:absolute;left:0;right:0;bottom:0;height:150px;z-index:4;background:#fff;border-top:2px solid var(--line);padding:24px 80px 0}
+#cap h1{font-size:54px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
+#cap p{font-size:30px;font-weight:600;color:var(--sub);margin-top:8px}
+/* cards */
+.card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff}
+.card .logo{display:flex;align-items:center;gap:34px}
+.card .logo img{height:190px}
+.card .logo span{font-size:150px;font-weight:800;letter-spacing:-2px;color:var(--ink)}
+.card h2{margin-top:44px;font-size:64px;font-weight:700;color:var(--blue)}
+.card h3{margin-top:30px;font-size:52px;font-weight:700;color:var(--sub)}
+</style></head>
+<body><div id="stage"></div>
+<script>
+const LOGO = '../logo.svg';   // the repo's own logo
+const STEPS = ['Upload', 'Assign', 'Stow', 'Stage', 'Pickup', 'Load', 'Route', 'Deliver', 'Track'];
+// which strip chip each storyboard scene lights
+const SCENE_STEP = { 2: 0, 3: 1, 4: 2, 5: 3, 6: 4, 7: 6, 8: 7, 9: 8 };
+const SIZES = { dispatch: [1280, 720], pathiq: [360, 640], phone: [412, 915] };
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+// One device: its frame and the screenshot, scaled to fit `fit` {w, h} (screen
+// css px), optionally cropped to shot.crop[kind] = [x, y, w, h] in app css px.
+function device(kind, file, fit, shot, chipSide) {
+  const [cw, ch] = SIZES[kind];
+  const crop = (shot.crop && shot.crop[kind]) || [0, 0, cw, ch];
+  const k = Math.min(fit.w ? fit.w / crop[2] : 1e9, fit.h ? fit.h / crop[3] : 1e9);
+  const sw = Math.round(crop[2] * k), sh = Math.round(crop[3] * k);
+  const img = `<img src="${file}" style="width:${Math.round(cw * k)}px;height:${Math.round(ch * k)}px;left:${-Math.round(crop[0] * k)}px;top:${-Math.round(crop[1] * k)}px">`;
+  let marks = '';
+  if (shot.tap && shot.tap.dev === kind) marks += `<div class="tapring" style="left:${Math.round((shot.tap.x - crop[0]) * k)}px;top:${Math.round((shot.tap.y - crop[1]) * k)}px"></div>`;
+  if (shot.zoom && shot.zoom.dev === kind) { const z = shot.zoom.rect;
+    marks += `<div class="zbox" style="left:${Math.round((z[0] - crop[0]) * k)}px;top:${Math.round((z[1] - crop[1]) * k)}px;width:${Math.round(z[2] * k)}px;height:${Math.round(z[3] * k)}px"></div>`; }
+  const screen = `<div class="screen" style="width:${sw}px;height:${sh}px">${img}${marks}</div>`;
+  const chip = shot.scan && shot.scan.dev === kind && chipSide ? scanChip(shot, 'scanchip ' + chipSide) : '';
+  if (kind === 'dispatch') return `<div class="dev browser"><div class="bar"><i></i><i></i><i></i><b>TackPath Dispatch</b></div>${screen}</div>`;
+  if (kind === 'pathiq') return `<div class="dev tc56"><div class="side"></div><div class="side r"></div>${chip}${screen}<div class="lbl" style="bottom:-42px">PathIQ in the warehouse</div></div>`;
+  return `<div class="dev phone">${chip}${screen}<div class="lbl" style="bottom:-40px">Driver app</div></div>`;
+}
+const scanChip = (shot, cls) => `<div class="${cls}"><small>SCANNED</small>${esc(shot.scan.text)}</div>`;
+// The enlarged copy of shot.zoom.rect, beside a single phone.
+function zoomPanel(shot, file, box) {
+  const z = shot.zoom.rect, [cw, ch] = SIZES[shot.zoom.dev];
+  const k = Math.min(box.w / z[2], box.h / z[3], 2.6);
+  return `<div class="zoom" style="width:${Math.round(z[2] * k)}px;height:${Math.round(z[3] * k)}px">`
+    + `<img src="${file}" style="width:${Math.round(cw * k)}px;height:${Math.round(ch * k)}px;left:${-Math.round(z[0] * k)}px;top:${-Math.round(z[1] * k)}px"></div>`;
+}
+
+window.render = function (shot) {
+  const st = document.getElementById('stage');
+  if (shot.layout === 'title' || shot.layout === 'end') {
+    st.innerHTML = `<div class="card"><div class="logo"><img src="${LOGO}"><span>TackPath</span></div>`
+      + (shot.layout === 'title' ? `<h2>${esc(shot.caption)}</h2>` : `<h2>${esc(shot.caption || '')}</h2><h3>tackpath.com</h3>`) + `</div>`;
+    return;
+  }
+  const lit = shot.stripOn != null ? shot.stripOn : SCENE_STEP[shot.scene];
+  const strip = STEPS.map((s, i) => `<span class="chip ${i === lit ? 'on' : i < lit ? 'done' : ''}">${i + 1}. ${s}</span>`).join('');
+  const I = shot.img || {};
+  let body = '', sub = esc(shot.step || '');
+  switch (shot.layout) {
+    case 'dispatch': body = `<div id="devs">${device('dispatch', I.dispatch, { w: 1760, h: 744 }, shot)}</div>`; break;
+    case 'dispatch+phone': body = `<div id="devs">${device('dispatch', I.dispatch, { w: 1340, h: 744 }, shot)}${device('phone', I.phone, { h: 716 }, shot, 'top')}</div>`; break;
+    case 'pathiq+phone': body = `<div id="devs" style="gap:220px">${device('pathiq', I.pathiq, { h: 640 }, shot, 'left')}${device('phone', I.phone, { h: 716 }, shot, 'right')}</div>`; break;
+    default: {
+      const zp = shot.zoom ? zoomPanel(shot, I[shot.zoom.dev], { w: 1000, h: 520 }) : '';
+      body = `<div id="devs" style="justify-content:flex-start;padding-left:200px">${device('phone', I.phone, { h: 716 }, shot)}</div>`
+        + `<div id="side">${shot.scan ? scanChip(shot, 'scanchip inline') : ''}${zp}<div class="stepbig">${sub}</div></div>`;
+      sub = '';
+    }
+  }
+  st.innerHTML = `<div id="brand"><img src="${LOGO}">TackPath</div><div id="strip">${strip}</div>${body}`
+    + `<div id="cap"><h1>${esc(shot.caption)}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`;
+};
+</script>
+</body></html>
