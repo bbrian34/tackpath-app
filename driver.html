@@ -5171,10 +5171,31 @@ check();
      that still has no spot is listed under "Not on map", so dots + not on map
      = stops. Tapping a dot shows its number, recipient, address and packages.
      The pickup preview (TP-PICKUP) mounts the same map with tpRouteMap.mount:
-     read-only, no Google map under the dots, dots joined in route order. -->
+     read-only, no Google map under the dots, dots joined in route order.
+     2026-10 (v26): a real street map under the dots, in the app, for the
+     Route Map button AND the pickup preview: Leaflet 1.9.4 (shipped in
+     vendor/leaflet, no CDN) with OpenStreetMap tiles and their attribution.
+     Each dot is a marker on its coordinates (it stays there while panning and
+     zooming), every stop is fitted on open, no line between the dots, done
+     stops gray with a check. Few tile requests (only what is on screen, loaded
+     when the map is still). Offline (or the tiles fail): the dots on the plain
+     background with "Map unavailable offline". If Leaflet itself cannot load,
+     the earlier in-app dot map (no tiles) is used. The Google Embed map is no
+     longer used here. -->
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<script src="vendor/leaflet/leaflet.js"></script>
 <style>
 #routeMapOverlay .tprm{position:relative;flex:1;overflow:hidden;background:#e5e3df;touch-action:none;user-select:none;-webkit-user-select:none;}
-#routeMapOverlay .tprm-base{position:absolute;left:0;top:0;width:100%;height:100%;border:0;pointer-events:none;transform-origin:0 0;}
+/* v26: Leaflet + OpenStreetMap under the dots (both the Route Map and the pickup preview) */
+.tprm-l .tprm-leaf{position:absolute;inset:0;z-index:0;background:#e5e3df;}
+.tprm-preview .tprm-l .tprm-leaf{background:#eef2f6;}
+.tprm-l .tprm-pin{background:none;border:0;}
+#routeMapOverlay .tprm-l .tprm-pin .tprm-dot,.tprm-preview .tprm-l .tprm-pin .tprm-dot{position:relative;left:auto;top:auto;margin:0;display:block;}
+.tprm-l .tprm-offline{position:absolute;left:10px;top:10px;z-index:7;background:#0f172a;color:#fff;padding:6px 10px;border-radius:8px;
+  font:700 .8125rem/1.2 system-ui,sans-serif;}
+.tprm-l .tprm-offline[hidden]{display:none;}
+.tprm-l .tprm-card{bottom:24px;}
+.tprm-l .leaflet-control-attribution{font:500 11px/1.4 system-ui,sans-serif;}
 #routeMapOverlay .tprm-dots{position:absolute;inset:0;transform-origin:0 0;}
 #routeMapOverlay .tprm-dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;padding:0;border-radius:50%;
   border:2px solid #fff;background:#0a58ca;color:#fff;font:800 12px/22px system-ui,-apple-system,sans-serif;text-align:center;
@@ -5223,12 +5244,6 @@ check();
 var W=window,D=document,TILE=256,ZMIN=3,ZMAX=19;
 function $(id){return D.getElementById(id);}
 function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-var orig=W.showRouteMapOverlay;
-// The Embed key the app already used for this map (web: GKEY; phone app: the one in its Route Map function).
-function embedKey(){
-  try{if(typeof GKEY!=='undefined'&&GKEY)return GKEY;}catch(e){}
-  var m=/key=([\w-]{30,})/.exec(String(orig||''));return m?m[1]:'';
-}
 function list(){try{return (typeof surgeStops!=='undefined'&&surgeStops)||[];}catch(e){return [];}}
 function curIdx(){try{return typeof currentSurgeStop!=='undefined'?(currentSurgeStop|0):0;}catch(e){return 0;}}
 function num(s,i){var n=parseInt(s&&s.stop_number,10);return n>0?n:i+1;}
@@ -5270,22 +5285,18 @@ function unpx(x,y,z){var w=TILE*Math.pow(2,z),n=Math.PI-2*Math.PI*y/w;
   return {lat:180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))),lng:x/w*360-180};}
 // One map of numbered dots inside `ov` (2026-10-12: one implementation for the
 // Route Map button and the pickup preview). opt.ids: the Route Map's element
-// ids; opt.base: draw the Google Embed map under the dots; opt.preview: nothing
-// done or current yet.
+// ids; opt.preview: nothing done or current yet. With Leaflet (v26) the dots
+// sit on an OpenStreetMap street map; without it, the in-app dot map below.
 function create(ov,before,opt){
+  if(W.L&&W.L.map&&W.L.tileLayer)return createLeaflet(ov,before,opt);
   var V={z:12,c:null},M=[],sel=-1,frames=[],act=0,pendingSrc='',moved=false;
   var id=function(n){return opt.ids?' id="'+n+'"':'';};
   var wrap=D.createElement('div');wrap.className='tprm';if(opt.ids)wrap.id='tprmMap';
-  wrap.innerHTML=(opt.base?'<iframe class="tprm-base" title="Map" referrerpolicy="no-referrer-when-downgrade"></iframe>'
-    +'<iframe class="tprm-base" title="Map" referrerpolicy="no-referrer-when-downgrade" style="opacity:0"></iframe>':'')
-    +'<div class="tprm-dots"'+id('tprmDots')+'></div>'
+  wrap.innerHTML='<div class="tprm-dots"'+id('tprmDots')+'></div>'
     +'<div class="tprm-ctl"><button type="button" data-z="1" aria-label="Zoom in">+</button><button type="button" data-z="-1" aria-label="Zoom out">−</button>'
     +'<button type="button" class="fit" aria-label="Show all stops">ALL</button></div>'
     +'<div class="tprm-card"'+id('tprmCard')+' style="display:none"></div>';
-  var bar=D.createElement('div');bar.className='tprm-bar';if(opt.ids)bar.id='tprmBar';
-  bar.innerHTML=(opt.preview?'<div class="tprm-key"><span>Stops in delivery order, 1 first</span></div>'
-    :'<div class="tprm-key"><span><i style="background:#ff8a00"></i>Current</span><span><i style="background:#0a58ca"></i>Upcoming</span>'
-    +'<span><i style="background:#8a8f98"></i>Done ✓</span></div>')+'<div class="tprm-off"'+id('tprmOff')+' style="display:none"></div>';
+  var bar=keyBar(opt);
   if(before&&before.parentNode===ov){ov.insertBefore(wrap,before);ov.insertBefore(bar,before);}else{ov.appendChild(wrap);ov.appendChild(bar);}
   var dots=wrap.querySelector('.tprm-dots'),cardEl=wrap.querySelector('.tprm-card'),offEl=bar.querySelector('.tprm-off');
   frames=[].slice.call(wrap.querySelectorAll('iframe'));
@@ -5306,19 +5317,7 @@ function create(ov,before,opt){
     var cy=(Math.max.apply(null,q.map(function(a){return a.y;}))+Math.min.apply(null,q.map(function(a){return a.y;})))/2;
     V.z=z;V.c=unpx(cx+ctl/2,cy,z);
   }
-  function base(){
-    if(!opt.base)return;
-    var k=embedKey();if(!k||!V.c)return;
-    var src='https://www.google.com/maps/embed/v1/view?key='+k+'&center='+V.c.lat.toFixed(6)+','+V.c.lng.toFixed(6)+'&zoom='+V.z+'&maptype=roadmap';
-    var cur=frames[act];
-    if(cur.getAttribute('src')===src){cur.style.transform='';return;}
-    if(!cur.getAttribute('src')){cur.src=src;return;}
-    if(pendingSrc===src)return;
-    // Load the next view behind the shown one, then swap: no blank flash while panning.
-    var nx=frames[1-act];pendingSrc=src;
-    nx.onload=function(){if(pendingSrc!==src)return;pendingSrc='';nx.style.transform='';nx.style.opacity='1';cur.style.opacity='0';act=1-act;};
-    nx.style.opacity='0';nx.src=src;
-  }
+  function base(){}   // no map under the dots in this fallback (v26: no Google Embed map)
   function draw(){
     var sz=size(),c=px(V.c,V.z),placed=[];
     M.forEach(function(m){if(m.pos){var p=px(m.pos,V.z);placed.push({m:m,x:p.x-c.x+sz.w/2,y:p.y-c.y+sz.h/2});}});
@@ -5417,25 +5416,118 @@ function create(ov,before,opt){
   }
   return {render:render,view:function(){return {z:V.z,c:V.c};},model:function(){return M;}};
 }
+// The key under the map: what each colour means (Route Map) / the order (preview), and stops not on the map.
+function keyBar(opt){
+  var bar=D.createElement('div');bar.className='tprm-bar';if(opt.ids)bar.id='tprmBar';
+  bar.innerHTML=(opt.preview?'<div class="tprm-key"><span>Stops in delivery order, 1 first</span></div>'
+    :'<div class="tprm-key"><span><i style="background:#ff8a00"></i>Current</span><span><i style="background:#0a58ca"></i>Upcoming</span>'
+    +'<span><i style="background:#8a8f98"></i>Done ✓</span></div>')+'<div class="tprm-off"'+(opt.ids?' id="tprmOff"':'')+' style="display:none"></div>';
+  return bar;
+}
+// v26: the same dots on an OpenStreetMap street map (Leaflet, shipped in the app).
+var OSM_URL='https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+var OSM_ATTR='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+function createLeaflet(ov,before,opt){
+  var L=W.L,M=[],sel=-1,marks=[],tiles=null,bad=0,good=0;
+  var id=function(n){return opt.ids?' id="'+n+'"':'';};
+  var wrap=D.createElement('div');wrap.className='tprm tprm-l';if(opt.ids)wrap.id='tprmMap';
+  wrap.innerHTML='<div class="tprm-leaf"></div><div class="tprm-offline" role="status" hidden>Map unavailable offline</div>'
+    +'<div class="tprm-ctl"><button type="button" data-z="1" aria-label="Zoom in">+</button><button type="button" data-z="-1" aria-label="Zoom out">−</button>'
+    +'<button type="button" class="fit" aria-label="Show all stops">ALL</button></div>'
+    +'<div class="tprm-card"'+id('tprmCard')+' style="display:none"></div>';
+  var bar=keyBar(opt);
+  if(before&&before.parentNode===ov){ov.insertBefore(wrap,before);ov.insertBefore(bar,before);}else{ov.appendChild(wrap);ov.appendChild(bar);}
+  var el=wrap.querySelector('.tprm-leaf'),note=wrap.querySelector('.tprm-offline'),cardEl=wrap.querySelector('.tprm-card'),offEl=bar.querySelector('.tprm-off');
+  var map=L.map(el,{zoomControl:false,attributionControl:true,minZoom:3,maxZoom:19,zoomSnap:1,inertia:false,worldCopyJump:false});
+  map.attributionControl.setPrefix(false);
+  function online(){return navigator.onLine!==false;}
+  function noteNow(){note.hidden=online()&&!(bad>=3&&good===0);}
+  // Tiles only while online: what is on screen (+1 tile around), loaded when the map is still.
+  function addTiles(){
+    if(tiles||!online())return;
+    tiles=L.tileLayer(OSM_URL,{maxZoom:19,attribution:OSM_ATTR,keepBuffer:1,updateWhenIdle:true,updateWhenZooming:false,
+      referrerPolicy:'strict-origin-when-cross-origin'});
+    tiles.on('tileload',function(){good++;noteNow();});
+    tiles.on('tileerror',function(){bad++;noteNow();});
+    tiles.addTo(map);
+  }
+  W.addEventListener('online',function(){bad=0;addTiles();noteNow();});
+  W.addEventListener('offline',noteNow);
+  function icon(m){
+    var s=m.state==='cur'?34:26;
+    return L.divIcon({className:'tprm-pin',iconSize:[s,s],iconAnchor:[s/2,s/2],
+      html:'<button type="button" class="tprm-dot st-'+m.state+(m.i===sel?' sel':'')+'" data-i="'+m.i+'" data-stop="'+m.n+'" aria-label="Stop '+m.n+'">'+m.n+'</button>'});
+  }
+  function draw(){
+    marks.forEach(function(k){map.removeLayer(k);});marks=[];
+    M.forEach(function(m){
+      if(!m.pos)return;
+      var k=L.marker([m.pos.lat,m.pos.lng],{icon:icon(m),keyboard:false,riseOnHover:false,
+        zIndexOffset:m.state==='cur'?1000:m.state==='done'?-500:-m.i});
+      k.on('click',function(){card(m.i);});
+      k.addTo(map);marks.push(k);
+    });
+    var off=M.filter(function(m){return !m.pos;});
+    offEl.style.display=off.length?'':'none';
+    offEl.innerHTML=off.length?('Not on map: '+off.map(function(m){return '<b data-i="'+m.i+'" data-stop="'+m.n+'">'+m.n+'</b>';}).join('')
+      +(off.some(function(m){return m.wait;})?' <span>(finding)</span>':'')):'';
+  }
+  function fit(){
+    var pts=M.filter(function(m){return m.pos;}).map(function(m){return [m.pos.lat,m.pos.lng];});
+    if(!pts.length){map.setView([39.5,-98.35],4,{animate:false});return;}
+    if(pts.length===1){map.setView(pts[0],15,{animate:false});return;}
+    map.fitBounds(L.latLngBounds(pts),{paddingTopLeft:[28,28],paddingBottomRight:[64,28],maxZoom:17,animate:false});
+  }
+  function card(i){
+    var m=M[i];sel=m?i:-1;
+    if(!m){cardEl.style.display='none';draw();return;}
+    cardEl.innerHTML='<b>Stop '+m.n+'</b>'+(opt.preview?'':' · '+(m.state==='done'?'Done':m.state==='cur'?'Current stop':'Upcoming'))
+      +'<div>'+h(m.s&&m.s.recipient||'')+'</div><div>'+h(m.s&&m.s.address||'')+'</div>'
+      +'<div>'+m.pk+' package'+(m.pk===1?'':'s')+'</div><button type="button" aria-label="Close">✕</button>';
+    cardEl.style.display='';
+    cardEl.querySelector('button').onclick=function(){card(-1);};
+    draw();
+  }
+  bar.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('b[data-i]');if(t)card(+t.getAttribute('data-i'));});
+  wrap.querySelectorAll('.tprm-ctl button').forEach(function(b){
+    b.onclick=function(){if(b.className==='fit')fit();else if(+b.getAttribute('data-z')>0)map.zoomIn();else map.zoomOut();};});
+  L.DomEvent.disableClickPropagation(wrap.querySelector('.tprm-ctl'));
+  L.DomEvent.disableClickPropagation(cardEl);
+  W.addEventListener('resize',function(){if(opt.shown())map.invalidateSize(false);});
+  function render(){
+    M=model(opt.preview);sel=-1;cardEl.style.display='none';
+    map.invalidateSize(false);
+    fit();draw();noteNow();addTiles();
+    M.forEach(function(m){
+      var a=m.s&&m.s.address;if(m.pos||!a||a in geo)return;
+      geo[a]='wait';
+      geocode(a).then(function(p){geo[a]=ll(p);if(opt.shown()){M=model(opt.preview);fit();draw();}});
+    });
+    M=model(opt.preview);draw();
+  }
+  return {render:render,view:function(){var c=map.getCenter();return {z:map.getZoom(),c:{lat:c.lat,lng:c.lng}};},
+    model:function(){return M;},leaflet:function(){return map;}};
+}
 var overlay=null;
 function open(){
   if(!list().length)return;
   var ov=$('routeMapOverlay');if(!ov)return;
   if(!overlay){
     var fr=$('routeMapFrame');if(fr)fr.style.display='none';
-    overlay=create(ov,fr,{ids:true,base:true,shown:function(){return ov.classList.contains('on');}});
+    overlay=create(ov,fr,{ids:true,shown:function(){return ov.classList.contains('on');}});
   }
   ov.classList.add('on');
   overlay.render();
 }
-// The pickup preview (TP-PICKUP): the same dots, read-only, no Google map under them.
+// The pickup preview (TP-PICKUP): the same dots and street map, read-only.
 function mount(host,shown){
   host.classList.add('tprm-preview');
   var m=create(host,null,{preview:true,shown:shown||function(){return true;}});
   return m;
 }
 W.showRouteMapOverlay=open;
-W.tpRouteMap={open:open,mount:mount,model:function(){return model();},key:embedKey,view:function(){return overlay?overlay.view():{z:12,c:null};}};
+W.tpRouteMap={open:open,mount:mount,model:function(){return model();},view:function(){return overlay?overlay.view():{z:12,c:null};},
+  leaflet:function(){return overlay&&overlay.leaflet?overlay.leaflet():null;}};
 })();
 </script>
 <!-- TP-ROUTEMAP:END -->
