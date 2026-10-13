@@ -63,6 +63,6 @@ from verify_webhook import verify_tackpath_signature as v
 s, b, good, old, t = sys.argv[2:7]; b = b.encode(); t = int(t)
 print(json.dumps([v(s, b, good, now=t), v(s, b + b" ", good, now=t), v("x", b, good, now=t), v(s, b, old, now=t), v(s, b, "", now=t), v(s, b, "t=abc,v1=00", now=t)]))`;
   const dir = new URL('docs/api/examples/', root).pathname;
-  const out = execFileSync('python3', ['-I', '-c', script, dir, secret, body, good, old, String(t)], { encoding: 'utf8' });
+  const out = execFileSync('python3', ['-I', '-c', script, dir, secret, body, good, old, String(t)], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
   assert.deepEqual(JSON.parse(out), [true, false, false, false, false, false]);
 });
