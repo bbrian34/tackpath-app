@@ -1,38 +1,48 @@
 -- ═══════════════════════════════════════════════════════════════════════
--- TackPath — migration 69 (2026-10-13): Public API v1.
+-- TackPath — migration 69 (2026-10-15): Public API v1.
 --
 -- Everything the external API needs, additive and reversible:
 --   - a private schema tp_api (API keys, orders, batches, idempotency,
---     webhook endpoints/events/deliveries, status log, audit log);
+--     webhook endpoints/events/deliveries, status log, audit log, outbox);
 --   - one gateway, public.tp_svc_api(action, args), executable by the
 --     service role ONLY (the "api" and "api-webhooks" edge functions call
 --     it). anon/authenticated cannot call it, so the public key still reaches
 --     exactly the nine tp_* entry points migration 20 verified;
---   - two AFTER triggers (jobs status/driver, messages insert) that record
---     status times and queue webhook events. Each trigger body catches every
---     error: a webhook or API problem can never fail a dispatcher, PathIQ or
---     driver write.
+--   - four AFTER triggers (jobs, messages, PathIQ events, bin bindings) that
+--     only queue one row in tp_api.outbox, and only for a company that uses
+--     the API (an active webhook endpoint or live API orders). They read one
+--     indexed row and insert one row: no order state, no scan of the
+--     company's jobs, no webhook work. Each also catches every error.
+--     Everything else (status history, order states, webhook events) is
+--     computed later from the outbox by tp_api.process: by the webhook
+--     worker every minute, and for the calling company at the start of each
+--     API read, outside every dispatcher, PathIQ and driver write.
 --
 -- Credentials: keys look like tpk_live_<12 hex>_<64 hex>. Only the SHA-256 of
 -- the whole key is stored, with the 12-hex prefix for lookup. Each key belongs
 -- to one company (organizations.id) and carries scopes; it can be limited to
 -- the orders it (or keys with the same client label) created. Keys are managed
 -- with a company (dispatcher) session; nothing is shared between companies.
+-- Test-mode keys (tpk_test_) keep their orders apart and never create jobs.
 --
--- Order intake reuses the existing intake path for orders from outside
--- (Shopify, customer portal): a pending job on the company's board, created
--- with tp_sec.insert_json (real columns only). Tracking reads what the apps
--- already record (PathIQ events, jobs, bin_bindings, STOP_DELIVERED /
--- STOP_EXCEPTION / POD_ATTACHED messages) and never invents a time.
+-- Orders and routes: a live order becomes a pending job on the company board
+-- (the existing intake path, tp_sec.insert_json). It moves onto a route ONLY
+-- when dispatch writes its TackPath order id (tp_order_id: "ord_...") on a
+-- route stop or package, and only for an order of the same company. Tracking
+-- numbers and external ids chosen by the customer never link an order to
+-- anything; an intake tracking number already on a job of the company is
+-- refused. PathIQ scans count for an order only on the job that carries it.
 --
 -- Needs 10 (tp_sec helpers). Works with or without 20-68. Changes no existing
 -- function, table, policy or grant. Rollback: 69_public_api.rollback.sql.
+-- Off switch without dropping anything: see docs/api/DEPLOY.md.
 -- ═══════════════════════════════════════════════════════════════════════
 begin;
 
 do $pre$
 begin
-  if to_regnamespace('tp_sec') is null or to_regprocedure('tp_sec.insert_json(regclass,jsonb,text[])') is null then
+  if to_regnamespace('tp_sec') is null or to_regprocedure('tp_sec.insert_json(regclass,jsonb,text[])') is null
+     or to_regprocedure('tp_sec.rate_ok(text,text,integer,interval)') is null then
     raise exception 'Apply 10_sessions_and_rpcs.sql first (tp_sec helpers). Nothing was changed.';
   end if;
   if to_regnamespace('tp_api') is not null then
@@ -41,12 +51,24 @@ begin
   if to_regclass('public.jobs') is null or to_regclass('public.messages') is null or to_regclass('public.organizations') is null then
     raise exception 'public.jobs, public.messages and public.organizations are needed. Nothing was changed.';
   end if;
+  if (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'jobs'
+       and column_name in ('id','org_id','status','driver_name','surge_stops','archived','created_at')) < 7 then
+    raise exception 'public.jobs lacks one of id, org_id, status, driver_name, surge_stops, archived, created_at. Nothing was changed.';
+  end if;
 end $pre$;
 
 create schema tp_api;
 revoke all on schema tp_api from public;
 
 -- ── 1. TABLES (private) ─────────────────────────────────────────────────
+-- Kill switch: enabled = false makes both API functions answer 503 and send nothing.
+create table tp_api.settings (
+  id         boolean primary key default true check (id),
+  enabled    boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+insert into tp_api.settings default values;
+
 create table tp_api.keys (
   id              uuid primary key default gen_random_uuid(),
   org_key         text not null,
@@ -82,23 +104,62 @@ create table tp_api.batches (
 create table tp_api.orders (
   id              uuid primary key default gen_random_uuid(),
   org_key         text not null,
+  mode            text not null default 'live' check (mode in ('live','test')),
   key_id          uuid,
   client_label    text,
   external_id     text not null,
   tracking_number text not null,
-  job_id          uuid,                 -- the job created at intake
+  job_id          uuid,                 -- live orders: the job created at intake; test orders: none
   batch_id        uuid,
   recipient       text not null,
   address         text not null,
   packages        integer not null,
   details         jsonb not null default '{}',
-  last_status     text,                 -- last status sent in a webhook (dedupe)
-  created_at      timestamptz not null default now()
+  status          text not null default 'received',  -- last computed status (lists and filters read this)
+  snapshot        jsonb,                -- the order as last computed (lists return this, never recompute)
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
 );
-create unique index orders_org_external on tp_api.orders (org_key, external_id);
-create unique index orders_org_tracking on tp_api.orders (org_key, upper(tracking_number));
+create unique index orders_org_external on tp_api.orders (org_key, mode, external_id);
+create unique index orders_org_tracking on tp_api.orders (org_key, mode, upper(tracking_number));
 create index on tp_api.orders (job_id);
-create index on tp_api.orders (org_key, created_at desc, id desc);
+create index orders_list on tp_api.orders (org_key, mode, created_at desc, id desc);
+create index orders_by_status on tp_api.orders (org_key, mode, status, created_at desc, id desc);
+
+-- An order is on a route only when dispatch wrote its TackPath order id there.
+create table tp_api.order_links (
+  order_id    uuid not null references tp_api.orders(id) on delete cascade,
+  job_id      uuid not null,
+  stop_number integer not null,
+  linked_at   timestamptz not null default now(),
+  primary key (order_id, job_id)
+);
+create index on tp_api.order_links (job_id);
+
+-- Companies the triggers queue for: an active webhook endpoint or live API orders.
+create table tp_api.watch (
+  org_key text primary key,
+  since   timestamptz not null default now()
+);
+
+-- What the triggers queue (one row per change), processed by tp_api.process.
+create table tp_api.outbox (
+  id             bigserial primary key,
+  org_key        text not null,
+  job_id         uuid not null,
+  kind           text not null check (kind in ('job','stops','message','scan','bin')),
+  from_status    text,
+  to_status      text,
+  driver_name    text,
+  driver_changed boolean not null default false,
+  body           text,                  -- message records: the record itself (STOP_DELIVERED::... etc.)
+  at             timestamptz not null default now(),
+  processed_at   timestamptz,
+  error          text
+);
+create index outbox_due_org on tp_api.outbox (org_key, id) where processed_at is null;
+create index outbox_due on tp_api.outbox (id) where processed_at is null;
+create index on tp_api.outbox (job_id) where processed_at is null;
 
 create table tp_api.idempotency (
   key_id       uuid not null,
@@ -106,12 +167,13 @@ create table tp_api.idempotency (
   op           text not null,
   request_hash text not null,
   status       integer not null,
-  response     jsonb not null,
+  response     jsonb not null,            -- never holds a key or webhook secret
   created_at   timestamptz not null default now(),
   primary key (key_id, idem_key)
 );
 
--- Every status change of a job, from now on (jobs has no assigned_at etc.).
+-- Every status change of a job of a company that uses the API (jobs has no
+-- assigned_at etc.), from the outbox, with the time of the change.
 create table tp_api.job_status_log (
   id          bigserial primary key,
   job_id      uuid not null,
@@ -198,6 +260,25 @@ create function tp_api.fail(p_status integer, p_code text, p_msg text) returns v
 language plpgsql set search_path = '' as $$
 begin raise exception 'TPAPI:%:%:%', p_status, p_code, p_msg; end $$;
 
+create function tp_api.err(p_status integer, p_code text, p_msg text) returns jsonb
+language sql immutable set search_path = '' as
+$$ select jsonb_build_object('status', p_status, 'body', jsonb_build_object('error', jsonb_build_object('code', p_code, 'message', p_msg))) $$;
+
+-- an exception (sqlerrm, sqlstate) as an API response; never the database's own text
+create function tp_api.err_out(p_msg text, p_state text) returns jsonb
+language plpgsql set search_path = '' as $$
+declare parts text[];
+begin
+  if p_msg like 'TPAPI:%' then
+    parts := regexp_match(p_msg, '^TPAPI:([0-9]{3}):([a-z_]+):(.*)$');
+    return tp_api.err(parts[1]::int, parts[2], parts[3]);
+  elsif p_state in ('22P02','22007','22008','22003','23514') then
+    return tp_api.err(400, 'invalid_request', 'A value in the request is not valid');
+  end if;
+  raise warning 'tp_api: % %', p_state, p_msg;
+  return tp_api.err(500, 'internal_error', 'Something went wrong on our side. Please retry later');
+end $$;
+
 create function tp_api.ext_id(p_prefix text, p_id uuid) returns text
 language sql immutable set search_path = '' as
 $$ select case when p_id is null then null else p_prefix || '_' || replace(p_id::text, '-', '') end $$;
@@ -238,56 +319,137 @@ language sql immutable set search_path = '' as $$
     when 'cancelled' then 'cancelled' else 'unknown' end
 $$;
 
-create function tp_api.stops_of(j public.jobs) returns jsonb
-language sql stable set search_path = '' as $$
-  select case when jsonb_typeof(to_jsonb(j)->'surge_stops') = 'array' then to_jsonb(j)->'surge_stops'
-              when jsonb_typeof(to_jsonb(j)->'surge_stops') = 'string' then coalesce(tp_api.safe_json(to_jsonb(j)->>'surge_stops'), '[]')
-              else '[]' end
-$$;
-
--- does a stop carry this order (stop-level or package-level ids)?
-create function tp_api.stop_has(p_stop jsonb, p_ext text, p_trk text) returns boolean
+-- a route's stops as a JSON array (the column may hold an array or a JSON string)
+create function tp_api.stops_value(v jsonb) returns jsonb
 language sql immutable set search_path = '' as $$
-  select upper(coalesce(p_stop->>'tracking_number','')) = upper(p_trk)
-      or coalesce(p_stop->>'order_id','') = p_ext
-      or exists (select 1 from jsonb_array_elements(case when jsonb_typeof(p_stop->'pkgs') = 'array' then p_stop->'pkgs' else '[]' end) k
-                  where upper(coalesce(k->>'tracking_number','')) = upper(p_trk) or coalesce(k->>'order_id','') = p_ext
-                     or upper(coalesce(k->>'piece_id','')) = upper(p_trk))
+  select case jsonb_typeof(v)
+    when 'array' then v
+    when 'string' then (select case when jsonb_typeof(x) = 'array' then x else '[]'::jsonb end
+                          from (select tp_api.safe_json(v #>> '{}') as x) s)
+    else '[]'::jsonb end
 $$;
 
--- The job that currently carries the order, and its stop number:
--- a (newer) route that dispatch built with this order's id or tracking
--- number, else the job created at intake (stop 1).
+create function tp_api.stops_of(j public.jobs) returns jsonb
+language sql stable set search_path = '' as
+$$ select tp_api.stops_value(to_jsonb(j.surge_stops)) $$;
+
+-- every package code a route's stops carry (stop and package tracking numbers, piece ids), upper case
+create function tp_api.stop_codes(p_stops jsonb) returns setof text
+language sql immutable set search_path = '' as $$
+  select distinct upper(btrim(c)) from (
+    select s->>'tracking_number' as c from jsonb_array_elements(p_stops) s
+    union all
+    select k->>f from jsonb_array_elements(p_stops) s,
+                      jsonb_array_elements(case when jsonb_typeof(s->'pkgs') = 'array' then s->'pkgs' else '[]' end) k,
+                      unnest(array['tracking_number', 'piece_id']) f
+  ) x where coalesce(btrim(c), '') <> ''
+$$;
+
+-- every package code on any job of a company (intake refuses these as tracking numbers)
+create function tp_api.company_codes(p_org text) returns text[]
+language sql stable set search_path = '' as $$
+  select coalesce(array_agg(distinct c), '{}')
+    from public.jobs j, lateral tp_api.stop_codes(tp_api.stops_value(to_jsonb(j.surge_stops))) c
+   where j.org_id::text = p_org and j.surge_stops is not null
+$$;
+
+-- the TackPath order ids dispatch wrote on a stop or its packages
+create function tp_api.stop_order_ids(p_stop jsonb) returns setof text
+language sql immutable set search_path = '' as $$
+  select p_stop->>'tp_order_id' where coalesce(p_stop->>'tp_order_id', '') <> ''
+  union
+  select k->>'tp_order_id' from jsonb_array_elements(case when jsonb_typeof(p_stop->'pkgs') = 'array' then p_stop->'pkgs' else '[]' end) k
+   where coalesce(k->>'tp_order_id', '') <> ''
+$$;
+
+-- Rebuild the links of one job from its stops. Only live orders of the same
+-- company are linked. Returns the orders linked before and after.
+create function tp_api.relink(p_job uuid) returns uuid[]
+language plpgsql set search_path = '' as $$
+declare j public.jobs; before uuid[]; after uuid[];
+begin
+  select coalesce(array_agg(order_id), '{}') into before from tp_api.order_links where job_id = p_job;
+  delete from tp_api.order_links where job_id = p_job;
+  select * into j from public.jobs where id = p_job;
+  if j.id is not null and j.org_id is not null then
+    insert into tp_api.order_links (order_id, job_id, stop_number)
+    select distinct on (o.id) o.id, j.id, e.n::int
+      from jsonb_array_elements(tp_api.stops_of(j)) with ordinality e(v, n)
+      cross join lateral tp_api.stop_order_ids(e.v) x(oid)
+      join tp_api.orders o on o.id = tp_api.parse_id('ord', x.oid)
+     where o.org_key = j.org_id::text and o.mode = 'live'
+     order by o.id, e.n;
+  end if;
+  select coalesce(array_agg(order_id), '{}') into after from tp_api.order_links where job_id = p_job;
+  return before || after;
+end $$;
+
+-- The job that carries the order, and its stop number: the newest route that
+-- dispatch linked the order to by its TackPath id, else the intake job (stop 1).
 create function tp_api.locate(o tp_api.orders) returns jsonb
 language plpgsql stable set search_path = '' as $$
-declare j public.jobs; jid uuid; n integer; st jsonb;
+declare j public.jobs; jid uuid; n integer;
 begin
-  select jj.id, e.n, e.v into jid, n, st
-    from public.jobs jj, jsonb_array_elements(tp_api.stops_of(jj)) with ordinality e(v, n)
-   where jj.org_id::text = o.org_key and coalesce((to_jsonb(jj)->>'archived')::boolean, false) = false
-     and tp_api.stop_has(e.v, o.external_id, o.tracking_number)
+  select l.job_id, l.stop_number into jid, n
+    from tp_api.order_links l join public.jobs jj on jj.id = l.job_id
+   where l.order_id = o.id and not coalesce(jj.archived, false)
    order by jj.created_at desc limit 1;
   if jid is not null then
     select * into j from public.jobs where id = jid;
-    return jsonb_build_object('job', to_jsonb(j), 'stop_number', n, 'stop', st, 'routed', true);
+    return jsonb_build_object('job', to_jsonb(j), 'stop_number', n, 'stop', tp_api.stops_of(j)->(n - 1), 'routed', true);
   end if;
+  if o.job_id is null then return null; end if;
   select * into j from public.jobs where id = o.job_id;
   if j.id is null then return null; end if;
   return jsonb_build_object('job', to_jsonb(j), 'stop_number', 1, 'stop', null, 'routed', false);
 end $$;
 
--- The stop's latest record of a kind (STOP_DELIVERED / STOP_EXCEPTION).
-create function tp_api.stop_record(p_job uuid, p_stop integer, p_ext text, p_marker text) returns jsonb
+-- the package codes of an order: its tracking number, plus the codes dispatch
+-- put with its TackPath id: the stop's own tracking number when the stop
+-- carries the id, and the packages that carry the id (or, on a stop that
+-- carries it, packages without an id of their own). Packages of other
+-- orders at a shared stop are never included.
+create function tp_api.order_codes(o tp_api.orders, p_stop jsonb) returns text[]
+language sql stable set search_path = '' as $$
+  select array_agg(distinct c) from (
+    select upper(o.tracking_number) as c
+    union all
+    select upper(p_stop->>'tracking_number') where p_stop->>'tp_order_id' = tp_api.ext_id('ord', o.id)
+    union all
+    select upper(k->>f) from jsonb_array_elements(case when jsonb_typeof(p_stop->'pkgs') = 'array' then p_stop->'pkgs' else '[]' end) k,
+                             unnest(array['tracking_number', 'piece_id']) f
+     where k->>'tp_order_id' = tp_api.ext_id('ord', o.id)
+        or (coalesce(k->>'tp_order_id', '') = '' and p_stop->>'tp_order_id' = tp_api.ext_id('ord', o.id))
+  ) x where coalesce(c, '') <> ''
+$$;
+
+-- a job's status at a time: the last recorded change at or before it, else
+-- the status before the first later change, else its status now
+create function tp_api.job_status_at(p_job uuid, p_now text, p_at timestamptz) returns text
+language sql stable set search_path = '' as $$
+  with ch as (
+    select at, id as seq, from_status, to_status from tp_api.job_status_log where job_id = p_job
+    union all
+    select at, id, from_status, to_status from tp_api.outbox
+     where job_id = p_job and kind = 'job' and processed_at is null and from_status is distinct from to_status)
+  select coalesce((select to_status from ch where at <= p_at order by at desc, seq desc limit 1),
+                  (select from_status from ch where at > p_at order by at, seq limit 1),
+                  p_now)
+$$;
+
+-- The stop's latest record of a kind (STOP_DELIVERED / STOP_EXCEPTION), by stop number only.
+create function tp_api.stop_record(p_job uuid, p_stop integer, p_marker text, p_at timestamptz) returns jsonb
 language sql stable set search_path = '' as $$
   select r || jsonb_build_object('_recorded_at', m.created_at) from public.messages m,
          lateral (select tp_api.marked(m.body, p_marker) as r) x
-   where m.job_id = p_job and r is not null
-     and (coalesce((r->>'stop_number')::text, '') = p_stop::text or (p_ext <> '' and r->>'order_id' = p_ext))
+   where m.job_id = p_job and r is not null and coalesce(r->>'stop_number', '') = p_stop::text
+     and (p_at is null or m.created_at <= p_at)
    order by m.created_at desc limit 1
 $$;
 
--- Everything we know about an order, computed from the apps' own records.
-create function tp_api.order_state(o tp_api.orders) returns jsonb
+-- Everything we know about an order (now, or as it was at p_at), from the
+-- apps' own records on the job that carries it.
+create function tp_api.order_state(o tp_api.orders, p_at timestamptz default null) returns jsonb
 language plpgsql stable set search_path = '' as $$
 declare
   loc jsonb := tp_api.locate(o);
@@ -295,29 +457,33 @@ declare
   jid uuid := (j->>'id')::uuid;
   sn integer := coalesce((loc->>'stop_number')::int, 1);
   st jsonb := loc->'stop';
+  codes text[];
   dlv jsonb; exc jsonb;
   sorted_at timestamptz; staged_at timestamptz; staging text; bin text;
-  s text := 'received'; js text := j->>'status';
+  s text := 'received'; js text;
 begin
-  if jid is not null then
-    dlv := tp_api.stop_record(jid, sn, o.external_id, 'STOP_DELIVERED::');
-    exc := tp_api.stop_record(jid, sn, o.external_id, 'STOP_EXCEPTION::');
-  end if;
+  if jid is null then return jsonb_build_object('status', 'received'); end if;   -- test orders; a removed job
+  js := case when p_at is null then j->>'status' else tp_api.job_status_at(jid, j->>'status', p_at) end;
+  dlv := tp_api.stop_record(jid, sn, 'STOP_DELIVERED::', p_at);
+  exc := tp_api.stop_record(jid, sn, 'STOP_EXCEPTION::', p_at);
+  codes := tp_api.order_codes(o, st);
   if to_regclass('public.events') is not null then
     execute $q$ select min(e.occurred_at) from public.events e
-       where e.org_id::text = $1 and e.event_type = 'package.stowed'
-         and (upper(coalesce(e.payload->>'code','')) in (upper($2), upper($3))
-           or upper(coalesce(e.payload->>'piece','')) in (upper($2), upper($3))) $q$
-      into sorted_at using o.org_key, o.tracking_number, o.external_id;
+       where e.job_id = $1 and e.event_type = 'package.stowed'
+         and (upper(coalesce(e.payload->>'code', '')) = any($2) or upper(coalesce(e.payload->>'piece', '')) = any($2))
+         and ($3::timestamptz is null or e.recorded_at <= $3) $q$
+      into sorted_at using jid, codes, p_at;
   end if;
-  if jid is not null and to_regclass('public.bin_bindings') is not null then
+  if to_regclass('public.bin_bindings') is not null then
     execute $q$ select b.bin_code, to_jsonb(b)->>'staging_code', tp_api.ts(to_jsonb(b)->>'staged_at')
                   from public.bin_bindings b where b.job_id = $1 order by b.opened_at desc limit 1 $q$
       into bin, staging, staged_at using jid;
+    if p_at is not null and staged_at > p_at then staged_at := null; staging := null; end if;
   end if;
-  if staged_at is null and jid is not null and to_regclass('public.events') is not null then
-    execute $q$ select min(e.occurred_at) from public.events e where e.job_id = $1 and e.event_type = 'bin.staged' $q$
-      into staged_at using jid;
+  if staged_at is null and to_regclass('public.events') is not null then
+    execute $q$ select min(e.occurred_at) from public.events e where e.job_id = $1 and e.event_type = 'bin.staged'
+                 and ($2::timestamptz is null or e.recorded_at <= $2) $q$
+      into staged_at using jid, p_at;
   end if;
 
   if dlv is not null then s := 'delivered';
@@ -334,15 +500,16 @@ begin
 
   -- absent facts are left out (not JSON null), so callers can test them with IS NULL
   return jsonb_strip_nulls(jsonb_build_object('status', s, 'job', j, 'stop_number', sn, 'routed', coalesce((loc->>'routed')::boolean, false),
-    'delivered', dlv, 'exception', exc, 'sorted_at', sorted_at, 'staged_at', staged_at, 'staging_spot', staging, 'bin', bin));
+    'delivered', dlv, 'exception', exc, 'sorted_at', sorted_at, 'staged_at', staged_at, 'staging_spot', staging, 'bin', bin,
+    'codes', to_jsonb(codes)));
 end $$;
 
-create function tp_api.order_json(o tp_api.orders) returns jsonb
+create function tp_api.order_json(o tp_api.orders, p_at timestamptz default null) returns jsonb
 language plpgsql stable set search_path = '' as $$
-declare s jsonb := tp_api.order_state(o); j jsonb := s->'job';
+declare s jsonb := tp_api.order_state(o, p_at); j jsonb := s->'job';
 begin
   return jsonb_build_object(
-    'id', tp_api.ext_id('ord', o.id), 'object', 'order',
+    'id', tp_api.ext_id('ord', o.id), 'object', 'order', 'mode', o.mode,
     'external_id', o.external_id, 'tracking_number', o.tracking_number,
     'status', s->>'status',
     'recipient', jsonb_build_object('name', o.recipient),
@@ -354,7 +521,7 @@ begin
         'driver', case when coalesce(j->>'driver_name','') = '' then null
                        else jsonb_build_object('name', tp_api.driver_display(j->>'driver_name')) end) end,
     'sorted_at', s->'sorted_at', 'staged_at', s->'staged_at', 'staging_spot', s->'staging_spot',
-    'out_for_delivery_at', j->'picked_up_at',
+    'out_for_delivery_at', case when p_at is null or tp_api.ts(j->>'picked_up_at') <= p_at then j->'picked_up_at' end,
     'delivered_at', coalesce(s->'delivered'->'delivered_at', case when s->>'status' = 'delivered' then j->'delivered_at' end),
     'proof_of_delivery_available', (s->'delivered') is not null,
     'batch_id', tp_api.ext_id('bat', o.batch_id),
@@ -366,17 +533,17 @@ create function tp_api.order_events(o tp_api.orders) returns jsonb
 language plpgsql stable set search_path = '' as $$
 declare s jsonb := tp_api.order_state(o); j jsonb := s->'job'; jid uuid := (j->>'id')::uuid;
   ev jsonb := '[]'; pq jsonb := '[]'; x jsonb := s->'exception'; d jsonb := s->'delivered';
+  codes text[] := array(select jsonb_array_elements_text(coalesce(s->'codes', '[]')));
 begin
   ev := ev || jsonb_build_array(jsonb_build_object('type','received','occurred_at', o.created_at, 'source','api'));
-  if to_regclass('public.events') is not null then      -- PathIQ scans of this package
+  if jid is not null and to_regclass('public.events') is not null then      -- PathIQ scans of this package on its job
     execute $q$ select coalesce(jsonb_agg(jsonb_build_object(
                'type', case e.event_type when 'package.inducted' then 'received_at_warehouse' else 'sorted' end,
                'occurred_at', e.occurred_at, 'source', 'pathiq', 'bin', e.payload->'bin') order by e.occurred_at), '[]')
           from public.events e
-         where e.org_id::text = $1 and e.event_type in ('package.inducted','package.stowed')
-           and (upper(coalesce(e.payload->>'code','')) in (upper($2), upper($3))
-             or upper(coalesce(e.payload->>'piece','')) in (upper($2), upper($3))) $q$
-      into pq using o.org_key, o.tracking_number, o.external_id;
+         where e.job_id = $1 and e.event_type in ('package.inducted','package.stowed')
+           and (upper(coalesce(e.payload->>'code','')) = any($2) or upper(coalesce(e.payload->>'piece','')) = any($2)) $q$
+      into pq using jid, codes;
     ev := ev || pq;
   end if;
   if (s->>'staged_at') is not null then
@@ -391,7 +558,7 @@ begin
               'driver', case when l.to_status = 'assigned' then tp_api.driver_display(l.driver_name) end) order by l.at)
             from tp_api.job_status_log l where l.job_id = jid
              and l.to_status in ('assigned','in_transit','cancelled','pending')), '[]');
-    -- before this migration there is no status log: the pickup time of migration 68, if recorded
+    -- without a status log entry: the pickup time of migration 68, if recorded
     if (j->>'picked_up_at') is not null
        and not exists (select 1 from tp_api.job_status_log l where l.job_id = jid and l.to_status = 'in_transit') then
       ev := ev || jsonb_build_array(jsonb_build_object('type','out_for_delivery','occurred_at', j->'picked_up_at','source','driver'));
@@ -415,12 +582,13 @@ end $$;
 
 -- Proof of delivery: the delivery record and the media paths in the private
 -- "pod" bucket (the edge function turns paths into short-lived signed links).
+-- Only files under the carrying job's own folder are returned.
 create function tp_api.order_pod(o tp_api.orders) returns jsonb
 language plpgsql stable set search_path = '' as $$
 declare s jsonb := tp_api.order_state(o); d jsonb := s->'delivered'; jid uuid := (s->'job'->>'id')::uuid;
   sn integer := (s->>'stop_number')::int; media jsonb := '[]';
 begin
-  if d is null then perform tp_api.fail(404, 'pod_not_available', 'No proof of delivery has been recorded for this order'); end if;
+  if d is null or jid is null then perform tp_api.fail(404, 'pod_not_available', 'No proof of delivery has been recorded for this order'); end if;
   if coalesce(d->>'pod_url','') <> '' then
     media := media || jsonb_build_array(jsonb_build_object('kind', coalesce(d->>'pod_kind','photo'), 'path', d->>'pod_url'));
   end if;
@@ -460,8 +628,8 @@ begin
     res := res || jsonb_build_object('stops', coalesce((select jsonb_agg(jsonb_build_object(
         'stop_number', e.n, 'order_id', e.v->'order_id', 'tracking_number', e.v->'tracking_number',
         'recipient', e.v->'recipient', 'address', e.v->'address', 'packages', e.v->'packages',
-        'status', case when tp_api.stop_record(j.id, e.n::int, coalesce(e.v->>'order_id',''), 'STOP_DELIVERED::') is not null then 'delivered'
-                       when tp_api.stop_record(j.id, e.n::int, coalesce(e.v->>'order_id',''), 'STOP_EXCEPTION::') is not null then 'exception'
+        'status', case when tp_api.stop_record(j.id, e.n::int, 'STOP_DELIVERED::', null) is not null then 'delivered'
+                       when tp_api.stop_record(j.id, e.n::int, 'STOP_EXCEPTION::', null) is not null then 'exception'
                        when coalesce((e.v->>'cancelled')::boolean, false) then 'cancelled' else 'pending' end) order by e.n)
       from jsonb_array_elements(stops) with ordinality e(v, n)), '[]'));
   end if;
@@ -494,7 +662,7 @@ begin
   if a ? 'session' then
     begin s := tp_sec.session(a->>'session', 'org');
     exception when others then perform tp_api.fail(401, 'invalid_session', 'Sign in again'); end;
-    return jsonb_build_object('kind','session','org_key', s.org_key, 'scopes', to_jsonb(tp_api.all_scopes()),
+    return jsonb_build_object('kind','session','org_key', s.org_key, 'scopes', to_jsonb(tp_api.all_scopes()), 'mode', 'live',
       'own_orders_only', false, 'client_label', null, 'key_id', null, 'rate', 600);
   end if;
   if raw is null or raw !~ '^tpk_(live|test)_[0-9a-f]{12}_[0-9a-f]{64}$' then
@@ -511,13 +679,13 @@ begin
     update tp_api.keys set last_used_at = now() where id = k.id;
   end if;
   return jsonb_build_object('kind','key','org_key', k.org_key, 'scopes', to_jsonb(k.scopes), 'own_orders_only', k.own_orders_only,
-    'client_label', coalesce(k.client_label, k.id::text), 'key_id', k.id, 'prefix', k.prefix, 'rate', k.rate_per_minute);
+    'client_label', coalesce(k.client_label, k.id::text), 'key_id', k.id, 'prefix', k.prefix, 'rate', k.rate_per_minute, 'mode', k.mode);
 end $$;
 
--- may this caller see this order?
+-- may this caller see this order? (same company, same mode, and its own if limited)
 create function tp_api.can_see(p jsonb, o tp_api.orders) returns boolean
 language sql stable set search_path = '' as $$
-  select o.org_key = p->>'org_key'
+  select o.org_key = p->>'org_key' and o.mode = coalesce(p->>'mode', 'live')
      and (not coalesce((p->>'own_orders_only')::boolean, false) or coalesce(o.client_label, '') = p->>'client_label')
 $$;
 
@@ -526,22 +694,39 @@ language plpgsql stable set search_path = '' as $$
 declare o tp_api.orders; u uuid := tp_api.parse_id('ord', p_id);
 begin
   if u is not null then select * into o from tp_api.orders where id = u;
-  else select * into o from tp_api.orders where org_key = p->>'org_key' and external_id = p_id; end if;
+  else select * into o from tp_api.orders where org_key = p->>'org_key' and mode = coalesce(p->>'mode', 'live') and external_id = p_id; end if;
   if o.id is null or not tp_api.can_see(p, o) then perform tp_api.fail(404, 'not_found', 'No such order'); end if;
   return o;
 end $$;
 
--- ── 4. WEBHOOK EVENTS (queued; never blocks the caller) ─────────────────
+-- ── 4. QUEUE, WEBHOOK EVENTS, PROCESSING (never inside an operational write) ──
 create function tp_api.all_events() returns text[]
 language sql immutable set search_path = '' as $$
   select array['order.status_changed','route.assignment_changed','delivery.completed','delivery.exception','pod.available']
+$$;
+
+-- keep tp_api.watch true to "this company has an active endpoint or live API orders"
+create function tp_api.rewatch(p_org text) returns void
+language plpgsql set search_path = '' as $$
+begin
+  if exists (select 1 from tp_api.webhook_endpoints where org_key = p_org and active)
+     or exists (select 1 from tp_api.orders where org_key = p_org and mode = 'live') then
+    insert into tp_api.watch (org_key) values (p_org) on conflict do nothing;
+  else
+    delete from tp_api.watch where org_key = p_org;
+  end if;
+end $$;
+
+create function tp_api.listens(p_org text, p_type text) returns boolean
+language sql stable set search_path = '' as $$
+  select exists (select 1 from tp_api.webhook_endpoints w where w.org_key = p_org and w.active and p_type = any(w.events))
 $$;
 
 create function tp_api.emit(p_org text, p_type text, p_order uuid, p_job uuid, p_label text, p_data jsonb) returns void
 language plpgsql set search_path = '' as $$
 declare ev uuid;
 begin
-  if not exists (select 1 from tp_api.webhook_endpoints w where w.org_key = p_org and w.active and p_type = any(w.events)) then
+  if not tp_api.listens(p_org, p_type) then
     return;   -- nobody listens: nothing is stored
   end if;
   insert into tp_api.events (org_key, client_label, type, order_id, job_id, data)
@@ -553,91 +738,201 @@ begin
      and (p_type <> 'route.assignment_changed' or w.client_label is null);
 end $$;
 
--- orders carried by a job: created with it, or routed onto it by dispatch
-create function tp_api.orders_of_job(j public.jobs) returns setof tp_api.orders
+-- orders carried by a job: created with it, or linked to it by dispatch
+create function tp_api.orders_of_job(p_job uuid) returns setof tp_api.orders
 language sql stable set search_path = '' as $$
-  select o.* from tp_api.orders o where o.job_id = j.id
+  select o.* from tp_api.orders o where o.job_id = p_job
   union
-  select o.* from tp_api.orders o, jsonb_array_elements(tp_api.stops_of(j)) e(v)
-   where o.org_key = j.org_id::text and tp_api.stop_has(e.v, o.external_id, o.tracking_number)
+  select o.* from tp_api.order_links l join tp_api.orders o on o.id = l.order_id where l.job_id = p_job
 $$;
 
-create function tp_api.emit_status(o tp_api.orders, p_job uuid) returns void
+-- an order's status as it was at p_at: sent when it changed (only if someone listens)
+create function tp_api.emit_status(p_order uuid, p_job uuid, p_at timestamptz) returns void
 language plpgsql set search_path = '' as $$
-declare cur jsonb := tp_api.order_json(o);
+declare o tp_api.orders; cur jsonb;
 begin
-  if cur->>'status' is distinct from o.last_status then
-    update tp_api.orders set last_status = cur->>'status' where id = o.id;
+  select * into o from tp_api.orders where id = p_order;
+  if o.id is null or not tp_api.listens(o.org_key, 'order.status_changed') then return; end if;
+  cur := tp_api.order_json(o, p_at);
+  if cur->>'status' is distinct from o.status then
+    update tp_api.orders set status = cur->>'status', updated_at = now() where id = o.id;
     perform tp_api.emit(o.org_key, 'order.status_changed', o.id, p_job, o.client_label,
-      jsonb_build_object('order', cur, 'previous_status', o.last_status));
+      jsonb_build_object('order', cur, 'previous_status', o.status));
   end if;
 end $$;
 
+-- store an order as it is now (lists read this); send its status if it changed
+create function tp_api.refresh(p_order uuid) returns void
+language plpgsql set search_path = '' as $$
+declare o tp_api.orders; cur jsonb;
+begin
+  select * into o from tp_api.orders where id = p_order;
+  if o.id is null then return; end if;
+  cur := tp_api.order_json(o);
+  if cur->>'status' is distinct from o.status then
+    perform tp_api.emit(o.org_key, 'order.status_changed', o.id, tp_api.parse_id('rte', cur->'route'->>'id'), o.client_label,
+      jsonb_build_object('order', cur, 'previous_status', o.status));
+  end if;
+  update tp_api.orders set status = cur->>'status', snapshot = cur, updated_at = now() where id = o.id;
+end $$;
+
+-- one queued change: status history, route and delivery events, order statuses
+create function tp_api.process_one(r tp_api.outbox) returns uuid[]
+language plpgsql set search_path = '' as $$
+declare j public.jobs; touched uuid[] := '{}'; o tp_api.orders; st jsonb; ord jsonb; rec jsonb; kind text;
+begin
+  select * into j from public.jobs where id = r.job_id;
+  if j.id is null then return touched; end if;
+  if r.kind = 'stops' then touched := touched || tp_api.relink(j.id); end if;
+  if r.kind = 'job' then
+    if r.from_status is distinct from r.to_status then
+      insert into tp_api.job_status_log (job_id, org_key, from_status, to_status, driver_name, at)
+      values (j.id, r.org_key, r.from_status, r.to_status, r.driver_name, r.at);
+    end if;
+    if r.driver_changed or (r.to_status = 'assigned' and r.from_status is distinct from 'assigned') then
+      perform tp_api.emit(r.org_key, 'route.assignment_changed', null, j.id, null, jsonb_build_object('route', tp_api.route_json(j, false)));
+    end if;
+  end if;
+  if r.kind = 'message' and r.body is not null then
+    kind := split_part(r.body, '::', 1);
+    rec := tp_api.safe_json(substr(r.body, length(kind) + 3));
+  end if;
+  for o in select * from tp_api.orders_of_job(j.id) loop
+    touched := touched || o.id;
+    if rec is not null and (tp_api.listens(o.org_key, 'delivery.completed') or tp_api.listens(o.org_key, 'delivery.exception')
+                            or tp_api.listens(o.org_key, 'pod.available')) then
+      st := tp_api.order_state(o, r.at);
+      if (st->'job'->>'id')::uuid is not distinct from j.id
+         and coalesce(case when kind = 'POD_ATTACHED' then rec->>'stop' else rec->>'stop_number' end, '') = (st->>'stop_number') then
+        ord := tp_api.order_json(o, r.at);
+        if kind = 'STOP_DELIVERED' then
+          perform tp_api.emit(o.org_key, 'delivery.completed', o.id, j.id, o.client_label, jsonb_build_object('order', ord));
+          if coalesce(rec->>'pod_url','') <> '' then
+            perform tp_api.emit(o.org_key, 'pod.available', o.id, j.id, o.client_label, jsonb_build_object('order', ord));
+          end if;
+        elsif kind = 'STOP_EXCEPTION' then
+          perform tp_api.emit(o.org_key, 'delivery.exception', o.id, j.id, o.client_label,
+            jsonb_build_object('order', ord, 'reason', rec->'reason', 'reason_label', rec->'reason_label'));
+        elsif kind = 'POD_ATTACHED' and rec->>'problem' is null and st->'delivered' is not null then
+          perform tp_api.emit(o.org_key, 'pod.available', o.id, j.id, o.client_label, jsonb_build_object('order', ord));
+        end if;
+      end if;
+    end if;
+    perform tp_api.emit_status(o.id, j.id, r.at);
+  end loop;
+  return touched;
+end $$;
+
+-- Work through queued changes, oldest first: one company (p_org) or all.
+-- Each row is processed on its own; a row that fails is marked with its
+-- error and never blocks the rest. Stops after about 2 seconds.
+create function tp_api.process(p_org text, p_limit integer) returns integer
+language plpgsql set search_path = '' as $$
+declare r tp_api.outbox; n integer := 0; touched uuid[] := '{}'; oid uuid;
+begin
+  for r in select * from tp_api.outbox
+            where processed_at is null and (p_org is null or org_key = p_org)
+            order by id limit greatest(least(coalesce(p_limit, 200), 1000), 1)
+            for update skip locked loop
+    exit when clock_timestamp() - statement_timestamp() > interval '2 seconds';
+    begin
+      touched := touched || tp_api.process_one(r);
+      update tp_api.outbox set processed_at = now() where id = r.id;
+    exception when others then
+      update tp_api.outbox set processed_at = now(), error = left(sqlerrm, 300) where id = r.id;
+    end;
+    n := n + 1;
+  end loop;
+  for oid in select distinct x from unnest(touched) x loop
+    begin perform tp_api.refresh(oid);
+    exception when others then raise warning 'tp_api.refresh: %', sqlerrm; end;
+  end loop;
+  if random() < 0.01 then delete from tp_api.outbox where processed_at < now() - interval '2 days'; end if;
+  return n;
+end $$;
+
+-- The triggers: one indexed read, at most one insert, every error caught.
 create function tp_api.on_job_change() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare o tp_api.orders;
 begin
   begin
-    if new.status is distinct from old.status then
-      insert into tp_api.job_status_log (job_id, org_key, from_status, to_status, driver_name)
-      values (new.id, new.org_id::text, old.status, new.status, new.driver_name);
-    end if;
-    if new.org_id is not null and (new.status is distinct from old.status or new.driver_name is distinct from old.driver_name) then
-      if new.driver_name is distinct from old.driver_name or (new.status = 'assigned' and old.status is distinct from 'assigned') then
-        perform tp_api.emit(new.org_id::text, 'route.assignment_changed', null, new.id, null,
-          jsonb_build_object('route', tp_api.route_json(new, false)));
+    if new.org_id is null then return null; end if;
+    -- a company that does not use the API: one indexed read, nothing else
+    if not exists (select 1 from tp_api.watch w where w.org_key = new.org_id::text) then return null; end if;
+    if tg_op = 'INSERT' then
+      if coalesce(new.surge_stops::text, '') like '%tp_order_id%' then
+        insert into tp_api.outbox (org_key, job_id, kind) values (new.org_id::text, new.id, 'stops');
       end if;
-      for o in select * from tp_api.orders_of_job(new) loop
-        perform tp_api.emit_status(o, new.id);
-      end loop;
+      return null;
+    end if;
+    if new.surge_stops is distinct from old.surge_stops
+       and (coalesce(new.surge_stops::text, '') like '%tp_order_id%' or coalesce(old.surge_stops::text, '') like '%tp_order_id%') then
+      insert into tp_api.outbox (org_key, job_id, kind) values (new.org_id::text, new.id, 'stops');
+    end if;
+    if new.status is distinct from old.status or new.driver_name is distinct from old.driver_name then
+      insert into tp_api.outbox (org_key, job_id, kind, from_status, to_status, driver_name, driver_changed)
+      values (new.org_id::text, new.id, 'job', old.status, new.status, new.driver_name, new.driver_name is distinct from old.driver_name);
     end if;
   exception when others then
-    raise warning 'tp_api.on_job_change: %', sqlerrm;   -- never fail the job update
+    raise warning 'tp_api.on_job_change: %', sqlerrm;   -- never fail the job write
   end;
   return null;
 end $$;
 
 create function tp_api.on_message() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare j public.jobs; o tp_api.orders; r jsonb; kind text; st jsonb; ord jsonb;
+declare org uuid;
 begin
   begin
-    if new.body is null or new.job_id is null or new.body !~ '^(STOP_DELIVERED|STOP_EXCEPTION|POD_ATTACHED)::' then return null; end if;
-    kind := split_part(new.body, '::', 1);
-    r := tp_api.safe_json(substr(new.body, length(kind) + 3));
-    if r is null then return null; end if;
-    select * into j from public.jobs where id = new.job_id;
-    if j.id is null or j.org_id is null then return null; end if;
-    for o in select * from tp_api.orders_of_job(j) loop
-      st := tp_api.order_state(o);
-      if (st->'job'->>'id')::uuid is distinct from j.id
-         or coalesce(case when kind = 'POD_ATTACHED' then r->>'stop' else r->>'stop_number' end, '') <> (st->>'stop_number') then
-        continue;      -- a record of another stop
-      end if;
-      ord := tp_api.order_json(o);
-      if kind = 'STOP_DELIVERED' then
-        perform tp_api.emit(o.org_key, 'delivery.completed', o.id, j.id, o.client_label, jsonb_build_object('order', ord));
-        if coalesce(r->>'pod_url','') <> '' then
-          perform tp_api.emit(o.org_key, 'pod.available', o.id, j.id, o.client_label, jsonb_build_object('order', ord));
-        end if;
-      elsif kind = 'STOP_EXCEPTION' then
-        perform tp_api.emit(o.org_key, 'delivery.exception', o.id, j.id, o.client_label,
-          jsonb_build_object('order', ord, 'reason', r->'reason', 'reason_label', r->'reason_label'));
-      elsif kind = 'POD_ATTACHED' and r->>'problem' is null and st->'delivered' is not null then
-        perform tp_api.emit(o.org_key, 'pod.available', o.id, j.id, o.client_label, jsonb_build_object('order', ord));
-      end if;
-      perform tp_api.emit_status(o, j.id);
-    end loop;
+    if new.job_id is null or new.body is null or new.body !~ '^(STOP_DELIVERED|STOP_EXCEPTION|POD_ATTACHED)::' then return null; end if;
+    select j.org_id into org from public.jobs j where j.id = new.job_id;
+    if org is null or not exists (select 1 from tp_api.watch w where w.org_key = org::text) then return null; end if;
+    insert into tp_api.outbox (org_key, job_id, kind, body) values (org::text, new.job_id, 'message', left(new.body, 20000));
   exception when others then
-    raise warning 'tp_api.on_message: %', sqlerrm;   -- never fail the driver's message
+    raise warning 'tp_api.on_message: %', sqlerrm;      -- never fail the driver's message
   end;
   return null;
 end $$;
 
-create trigger tp_api_job_change after update of status, driver_name on public.jobs
+create function tp_api.on_scan() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  begin
+    if new.job_id is null or new.org_id is null or new.event_type not in ('package.stowed','package.inducted','bin.staged') then return null; end if;
+    if not exists (select 1 from tp_api.watch w where w.org_key = new.org_id::text) then return null; end if;
+    insert into tp_api.outbox (org_key, job_id, kind) values (new.org_id::text, new.job_id, 'scan');
+  exception when others then
+    raise warning 'tp_api.on_scan: %', sqlerrm;         -- never fail a PathIQ scan
+  end;
+  return null;
+end $$;
+
+create function tp_api.on_bin() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  begin
+    if new.job_id is null or new.org_id is null then return null; end if;
+    if not exists (select 1 from tp_api.watch w where w.org_key = new.org_id::text) then return null; end if;
+    insert into tp_api.outbox (org_key, job_id, kind) values (new.org_id::text, new.job_id, 'bin');
+  exception when others then
+    raise warning 'tp_api.on_bin: %', sqlerrm;          -- never fail a bin binding
+  end;
+  return null;
+end $$;
+
+create trigger tp_api_job_change after insert or update of status, driver_name, surge_stops on public.jobs
   for each row execute function tp_api.on_job_change();
 create trigger tp_api_message after insert on public.messages
   for each row execute function tp_api.on_message();
+do $trg$
+begin
+  if to_regclass('public.events') is not null then
+    execute 'create trigger tp_api_scan after insert on public.events for each row execute function tp_api.on_scan()';
+  end if;
+  if to_regclass('public.bin_bindings') is not null then
+    execute 'create trigger tp_api_bin after insert or update on public.bin_bindings for each row execute function tp_api.on_bin()';
+  end if;
+end $trg$;
 
 -- ── 5. OPERATIONS ───────────────────────────────────────────────────────
 create function tp_api.page(a jsonb) returns jsonb
@@ -657,14 +952,16 @@ create function tp_api.cursor_of(p_t timestamptz, p_id uuid) returns text
 language sql immutable set search_path = '' as
 $$ select replace(encode(convert_to(jsonb_build_object('t', p_t, 'id', p_id)::text, 'UTF8'), 'base64'), E'\n', '') $$;
 
-create function tp_api.create_order(p jsonb, o jsonb, p_batch uuid) returns jsonb
+-- p_codes: the package codes already on the company's jobs (live orders only)
+create function tp_api.create_order(p jsonb, o jsonb, p_batch uuid, p_codes text[]) returns jsonb
 language plpgsql set search_path = '' as $$
 declare
+  md text := coalesce(p->>'mode', 'live');
   ext text := btrim(coalesce(o->>'external_id',''));
   rcp text := btrim(coalesce(o->>'recipient_name',''));
   addr text := btrim(coalesce(o->>'address',''));
   pk integer; trk text := upper(btrim(coalesce(o->>'tracking_number','')));
-  ex tp_api.orders; v_job jsonb; v_ord tp_api.orders; det jsonb; summary text;
+  ex tp_api.orders; v_job jsonb; v_ord tp_api.orders; det jsonb; summary text; cur jsonb;
 begin
   if ext = '' or length(ext) > 64 or ext !~ '^[A-Za-z0-9._:-]+$' then
     return jsonb_build_object('status', 422, 'error', 'invalid_external_id', 'message', 'external_id: 1-64 letters, digits or . _ : -');
@@ -679,14 +976,15 @@ begin
     return jsonb_build_object('status', 422, 'error', 'invalid_tracking_number', 'message', 'tracking_number: 6-40 letters, digits or -');
   end if;
 
-  select * into ex from tp_api.orders where org_key = p->>'org_key' and external_id = ext;
+  select * into ex from tp_api.orders where org_key = p->>'org_key' and mode = md and external_id = ext;
   if ex.id is not null then
     return jsonb_build_object('status', 409, 'error', 'duplicate_order',
       'message', 'An order with this external_id already exists', 'order_id', tp_api.ext_id('ord', ex.id));
   end if;
   if trk = '' then trk := 'TPA' || upper(tp_sec.random_hex(6)); end if;
-  if exists (select 1 from tp_api.orders where org_key = p->>'org_key' and upper(tracking_number) = trk) then
-    return jsonb_build_object('status', 409, 'error', 'duplicate_tracking_number', 'message', 'This tracking_number is already used by another order');
+  if exists (select 1 from tp_api.orders where org_key = p->>'org_key' and mode = md and upper(tracking_number) = trk)
+     or (md = 'live' and trk = any(coalesce(p_codes, '{}'))) then
+    return jsonb_build_object('status', 409, 'error', 'duplicate_tracking_number', 'message', 'This tracking_number is already in use');
   end if;
 
   det := jsonb_strip_nulls(jsonb_build_object(
@@ -699,22 +997,26 @@ begin
   summary := left(concat_ws(' · ', rcp, pk || case when pk = 1 then ' package' else ' packages' end,
                             'Tracking ' || trk, det->>'unit', det->>'delivery_notes'), 1000);
 
-  -- the existing intake path: a pending job on the company's board
-  v_job := tp_sec.insert_json('public.jobs', jsonb_strip_nulls(jsonb_build_object(
-    'title', left('API order ' || ext || ' · ' || rcp, 200),
-    'pickup_address', det->>'pickup_address', 'dropoff_address', addr,
-    'status', 'pending', 'org_id', p->>'org_key', 'source', 'api',
-    'total_packages', pk, 'total_stops', 1, 'route_summary', summary, 'customer_confirmed', true)),
-    array['title','pickup_address','dropoff_address','status','org_id','source','total_packages','total_stops',
-          'route_summary','customer_confirmed']);
+  -- live: the existing intake path, a pending job on the company's board. test: no job at all.
+  if md = 'live' then
+    v_job := tp_sec.insert_json('public.jobs', jsonb_strip_nulls(jsonb_build_object(
+      'title', left('API order ' || ext || ' · ' || rcp, 200),
+      'pickup_address', det->>'pickup_address', 'dropoff_address', addr,
+      'status', 'pending', 'org_id', p->>'org_key', 'source', 'api',
+      'total_packages', pk, 'total_stops', 1, 'route_summary', summary, 'customer_confirmed', true)),
+      array['title','pickup_address','dropoff_address','status','org_id','source','total_packages','total_stops',
+            'route_summary','customer_confirmed']);
+    insert into tp_api.watch (org_key) values (p->>'org_key') on conflict do nothing;
+  end if;
 
-  insert into tp_api.orders (org_key, key_id, client_label, external_id, tracking_number, job_id, batch_id,
+  insert into tp_api.orders (org_key, mode, key_id, client_label, external_id, tracking_number, job_id, batch_id,
                              recipient, address, packages, details)
-  values (p->>'org_key', (p->>'key_id')::uuid, p->>'client_label', ext, trk, (v_job->>'id')::uuid, p_batch,
+  values (p->>'org_key', md, (p->>'key_id')::uuid, p->>'client_label', ext, trk, (v_job->>'id')::uuid, p_batch,
           rcp, addr, pk, det)
   returning * into v_ord;
-  update tp_api.orders set last_status = 'received' where id = v_ord.id returning * into v_ord;
-  return jsonb_build_object('status', 201, 'order', tp_api.order_json(v_ord));
+  cur := tp_api.order_json(v_ord);
+  update tp_api.orders set status = cur->>'status', snapshot = cur where id = v_ord.id;
+  return jsonb_build_object('status', 201, 'order', cur);
 end $$;
 
 create function tp_api.check_webhook_url(p_url text) returns text
@@ -774,13 +1076,16 @@ language plpgsql set search_path = '' as $$
 declare
   b jsonb := coalesce(a->'body', '{}');
   q jsonb := coalesce(a->'query', '{}');
+  md text := coalesce(p->>'mode', 'live');
+  own boolean := coalesce((p->>'own_orders_only')::boolean, false);
   pg jsonb; res jsonb; o tp_api.orders; w tp_api.webhook_endpoints; j public.jobs; u uuid;
   rows jsonb; r jsonb; n_acc integer := 0; n_dup integer := 0; n_rej integer := 0; bid uuid := gen_random_uuid();
-  sec text; ev text[]; i integer := 0;
+  sec text; ev text[]; i integer := 0; codes text[];
 begin
   case op
   when 'orders.create' then
-    res := tp_api.create_order(p, b, null);
+    codes := case when md = 'live' then tp_api.company_codes(p->>'org_key') end;
+    res := tp_api.create_order(p, b, null, codes);
     if (res->>'status')::int <> 201 then
       return jsonb_build_object('status', (res->>'status')::int, 'body', jsonb_build_object('error',
         jsonb_build_object('code', res->>'error', 'message', res->>'message') || jsonb_strip_nulls(jsonb_build_object('order_id', res->'order_id'))));
@@ -791,11 +1096,12 @@ begin
     if jsonb_typeof(b->'orders') <> 'array' or jsonb_array_length(b->'orders') = 0 or jsonb_array_length(b->'orders') > 500 then
       perform tp_api.fail(422, 'invalid_batch', 'orders: a list of 1-500 orders');
     end if;
+    codes := case when md = 'live' then tp_api.company_codes(p->>'org_key') end;
     rows := '[]';
     for r in select x from jsonb_array_elements(b->'orders') x loop
       i := i + 1;
       begin
-        res := tp_api.create_order(p, r, bid);
+        res := tp_api.create_order(p, r, bid, codes);
       exception when others then
         res := jsonb_build_object('status', 422, 'error', 'invalid_order', 'message', 'This order could not be read');
       end;
@@ -819,31 +1125,32 @@ begin
     select jsonb_build_object('id', tp_api.ext_id('bat', x.id), 'object', 'batch', 'received', x.received, 'created', x.accepted,
              'duplicates', x.duplicates, 'rejected', x.rejected, 'results', x.results, 'created_at', x.created_at) into res
       from tp_api.batches x where x.id = tp_api.parse_id('bat', a->>'id') and x.org_key = p->>'org_key'
-       and (not coalesce((p->>'own_orders_only')::boolean, false) or x.key_id::text = p->>'key_id'
+       and (not own or x.key_id::text = p->>'key_id'
             or exists (select 1 from tp_api.keys k where k.id = x.key_id and coalesce(k.client_label, k.id::text) = p->>'client_label'));
     if res is null then perform tp_api.fail(404, 'not_found', 'No such batch'); end if;
     return jsonb_build_object('status', 200, 'body', res);
 
   when 'orders.list' then
+    -- stored values only: no order is recomputed here
     pg := tp_api.page(q);
     if q ? 'status' and not (q->>'status' = any(array['received','sorted','staged','assigned','out_for_delivery','delivered',
                                                    'delivery_attempted','exception','cancelled'])) then
       perform tp_api.fail(400, 'invalid_filter', 'Unknown status filter');
     end if;
     select coalesce(jsonb_agg(x.js order by x.c desc, x.id desc), '[]') into rows from (
-      select tp_api.order_json(oo) as js, oo.created_at as c, oo.id from tp_api.orders oo
-       where tp_api.can_see(p, oo)
+      select coalesce(oo.snapshot, jsonb_build_object('id', tp_api.ext_id('ord', oo.id), 'object', 'order', 'status', oo.status,
+                                                      'created_at', oo.created_at)) as js, oo.created_at as c, oo.id
+        from tp_api.orders oo
+       where oo.org_key = p->>'org_key' and oo.mode = md
+         and (not own or coalesce(oo.client_label, '') = p->>'client_label')
+         and (q->>'status' is null or oo.status = q->>'status')
          and (q->>'external_id' is null or oo.external_id = q->>'external_id')
          and (q->>'tracking_number' is null or upper(oo.tracking_number) = upper(q->>'tracking_number'))
          and (q->>'created_after' is null or oo.created_at >= tp_api.ts(q->>'created_after'))
          and (q->>'created_before' is null or oo.created_at < tp_api.ts(q->>'created_before'))
          and (pg->>'t' is null or (oo.created_at, oo.id) < ((pg->>'t')::timestamptz, (pg->>'id')::uuid))
        order by oo.created_at desc, oo.id desc
-       limit case when q ? 'status' then 2000 else (pg->>'limit')::int + 1 end) x;
-    if q ? 'status' then
-      select coalesce(jsonb_agg(e), '[]') into rows from jsonb_array_elements(rows) e where e->>'status' = q->>'status';
-      select coalesce(jsonb_agg(e), '[]') into rows from (select e from jsonb_array_elements(rows) e limit (pg->>'limit')::int + 1) z;
-    end if;
+       limit (pg->>'limit')::int + 1) x;
     return jsonb_build_object('status', 200, 'body', jsonb_build_object('object', 'list',
       'data', coalesce((select jsonb_agg(e) from (select e from jsonb_array_elements(rows) e limit (pg->>'limit')::int) z), '[]'),
       'has_more', jsonb_array_length(rows) > (pg->>'limit')::int,
@@ -861,7 +1168,7 @@ begin
       'status', tp_api.order_state(o)->>'status', 'data', tp_api.order_events(o)));
 
   when 'tracking.get' then
-    select * into o from tp_api.orders where org_key = p->>'org_key' and upper(tracking_number) = upper(coalesce(a->>'id',''));
+    select * into o from tp_api.orders where org_key = p->>'org_key' and mode = md and upper(tracking_number) = upper(coalesce(a->>'id',''));
     if o.id is null or not tp_api.can_see(p, o) then perform tp_api.fail(404, 'not_found', 'No such tracking number'); end if;
     return jsonb_build_object('status', 200, 'body', jsonb_build_object('object', 'tracking', 'order', tp_api.order_json(o),
       'events', tp_api.order_events(o)));
@@ -878,7 +1185,7 @@ begin
     end if;
     select coalesce(jsonb_agg(x.js order by x.c desc, x.id desc), '[]') into rows from (
       select tp_api.route_json(jj, false) as js, jj.created_at as c, jj.id from public.jobs jj
-       where jj.org_id::text = p->>'org_key' and coalesce((to_jsonb(jj)->>'archived')::boolean, false) = false
+       where jj.org_id::text = p->>'org_key' and not coalesce(jj.archived, false)
          and (q->>'status' is null or tp_api.route_status(jj.status) = q->>'status')
          and (q->>'created_after' is null or jj.created_at >= tp_api.ts(q->>'created_after'))
          and (pg->>'t' is null or (jj.created_at, jj.id) < ((pg->>'t')::timestamptz, (pg->>'id')::uuid))
@@ -904,14 +1211,15 @@ begin
     end if;
     sec := 'whsec_' || tp_sec.random_hex(32);
     insert into tp_api.webhook_endpoints (org_key, client_label, url, description, events, secret)
-    values (p->>'org_key', case when coalesce((p->>'own_orders_only')::boolean, false) then p->>'client_label' end,
+    values (p->>'org_key', case when own then p->>'client_label' end,
             b->>'url', left(b->>'description', 200), ev, sec) returning * into w;
+    perform tp_api.rewatch(p->>'org_key');
     return jsonb_build_object('status', 201, 'body', tp_api.webhook_json(w) || jsonb_build_object('secret', sec));
 
   when 'webhooks.list' then
     select coalesce(jsonb_agg(tp_api.webhook_json(x) order by x.created_at desc), '[]') into rows
       from tp_api.webhook_endpoints x where x.org_key = p->>'org_key'
-       and (not coalesce((p->>'own_orders_only')::boolean, false) or x.client_label = p->>'client_label');
+       and (not own or x.client_label = p->>'client_label');
     return jsonb_build_object('status', 200, 'body', jsonb_build_object('object', 'list', 'data', rows, 'has_more', false));
 
   when 'webhooks.get' then
@@ -929,12 +1237,14 @@ begin
                               when b ? 'active' then null else disabled_at end,
            updated_at = now()
      where id = w.id returning * into w;
+    perform tp_api.rewatch(p->>'org_key');
     return jsonb_build_object('status', 200, 'body', tp_api.webhook_json(w));
 
   when 'webhooks.delete' then
     w := tp_api.find_webhook(p, a->>'id');
     update tp_api.webhook_endpoints set active = false, disabled_at = now(), updated_at = now() where id = w.id;
     update tp_api.deliveries set status = 'failed', last_error = 'endpoint deleted' where endpoint_id = w.id and status = 'pending';
+    perform tp_api.rewatch(p->>'org_key');
     return jsonb_build_object('status', 200, 'body', jsonb_build_object('id', tp_api.ext_id('whk', w.id), 'deleted', true));
 
   when 'webhooks.rotate' then
@@ -965,7 +1275,7 @@ begin
     select coalesce(jsonb_agg(jsonb_build_object('id', tp_api.ext_id('evt', e.id), 'type', e.type, 'created_at', e.created_at, 'data', e.data)
              order by e.created_at desc), '[]') into rows
       from (select * from tp_api.events ee where ee.org_key = p->>'org_key'
-              and (not coalesce((p->>'own_orders_only')::boolean, false) or ee.client_label = p->>'client_label')
+              and (not own or ee.client_label = p->>'client_label')
               and (pg->>'t' is null or (ee.created_at, ee.id) < ((pg->>'t')::timestamptz, (pg->>'id')::uuid))
             order by ee.created_at desc, ee.id desc limit (pg->>'limit')::int) e;
     return jsonb_build_object('status', 200, 'body', jsonb_build_object('object', 'list', 'data', rows,
@@ -1053,76 +1363,105 @@ begin
 end $$;
 
 -- ── 6. THE GATEWAY (service role only) ──────────────────────────────────
+create function tp_api.enabled() returns boolean
+language sql stable set search_path = '' as
+$$ select coalesce((select enabled from tp_api.settings), true) $$;
+
+-- One API request. Order: kill switch; failed-sign-in limits (address, key
+-- prefix); who is calling; the per-key rate limit, counted for every request
+-- before anything can fail; then the operation in its own error block. The
+-- counts are written outside that block, so a failing request cannot undo them.
 create function tp_api.handle(a jsonb) returns jsonb
 language plpgsql set search_path = '' as $$
 declare
-  p jsonb; op text := a->>'op'; out jsonb; st integer; code text; msg text; parts text[];
+  p jsonb; op text := a->>'op'; out jsonb; scope text; remaining integer; hdr jsonb := '{}';
   writes constant text[] := array['orders.create','orders.batch','webhooks.create','webhooks.rotate','keys.create','keys.rotate'];
+  reads constant text[] := array['orders.get','orders.list','orders.events','orders.pod','tracking.get','routes.list','routes.get','events.list'];
   idem text := nullif(btrim(coalesce(a->>'idempotency_key','')), ''); hsh text; prev tp_api.idempotency;
-  scope text; remaining integer; hdr jsonb := '{}';
+  ip text := nullif(left(btrim(coalesce(a->>'ip', '')), 64), '');
+  pre text := case when coalesce(a->>'key', '') ~ '^tpk_(live|test)_[0-9a-f]{12}_' then split_part(a->>'key', '_', 3) end;
 begin
-  begin
-    p := tp_api.principal(a);
-    if p->>'kind' = 'key' then
-      if not tp_sec.rate_ok('api_req', p->>'key_id', (p->>'rate')::int, interval '1 minute') then
-        perform tp_api.fail(429, 'rate_limited', 'Too many requests. Retry after the time in Retry-After');
+  if not tp_api.enabled() then
+    out := tp_api.err(503, 'api_disabled', 'The TackPath API is switched off for maintenance. Please retry later');
+  elsif ip is not null and tp_sec.rate_count('api_authfail_ip', ip, interval '1 minute') >= 30 then
+    out := tp_api.err(429, 'rate_limited', 'Too many failed sign-ins from this address. Retry after the time in Retry-After');
+  else
+    begin
+      p := tp_api.principal(a);
+    exception when others then
+      out := tp_api.err_out(sqlerrm, sqlstate);
+    end;
+    if (out->>'status')::int = 401 then
+      if pre is not null and out->'body'->'error'->>'code' = 'invalid_api_key'
+         and tp_sec.rate_count('api_authfail_key', pre, interval '1 minute') >= 10 then
+        out := tp_api.err(429, 'rate_limited', 'Too many failed attempts for this key. Retry after the time in Retry-After');
       end if;
-      remaining := greatest((p->>'rate')::int - tp_sec.rate_count('api_req', p->>'key_id', interval '1 minute'), 0);
-      hdr := jsonb_build_object('X-RateLimit-Limit', (p->>'rate'), 'X-RateLimit-Remaining', remaining::text);
-      if op like 'keys.%' then perform tp_api.fail(403, 'forbidden', 'API keys are managed on the TackPath developer page'); end if;
-      scope := tp_api.op_scope(op);
-      if scope is null then perform tp_api.fail(404, 'unknown_endpoint', 'No such endpoint'); end if;
-      if not (scope = any(array(select jsonb_array_elements_text(p->'scopes')))) then
-        perform tp_api.fail(403, 'insufficient_scope', 'This API key does not have the ' || scope || ' scope');
-      end if;
-      if op = 'orders.batch' and not tp_sec.rate_ok('api_batch', p->>'org_key', 120, interval '1 hour') then
-        perform tp_api.fail(429, 'rate_limited', 'Too many batches this hour');
-      end if;
-    elsif p->>'kind' = 'session' and not tp_sec.rate_ok('api_admin', p->>'org_key', 600, interval '1 minute') then
-      perform tp_api.fail(429, 'rate_limited', 'Too many requests');
+      if ip is not null then insert into tp_sec.rate_events (bucket, key) values ('api_authfail_ip', ip); end if;
+      if pre is not null then insert into tp_sec.rate_events (bucket, key) values ('api_authfail_key', pre); end if;
     end if;
+  end if;
 
-    if p->>'kind' = 'session' then idem := null; end if;   -- idempotency is per API key
-    if op = any(writes) and idem is not null then
-      if length(idem) > 200 then perform tp_api.fail(400, 'invalid_idempotency_key', 'Idempotency-Key: at most 200 characters'); end if;
-      hsh := tp_sec.sha256_hex(op || '|' || coalesce(a->>'id','') || '|' || coalesce((a->'body')::text, ''));
-      select * into prev from tp_api.idempotency
-       where key_id = coalesce((p->>'key_id')::uuid, '00000000-0000-0000-0000-000000000000') and idem_key = idem
-         and created_at > now() - interval '24 hours';
-      if prev.key_id is not null then
-        if prev.request_hash <> hsh or prev.op <> op then
-          perform tp_api.fail(409, 'idempotency_conflict', 'This Idempotency-Key was used with a different request');
+  if out is null and p->>'kind' = 'key' then
+    if not tp_sec.rate_ok('api_req', p->>'key_id', (p->>'rate')::int, interval '1 minute') then
+      out := tp_api.err(429, 'rate_limited', 'Too many requests. Retry after the time in Retry-After');
+    elsif op = 'orders.batch' and not tp_sec.rate_ok('api_batch', p->>'org_key', 120, interval '1 hour') then
+      out := tp_api.err(429, 'rate_limited', 'Too many batches this hour');
+    end if;
+    remaining := greatest((p->>'rate')::int - tp_sec.rate_count('api_req', p->>'key_id', interval '1 minute'), 0);
+    hdr := jsonb_build_object('X-RateLimit-Limit', (p->>'rate'), 'X-RateLimit-Remaining', remaining::text);
+  elsif out is null and p->>'kind' = 'session' and not tp_sec.rate_ok('api_admin', p->>'org_key', 600, interval '1 minute') then
+    out := tp_api.err(429, 'rate_limited', 'Too many requests');
+  end if;
+
+  if out is null then
+    begin
+      if p->>'kind' = 'key' then
+        if op like 'keys.%' then perform tp_api.fail(403, 'forbidden', 'API keys are managed on the TackPath developer page'); end if;
+        scope := tp_api.op_scope(op);
+        if scope is null then perform tp_api.fail(404, 'unknown_endpoint', 'No such endpoint'); end if;
+        if not (scope = any(array(select jsonb_array_elements_text(p->'scopes')))) then
+          perform tp_api.fail(403, 'insufficient_scope', 'This API key does not have the ' || scope || ' scope');
         end if;
-        out := jsonb_build_object('status', prev.status, 'body', prev.response, 'headers', hdr || jsonb_build_object('Idempotent-Replayed', 'true'));
       end if;
-    end if;
 
-    if out is null then
-      out := case when p->>'kind' = 'session' then tp_api.run_admin(p, op, a) else tp_api.run(p, op, a) end;
-      out := out || jsonb_build_object('headers', hdr);
-      if op = any(writes) and idem is not null and (out->>'status')::int < 500 then
-        delete from tp_api.idempotency where key_id = coalesce((p->>'key_id')::uuid, '00000000-0000-0000-0000-000000000000')
-          and idem_key = idem;
-        insert into tp_api.idempotency (key_id, idem_key, op, request_hash, status, response)
-        values (coalesce((p->>'key_id')::uuid, '00000000-0000-0000-0000-000000000000'), idem, op, hsh, (out->>'status')::int, out->'body');
-        if random() < 0.01 then delete from tp_api.idempotency where created_at < now() - interval '2 days'; end if;
+      if p->>'kind' = 'session' then idem := null; end if;   -- idempotency is per API key
+      if op = any(writes) and idem is not null then
+        if length(idem) > 200 then perform tp_api.fail(400, 'invalid_idempotency_key', 'Idempotency-Key: at most 200 characters'); end if;
+        hsh := tp_sec.sha256_hex(op || '|' || coalesce(a->>'id','') || '|' || coalesce((a->'body')::text, ''));
+        select * into prev from tp_api.idempotency
+         where key_id = (p->>'key_id')::uuid and idem_key = idem and created_at > now() - interval '24 hours';
+        if prev.key_id is not null then
+          if prev.request_hash <> hsh or prev.op <> op then
+            perform tp_api.fail(409, 'idempotency_conflict', 'This Idempotency-Key was used with a different request');
+          end if;
+          out := jsonb_build_object('status', prev.status, 'body', prev.response, 'headers', jsonb_build_object('Idempotent-Replayed', 'true'));
+        end if;
       end if;
-    end if;
-  exception when others then
-    if sqlerrm like 'TPAPI:%' then
-      parts := regexp_match(sqlerrm, '^TPAPI:([0-9]{3}):([a-z_]+):(.*)$');
-      st := parts[1]::int; code := parts[2]; msg := parts[3];
-    elsif sqlstate in ('22P02','22007','22008','22003','23514') then
-      st := 400; code := 'invalid_request'; msg := 'A value in the request is not valid';
-    else
-      st := 500; code := 'internal_error'; msg := 'Something went wrong on our side. Please retry later';
-      raise warning 'tp_api: % %', sqlstate, sqlerrm;
-    end if;
-    out := jsonb_build_object('status', st, 'body', jsonb_build_object('error', jsonb_build_object('code', code, 'message', msg)),
-      'headers', hdr || case when st = 429 then jsonb_build_object('Retry-After', '60') else '{}' end);
-  end;
+
+      if out is null then
+        -- reads see the company's latest changes: work through its queue first (bounded, never blocking)
+        if op = any(reads) then
+          begin perform tp_api.process(p->>'org_key', 200);
+          exception when others then raise warning 'tp_api.process: %', sqlerrm; end;
+        end if;
+        out := case when p->>'kind' = 'session' then tp_api.run_admin(p, op, a) else tp_api.run(p, op, a) end;
+        if op = any(writes) and idem is not null and (out->>'status')::int < 500 then
+          delete from tp_api.idempotency where key_id = (p->>'key_id')::uuid and idem_key = idem;
+          insert into tp_api.idempotency (key_id, idem_key, op, request_hash, status, response)
+          values ((p->>'key_id')::uuid, idem, op, hsh, (out->>'status')::int, (out->'body') - 'secret' - 'key');   -- never a secret
+          if random() < 0.01 then delete from tp_api.idempotency where created_at < now() - interval '2 days'; end if;
+        end if;
+      end if;
+    exception when others then
+      out := tp_api.err_out(sqlerrm, sqlstate);
+    end;
+  end if;
+
+  out := out || jsonb_build_object('headers', hdr || coalesce(out->'headers', '{}')
+    || case when (out->>'status')::int = 429 then jsonb_build_object('Retry-After', '60')
+            when (out->>'status')::int = 503 then jsonb_build_object('Retry-After', '300') else '{}' end);
   insert into tp_api.audit (org_key, key_id, key_prefix, actor, request_id, method, path, op, status, error_code)
-  values (p->>'org_key', (p->>'key_id')::uuid, coalesce(p->>'prefix', case when a->>'key' ~ '^tpk_(live|test)_[0-9a-f]{12}_' then split_part(a->>'key','_',3) end),
+  values (p->>'org_key', (p->>'key_id')::uuid, coalesce(p->>'prefix', pre),
           p->>'kind', left(a->>'request_id', 64), left(a->>'method', 10), left(a->>'path', 300), left(op, 40),
           (out->>'status')::int, out->'body'->'error'->>'code');
   return out;
@@ -1133,6 +1472,7 @@ create function tp_api.claim(p_limit integer) returns jsonb
 language plpgsql set search_path = '' as $$
 declare res jsonb;
 begin
+  if not tp_api.enabled() then return '[]'; end if;
   with due as (
     select d.id from tp_api.deliveries d join tp_api.webhook_endpoints w on w.id = d.endpoint_id
      where d.status = 'pending' and d.next_attempt_at <= now() and (d.locked_until is null or d.locked_until < now()) and w.active
@@ -1177,6 +1517,9 @@ returns jsonb language plpgsql security definer set search_path = '' as $$
 begin
   case p_action
   when 'request' then return tp_api.handle(coalesce(p_args, '{}'));
+  when 'process' then
+    if not tp_api.enabled() then return jsonb_build_object('disabled', true); end if;
+    return jsonb_build_object('processed', tp_api.process(null, coalesce(nullif(p_args->>'limit','')::int, 500)));
   when 'claim'   then return tp_api.claim(nullif(p_args->>'limit','')::int);
   when 'report'  then return tp_api.report(coalesce(p_args, '{}'));
   else raise exception 'TP_INVALID: unknown action %', p_action;

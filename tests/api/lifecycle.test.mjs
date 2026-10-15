@@ -67,7 +67,8 @@ test('the full journey: received, assigned, sorted, staged, out for delivery, de
 
   const tr = await get('/tracking/trk-100001');
   assert.equal(tr.status, 200); assert.equal(tr.body.order.id, o.id); assert.equal(tr.body.events.length, 6);
-  assert.ok(!JSON.stringify([g, ev.body, pod.body, tr.body]).includes('555'), 'no phone numbers in any response');
+  const all = JSON.stringify([g, ev.body, pod.body, tr.body]);   // the driver's phone is 4045551234 (random ids may contain "555")
+  assert.ok(!all.includes('4045551234') && !all.includes('555-1234'), 'no phone numbers in any response');
 });
 
 test('before anything is recorded, nothing is invented: no sorted, staged or delivered times', async () => {
@@ -101,11 +102,12 @@ test('cancelled by dispatch', async () => {
 test('an order that dispatch puts on a multi-stop route follows that route and its stop', async () => {
   const a = (await call('POST', '/orders', { key, body: ORDER(6, { tracking_number: 'RTE-000006' }) })).body;
   const b = (await call('POST', '/orders', { key, body: ORDER(7, { tracking_number: 'RTE-000007' }) })).body;
-  // a SmartSort route as the dispatcher publishes it (stop 2 combines two packages at one address)
+  // a SmartSort route as the dispatcher publishes it (stop 2 combines two packages at one address);
+  // dispatch puts an API order on a route by writing its TackPath order id (tp_order_id) on the stop or package
   const stops = [
-    { stop_number: 1, order_id: 'SO-1006', tracking_number: 'RTE-000006', recipient: 'Avery Collins', address: '214 Maple Grove Ln', packages: 1 },
+    { stop_number: 1, tp_order_id: a.id, order_id: 'SO-1006', tracking_number: 'RTE-000006', recipient: 'Avery Collins', address: '214 Maple Grove Ln', packages: 1 },
     { stop_number: 2, order_id: 'X-9', recipient: 'Jordan Blake', address: '87 Cedar Hollow Dr', packages: 2,
-      pkgs: [{ order_id: 'X-9', tracking_number: 'OTHER-1' }, { order_id: 'SO-1007', tracking_number: 'RTE-000007' }] },
+      pkgs: [{ order_id: 'X-9', tracking_number: 'OTHER-1' }, { tp_order_id: b.id, order_id: 'SO-1007', tracking_number: 'RTE-000007' }] },
   ];
   const rid = (await db.query(`insert into public.jobs (org_id, title, status, job_type, surge_stops, total_stops, total_packages)
     values ($1, 'Surge Route RT-009', 'pending', 'surge', $2, 2, 3) returning id`, [ORG_A, JSON.stringify(stops)])).rows[0].id;

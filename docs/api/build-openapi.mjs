@@ -11,7 +11,8 @@ const list = (item) => ({ type: 'object', required: ['object', 'data', 'has_more
   object: { const: 'list' }, data: { type: 'array', items: item }, has_more: { type: 'boolean' },
   next_cursor: { type: ['string', 'null'], description: 'Pass as ?cursor= to get the next page' } } });
 const common = { 401: err('Missing, invalid, revoked or expired credentials'), 429: err('Rate limit exceeded (see Retry-After)'),
-  500: err('Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)') };
+  500: err('Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)'),
+  503: err('api_disabled: the API is switched off for maintenance (see Retry-After)') };
 const idParam = (name, desc) => ({ name: 'id', in: 'path', required: true, description: desc, schema: { type: 'string', pattern: '^[A-Za-z0-9._:-]{1,64}$' } });
 const q = (name, desc, schema = { type: 'string' }) => ({ name, in: 'query', required: false, description: desc, schema });
 const paging = [q('limit', '1-200, default 50', { type: 'integer', minimum: 1, maximum: 200 }), q('cursor', 'next_cursor from the previous page')];
@@ -32,7 +33,7 @@ const schemas = {
     recipient_name: { type: 'string', minLength: 1, maxLength: 120 },
     address: { type: 'string', minLength: 5, maxLength: 300, description: 'Full delivery address' },
     packages: { type: 'integer', minimum: 1, maximum: 99, default: 1 },
-    tracking_number: { type: 'string', pattern: '^[A-Za-z0-9-]{6,40}$', description: 'The barcode on the package. Generated (TPA...) if omitted. Unique per company.' },
+    tracking_number: { type: 'string', pattern: '^[A-Za-z0-9-]{6,40}$', description: 'The barcode on the package. Generated (TPA...) if omitted. Unique per company; a number already used by another order or on any of the company routes is refused (409).' },
     recipient_phone: { type: 'string', maxLength: 30 }, unit: { type: 'string', maxLength: 40 },
     access_notes: { type: 'string', maxLength: 500 }, gate_code: { type: 'string', maxLength: 40 },
     delivery_notes: { type: 'string', maxLength: 1000 }, signature_required: { type: 'boolean' },
@@ -40,6 +41,7 @@ const schemas = {
     metadata: { type: 'object', description: 'Your own key/values, returned as is (at most 2 KB)' } } },
   Order: { type: 'object', properties: {
     id: { type: 'string', examples: ['ord_45ff5ef99ddf4ae6b369899a184ffd70'] }, object: { const: 'order' },
+    mode: { enum: ['live', 'test'], description: 'test: created with a test-mode key; never on the dispatch board' },
     external_id: { type: 'string' }, tracking_number: { type: 'string' },
     status: { enum: ORDER_STATUS, description: 'See the status table in the guide' },
     recipient: { type: 'object', properties: { name: { type: 'string' } } }, address: { type: 'string' }, packages: { type: 'integer' },

@@ -102,7 +102,7 @@
           "tracking_number": {
             "type": "string",
             "pattern": "^[A-Za-z0-9-]{6,40}$",
-            "description": "The barcode on the package. Generated (TPA...) if omitted. Unique per company."
+            "description": "The barcode on the package. Generated (TPA...) if omitted. Unique per company; a number already used by another order or on any of the company routes is refused (409)."
           },
           "recipient_phone": {
             "type": "string",
@@ -148,6 +148,13 @@
           },
           "object": {
             "const": "order"
+          },
+          "mode": {
+            "enum": [
+              "live",
+              "test"
+            ],
+            "description": "test: created with a test-mode key; never on the dispatch board"
           },
           "external_id": {
             "type": "string"
@@ -1021,6 +1028,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -1187,6 +1204,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1285,6 +1312,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1353,6 +1390,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1462,6 +1509,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1537,6 +1594,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1605,6 +1672,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1694,6 +1771,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1829,6 +1916,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1897,6 +1994,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1989,6 +2096,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -2066,6 +2183,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2134,6 +2261,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2234,6 +2371,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -2308,6 +2455,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2400,6 +2557,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2476,6 +2643,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2584,6 +2761,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2678,6 +2865,16 @@
           },
           "500": {
             "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
             "content": {
               "application/json": {
                 "schema": {

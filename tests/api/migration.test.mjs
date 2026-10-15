@@ -24,7 +24,7 @@ test('69 refuses to run twice, the rollback removes everything it added, and 69 
   await assert.rejects(db.exec(sqlFile('69_public_api.rollback.sql')), /not in place/);
   await db.exec('rollback');
   await db.exec(sqlFile('69_public_api.sql'));
-  assert.equal((await db.query(`select count(*)::int n from pg_trigger where tgname like 'tp_api%'`)).rows[0].n, 2);
+  assert.equal((await db.query(`select count(*)::int n from pg_trigger where tgname like 'tp_api%'`)).rows[0].n, 4, 'jobs, messages, events, bin_bindings');
 });
 
 test('69 stops, changing nothing, when migration 10 is missing', async () => {

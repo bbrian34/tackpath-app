@@ -38,7 +38,8 @@ Authorization: Bearer tpk_live_361f0da6ce32_9b2f...   (64 hex characters after t
 - **Rotation:** **Rotate** issues a new key. The old key keeps working for the grace period (default 24 hours; 0 revokes it at once), so you can deploy the new key with no downtime.
 - **Revocation:** **Revoke** stops a key immediately.
 - **Expiry:** a key can be given an expiry date when it is created.
-- **Failed credentials:** a request with a missing, wrong, revoked or expired key gets `401`.
+- **Failed credentials:** a request with a missing, wrong, revoked or expired key gets `401`. After repeated failures from one address, or for one key prefix, further attempts get `429` for a minute (see Limits).
+- **Test mode:** a key created in test mode (`tpk_test_...`) works on its own set of orders. Test orders never appear on the dispatch board, are never offered to drivers and stay `received`. Live keys never see test orders, and test keys never see live ones.
 
 ## 2. Quick start
 
@@ -54,7 +55,7 @@ curl -X POST "$API/orders" \
 
 ```json
 {
-  "id": "ord_45ff5ef99ddf4ae6b369899a184ffd70", "object": "order",
+  "id": "ord_45ff5ef99ddf4ae6b369899a184ffd70", "object": "order", "mode": "live",
   "external_id": "SO-48213", "tracking_number": "PCX4102322", "status": "received",
   "recipient": { "name": "Avery Collins" }, "address": "214 Maple Grove Ln, Marietta, GA 30064", "packages": 2,
   "details": {}, "route": { "id": "rte_2ed955a68399451b82cefff2c794a79f", "status": "unassigned", "stop_number": 1, "driver": null },
@@ -85,13 +86,14 @@ The order now appears on the dispatcher's board as a pending delivery, the same 
 | `recipient_name` | yes | 1-120 characters |
 | `address` | yes | Full address, 5-300 characters |
 | `packages` | no | 1-99, default 1 |
-| `tracking_number` | no | 6-40 of `A-Z 0-9 -`, stored upper case. This is the barcode PathIQ and the driver scan. If you leave it out, TackPath creates one (`TPA...`). Unique per company. |
+| `tracking_number` | no | 6-40 of `A-Z 0-9 -`, stored upper case. This is the barcode PathIQ and the driver scan. If you leave it out, TackPath creates one (`TPA...`). Unique per company: a number already used by another order, or already on any of the company's routes, is refused with `409 duplicate_tracking_number`. |
 | `recipient_phone`, `unit`, `access_notes`, `gate_code`, `delivery_notes`, `signature_required`, `pickup_address` | no | Shown to dispatch and the driver |
 | `metadata` | no | Your own object (max 2 KB), returned as is |
 
 **Duplicates and retries**
 - A second order with the same `external_id` gets `409 duplicate_order`, with `error.order_id` naming the existing order. A reused tracking number gets `409 duplicate_tracking_number`.
 - Send an `Idempotency-Key` header (any unique string, max 200 characters) on every write. Repeating the request with the same key and body within 24 hours returns the first response, with the header `Idempotent-Replayed: true`. Reusing the key with a different body gets `409 idempotency_conflict`.
+- Secrets are never stored for replays: a replayed `POST /webhooks` or `rotate-secret` response has no `secret`. If you lost it, rotate the secret again.
 
 **Manifests:** `POST /orders/batch` with `{"orders": [ ... up to 500 ... ]}`. Each line is checked on its own. The response is always `200`:
 
@@ -136,7 +138,8 @@ An order's `status` is the furthest point it has reached, worked out only from w
 - **Order of states:** assignment can happen before or after sorting. The status always shows the most advanced physical state.
 - **Events:** `/events` lists every step in time order with its own time and source (`api`, `pathiq`, `dispatch`, `driver`). A step that was not recorded is not listed, and a time is never estimated or filled in.
 - **History:** status changes made before the API was enabled have no recorded time, so only their outcome is shown.
-- **Routes:** if dispatch puts your order on a multi-stop route (SmartSort), the order follows that route. `route.id` and `route.stop_number` change to match.
+- **Routes:** when dispatch puts your order on a multi-stop route, it marks the stop with your order's TackPath id (`ord_...`). The order then follows that route, and `route.id` and `route.stop_number` change to match. Tracking numbers and `external_id` values never link an order to a route, a stop or another order's records.
+- **Freshness:** an order's own endpoints (`/orders/{id}`, `/events`, `/proof-of-delivery`, `/tracking/...`) show its latest state. `GET /orders` and webhooks reflect a change once TackPath has processed it, normally within a minute.
 
 ## 5. Routes
 
@@ -237,6 +240,7 @@ Every error has the same shape. Quote `request_id` (also in the `X-Request-Id` h
 | 415 | `unsupported_media_type` | Send `Content-Type: application/json` |
 | 422 | `invalid_external_id`, `invalid_recipient`, `invalid_address`, `invalid_packages`, `invalid_tracking_number`, `invalid_batch`, `invalid_order`, `invalid_url`, `invalid_events`, `too_many_endpoints`, `invalid_name`, `invalid_mode`, `invalid_scopes`, `invalid_expiry`, `too_many_keys` | Fix the field named in the message |
 | 429 | `rate_limited` | Wait for `Retry-After` seconds |
+| 503 | `api_disabled` | The API is switched off for maintenance. Retry after `Retry-After` seconds |
 | 500 | `internal_error` | Retry with the same Idempotency-Key; contact support with the request id if it persists |
 
 Another company's resources always answer `404`, never `403`, so their existence is not revealed.
@@ -252,6 +256,7 @@ Another company's resources always answer `404`, never `403`, so their existence
 | Active keys | 25 per company |
 | Webhook endpoints | 10 active per company |
 | Idempotency keys | remembered for 24 hours |
+| Failed sign-ins | 20 per minute per address (checked before the database), 30 per minute per address across all servers, 10 per minute per key prefix |
 
 When a limit is exceeded you get `429 rate_limited` with `Retry-After: 60`.
 

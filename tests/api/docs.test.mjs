@@ -33,6 +33,7 @@ test('every error code the SQL gateway and the edge function return is in the de
   const codes = new Set([
     ...[...sql.matchAll(/fail\(\d{3},\s*'([a-z_]+)'/g)].map((m) => m[1]),
     ...[...sql.matchAll(/'error',\s*'([a-z_]+)',\s*'message'/g)].map((m) => m[1]),
+    ...[...sql.matchAll(/tp_api\.err\(\d{3},\s*'([a-z_]+)'/g)].map((m) => m[1]),
     ...[...js.matchAll(/error\(\d{3},\s*'([a-z_]+)'/g)].map((m) => m[1]),
   ]);
   assert.ok(codes.size >= 20, `found ${codes.size} codes`);

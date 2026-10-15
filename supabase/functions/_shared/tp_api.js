@@ -94,22 +94,62 @@ function error(status, code, message, requestId, extra = {}) {
 }
 
 // ── Webhook destinations: no private networks (SSRF) ──────────────────────
-export function isPublicIp(ip) {
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
-    const [a, b] = ip.split('.').map(Number);
-    if (a === 10 || a === 127 || a === 0 || a >= 224) return false;
-    if (a === 169 && b === 254) return false;              // link-local, cloud metadata
-    if (a === 172 && b >= 16 && b <= 31) return false;
-    if (a === 192 && b === 168) return false;
-    if (a === 100 && b >= 64 && b <= 127) return false;    // carrier-grade NAT
-    if (a === 192 && b === 0) return false;
-    if (a === 198 && (b === 18 || b === 19)) return false;
-    return true;
+function ipv4Public(ip) {
+  const b = ip.split('.').map(Number);
+  if (b.length !== 4 || b.some((x) => !Number.isInteger(x) || x < 0 || x > 255)) return false;
+  const [a, c] = b;
+  if (a === 10 || a === 127 || a === 0 || a >= 224) return false;   // private, loopback, "this network", multicast and reserved
+  if (a === 169 && c === 254) return false;              // link-local, cloud metadata
+  if (a === 172 && c >= 16 && c <= 31) return false;
+  if (a === 192 && c === 168) return false;
+  if (a === 100 && c >= 64 && c <= 127) return false;    // carrier-grade NAT
+  if (a === 192 && c === 0) return false;                // IETF assignments, documentation
+  if (a === 198 && (c === 18 || c === 19)) return false; // benchmarking
+  if (a === 198 && c === 51 && b[2] === 100) return false;   // documentation
+  if (a === 203 && c === 0 && b[2] === 113) return false;    // documentation
+  return true;
+}
+
+// "2001:db8::1", "::ffff:1.2.3.4" -> eight 16-bit groups, or null if it is not a plain IPv6 address
+function parseIpv6(text) {
+  let s = text;
+  if (!/^[0-9a-f:.]{2,45}$/.test(s)) return null;          // also refuses zone ids ("fe80::1%eth0")
+  if (s.includes('.')) {                                  // a dotted IPv4 tail -> two groups
+    const i = s.lastIndexOf(':');
+    const v4 = s.slice(i + 1).split('.').map(Number);
+    if (v4.length !== 4 || v4.some((x) => !Number.isInteger(x) || x > 255)) return null;
+    s = s.slice(0, i + 1) + ((v4[0] << 8) | v4[1]).toString(16) + ':' + ((v4[2] << 8) | v4[3]).toString(16);
   }
-  const v6 = ip.toLowerCase();
-  if (v6 === '::1' || v6 === '::' || v6.startsWith('fc') || v6.startsWith('fd') || v6.startsWith('fe80') || v6.startsWith('ff')) return false;
-  if (v6.startsWith('::ffff:')) return isPublicIp(v6.slice(7));
-  return v6.includes(':');
+  const halves = s.split('::');
+  if (halves.length > 2) return null;
+  const groups = (x) => (x === '' ? [] : x.split(':'));
+  const head = groups(halves[0]), tail = halves.length === 2 ? groups(halves[1]) : [];
+  if ([...head, ...tail].some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return null;
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? missing !== 0 : missing < 1) return null;
+  return [...head, ...Array(halves.length === 2 ? missing : 0).fill('0'), ...tail].map((g) => parseInt(g, 16));
+}
+
+// True only for an address on the public internet. IPv6: an allowlist, global
+// unicast 2000::/3 only, minus 6to4, Teredo/IETF and documentation ranges.
+// IPv4-mapped addresses (::ffff:a.b.c.d) are judged by the IPv4 address they
+// reach; IPv4-compatible (::a.b.c.d) and NAT64 (64:ff9b::/96) forms are refused.
+export function isPublicIp(ip) {
+  const s = String(ip || '').trim().toLowerCase();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(s)) return ipv4Public(s);
+  const h = parseIpv6(s);
+  if (!h) return false;
+  if (h.slice(0, 5).every((x) => x === 0) && h[5] === 0xffff) {
+    return ipv4Public([h[6] >> 8, h[6] & 255, h[7] >> 8, h[7] & 255].join('.'));
+  }
+  if (h.slice(0, 6).every((x) => x === 0)) return false;                 // ::, ::1, IPv4-compatible
+  if (h[0] === 0x64 && h[1] === 0xff9b) return false;                    // NAT64 (well-known and local-use)
+  if ((h[0] & 0xe000) !== 0x2000) return false;                          // not global unicast 2000::/3
+  if (h[0] === 0x2002) return false;                                     // 6to4
+  if (h[0] === 0x2001 && h[1] < 0x0200) return false;                    // 2001::/23 incl. Teredo 2001::/32
+  if (h[0] === 0x2001 && h[1] === 0x0db8) return false;                  // documentation
+  if (h[0] === 0x3fff && h[1] < 0x1000) return false;                    // documentation 3fff::/20
+  return true;
 }
 
 // Checks the URL shape and that every address the host resolves to is public.
@@ -160,8 +200,47 @@ async function signMedia(pod, storage) {
   return { ...pod, media };
 }
 
+// ── Failed sign-ins: limited per address and per key prefix ───────────────
+// In memory, per edge instance, so a flood of invalid keys is refused before
+// it reaches the database (the gateway keeps its own shared counts as well).
+// A key that has worked recently is not held back by its prefix's failures.
+export function createAuthLimiter({ perIp = 20, perPrefix = 10, windowMs = 60_000, now = () => Date.now() } = {}) {
+  const fails = new Map();
+  const good = new Map();
+  const recent = (k) => {
+    const t = now();
+    const a = (fails.get(k) || []).filter((x) => t - x < windowMs);
+    if (a.length) fails.set(k, a); else fails.delete(k);
+    return a.length;
+  };
+  return {
+    blocked(ip, prefix, keyHash) {
+      if (ip && recent('ip:' + ip) >= perIp) return true;
+      if (prefix && !(keyHash && good.get(keyHash) > now()) && recent('pre:' + prefix) >= perPrefix) return true;
+      return false;
+    },
+    failed(ip, prefix) {
+      if (fails.size > 50_000) fails.clear();
+      for (const k of [ip && 'ip:' + ip, prefix && 'pre:' + prefix]) if (k) fails.set(k, [...(fails.get(k) || []), now()]);
+    },
+    worked(keyHash) { if (good.size > 50_000) good.clear(); if (keyHash) good.set(keyHash, now() + 10 * windowMs); },
+  };
+}
+
+// The caller's address, as the platform's proxy reports it.
+export function clientIp(req) {
+  const h = (n) => (req.headers.get(n) || '').trim();
+  const v = h('cf-connecting-ip') || h('x-real-ip') || h('x-forwarded-for').split(',')[0].trim();
+  return /^[0-9a-fA-F:.]{2,45}$/.test(v) ? v.toLowerCase() : null;
+}
+
+async function sha256Hex(text) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 // ── The API handler ───────────────────────────────────────────────────────
-// deps: { rpc(fn, args) -> {data|error}, storage: {sign}, resolve(host) -> [ip], log }
+// deps: { rpc(fn, args) -> {data|error}, storage: {sign}, resolve(host) -> [ip], log, authLimiter? }
 export async function handleApi(req, deps) {
   const requestId = newRequestId();
   const url = new URL(req.url);
@@ -176,7 +255,9 @@ export async function handleApi(req, deps) {
   // credentials: an API key, or (developer page) a company session
   const auth = req.headers.get('authorization') || '';
   const session = req.headers.get('x-tackpath-session') || '';
+  const ip = clientIp(req);
   const args = { op: route.op, id: route.id, request_id: requestId, method: req.method, path: url.pathname.slice(0, 300) };
+  if (ip) args.ip = ip;
   if (route.auth === 'session') {
     if (!session) return error(401, 'invalid_session', 'Sign in on the TackPath developer page', requestId);
     args.session = session;
@@ -187,6 +268,14 @@ export async function handleApi(req, deps) {
   } else {
     return error(401, 'invalid_api_key', 'Send your API key as: Authorization: Bearer tpk_live_...', requestId,
                  { 'WWW-Authenticate': 'Bearer' });
+  }
+
+  // too many failed sign-ins from this address or for this key prefix: refused here, before the database
+  const limiter = deps.authLimiter;
+  const prefix = args.key && /^tpk_(live|test)_[0-9a-f]{12}_/.test(args.key) ? args.key.split('_')[2] : null;
+  const keyHash = limiter && args.key ? await sha256Hex(args.key) : null;
+  if (limiter && limiter.blocked(ip, prefix, keyHash)) {
+    return error(429, 'rate_limited', 'Too many failed sign-ins. Retry after the time in Retry-After', requestId, { 'Retry-After': '60' });
   }
 
   // query string: known parameters only
@@ -235,13 +324,15 @@ export async function handleApi(req, deps) {
     return error(500, 'internal_error', 'Something went wrong on our side. Please retry later', requestId);
   }
   let { status, body, headers = {} } = r.data;
+  if (limiter) { if (status === 401) limiter.failed(ip, prefix); else if (status !== 429) limiter.worked(keyHash); }
   if (body && body.error) body = { error: { ...body.error, request_id: requestId } };
   if (route.op === 'orders.pod' && status === 200) body = await signMedia(body, deps.storage);
   return reply(status, body, requestId, headers);
 }
 
 // For Deno.serve: CORS preflight, JSON out, never a stack trace.
-export function serveApi(deps) {
+export function serveApi(deps0) {
+  const deps = { authLimiter: createAuthLimiter(), ...deps0 };
   return async (req) => {
     const cors = corsHeaders(req.headers.get('origin') || '');
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -253,9 +344,13 @@ export function serveApi(deps) {
 }
 
 // ── The webhook worker ────────────────────────────────────────────────────
-// Takes due deliveries, sends each once (10 s timeout, no redirects), reports
+// Processes the queue, takes due deliveries, sends each once (10 s timeout, no redirects), reports
 // the result; the database schedules retries (1m, 5m, 30m, 2h, 6h, 12h, 24h).
 export async function runWebhooks(deps, { limit = 25 } = {}) {
+  // first turn queued changes into events (order states are computed here, never in a trigger)
+  const processed = await deps.rpc('tp_svc_api', { p_action: 'process', p_args: { limit: 500 } });
+  if (processed.error) deps.log?.('outbox processing failed', processed.error.message);
+  if (processed.data && processed.data.disabled) return { sent: 0, failed: 0, disabled: true };
   const claimed = await deps.rpc('tp_svc_api', { p_action: 'claim', p_args: { limit } });
   if (claimed.error) { deps.log?.('webhook claim failed', claimed.error.message); return { sent: 0, failed: 0, error: true }; }
   let sent = 0, failed = 0;

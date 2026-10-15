@@ -3,35 +3,50 @@
 Nothing in this branch is deployed. The live pages, apps and gateways do not call anything added
 here, so the API can be shipped, paused or removed without touching the running system. Every step
 below needs an explicit go-ahead from the owner; do them in a quiet hour, in this order.
+Open issues are listed in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 ## What gets deployed
 
-| Piece | What it is | Reversible by |
-|---|---|---|
-| `supabase/security/69_public_api.sql` | Schema `tp_api`, gateway `public.tp_svc_api` (service_role only), two AFTER triggers that queue webhook events | `69_public_api.rollback.sql` |
-| `supabase/functions/api` | The public HTTPS API (`/functions/v1/api/v1/...`) | `supabase functions delete api` |
-| `supabase/functions/api-webhooks` | Webhook sender, called by cron | `supabase functions delete api-webhooks` |
-| `supabase/security/70_api_webhooks_cron.sql` | pg_cron job `api-webhooks-job`, every minute | `70_api_webhooks_cron.rollback.sql` |
-| `developers.html` | Key and webhook management page for dispatcher companies | Remove the file from the site |
+| Piece | What it is | Off switch (keeps all data) | Full rollback |
+|---|---|---|---|
+| `supabase/security/69_public_api.sql` | Schema `tp_api`, gateway `public.tp_svc_api` (service_role only), four AFTER triggers (`jobs`, `messages`, `events`, `bin_bindings`) that queue one row each for companies that use the API | Disable the four triggers (below) | `69_public_api.rollback.sql` |
+| `supabase/functions/api` | The public HTTPS API (`/functions/v1/api/v1/...`) | Kill switch: every request answers 503 `api_disabled` | `supabase functions delete api` |
+| `supabase/functions/api-webhooks` | Processes the queue and sends webhooks, called by cron | Kill switch: processes and sends nothing | `supabase functions delete api-webhooks` |
+| `supabase/security/70_api_webhooks_cron.sql` | pg_cron job `api-webhooks-job`, every minute | (the kill switch covers it) | `70_api_webhooks_cron.rollback.sql` |
+| `developers.html` | Key and webhook management page for dispatcher companies | Kill switch: its API calls answer 503 | Remove the file from the site |
 
-Migration 69 is additive: new schema, new function, two new triggers. It changes no existing table,
+Migration 69 is additive: new schema, new function, four new triggers. It changes no existing table,
 column, function, grant or row. The test `tests/api/migration.test.mjs` proves the existing
-gateways return the same results with and without it, and that rollback then reapply works.
+gateways (dispatcher, PathIQ, driver, customer portal, tracking) return the same results with and
+without it, and that rollback then reapply works.
+
+The triggers only write one row to `tp_api.outbox`, and only for a company that has an active webhook
+endpoint or live API orders. For every other company they read one indexed row and return. They
+never compute order states, scan a company's jobs or send anything. Measured on a company with
+1,500 routes of 20 stops and 20 API orders on one route: one `UPDATE jobs SET status` takes 1.1 ms
+(it took 4,275 ms before the fix). Order states, status history and webhook events are computed
+from the queue later, by the worker every minute and at the start of the company's own API reads.
 
 ## Before you start
 
-1. All suites green on this branch (see "Tests" in the PR): `node --test tests/api/*.test.mjs`,
-   the pages suite, `tests/security`, `operations`.
+1. All suites green on this branch: `node --test tests/api/*.test.mjs` (repository root), the pages
+   suite (`cd tests && node --test *.test.js`), `node --test tests/security/*.test.mjs`, and
+   `cd operations && npm test`.
 2. Take a database backup (Supabase Dashboard, Database, Backups) and note the time.
-3. Confirm migrations 10, 20, 50, 60 to 65, 67 and 68 are applied (69's preflight refuses otherwise
-   and changes nothing).
+3. Migration 69's preflight checks only that migration 10's helpers (`tp_sec.insert_json`,
+   `tp_sec.rate_ok`) exist, that `public.jobs`, `public.messages` and `public.organizations` exist,
+   that `jobs` has the columns it reads (`id, org_id, status, driver_name, surge_stops, archived,
+   created_at`), and that 69 is not applied yet. If one of these fails it stops and changes nothing.
+   It does **not** check migrations 20 to 68. The tests run 69 on top of 10, 20, 50, 60 to 65, 67 and
+   68, the order production has; confirm those are applied before you run it.
 
 ## Deploy order
 
 1. **Migration 69.** SQL editor: run `supabase/security/69_public_api.sql`. It runs in one
    transaction; on any error nothing is changed. Check:
-   `select count(*) from tp_api.keys;` returns 0, and
-   `select has_function_privilege('anon', 'public.tp_svc_api(text,jsonb)', 'execute');` returns false.
+   `select count(*) from tp_api.keys;` returns 0,
+   `select has_function_privilege('anon', 'public.tp_svc_api(text,jsonb)', 'execute');` returns false, and
+   `select tgrelid::regclass, tgname from pg_trigger where tgname like 'tp_api_%';` lists four triggers.
 2. **API function.**
    `supabase functions deploy api --no-verify-jwt`
    Secret `SERVICE_ROLE_KEY` must already exist (it does for the other functions). `--no-verify-jwt`
@@ -43,54 +58,83 @@ gateways return the same results with and without it, and that rollback then rea
    Secret `CRON_SECRET` must equal the Vault secret `tp_cron_secret` (the same pair `swarm-watch`
    uses, migration 40). Without the header the function answers 401. Do not rotate either value
    as part of this rollout.
-4. **Migration 70** (optional; without it events are queued but not sent). Run
-   `supabase/security/70_api_webhooks_cron.sql`. Check: `select jobname, schedule from cron.job where jobname = 'api-webhooks-job';`
+4. **Migration 70** (optional; without it the queue is processed only by the company's own API reads
+   and no webhook is sent). Run `supabase/security/70_api_webhooks_cron.sql`. Check:
+   `select jobname, schedule from cron.job where jobname = 'api-webhooks-job';`
 5. **Developer page.** Publish `developers.html` with the site. It only calls `tp_org_sign_in`
    (existing) and the `api` function.
-6. **Pilot.** Create one test-mode key (`tpk_test_...`) for one company, run
-   `docs/api/examples/end-to-end.sh` against it, register a webhook on a server you control and
-   confirm a `webhook.test` event arrives with a valid signature. Revoke the key afterwards.
-   Then issue live keys company by company.
+6. **Pilot, on a test company with no drivers.** Create one test-mode key (`tpk_test_...`); test-mode
+   orders are stored apart and never create jobs (tested). Run `docs/api/examples/end-to-end.sh`
+   against it, register a webhook on a server you control and confirm a `webhook.test` event arrives
+   with a valid signature. Then try one live key on the same test company: its orders do become
+   pending jobs on that company's board. Also check, from a machine you control, that a
+   `cf-connecting-ip` or `x-forwarded-for` header you send yourself does not replace your address in
+   the audit (see KNOWN_ISSUES.md). Revoke the keys afterwards. Then issue live keys company by
+   company.
 
-## Rollback (any step, in reverse order)
+## Off switches (no data is dropped; both tested in `tests/api/hardening.test.mjs`, test L7)
 
-1. Remove `developers.html` from the site.
-2. `supabase/security/70_api_webhooks_cron.rollback.sql` (stops sending).
+**Stop all queueing (the triggers).** Dispatcher, PathIQ and driver writes then never touch `tp_api`:
+
+```sql
+alter table public.jobs         disable trigger tp_api_job_change;
+alter table public.messages     disable trigger tp_api_message;
+alter table public.events       disable trigger tp_api_scan;
+alter table public.bin_bindings disable trigger tp_api_bin;
+```
+
+Turn back on with the same four statements using `enable trigger`. Changes made while the triggers
+were off are not queued: orders show their current state on the next read, but no webhook is sent
+for those changes and the status history has a gap.
+
+**Kill switch for both edge functions (the rollback for `api` and `api-webhooks`).**
+
+```sql
+update tp_api.settings set enabled = false, updated_at = now();
+```
+
+Every API request then answers `503 api_disabled` (with `Retry-After`), the worker processes and
+sends nothing, and keys, orders, endpoints and queued events are kept. `enabled = true` restores
+both at once; queued work is then processed and sent. Tested: 503 while off, nothing sent while off,
+200 and sending again after it is turned back on.
+
+Removing the functions themselves (`supabase functions delete api`, `supabase functions delete
+api-webhooks`) is a Supabase CLI step. It cannot be run or tested from this repository; use the
+kill switch first, then delete the functions if you want them gone.
+
+## Full rollback (in reverse order)
+
+1. Kill switch on (above), then remove `developers.html` from the site.
+2. `supabase/security/70_api_webhooks_cron.rollback.sql` (unschedules the worker). Tested.
 3. `supabase functions delete api-webhooks` and `supabase functions delete api` (customers get 404;
-   nothing else calls them).
-4. `supabase/security/69_public_api.rollback.sql`: drops the two triggers, `tp_svc_api` and schema
-   `tp_api` (keys, webhook endpoints, events, delivery logs, audit). Jobs created through the API stay
-   in `jobs` as ordinary pending jobs with source `api`; dispatch handles or archives them as usual.
-   To keep the audit trail, export `tp_api.audit` and `tp_api.orders` before running it.
+   nothing else calls them). Not testable here (see above).
+4. `supabase/security/69_public_api.rollback.sql`: drops the four triggers, `tp_svc_api` and schema
+   `tp_api` (keys, orders, links, queue, webhook endpoints, events, delivery logs, audit). Jobs created
+   through the API stay in `jobs` as ordinary pending jobs with source `api`; dispatch handles or
+   archives them as usual. To keep the audit trail, export `tp_api.audit` and `tp_api.orders` first.
+   Tested: rollback removes everything 69 added, the API's jobs stay, and 69 applies again.
 
-Fast kill switch without dropping data: delete the `api` function (step 3), or revoke all keys:
-`update tp_api.keys set revoked_at = now() where revoked_at is null;`
+Revoking every key is also possible: `update tp_api.keys set revoked_at = now() where revoked_at is null;`
 
 ## Production requirements
 
 - Supabase project `hofijsiphyjpdvujjzfi`, with pg_cron, pg_net and the Vault secret `tp_cron_secret`.
 - Function secrets: `SERVICE_ROLE_KEY` (both functions), `CRON_SECRET` (api-webhooks).
 - The private `pod` storage bucket (existing); POD media links are signed for 15 minutes.
+- For routed API orders to be tracked on their route, the dispatcher must write each order's
+  TackPath id (`tp_order_id`) on the route stop. It does not yet (KNOWN_ISSUES.md); until then
+  API orders are tracked on their intake job.
 
 ## Known risks and limits
 
-- **Webhook signing secrets are stored in plain text** in `tp_api.webhook_endpoints.secret` (the
-  sender needs the raw value to sign). The schema is private: no grant to anon or authenticated,
-  never returned after creation. Moving them into Supabase Vault is a follow-up; tests run in PGlite,
-  which has no Vault.
-- **DNS rebinding.** Webhook URLs are resolved and checked against private and reserved ranges at
-  registration and again before every send, and redirects are not followed. A host that changes its
-  DNS answer between the check and the connection could still reach an internal address. Edge
-  Functions run outside the database network, which limits what such a request could reach.
-- **API orders are offered to drivers** like Shopify orders: they become pending jobs. A customer
-  with a key can add work to their company's board, within rate limits (120 requests per minute per
-  key, 500 orders per batch).
-- **Status history starts at deploy.** Events and webhooks exist only for changes after migration 69;
-  older jobs show their current status without a history.
-- **The Deno wrappers are untested.** All logic lives in `_shared/tp_api.js` and is tested under Node
-  against the real migrations; the two `index.ts` files only wire secrets and Supabase clients, and
-  have not run in the Supabase Edge runtime. Step 6 (pilot) is where that is first exercised.
-- **Rate limit storage.** Requests are counted in `tp_sec.rate_events`, which already purges rows
-  older than two days; heavy API use grows that table proportionally.
-- **Sender throughput.** The worker sends up to 25 deliveries per minute per run; a large backlog
-  drains over several minutes. Deliveries never block order intake or driver actions.
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the open review findings (M2 DNS rebinding, M4 worker
+overlap, L2 to L6) and the limits of the fixes. In short:
+
+- **API orders are offered to drivers** like Shopify orders: live orders become pending jobs. A
+  customer with a live key can add work to their company's board, within rate limits (120 requests
+  per minute per key, 500 orders per batch, 120 batches per hour). Test-mode keys never create jobs.
+- **Status history starts at deploy**, and only for companies that use the API.
+- **The Deno wrappers are untested**: `api/index.ts` and `api-webhooks/index.ts` have not run in the
+  Supabase Edge runtime. Step 6 (pilot) is where that is first exercised.
+- **Rate limit storage.** Requests and failed sign-ins are counted in `tp_sec.rate_events`, which
+  purges rows older than two days; heavy API use grows that table proportionally.
