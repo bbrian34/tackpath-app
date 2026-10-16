@@ -24,9 +24,13 @@
   S.stageScale = () => scale;
 
   // ── layouts ──
-  const DEV = { desk: $('devDesk'), tc56: $('devTc56'), phone: $('devPhone'), rack: $('rack'), manifest: $('manifest') };
+  const DEV = { desk: $('devDesk'), tc56: $('devTc56'), phone: $('devPhone'), rack: $('rack'), manifest: $('manifest'), portal: $('devPortal'), rphone: $('devRphone') };
   const LAYOUTS = {
     intro:    {},
+    portal:   { portal: [240, 92, 0.99] },
+    board:    { desk: [240, 92, 0.99] },
+    signin:   { phone: [747, 92, 0.98] },
+    track:    { phone: [96, 96, 0.96], desk: [600, 150, 0.56], rphone: [1452, 96, 0.96] },
     intake:   { desk: [470, 92, 0.94], manifest: [44, 150, 1] },
     assign:   { desk: [40, 112, 0.93], phone: [1446, 104, 0.92] },
     sort:     { tc56: [120, 96, 1.06], rack: [650, 150, 1], phone: [1452, 124, 0.86] },
@@ -67,7 +71,7 @@
   };
 
   // ── mapping an element inside an app to stage coordinates ──
-  const FRAME = { dispatcher: 'fDisp', pathiq: 'fPiq', driver: 'fDrv' };
+  const FRAME = { dispatcher: 'fDisp', pathiq: 'fPiq', driver: 'fDrv', customer: 'fCust', tracking: 'fTrk' };
   S.frame = (app) => $(FRAME[app]);
   function stageRect(app, el) {
     const fr = $(FRAME[app]).getBoundingClientRect(), sr = stage.getBoundingClientRect();
@@ -170,12 +174,28 @@
 
   // ── phone: heads-up notification, spoken prompt ──
   let notifT = null;
+  let smsUntil = 0;
   S.notify = function (title, body, action, app) {
     if (S.quiet) return;
+    // a text message on screen is read first; the app's own notification follows it
+    const hold = smsUntil - performance.now();
+    if (hold > 0) { setTimeout(() => S.notify(title, body, action, app), hold + 150); return; }
     const n = $('notif');
+    n.className = 'notif';
     n.innerHTML = '<div class="n-app"><b>●</b> ' + (app || 'TackPath') + ' · now</div><div class="n-t">' + title + '</div>' + (body ? '<div class="n-b">' + body + '</div>' : '') + (action ? '<div class="n-act">' + action + '</div>' : '');
     n.hidden = false; void n.offsetWidth; n.classList.add('show');
     clearTimeout(notifT); notifT = setTimeout(() => { n.classList.remove('show'); setTimeout(() => { n.hidden = true; }, rt(500)); }, rt(3600));
+  };
+  // A text message as Android shows it; the wording is the exact text TackPath's
+  // Twilio number sends. In the demo it is shown, never sent.
+  S.sms = function (body, holdMs) {
+    if (S.quiet) return;
+    const n = $('notif');
+    n.className = 'notif sms';
+    smsUntil = performance.now() + rt(holdMs || 6500) + 500;
+    n.innerHTML = '<div class="n-app"><b>●</b> Messages · now</div><div class="n-t">TackPath · +1 (678) 274-5974</div><div class="n-b">' + body + '</div><div class="n-tag">SMS via Twilio · simulated in the demo</div>';
+    n.hidden = false; void n.offsetWidth; n.classList.add('show');
+    clearTimeout(notifT); notifT = setTimeout(() => { n.classList.remove('show'); setTimeout(() => { n.hidden = true; n.className = 'notif'; }, rt(500)); }, rt(holdMs || 6500));
   };
   let speechT = null;
   S.speak = function (text) {
@@ -277,6 +297,7 @@
     const t = new Date(root.__TPDEMO__.clock.now());
     $('demoClock').textContent = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
     $('phoneTime').textContent = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(/ [AP]M/, '');
+    $('phoneTime2').textContent = $('phoneTime').textContent;
   };
 
   // Time-skip card: shown while repeat work runs at full speed.
@@ -291,6 +312,24 @@
     const tick = () => { c.textContent = new Date(root.__TPDEMO__.clock.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
     tick(); skipT = setInterval(tick, 100);
   };
+  // Chapter card: a calm full-screen title between scenes, and over a cut.
+  S.chapter = function (n, title, sub) {
+    const c = $('chapter');
+    if (!title) { c.classList.remove('show'); return; }
+    $('chN').textContent = n || ''; $('chT').textContent = title; $('chS').textContent = sub || '';
+    c.classList.add('show');
+  };
+  // On air / off air: the recorder keeps only on-air frames, so repeated work
+  // done off air becomes a cut in the film (never a speed-up).
+  root.__AIR_LOG__ = [{ t: performance.timeOrigin + performance.now(), on: true }];
+  S.air = function (on) {
+    const last = root.__AIR_LOG__[root.__AIR_LOG__.length - 1];
+    if (last.on === !!on) return;
+    root.__AIR_LOG__.push({ t: performance.timeOrigin + performance.now(), on: !!on });
+    document.body.classList.toggle('offair', !on);
+  };
+  S.onAir = () => root.__AIR_LOG__[root.__AIR_LOG__.length - 1].on;
+  if (new URLSearchParams(location.search).get('rec') === '1') document.body.classList.add('rec');
   S.busy = function (text) { const b = $('busy'); if (!text) { b.hidden = true; return; } $('busyText').textContent = text; b.hidden = false; };
   S.title = function (on) { $('titleCard').classList.toggle('gone', !on); };
 })(window);

@@ -129,6 +129,10 @@
             resolve(resp(401, { code: '42501', message: 'permission denied' }));
             return;
           }
+          if (/nominatim\.openstreetmap\.org\/search/.test(url)) {
+            // the customer portal's city lookup: answered offline (the portal falls back to its own city patterns)
+            H.count('geocode', APP, 'nominatim (offline)'); resolve(resp(200, [])); return;
+          }
           if (/maps\.googleapis\.com\/maps\/api\/geocode\/json/.test(url)) {
             H.count('geocode', APP, 'demo');
             var addr = new URL(url).searchParams.get('address');

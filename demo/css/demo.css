@@ -216,3 +216,38 @@ button{font-family:inherit}
 .skip-t{font-size:84px;font-weight:800;margin:14px 0 8px;color:#fff;letter-spacing:-.01em}
 .skip-s{font-size:26px;color:#a9bdd2}
 .skip-c{margin-top:28px;font-family:'DM Mono',monospace;font-size:44px;color:#fff;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);border-radius:14px;display:inline-block;padding:8px 26px}
+
+/* ── 2026-10 presentation cut ─────────────────────────────────────────── */
+/* opening title: the TackPath logo and wordmark, once */
+.tc-logo{display:flex;align-items:center;justify-content:center;gap:22px;margin-bottom:26px}
+.tc-word{font-family:'Montserrat',sans-serif;font-weight:500;letter-spacing:3px;font-size:64px;line-height:1}
+.tc-word b{font-weight:500;color:#fff}.tc-word i{font-style:normal;color:var(--blue)}
+.tc-inner h1{font-size:46px}
+body.rec .big-start,body.rec .tc-foot,body.rec #controls{display:none!important}
+.title-card .tc-inner>*{opacity:0;transform:translateY(14px);animation:tcin 1s var(--ease) forwards}
+.title-card .tc-inner>:nth-child(2){animation-delay:.35s}.title-card .tc-inner>:nth-child(3){animation-delay:.6s}.title-card .tc-inner>:nth-child(4){animation-delay:.8s}
+@keyframes tcin{to{opacity:1;transform:none}}
+
+/* chapter card: a calm title between scenes and where repeated work is cut */
+.chapter{position:absolute;inset:0;z-index:58;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;
+  background:radial-gradient(900px 560px at 50% 45%,rgba(13,35,64,.97),rgba(4,10,20,.985));transition:opacity .6s var(--ease)}
+.chapter.show{opacity:1}
+.ch-in{text-align:center;transform:translateY(10px);transition:transform .9s var(--ease)}
+.chapter.show .ch-in{transform:none}
+.ch-n{font-size:18px;letter-spacing:.34em;text-transform:uppercase;color:var(--blue);font-weight:800}
+.ch-t{font-size:76px;font-weight:800;margin:16px 0 10px;color:#fff;letter-spacing:-.01em}
+.ch-s{font-size:26px;color:#a9bdd2;max-width:1100px;line-height:1.45;margin:0 auto}
+.ch-s:empty{display:none}
+
+/* second browser (customer portal) and the recipient's phone */
+.desk.portal .desk-chrome .url{flex-basis:360px}
+.rphone .screen{background:#fff}
+.rphone .statusbar{background:#0b1220}
+
+/* a text message (Twilio) on the driver's phone */
+.notif.sms{background:rgba(248,250,252,.98);color:#0b1220;border-radius:20px;padding:12px 14px 13px}
+.notif.sms .n-app{color:#5b6b7c}.notif.sms .n-app b{color:#34c759}
+.notif.sms .n-t{font-size:14px;color:#0b1220}
+.notif.sms .n-b{font-size:14.5px;line-height:1.38;color:#1c2733;margin-top:4px}
+.notif.sms .n-tag{display:inline-block;margin-top:8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6b7785;border:1px solid #d6dde5;border-radius:6px;padding:2px 6px}
+.notif.sms.long{top:30px}

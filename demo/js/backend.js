@@ -31,6 +31,7 @@
     const suppressed = [];          // SMS and other outward actions the demo did NOT perform
     const podFiles = new Map();
     const loginCodes = new Map();
+    const orderTokens = new Map();  // job id -> order token (customer portal)
     let msgId = 1000;
 
     function newSession(kind, extra) {
@@ -273,12 +274,71 @@
     }
     const orgToken = () => newSession('org', {});
 
+    // ── tp_customer (customer.html): an order token per order ──
+    function tpCustomer(action, a) {
+      a = a || {};
+      const jid = a.id;
+      if (action !== 'create_order' && (jid == null || orderTokens.get(String(jid)) !== a.order_token)) throw new Error('TP_DENIED: order not found');
+      switch (action) {
+        case 'create_order': {
+          // The real portal link is customer.html?org=<slug>. A page loaded inside the demo has no
+          // URL of its own, so an order without a slug belongs to the demo's only company.
+          const oid = !a.org_slug || String(a.org_slug).toLowerCase() === org.slug ? org.id : null;
+          const job = Object.assign({ id: uuid(), stops_completed: 0, archived: false, exception_flag: false, staged_at: null, picked_up_at: null, delivered_at: null, driver_name: null, job_type: null, surge_stops: null },
+            pick(a, ['title', 'pickup_address', 'dropoff_address', 'price', 'distance_miles', 'route_summary', 'estimated_delivery_at']),
+            { status: 'routing', customer_confirmed: false, org_id: oid, source: 'customer', created_at: iso() });
+          T.jobs.push(job); emit('row', { table: 'jobs', row: job, created: true });
+          const tok = hex(48); orderTokens.set(String(job.id), tok);
+          return { job: clone(job), order_token: tok };
+        }
+        case 'get': return clone(jobById(jid) || null);
+        case 'confirm': return updateRows('jobs', jid, { status: 'pending', customer_confirmed: true }, ['status', 'customer_confirmed'], { status: 'routing' });
+        case 'cancel': return updateRows('jobs', jid, { status: 'cancelled' }, ['status'], {});
+        case 'post_message': return addMessage({ job_id: jid, sender: 'CommAgent', sender_role: 'agent', body: String(a.body || '').slice(0, 1000) });
+        default: throw new Error('TP_INVALID: unknown action ' + action);
+      }
+    }
+    // ── tp_track (track.html, tracking.html): exact id or exact tracking number ──
+    function publicJob(j) { return pick(j, ['id', 'title', 'status', 'pickup_address', 'dropoff_address', 'driver_name', 'total_packages', 'price', 'estimated_delivery_at', 'driver_rating', 'stops_completed']); }
+    function tpTrack(action, a) {
+      a = a || {};
+      const tn = String(a.tracking_number || '').trim().toUpperCase();
+      switch (action) {
+        case 'job': { const j = jobById(String(a.id || '').trim()); return j ? clone(publicJob(j)) : null; }
+        case 'stop': {
+          if (tn.length < 6) return null;
+          const hit = T.jobs.slice().sort(byCreatedDesc).map((j) => ({ j, st: (j.surge_stops || []).find((s) => String(s.tracking_number || '').toUpperCase() === tn) })).find((x) => x.st);
+          if (!hit) return null;
+          const j = hit.j, st = hit.st;
+          return clone({ id: j.id, status: j.status, stops_completed: j.stops_completed, estimated_delivery_at: j.estimated_delivery_at, driver_name: j.driver_name,
+            surge_stops: [pick(st, ['tracking_number', 'stop_number', 'recipient', 'address', 'status', 'delivered', 'delivered_at', 'cancelled', 'lat', 'lng', 'eta'])] });
+        }
+        case 'location': {
+          const j = jobById(String(a.id || '').trim());
+          if (!j || !['assigned', 'in_transit'].includes(j.status)) return null;
+          const l = T.driver_locations.filter((x) => String(x.job_id) === String(j.id)).sort((x, y) => String(y.updated_at).localeCompare(String(x.updated_at)))[0];
+          return l ? { lat: l.lat, lng: l.lng, updated_at: l.updated_at } : null;
+        }
+        case 'rate': return updateRows('jobs', a.id, { driver_rating: +a.rating }, ['driver_rating'], { status: 'delivered', driver_rating: null });
+        default: throw new Error('TP_INVALID: unknown action ' + action);
+      }
+    }
+    // A Shopify order as shopify-webhook creates it: a pending job on the company board.
+    function shopifyOrder(o) {
+      const job = Object.assign({ id: uuid(), stops_completed: 0, archived: false, exception_flag: false, staged_at: null, picked_up_at: null, delivered_at: null, driver_name: null, job_type: null, surge_stops: null },
+        o, { status: 'pending', customer_confirmed: true, org_id: org.id, source: 'shopify', created_at: iso() });
+      T.jobs.push(job); emit('row', { table: 'jobs', row: job, created: true });
+      return clone(job);
+    }
+
     // ── RPC entry point ──
     function rpc(fn, body) {
       body = body || {};
       switch (fn) {
         case 'tp_org': return tpOrg(body.p_token, body.p_action, body.p_args);
         case 'tp_driver': return tpDriver(body.p_token, body.p_action, body.p_args);
+        case 'tp_customer': return tpCustomer(body.p_action, body.p_args);
+        case 'tp_track': return tpTrack(body.p_action, body.p_args);
         case 'tp_org_lookup': return String(body.p_slug || '').toLowerCase() === org.slug ? { id: org.id, slug: org.slug, name: org.name } : null;
         case 'tp_org_sign_in':
           if (String(body.p_slug || '').trim().toLowerCase() !== org.slug) return { ok: false, error: 'TP_DENIED' };
@@ -345,7 +405,7 @@
       return { status: 404, data: { error: 'not available in the demo' } };
     }
 
-    return { T, rpc, fn, geocode, setLocation, addMessage, driverToken, orgToken, tpDriver, tpOrg, suppressed, podFiles, org,
+    return { T, rpc, fn, geocode, setLocation, addMessage, driverToken, orgToken, tpDriver, tpOrg, suppressed, podFiles, org, shopifyOrder,
       iso, jobById };
   }
 

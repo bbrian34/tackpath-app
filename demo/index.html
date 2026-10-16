@@ -68,6 +68,26 @@
       <div class="device-label">Driver app · Android</div>
     </div>
 
+    <!-- Customer portal: a business books a delivery -->
+    <div class="device desk portal" id="devPortal">
+      <div class="desk-chrome">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="url">tackpath · customer portal</span>
+        <span class="who">Buckhead Bloom Florist</span>
+      </div>
+      <div class="screen"><iframe id="fCust" title="TackPath customer portal" scrolling="no"></iframe></div>
+      <div class="device-label">Customer portal · the sender</div>
+    </div>
+
+    <!-- The recipient's phone: the tracking link -->
+    <div class="device phone rphone" id="devRphone">
+      <div class="screen">
+        <div class="statusbar"><span id="phoneTime2">7:52</span><span class="sb-r">▾ ▴ ▮ 64%</span></div>
+        <iframe id="fTrk" title="TackPath tracking" scrolling="no"></iframe>
+      </div>
+      <div class="device-label">Tracking · the recipient</div>
+    </div>
+
     <!-- Warehouse floor illustration -->
     <section id="rack" class="panel rack" aria-label="Staging rack (illustration)">
       <div class="panel-h">Staging rack <small>illustration of the warehouse floor</small></div>
@@ -92,14 +112,20 @@
 
     <footer id="captionBar"><div id="caption" class="caption"></div></footer>
 
+    <!-- Chapter card (between scenes, and where repeated work is cut out) -->
+    <div id="chapter" class="chapter"><div class="ch-in"><div class="ch-n" id="chN"></div><div class="ch-t" id="chT"></div><div class="ch-s" id="chS"></div></div></div>
+
     <!-- Title card -->
     <div id="titleCard" class="title-card">
       <div class="tc-inner">
-        <div class="eyebrow">TackPath · live demonstration</div>
-        <h1>Watch what happens when a courier company receives a shipment and TackPath runs the operation.</h1>
-        <p>Real TackPath screens: dispatcher, PathIQ on a warehouse handheld, and the driver app. They run on demo data inside this browser. Nothing is sent anywhere.</p>
+        <div class="tc-logo">
+          <svg viewBox="0 0 40 70" width="46" height="80" aria-hidden="true"><defs><linearGradient id="tpg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#19b7ef"/><stop offset="1" stop-color="#0060cc"/></linearGradient></defs><rect x="2" y="4" width="36" height="8" rx="3" fill="url(#tpg2)"/><rect x="16" y="4" width="8" height="62" rx="3" fill="url(#tpg2)"/></svg>
+          <span class="tc-word"><b>T Ʌ C K</b> <i>P Ʌ T H</i></span>
+        </div>
+        <h1>From the manifest to the doorstep.</h1>
+        <p>One courier company's morning, run end to end by TackPath: orders, routing, warehouse sorting, drivers, deliveries and proof. Every screen is the real TackPath app.</p>
         <button id="bigStart" class="big-start" disabled>Loading TackPath…</button>
-        <div class="tc-foot">Runs by itself, about 3 minutes at 1×. Use the controls at the bottom to pause, change speed or jump between scenes.</div>
+        <div class="tc-foot">Runs by itself at real speed. Use the controls at the bottom to pause or jump between scenes.</div>
       </div>
     </div>
 
