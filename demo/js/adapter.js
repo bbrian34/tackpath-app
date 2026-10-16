@@ -36,7 +36,7 @@
     };
   }
   Object.defineProperty(W, 'localStorage', { configurable: true, value: makeStorage(H.storage(APP)) });
-  Object.defineProperty(W, 'sessionStorage', { configurable: true, value: makeStorage({}) });
+  Object.defineProperty(W, 'sessionStorage', { configurable: true, value: makeStorage(Object.assign({}, (H.sessionSeed || {})[APP])) });
   try { Object.defineProperty(W, 'indexedDB', { configurable: true, value: undefined }); } catch (e) {}
   try { Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistrations: function () { return Promise.resolve([]); }, register: function () { return Promise.reject(new Error('demo')); } } }); } catch (e) {}
 

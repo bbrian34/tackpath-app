@@ -21,6 +21,8 @@
   hub.seedStorage('pathiq', { tp_dispatch_org: sess(tok.piq), tp_worker: 'Keisha Moore', tp_device: 'tc56-peachline-01' });
     // Andre signs in through the app's own sign-in screen, on camera (Part 3).
   hub.seedStorage('driver', { tp_dx_perm_intro: '1', tp_theme: 'light' });
+  // a dispatcher who has already opened the board today: the once-per-session splash has played
+  hub.sessionSeed = { dispatcher: { tackpath_splash_shown: '1' } };
 
   // Server-side pacing so the work is watchable (the apps make the same calls either way).
   hub.latencyFn = function (app, url, body) {
@@ -635,8 +637,8 @@
     await until(() => S.bubble.state() === 'arrived', 'arrived bubble', 30);
     S.highlightBox(...(() => { const b = S.bubble.el().getBoundingClientRect(), sr = $('stage').getBoundingClientRect(), k = S.stageScale(); return [(b.left - sr.left) / k - 6, (b.top - sr.top) / k - 6, b.width / k + 12, b.height / k + 12]; })(), 'Arrived · tap to deliver', 'green');
     S.caption('Within 80 m it turns green: <b>Arrived · tap here to deliver</b>.');
-    await park;
-    await wait(2.2);
+    await wait(2.6);
+    await offAir(async () => { await park; });   // cut: the last few metres of parking
     await returnToApp();
     S.caption('One tap and Andre is back in TackPath, on this stop.');
     await wait(2);
