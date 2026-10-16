@@ -182,7 +182,7 @@ button{font-family:inherit}
 .caption b{color:#7fd8ff}
 
 /* title card */
-.title-card{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:radial-gradient(900px 600px at 50% 40%,rgba(13,35,64,.96),rgba(5,11,22,.98));transition:opacity .8s}
+.title-card{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:radial-gradient(900px 600px at 50% 40%,#0d2340,#050b16);transition:opacity .8s}
 .title-card.gone{opacity:0;pointer-events:none}
 .tc-inner{max-width:1100px;text-align:center}
 .tc-inner .eyebrow{font-size:16px;letter-spacing:.3em;text-transform:uppercase;color:var(--blue);font-weight:800}
@@ -251,3 +251,5 @@ body.rec .big-start,body.rec .tc-foot,body.rec #controls{display:none!important}
 .notif.sms .n-b{font-size:14.5px;line-height:1.38;color:#1c2733;margin-top:4px}
 .notif.sms .n-tag{display:inline-block;margin-top:8px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6b7785;border:1px solid #d6dde5;border-radius:6px;padding:2px 6px}
 .notif.sms.long{top:30px}
+#devPhone .statusbar{background:#f5f7fa;color:#0f172a}
+.title-card.end .tc-inner>p,.title-card.end .big-start,.title-card.end .tc-foot{display:none}

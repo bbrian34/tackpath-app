@@ -29,6 +29,7 @@
     intro:    {},
     portal:   { portal: [240, 92, 0.99] },
     board:    { desk: [240, 92, 0.99] },
+    build:    { desk: [240, 92, 0.99] },
     signin:   { phone: [747, 92, 0.98] },
     track:    { phone: [96, 96, 0.96], desk: [600, 150, 0.56], rphone: [1452, 96, 0.96] },
     intake:   { desk: [470, 92, 0.94], manifest: [44, 150, 1] },
@@ -251,8 +252,8 @@
         const h = pos.heading || 0;
         const off = 0.08 * 826 * nav.view.mpp; // shift view centre ahead of the car
         const ahead = { lat: pos.lat + Math.cos(h * Math.PI / 180) * off / 111320, lng: pos.lng + Math.sin(h * Math.PI / 180) * off / (111320 * Math.cos(pos.lat * Math.PI / 180)) };
-        nav.view.setView(ahead, 2.3);
         nav.view.setRotation(h);
+        nav.view.setView(ahead, 2.3);
         nav.line.setDone(best);
       }
       // next maneuver

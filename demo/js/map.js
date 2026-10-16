@@ -201,7 +201,7 @@
       return [w / 2 + x, h / 2 + y];
     }
     setView(center, mpp) { if (center) this.center = { lat: center.lat, lng: center.lng }; if (mpp) this.mpp = mpp; this.draw(); }
-    setRotation(deg) { this.rotate = deg; this.wrap.style.transform = 'rotate(' + (-deg) + 'deg) scale(' + (deg ? 1.45 : 1) + ')'; }
+    setRotation(deg) { const flip = this.labels && Math.round(((this.rotate || 0) - deg) / 30) !== 0; this.rotate = deg; if (flip) this.draw(); this.wrap.style.transform = 'rotate(' + (-deg) + 'deg) scale(' + (deg ? 1.45 : 1) + ')'; }
     fit(points, pad) {
       if (!points.length) return;
       let la0 = 90, la1 = -90, ln0 = 180, ln1 = -180;
@@ -237,7 +237,9 @@
         for (let i = 0; i < pts.length - 1; i++) { const l = meters(pts[i], pts[i + 1]); if (l > bl) { bl = l; bi = i; } }
         const a = this.px(pts[bi][0], pts[bi][1]), b = this.px(pts[bi + 1][0], pts[bi + 1][1]);
         if (Math.hypot(b[0] - a[0], b[1] - a[1]) < name.length * fs * 0.62) return;
-        let ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+        // upright on screen: the whole map turns by -rotate in navigation
+        const rot = this.rotate || 0;
+        let ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI - rot; ang = ((ang % 360) + 540) % 360 - 180; if (ang > 90) ang -= 180; if (ang < -90) ang += 180; ang += rot;
         const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         const t = el(doc, 'text', { x: mx, y: my, 'font-size': fs, fill: T.streetLabel, 'text-anchor': 'middle', 'dominant-baseline': 'central',
           'font-family': 'Inter, DM Sans, system-ui, sans-serif', 'font-weight': cls === 'highway' ? 700 : 600, transform: 'rotate(' + ang + ' ' + mx + ' ' + my + ')',
@@ -376,5 +378,29 @@
     };
   }
 
-  root.DEMO_MAP = { meters, snap, route, along, bearing, polyLength, maneuvers, MapView, RouteLine, PinMarker, makeGoogleShim, nodes, adj };
+
+  // Web-map tiles (z/x/y, 256 px) drawn from the same streets, for maps that
+  // load tiles (the driver app's Leaflet map). Light theme, no labels.
+  function tile(canvas, z, x, y) {
+    const T = THEMES.light, S = 256, W = S * Math.pow(2, z);
+    canvas.width = S; canvas.height = S;
+    const ctx = canvas.getContext('2d');
+    const px = (lat, lng) => {
+      const sn = Math.sin(toRad(lat));
+      return [(lng + 180) / 360 * W - x * S, (0.5 - Math.log((1 + sn) / (1 - sn)) / (4 * Math.PI)) * W - y * S];
+    };
+    const mpp = 156543.03 * Math.cos(toRad(33.77)) / Math.pow(2, z), k = 3.2 / mpp;
+    const path = (pts) => { ctx.beginPath(); pts.forEach((p, i) => { const q = px(p[0], p[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); };
+    ctx.fillStyle = T.bg; ctx.fillRect(0, 0, S, S);
+    D.AREAS.forEach((a) => { path(a.poly); ctx.closePath(); ctx.fillStyle = T[a.kind] || T.district; ctx.fill(); });
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ['street', 'major', 'highway'].forEach((cls) => D.STREETS.filter((st) => st[1] === cls).forEach(([, , pts]) => {
+      const w = cls === 'highway' ? 9 : cls === 'major' ? 7 : 4.6;
+      path(pts); ctx.strokeStyle = T[cls === 'highway' ? 'highwayCase' : 'majorCase']; ctx.lineWidth = Math.max(1.5, (w + 2.4) * k); ctx.stroke();
+      path(pts); ctx.strokeStyle = T[cls]; ctx.lineWidth = Math.max(1, w * k); ctx.stroke();
+    }));
+    return canvas;
+  }
+
+  root.DEMO_MAP = { tile, meters, snap, route, along, bearing, polyLength, maneuvers, MapView, RouteLine, PinMarker, makeGoogleShim, nodes, adj };
 })(typeof window !== 'undefined' ? window : globalThis);

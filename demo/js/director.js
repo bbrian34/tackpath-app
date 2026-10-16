@@ -20,13 +20,14 @@
   hub.seedStorage('dispatcher', { tp_dispatch_theme: 'light', tp_dispatch_org: sess(tok.org), ['tp_warehouse_address_' + C.id]: C.hub.address, ['tp_ss_policy_' + C.id]: JSON.stringify(C.policy) });
   hub.seedStorage('pathiq', { tp_dispatch_org: sess(tok.piq), tp_worker: 'Keisha Moore', tp_device: 'tc56-peachline-01' });
     // Andre signs in through the app's own sign-in screen, on camera (Part 3).
-  hub.seedStorage('driver', { tp_dx_perm_intro: '1' });
+  hub.seedStorage('driver', { tp_dx_perm_intro: '1', tp_theme: 'light' });
 
   // Server-side pacing so the work is watchable (the apps make the same calls either way).
   hub.latencyFn = function (app, url, body) {
     if (pace.smartsort && app === 'dispatcher') {
-      if (/geocode/.test(url) || (body && body.action === 'geocode')) return 150;
-      if (body && body.action === 'matrix') return 900;
+      if (/geocode/.test(url) || (body && body.action === 'geocode')) return 1300;
+      if (body && body.action === 'matrix') return 2600;
+      if (body && body.action === 'routes') return 700;
       if (/tp_org/.test(url) && body && body.p_action === 'publish_route') return 1300;
     }
     return 35;
@@ -37,10 +38,8 @@
   const ready = Promise.all([
     root.loadDemoApp($('fDisp'), '../dispatcher.html', 'dispatcher', base),
     root.loadDemoApp($('fPiq'), '../stow.html', 'pathiq', base),
-    root.loadDemoApp($('fDrv'), 'vendor/driver-app.html', 'driver', new URL('vendor/', location.href).href),
-    root.loadDemoApp($('fCust'), '../customer.html', 'customer', base),
-    root.loadDemoApp($('fTrk'), '../tracking.html', 'tracking', base)
-  ]).then(() => Promise.all(['dispatcher', 'pathiq', 'driver', 'customer', 'tracking'].map((a) => hub.whenReady(a).then((w) => { W[a] = w; }))));
+    root.loadDemoApp($('fDrv'), 'vendor/driver-app.html', 'driver', new URL('vendor/', location.href).href)
+  ]).then(() => Promise.all(['dispatcher', 'pathiq', 'driver'].map((a) => hub.whenReady(a).then((w) => { W[a] = w; }))));
 
   // phone system layer follows what the driver app asks the phone to do
   hub.on('openUrl', (e) => {
@@ -297,11 +296,11 @@
   async function offAir(fn) { await air(false); try { await fn(); } finally { S.unhighlight(); S.flow(''); await air(true); } }
   // a cut with a chapter card in front of it
   async function cut(title, sub, fn) {
-    S.chapter('', title, sub); await wait(2.8);
+    S.chapter('', title, sub); await wait(2.2);
     await offAir(fn);
     await wait(0.6); S.chapter(null); await wait(0.8);
   }
-  async function opener(n, title, sub) { S.chapter(n, title, sub); await wait(2.6); S.chapter(null); await wait(0.9); }
+  async function opener(n, title, sub) { S.chapter(n, title, sub); await wait(1.9); S.chapter(null); await wait(0.6); }
   // typing into a real field, one character at a time
   async function typeInto(app, sel, text, cps) {
     const el = S.find(app, sel); if (!el) throw new Error('typeInto: not found ' + app + ' ' + sel);
@@ -345,92 +344,43 @@
   // the film cuts (offAir / cut), the way an editor would.
   const SCENES = [];
   const scene = (n, title, run) => SCENES.push({ n, title, run });
-  const PORTAL = { recipient: 'Maya Patel', pickup: '3060 Peachtree Rd NW, Buckhead', drop: '1085 Peachtree St NE, Midtown' };
-
-  // ── 1. Orders arrive: the customer portal and Shopify ──
-  scene('1', 'Orders arrive', async () => {
-    S.layout('portal'); S.act('Part 1', 'Orders arrive');
-    await opener('Part 1', 'Orders arrive', 'A business books on the customer portal. A Shopify store sends its orders. A client sends a manifest.');
-    S.caption('A florist in Buckhead books a same-day delivery on Peachline’s <b>TackPath customer portal</b>.');
-    await wait(2.4);
-    S.highlight('customer', '#recipient', 'Recipient');
-    await typeInto('customer', '#recipient', PORTAL.recipient);
-    S.highlight('customer', '#pickupAddr', 'Pick up');
-    await typeInto('customer', '#pickupAddr', PORTAL.pickup);
-    S.highlight('customer', '#deliveryAddr', 'Deliver to');
-    await typeInto('customer', '#deliveryAddr', PORTAL.drop);
-    S.unhighlight();
-    await wait(0.8);
-    const quote = byText('customer', 'button', /Request Quote/);
-    S.highlight('customer', quote, 'Request a quote');
-    await wait(1.2);
-    await tap('customer', quote, 0.6);
-    S.unhighlight();
-    S.caption('TackPath prices the trip by zone and lines up a driver.');
-    await wait(4.5);
-    // the portal's own status steps run about 13 seconds before the price is ready: cut to it
-    await offAir(async () => { await until(() => { const m = S.find('customer', '#confirmModal'); return m && m.style.display !== 'none' && getComputedStyle(m).display !== 'none'; }, 'price to confirm', 40); await wait(0.5); });
-    const conf = await until(() => S.find('customer', '.btn-confirm'), 'confirm button', 10);
-    S.highlight('customer', conf, 'Confirm & Dispatch', 'green');
-    S.caption('The price is ready. The florist confirms: <b>Confirm &amp; Dispatch</b>.');
-    await wait(2.4);
-    await tap('customer', conf, 1);
-    S.unhighlight();
-    await until(() => be.T.jobs.some((j) => j.source === 'customer' && j.status === 'pending'), 'portal order confirmed', 15);
-    await wait(1.4);
-    // the dispatcher's board
-    S.layout('board');
-    const cj = be.T.jobs.find((j) => j.source === 'customer');
-    try { await W.dispatcher.loadJobs(); } catch (e) {}
-    S.caption('In the dispatch office, the order is already on the board, <b>pending</b>, waiting for a driver.');
-    await wait(1.6);
-    const crow = await until(() => S.find('dispatcher', 'tr[onclick*="' + cj.id + '"]'), 'portal order on the board', 20);
-    S.highlight('dispatcher', crow, 'Customer portal · ' + PORTAL.recipient, 'green');
-    await wait(3.4);
-    S.unhighlight();
-    const sj = be.shopifyOrder({ title: 'Shopify #1042 · Lena Ortiz', pickup_address: C.hub.address, dropoff_address: '1280 W Peachtree St NW, Atlanta, GA 30309', total_packages: 1, total_stops: 1, price: 18 });
-    S.caption('A Shopify store is connected too: its new order lands on the board <b>by itself</b>.');
-    try { await W.dispatcher.loadJobs(); } catch (e) {}
-    const srow = await until(() => S.find('dispatcher', 'tr[onclick*="' + sj.id + '"]'), 'Shopify order on the board', 20);
-    S.highlight('dispatcher', srow, 'Shopify order', 'green');
-    await wait(3.4);
-    S.unhighlight();
-    [cj, sj].forEach((j) => be.tpOrg(tok.org, 'update_job', { id: j.id, patch: { status: 'assigned', driver_name: 'Luis Ortega' } }));
-    try { await W.dispatcher.loadJobs(); } catch (e) {}
-    S.caption('Both single deliveries go to Luis Ortega, who is already heading north.');
-    await wait(3);
-  });
-
-  // ── 2. Intake / SmartSort ──
-  scene('2', 'SmartSort builds the routes', async () => {
-    S.layout('intake'); S.act('Part 2', 'SmartSort builds the routes');
-    await opener('Part 2', 'SmartSort builds the routes', 'A client’s manifest becomes optimized routes on real road time.');
+  // ── 1. Intake / SmartSort ──
+  scene('1', 'SmartSort builds the routes', async () => {
+    S.layout('intake'); S.act('Part 1', 'SmartSort builds the routes');
+    await opener('Part 1', 'SmartSort builds the routes', 'A client’s manifest becomes optimized routes on real road time.');
     setRate(1);
     jumpTo(7, 52);
-    S.caption('<b>7:52 AM.</b> A client sends today’s manifest: <b>30 packages</b> for <b>17 addresses</b>.');
+    S.caption('<b>7:52 AM.</b> A client sends today’s manifest: <b>21 lines</b>, <b>30 packages</b> for <b>17 addresses</b>.');
     S.manifest(D.manifestCsv());
-    await wait(3.2);
+    await wait(3.6);
     const btn = byText('dispatcher', 'button', /\+ New Route/);
     S.highlight('dispatcher', btn, 'Dispatcher: + New Route');
     S.caption('The dispatcher uploads it to <b>SmartSort</b>.');
-    await wait(1.8);
+    await wait(2);
     S.ripple(...(() => { const r = S.rectOf('dispatcher', btn); return [r.x + r.w / 2, r.y + r.h / 2]; })());
     S.unhighlight();
     pace.smartsort = true;
     W.dispatcher.openSmartSortDrawer();
+    await wait(0.6);
+    S.layout('build');                     // push in on SmartSort while it works
+    await wait(0.9);
     W.dispatcher.handleFile(new W.dispatcher.File([D.manifestCsv()], 'peachline-manifest.csv', { type: 'text/csv' }));
-    await wait(1.2);
-    S.caption('SmartSort reads every line, finds each address, and measures real road time between every pair of stops.');
+    const status = () => txt('dispatcher', '#statusMsg') || '';
+    await until(() => /Geocoding/.test(status()), 'SmartSort geocoding', 20);
+    S.caption('SmartSort groups the 21 lines into <b>17 stops</b> and finds each address on the map.');
+    await until(() => !/Geocoding/.test(status()), 'geocoding done', 60);
+    S.caption('It measures <b>real road time</b> between every pair of stops, then orders each route.');
     const grid = () => { const g = S.find('dispatcher', '#routeGrid'); return g && g.children.length && g.offsetParent !== null ? g : null; };
     await until(grid, 'SmartSort route cards', 90);
-    await wait(0.4);
+    await wait(0.3);
     S.highlight('dispatcher', S.find('dispatcher', '#smartSortDrawer'), '3 routes · 30 packages accounted for', 'green');
     S.caption('<b>3 routes</b> built on real road time. Every package is accounted for before anything is published.');
     await until(() => routes().length === 3, '3 routes published', 40);
     await until(() => !S.find('dispatcher', '#smartSortDrawer').classList.contains('open'), 'SmartSort done', 20);
     pace.smartsort = false;
     S.unhighlight();
-    await wait(0.8);
+    S.layout('board');
+    await wait(1.4);
     const rows = Array.prototype.filter.call(W.dispatcher.document.querySelectorAll('tr[onclick*="openDrawer"]'), (r) => /Surge Route/.test(r.textContent));
     if (rows.length) {
       const a = S.rectOf('dispatcher', rows[0]), b = S.rectOf('dispatcher', rows[rows.length - 1]);
@@ -441,11 +391,11 @@
     S.unhighlight();
   });
 
-  // ── 3. The driver signs in with a texted code (Twilio) ──
-  scene('3', 'The driver signs in', async () => {
+  // ── 2. The driver signs in with a texted code (Twilio) ──
+  scene('2', 'The driver signs in', async () => {
     W.dispatcher.closeSmartSortDrawer();
-    S.layout('signin'); S.act('Part 3', 'The driver signs in');
-    await opener('Part 3', 'The driver signs in', 'No passwords: TackPath texts a one-time code.');
+    S.layout('signin'); S.act('Part 2', 'The driver signs in');
+    await opener('Part 2', 'The driver signs in', 'No passwords: TackPath texts a one-time code.');
     jumpTo(7, 55);
     S.caption('<b>7:55 AM.</b> Andre Coleman, a Peachline driver, opens the <b>TackPath driver app</b> and enters his number.');
     await wait(1.6);
@@ -468,12 +418,12 @@
     await wait(2.8);
   });
 
-  // ── 4. Dispatcher assigns ──
-  scene('4', 'Dispatch assigns drivers', async () => {
-    S.layout('assign'); S.act('Part 4', 'Dispatch assigns drivers');
-    await opener('Part 4', 'Dispatch assigns drivers', 'One click on the board, and the route is on the driver’s phone.');
+  // ── 3. Dispatcher assigns ──
+  scene('3', 'Dispatch assigns drivers', async () => {
+    S.layout('assign'); S.act('Part 3', 'Dispatch assigns drivers');
+    await opener('Part 3', 'Dispatch assigns drivers', 'One click on the board, and the route is on the driver’s phone.');
     S.caption('Three new routes on the board. On the right, Andre’s phone, signed in and waiting.');
-    await wait(2.4);
+    await wait(1.8);
     const r1 = routes()[0];
     const row = 'tr[onclick*="' + r1.id + '"]';
     await until(() => S.find('dispatcher', row), 'route row on board', 20);
@@ -482,7 +432,7 @@
     await tap('dispatcher', row, 1);
     for (const r of routes()) {
       const who = OWNER[routeNo(r)], first = r === r1;
-      if (!first) { W.dispatcher.openDrawer(r.id); await wait(0.9); }
+      if (!first) { await air(false); W.dispatcher.openDrawer(r.id); await wait(0.9); }
       const sel = await until(() => { const s = S.find('dispatcher', '#assignDriverSelect'); return s && s.options.length > 1 && s; }, 'driver list', 15);
       S.highlight('dispatcher', sel, first ? 'Pick the driver' : who);
       // focusing the picker holds the drawer still (the board refreshes every 2 s)
@@ -504,21 +454,22 @@
         await wait(0.6);
         S.highlight('driver', '#dxDayCard', 'Andre’s route · WAITING FOR WAREHOUSE', 'amber');
         S.caption('His app opens <b>his</b> route: 7 stops, 16 packages. Pickup stays locked: <b>Waiting for warehouse</b>.');
-        await wait(4);
+        await wait(3.4);
         S.unhighlight();
-        S.caption('Priya Nair takes RT-002 and Luis Ortega RT-003.');
       }
     }
     W.dispatcher.closeDrawer();
-    await wait(1.2);
+    await air(true);
+    S.caption('Priya Nair and Luis Ortega take RT-002 and RT-003.');
+    await wait(2.2);
   });
 
-  // ── 5. PathIQ sort on the TC56 ──
+  // ── 4. PathIQ sort on the TC56 ──
   const SORT = { held: [] };
   const EXC = 5;   // stop 6 · Gilbert Street Bakery · 3 packages
-  scene('5', 'PathIQ · sort and stage', async () => {
-    S.layout('sort'); S.act('Part 5', 'PathIQ · sort and stage');
-    await opener('Part 5', 'PathIQ sorts the warehouse', 'Every package scanned into its route’s bin, every bin staged for pickup.');
+  scene('4', 'PathIQ · sort and stage', async () => {
+    S.layout('sort'); S.act('Part 4', 'PathIQ · sort and stage');
+    await opener('Part 4', 'PathIQ sorts the warehouse', 'Every package scanned into its route’s bin, every bin staged for pickup.');
     jumpTo(8, 4);
     setRate(1);
     const rs = routes();
@@ -540,11 +491,11 @@
       const u = run[k];
       const completes = lastIdx.get(u.job.id) === k && u.job !== r1;
       // on camera: the first packages (new bins, a wrong bin) and each route's last package
-      const show = k < 7 || completes;
+      const show = k === 0 || k === 3 || k === 4 || (completes && stagedShown === 0);
       if (!show && S.onAir()) { await air(false); }
       if (show && !S.onAir()) { await air(true); if (completes) S.caption('Later in the sort: the last package for <b>' + u.job.title.replace('Surge Route ', '') + '</b>.'); }
       const gap = k === 0 ? 1.4 : 1.0;
-      if (k === 1) S.caption('PathIQ flips the card to the package’s bin; the bin scan confirms it. Every scan is counted.');
+      if (k === 3) S.caption('PathIQ flips the card to the package’s bin; the bin scan confirms it. Every scan is counted.');
       await stowUnit(u, gap, { narrate: k === 0, wrongFirst: k === 4 });
       if (/Bin Complete/.test(txt('pathiq', '#stowResult'))) {
         if (S.onAir()) { S.highlight('pathiq', '#stowResult', u.job.title.replace('Surge Route ', '') + ' complete', 'green'); S.caption('<b>' + u.job.title.replace('Surge Route ', '') + '</b> is complete: every package is in its bin.'); await wait(2); S.unhighlight(); }
@@ -561,30 +512,36 @@
     S.unhighlight();
   });
 
-  // ── 6. Route ready: WAITING → READY across apps ──
-  scene('6', 'Route ready for pickup', async () => {
-    S.layout('ready'); S.act('Part 6', 'Route ready for pickup');
-    await opener('Part 6', 'Ready for pickup', 'The warehouse and the driver’s phone stay in step.');
+  // ── 5. Route ready: WAITING → READY across apps ──
+  scene('5', 'Route ready for pickup', async () => {
+    S.layout('ready'); S.act('Part 5', 'Route ready for pickup');
+    await opener('Part 5', 'Ready for pickup', 'The warehouse and the driver’s phone stay in step.');
     S.caption('RT-001’s last package. Watch both screens.');
     S.flow('PathIQ bin status → driver app', 812, 250);
     await wait(1.8);
     for (let k = 0; k < SORT.held.length; k++) await stowUnit(SORT.held[k], 1.0, {});
     await until(() => /Bin Complete/.test(txt('pathiq', '#stowResult')), 'RT-001 complete', 10);
     S.highlight('pathiq', '#stowResult', 'Bin 1A complete', 'green');
-    S.caption('All 16 RT-001 packages are in bin 1A.');
-    await until(() => /ready for pickup/i.test(txt('driver', '#dxStage')), 'driver app turns READY', 20);
-    S.flow('bin 1A complete → Andre: READY FOR PICKUP', 760, 250, true);
-    S.highlight('driver', '#dxDayCard', 'READY FOR PICKUP · Bin 1A · A-01', 'green');
-    S.caption('Andre’s app turns <b>Ready for pickup</b> and unlocks pickup. Keisha stages the bin at <b>S-01</b>.');
+    S.caption('All 16 RT-001 packages are in bin 1A. Andre’s app still waits: the route is <b>not staged</b> yet.');
+    await until(() => /stage your route|Waiting for warehouse/i.test(txt('driver', '#dxStage')), 'driver app waits for staging', 20);
+    S.highlight('driver', '#dxStage', 'Waiting for the warehouse to stage the route', 'amber');
+    await wait(3);
+    S.unhighlight();
+    S.caption('Keisha moves bin 1A to the staging area and scans <b>STG S-01</b>.');
     await stageBin(routes()[0], false);
+    S.highlight('pathiq', '#stowResult', 'Staged at S-01', 'green');
+    await until(() => /ready for pickup/i.test(txt('driver', '#dxStage')), 'driver app turns READY', 20);
+    S.flow('STG S-01 scanned → Andre: READY FOR PICKUP', 760, 250, true);
+    S.highlight('driver', '#dxDayCard', 'READY FOR PICKUP · Bin 1A', 'green');
+    S.caption('The moment it is staged, Andre’s app turns <b>Ready for pickup</b> and unlocks pickup.');
     await wait(3);
     S.flow(''); S.unhighlight();
   });
 
-  // ── 7. Driver pickup ──
-  scene('7', 'Driver pickup', async () => {
-    S.layout('pickup'); S.act('Part 7', 'Driver pickup');
-    await opener('Part 7', 'Driver pickup', 'The right bin, every package scanned into the van.');
+  // ── 6. Driver pickup ──
+  scene('6', 'Driver pickup', async () => {
+    S.layout('pickup'); S.act('Part 6', 'Driver pickup');
+    await opener('Part 6', 'Driver pickup', 'The right bin, every package scanned into the van.');
     hub.clock.jump(4 * 60000);   // Andre walks over from the drivers' lounge
     setRate(1);
     fix({ lat: C.hub.lat, lng: C.hub.lng, heading: 90 });
@@ -593,6 +550,7 @@
     S.rack.picked('2A'); S.rack.picked('3A');
     await wait(1.8);
     const atPickup = W.driver.document.querySelector('#scRouteAccepted button:not(.dx-btn)');
+    hub.showCamera({ kind: 'bin', code: 'BIN:2A' }, false);   // in view when the scanner opens
     await tap('driver', atPickup, 0.9);
     await until(() => visible('driver', '#binScanOverlay'), 'bin scan screen', 10);
     S.caption('He grabs <b>bin 2A</b> by mistake…');
@@ -604,16 +562,27 @@
     S.unhighlight();
     await cameraScan('BIN:1A', '#binScanLastResult', /CONFIRMED/, 'bin');
     S.highlight('driver', '#binScanLastResult', 'Bin 1A confirmed', 'green');
-    S.caption('<b>Bin 1A confirmed.</b> Every package goes into the van with a scan.');
+    S.caption('<b>Bin 1A confirmed.</b>');
+    await until(() => onScreen('scPickup'), 'pickup route tab', 10);
+    await wait(0.6); S.unhighlight();
+    S.highlight('driver', '#tpPickMap', 'Today’s stops, in delivery order', 'green');
+    S.caption('The app shows today’s <b>7 stops</b> on the map, in delivery order.');
+    await wait(3);
+    S.unhighlight();
+    const loadTab = S.find('driver', '#scPickup [data-tab="load"]');
+    S.highlight('driver', loadTab, 'Load');
+    S.caption('On <b>Load</b>, every package goes into the van with a scan.');
+    hub.showCamera({ kind: 'label', code: unitsOf(rs[0])[0].code }, false);
+    await wait(1.4);
+    await tap('driver', loadTab, 0.6);
     await until(() => visible('driver', '#loadPkgOverlay'), 'loading screen', 10);
-    await wait(1); S.unhighlight();
+    await wait(0.6); S.unhighlight();
     const units = unitsOf(rs[0]);
     S.rack.clearFeed();
     for (let k = 0; k < units.length; k++) {
       const u = units[k];
-      const show = k < 3 || k === units.length - 1;
+      const show = k < 1;
       if (show !== S.onAir()) await air(show);
-      if (show && k === units.length - 1) S.caption('…and the 16th.');
       await cameraScan(u.code, '#loadPkgLastScan', /LOADED/);
       S.rack.take('1A');
       if (k === 0) { S.highlight('driver', '#loadPkgOverlay', 'Loaded · stop number shown', 'green'); S.caption('Each scan is counted against the route and shows its stop.'); await wait(1.8); S.unhighlight(); }
@@ -624,25 +593,24 @@
       }
     }
     await air(true);
-    await until(() => onScreen('scPickupComplete'), 'pickup complete', 10);
+    const go = await until(() => { const x = onScreen('scPickup') && S.find('driver', '#tpPickStart'); return x && !x.disabled && x; }, 'Start Route enabled', 15);
     S.rack.picked('1A');
-    S.highlight('driver', '#scPickupComplete', '16 packages loaded', 'green');
-    S.caption('All 16 loaded. Andre starts the route: RT-001 is <b>in transit</b>.');
+    S.highlight('driver', go, '16 of 16 loaded', 'green');
+    S.caption('All 16 loaded. Andre taps <b>Start Route</b>: RT-001 is <b>in transit</b>.');
     await wait(2.2);
     S.unhighlight();
-    await tap('driver', '#scPickupComplete button', 0.8);
+    await tap('driver', go, 0.8);
     await until(() => be.jobById(rs[0].id).status === 'in_transit', 'route in transit', 10);
     await wait(1.4);
   });
 
-  // the recipient of stop 1 and the tracking number on their package
+  // stop 1 of Andre’s route
   const firstStop = () => routes()[0].surge_stops[0];
-  const trackNo = () => { const s = firstStop(); return String(s.tracking_number || ((s.pkgs || [])[0] || {}).tracking_number || '').toUpperCase(); };
 
-  // ── 8. On the road: navigation, live map, tracking, back to TackPath ──
-  scene('8', 'On the road', async () => {
-    S.layout('track'); S.act('Part 8', 'On the road');
-    await opener('Part 8', 'On the road', 'Turn-by-turn on the phone, a live map at dispatch, and live tracking for the recipient.');
+  // ── 7. On the road: navigation, live map, back to TackPath ──
+  scene('7', 'On the road', async () => {
+    S.layout('drive'); S.act('Part 7', 'On the road');
+    await opener('Part 7', 'On the road', 'Turn-by-turn on the phone and a live map at dispatch.');
     await tap('dispatcher', '.tbtab[onclick*="smarttrack"]', 0.6);
     try { await W.dispatcher.refreshFleetMap(); } catch (e) {}
     S.highlight('driver', '#surgeRow0', 'Stop 1 · tap to navigate');
@@ -655,28 +623,14 @@
     const st = firstStop();
     S.flow('one GPS stream → driver phone + dispatcher map', 470, 110);
     S.caption('The <b>same GPS stream</b> moves the phone’s navigation and Andre’s dot on the dispatcher’s map.');
-    await driveReal(st.coords, 7, { easeIn: true });
+    await driveReal(st.coords, 5, { easeIn: true });
     S.flow('');
-    // the recipient follows the package with its tracking number
-    S.caption('At ' + st.recipient + ', the package’s <b>tracking page</b>: they enter the tracking number.');
-    S.highlight('tracking', '#tnInput', 'Tracking number');
-    const drive = driveReal(st.coords, 9);
-    await typeInto('tracking', '#tnInput', trackNo(), 9);
-    await wait(0.5);
-    await tap('tracking', '#trackBtn', 0.4);
-    S.unhighlight();
-    await drive;
-    await until(() => /Out for Delivery/.test(txt('tracking', '.status-headline')), 'tracking shows out for delivery', 15);
-    S.highlight('tracking', '#resultScreen', 'Out for delivery · next stop', 'green');
-    S.caption('The recipient sees it live: <b>out for delivery</b>, theirs is the next stop.');
-    await driveReal(st.coords, 5);
-    S.unhighlight();
     // cut to half a mile out: the floating button appears over Maps
     await offAir(async () => { await driveTo(before(st.coords, 860), 2); });
     S.caption('Inside half a mile, TackPath’s <b>floating button</b> appears over Maps.');
-    await driveReal(st.coords, 8);
+    await driveReal(st.coords, 5);
     await offAir(async () => { await driveTo(before(st.coords, 150), 2); });
-    S.caption('Andre pulls up to ' + st.recipient + '.');
+    S.caption('Andre pulls up at ' + st.recipient + '’s address.');
     const park = driveReal(st.coords, 30, { easeOut: true });
     await until(() => S.bubble.state() === 'arrived', 'arrived bubble', 30);
     S.highlightBox(...(() => { const b = S.bubble.el().getBoundingClientRect(), sr = $('stage').getBoundingClientRect(), k = S.stageScale(); return [(b.left - sr.left) / k - 6, (b.top - sr.top) / k - 6, b.width / k + 12, b.height / k + 12]; })(), 'Arrived · tap to deliver', 'green');
@@ -702,10 +656,11 @@
   async function deliver(i, opts) {
     const job = routes()[0], st = job.surge_stops[i], quick = opts.quick;
     setRate(1);
+    const pieces = unitsOf(job).filter((u) => u.stop === i + 1);
+    hub.showCamera({ kind: 'label', code: pieces[0].code }, false);   // the label is in view when the scanner opens
     await tap('driver', '#arrivalPrompt button', quick ? 0.4 : 1.1);
     await until(() => visible('driver', '#dlvScanOverlay'), 'delivery scan', 10);
-    if (!quick) { S.caption('Before proof of delivery, every package for this stop is scanned.'); }
-    const pieces = unitsOf(job).filter((u) => u.stop === i + 1);
+    if (!quick) { S.caption('Before proof of delivery, every package for this stop is scanned.'); await wait(1.2); }
     for (let k = 0; k < pieces.length; k++) {
       await cameraScan(pieces[k].code, '#dlvScanResult', /PACKAGE SCANNED|ACCOUNTED/);
       if (k < pieces.length - 1) { const nx = await until(() => S.find('driver', '#dlvNextBtn'), 'NEXT', 10); await wait(quick ? 0.2 : 0.8); await tap('driver', nx, 0.4); }
@@ -744,9 +699,9 @@
     await returnToApp();
   }
 
-  // ── 9. One delivery, start to finish; the recipient sees it; the next stop opens by itself ──
-  scene('9', 'Delivery · proof', async () => {
-    S.layout('drive'); S.act('Part 9', 'Delivery · proof of delivery');
+  // ── 8. One delivery, start to finish; the next stop opens by itself ──
+  scene('8', 'Delivery · proof', async () => {
+    S.layout('drive'); S.act('Part 8', 'Delivery · proof of delivery');
     S.caption('<b>Mark arrived</b>, then scan the stop’s packages.');
     await deliver(0, {});
     await until(() => S.find('driver', '#dxNext'), 'next-stop countdown', 10);
@@ -756,84 +711,9 @@
     await wait(1.6);
     S.unhighlight();
     S.caption('…and Maps is already guiding Andre to stop 2.');
-    await wait(2.4);
-    const others = sims.length ? Math.max.apply(null, sims.map((x) => x.endsAt)) + 60000 : 0;
-    const names = routes()[0].surge_stops.slice(1, 5).map((s) => s.recipient).join(', ');
-    await cut('Stops 2 to 5', names + ': the same steps at every stop. Scan, proof, next.', async () => {
-      for (let i = 1; i < 5; i++) { await driveStop(i); await deliver(i, { quick: true }); }
-      await driveStop(EXC, others);
-    });
+    await wait(3.4);
   });
 
-  // ── 10. A problem at a stop: the driver reports it, dispatch sees it ──
-  scene('10', 'Exception · business closed', async () => {
-    S.layout('drive'); S.act('Part 10', 'Exception · business closed');
-    const job = routes()[0], st = job.surge_stops[EXC];
-    S.caption('Stop 6: <b>' + st.recipient + '</b>, 3 packages. The shop is closed and nobody answers.');
-    setRate(1);
-    await wait(1.4);
-    await tap('driver', '#arrivalPrompt button', 0.8);
-    await until(() => visible('driver', '#dlvScanOverlay'), 'delivery scan', 10);
-    await wait(1.2);
-    await tap('driver', '#dlvScanOverlay button[onclick="cancelDeliveryScan()"]', 0.5);
-    await until(() => onScreen('scSurgeDelivery'), 'stop screen', 10);
-    await wait(0.8);
-    S.highlight('driver', '#dxProblemBtn', 'Problem', 'red');
-    S.caption('Andre can’t deliver, so he taps <b>Problem</b>.');
-    await wait(1.4);
-    await tap('driver', '#dxProblemBtn', 1);
-    const closed = await until(() => byText('driver', '#dxSheet button', /Business closed/), 'problem list', 10);
-    S.highlight('driver', closed, 'Business closed', 'red');
-    S.caption('Six supported reasons. With <b>Business closed</b> the packages go back to the station.');
-    await wait(2.2);
-    await tap('driver', closed, 1.1);
-    const rep = await until(() => S.find('driver', '#dxSheet .dx-btn.bad'), 'report button', 10);
-    S.highlight('driver', rep, 'Report and go to the next stop', 'red');
-    S.caption('One tap: dispatch is told, the 3 packages are marked to return, and the route moves on.');
-    await wait(2);
-    await tap('driver', rep, 0.6);
-    await until(() => be.T.messages.some((m) => /^STOP_EXCEPTION::/.test(m.body)), 'problem recorded', 15);
-    S.unhighlight();
-    // dispatcher: the driver chat shows the report as a plain alert
-    await tap('dispatcher', '#chatFab', 0.9);
-    const tabBtn = S.find('dispatcher', '.oc-tab[onclick*="drivers"]'); if (tabBtn) await tap('dispatcher', tabBtn, 0.7);
-    const alertBubble = await until(() => byText('dispatcher', '#msgs-drivers .oc-msg', /PROBLEM/), 'problem in dispatcher chat', 20);
-    alertBubble.scrollIntoView({ block: 'center' });
-    await wait(0.4);
-    S.highlight('dispatcher', alertBubble, 'Dispatch sees it right away', 'red');
-    S.caption('Dispatch: <b>⚠ PROBLEM · Stop 6: Business closed · 3 packages returning to station</b>.');
-    await wait(4.4);
-    S.unhighlight();
-    await tap('dispatcher', '#chatFab', 0.4);
-    const last = job.surge_stops.length - 1;
-    await cut('Stop 7', job.surge_stops[last].recipient + ': delivered the same way.', async () => {
-      await driveStop(last);
-      await deliver(last, { quick: true });
-      await until(() => ['completed_with_exceptions', 'delivered'].includes(be.jobById(job.id).status), 'route finished', 15);
-    });
-  });
-
-  // ── 11. Route complete + the day reconciled ──
-  scene('11', 'Route complete · the day reconciled', async () => {
-    S.layout('drive'); S.act('Part 11', 'The day, reconciled');
-    await until(() => S.find('driver', '#dxSummary'), 'driver summary', 15);
-    S.highlight('driver', '#dxSummary', 'Route finished with problems', 'amber');
-    S.caption('Andre’s summary: <b>6 stops, 13 packages delivered</b>, 1 problem, <b>3 packages to bring back</b>.');
-    await wait(4.4);
-    S.unhighlight();
-    await tap('dispatcher', '.tbtab[onclick*="dispatch"]', 0.5);
-    try { await W.dispatcher.loadJobs(); } catch (e) {}
-    S.layout('wrap');
-    await wait(1.6);
-    const row1 = S.find('dispatcher', 'tr[onclick*="' + routes()[0].id + '"]');
-    if (row1) S.highlight('dispatcher', row1, 'RT-001 · finished with problems', 'amber');
-    S.caption('The board: RT-002 and RT-003 <b>delivered</b>; RT-001 <b>finished · problems</b>.');
-    await wait(3.8);
-    S.unhighlight();
-    S.recon(reconHtml());
-    S.caption('Every package accounted for: <b>30 received = 27 delivered + 3 returning to the station</b>.');
-    await wait(7);
-  });
 
   // ════════════════ reconciliation from the demo backend ════════════════
   function reconcile() {
@@ -883,7 +763,8 @@
     ctl.turbo = false; applySpeed(); S.busy('');
     S.act('', ''); ctl.done = true; ctl.running = false; markScene();
     hub.emit('done', {});
-    S.caption('That’s TackPath: one operation, from the manifest to the doorstep.');
+    S.caption('');
+    $('titleCard').classList.add('end'); S.title(true);   // closing card: the logo and the line
     $('cPause').disabled = true;
   }
   function start(sceneIdx) {
@@ -933,11 +814,17 @@
 
   root.DEMO = { hub, be, W, ctl, SCENES, start, go, reconcile, ready, sims };
   ready.then(async () => {
+    // The driver app's street map loads OpenStreetMap tiles. Offline, the demo
+    // draws its own street tiles instead (same streets as every demo map).
+    (function tiles(n) {
+      const L = W.driver.L;                 // Leaflet loads a moment after the page
+      if (!L || !L.GridLayer) { if (n < 150) setTimeout(() => tiles(n + 1), 200); else console.error('[demo] map tiles: Leaflet did not load'); return; }
+      const Demo = L.GridLayer.extend({ createTile: function (c) { return M.tile(W.driver.document.createElement('canvas'), c.z, c.x, c.y); } });
+      L.tileLayer = function (url, o) { return new Demo({ maxZoom: (o && o.maxZoom) || 19, attribution: 'Demo map (offline)' }); };
+    })(0);
     // let the apps finish their first load before the show
     await new Promise((r) => setTimeout(r, 1200));
     hub.clock.resume();
-    // the florist's portal account (Andre signs in on camera, Part 3)
-    try { const c = W.customer.document; const em = c.getElementById('loginEmail'); if (em) em.value = 'buckhead.bloom@buckheadbloom.com'; W.customer.doLogin(); } catch (e) {}
     await new Promise((r) => setTimeout(r, 900)); hub.clock.pause();
     $('bigStart').disabled = false; $('bigStart').textContent = '▶ START DEMO';
     hub.emit('ready', {});

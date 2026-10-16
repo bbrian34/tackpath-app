@@ -146,4 +146,4 @@ restart work and restart resets to an empty board at 7:52.
 - Running faster than 4× is not offered: the apps' own animations and timers
   set the pace.
 - `demo/vendor/driver-app.html` is a copy of the native app at
-  tackpath-driver `86b2bba`; refresh it when the app changes.
+  tackpath-driver `a8faa26` (v26); refresh it when the app changes.

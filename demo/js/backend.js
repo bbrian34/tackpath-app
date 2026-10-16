@@ -254,7 +254,7 @@
           return { ok: true };
         }
         case 'fcm_token': return { ok: true };
-        case 'bin_binding': return clone(T.bin_bindings.filter((b) => String(b.job_id) === String(jid) && ['open', 'ready'].includes(b.state)).map((b) => ({ bin_code: b.bin_code, location_code: b.location_code, state: b.state })));
+        case 'bin_binding': return clone(T.bin_bindings.filter((b) => String(b.job_id) === String(jid) && ['open', 'ready'].includes(b.state)).map((b) => ({ bin_code: b.bin_code, state: b.state, staging_code: b.staging_code || null })));   // as migration 67
         case 'sign_out': return { ok: true };
         default: throw new Error('TP_INVALID: unknown action ' + action);
       }

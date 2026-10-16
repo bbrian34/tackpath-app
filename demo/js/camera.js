@@ -35,7 +35,7 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  // Background: inside of a van / warehouse floor, slightly moving like a hand-held phone.
+  // Background: inside of a van / warehouse floor.
   function backdrop(ctx, W, H, t, tone) {
     const g = ctx.createLinearGradient(0, 0, W, H);
     g.addColorStop(0, tone === 'door' ? '#6b5a48' : '#3a3f47'); g.addColorStop(1, tone === 'door' ? '#2c241c' : '#16191e');
@@ -44,9 +44,9 @@
 
   function drawLabel(ctx, W, H, code, t) {
     const s = stopFor(code) || {};
-    const wob = Math.sin(t / 700) * 0.02, dx = Math.sin(t / 900) * 6, dy = Math.cos(t / 1100) * 5;
-    // cardboard box
-    ctx.save(); ctx.translate(W / 2 + dx, H / 2 + dy); ctx.rotate(-0.04 + wob);
+    // cardboard box, held square and steady in the scan frame; 72% size so the
+    // whole label stays inside the app's tall (side-cropped) camera view
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(0.72, 0.72);
     ctx.fillStyle = '#b98a55'; rr(ctx, -W * 0.46, -H * 0.42, W * 0.92, H * 0.84, 10); ctx.fill();
     ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(-W * 0.46, -12, W * 0.92, 24);
     // label
@@ -71,8 +71,7 @@
   }
   function drawBin(ctx, W, H, code, t) {
     const label = String(code).replace(/^BIN[:\s-]*/i, '');
-    const dx = Math.sin(t / 900) * 5, dy = Math.cos(t / 1100) * 4;
-    ctx.save(); ctx.translate(W / 2 + dx, H / 2 + dy); ctx.rotate(0.02 + Math.sin(t / 800) * 0.015);
+    ctx.save(); ctx.translate(W / 2, H / 2);
     ctx.fillStyle = '#1f5fbf'; rr(ctx, -W * 0.47, -H * 0.4, W * 0.94, H * 0.8, 18); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.08)'; for (let i = 0; i < 5; i++) ctx.fillRect(-W * 0.47, -H * 0.4 + i * H * 0.17, W * 0.94, 4);
     ctx.fillStyle = '#fff'; rr(ctx, -150, -175, 300, 350, 10); ctx.fill();
@@ -83,8 +82,7 @@
     ctx.textAlign = 'left'; ctx.restore();
   }
   function drawDoor(ctx, W, H, t, sc) {
-    const dx = Math.sin(t / 900) * 4;
-    ctx.save(); ctx.translate(dx, 0);
+    ctx.save();
     ctx.fillStyle = '#8f8676'; ctx.fillRect(0, 0, W, H);                      // wall
     ctx.fillStyle = '#2f4a3a'; ctx.fillRect(W * 0.28, H * 0.06, W * 0.44, H * 0.7); // door
     ctx.fillStyle = '#d9c58a'; ctx.beginPath(); ctx.arc(W * 0.66, H * 0.43, 9, 0, 7); ctx.fill();
