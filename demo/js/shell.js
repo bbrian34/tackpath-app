@@ -60,7 +60,7 @@
   // ── act title + caption ──
   S.act = function (n, title) { $('actTitle').innerHTML = n ? '<span class="n">' + n + '</span>' + title : ''; };
   // Where the viewer is in the operation: four steps, the current one lit.
-  S.STAGES = ['Route Planning', 'Package Sorting', 'Driver Handoff', 'Delivery'];
+  S.STAGES = ['Route Planning', 'Package Sorting', 'Driver Handoff', 'Delivery', 'Route Complete'];
   S.stage = function (i) {
     $('actTitle').innerHTML = i == null ? '' : S.STAGES.map((t, k) =>
       '<span class="st' + (k === i ? ' on' : k < i ? ' done' : '') + '">' + t + '</span>').join('<span class="st-sep">›</span>');
@@ -173,7 +173,8 @@
     ready(code, stg) { const b = bins[code]; if (!b) return; b.el.classList.remove('open'); b.el.classList.add('ready'); b.el.querySelector('.b-state').textContent = stg ? 'STAGED · ' + stg : 'READY'; },
     take(code) { const b = bins[code]; if (!b) return; const f = b.el.querySelector('.b-fill'); if (f.lastChild) f.lastChild.remove(); b.n = Math.max(0, b.n - 1); b.el.querySelector('.b-count').textContent = b.n + ' left in bin'; },
     clearFeed() { $('rackFeed').innerHTML = '<span class="lbl">Scanned</span>'; },
-    picked(code) { const b = bins[code]; if (!b) return; b.el.classList.remove('ready', 'open'); b.el.classList.add('picked'); b.el.querySelector('.b-state').textContent = 'PICKED UP'; },
+    // one rule for every bin: picked up = empty, with who loaded it
+    picked(code, who) { const b = bins[code]; if (!b) return; b.el.classList.remove('ready', 'open'); b.el.classList.add('picked'); b.el.querySelector('.b-state').textContent = 'PICKED UP'; b.el.querySelector('.b-fill').innerHTML = ''; b.n = 0; b.el.querySelector('.b-count').textContent = who ? 'Loaded by ' + who : 'Empty'; },
     flash(code) { const b = bins[code]; if (!b || S.quiet) return; b.el.classList.add('flash'); setTimeout(() => b.el.classList.remove('flash'), 300); },
     feed(html, cls) {
       const f = $('rackFeed'); const c = document.createElement('div'); c.className = 'pkg-chip' + (cls ? ' ' + cls : ''); c.innerHTML = html;

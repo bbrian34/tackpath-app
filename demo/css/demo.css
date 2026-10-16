@@ -170,20 +170,22 @@ button{font-family:inherit}
 .hl.green{border-color:#53ff88;box-shadow:0 0 24px rgba(83,255,136,.7)}
 .hl.amber{border-color:#ffb020;box-shadow:0 0 24px rgba(255,176,32,.7)}
 .hl.red{border-color:#ff5a5a;box-shadow:0 0 24px rgba(255,90,90,.7)}
-.hl-tag{position:absolute;left:-3px;top:-34px;white-space:nowrap;background:#19b7ef;color:#00121f;font-size:13px;font-weight:800;padding:4px 10px;border-radius:8px}
+.hl-tag{position:absolute;left:-3px;top:-36px;white-space:nowrap;background:#19b7ef;color:#00121f;font-size:15px;font-weight:800;padding:4px 11px;border-radius:8px}
 .hl.green .hl-tag{background:#53ff88}.hl.amber .hl-tag{background:#ffb020}.hl.red .hl-tag{background:#ff5a5a;color:#fff}
 .ripple{position:absolute;z-index:36;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:rgba(255,255,255,.55);border:2px solid #fff;pointer-events:none;animation:rip .55s ease-out forwards}
 @keyframes rip{from{transform:scale(.6);opacity:1}to{transform:scale(3.2);opacity:0}}
 
 /* caption */
 #captionBar{position:absolute;left:0;right:0;bottom:22px;display:flex;justify-content:center;z-index:40;pointer-events:none}
-.caption{max-width:1180px;background:rgba(4,10,20,.88);border:1px solid var(--line);border-radius:14px;padding:12px 22px;font-size:21px;line-height:1.4;color:#eaf4ff;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.45);opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.caption{max-width:1320px;background:rgba(4,10,20,.88);border:1px solid var(--line);border-radius:14px;padding:13px 24px;font-size:23px;line-height:1.4;color:#eaf4ff;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.45);opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
 .caption.show{opacity:1;transform:none}
 .caption b{color:#7fd8ff}
 
 /* title card */
 .title-card{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:radial-gradient(900px 600px at 50% 40%,#0d2340,#050b16);transition:opacity .8s}
 .title-card.gone{opacity:0;pointer-events:none}
+.title-card{transition:opacity .6s .3s}.title-card:not(.gone){transition-delay:0s}
+.title-card .tc-inner{transition:opacity .25s}.title-card.gone .tc-inner{opacity:0}.title-card:not(.gone) .tc-inner{opacity:1;transition:opacity .5s .65s}
 .tc-inner{max-width:1100px;text-align:center}
 .tc-inner .eyebrow{font-size:16px;letter-spacing:.3em;text-transform:uppercase;color:var(--blue);font-weight:800}
 .tc-inner h1{font-size:56px;line-height:1.15;margin:22px 0 18px;font-weight:800;letter-spacing:-.01em}
@@ -230,9 +232,12 @@ body.rec .big-start,body.rec .tc-foot,body.rec #controls{display:none!important}
 
 /* chapter card: a calm title between scenes and where repeated work is cut */
 .chapter{position:absolute;inset:0;z-index:58;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;
-  background:radial-gradient(900px 560px at 50% 45%,#0d2340,#040a14);transition:opacity .6s var(--ease)}
+  background:radial-gradient(900px 560px at 50% 45%,#0d2340,#040a14);transition:opacity .5s var(--ease) .3s}
+.chapter.show{transition-delay:0s}
+.chapter .ch-in{opacity:0;transition:opacity .25s,transform .9s var(--ease)}
+.chapter.show .ch-in{opacity:1;transition:opacity .4s .55s,transform .9s var(--ease) .55s}
 .chapter.show{opacity:1}
-.ch-in{text-align:center;transform:translateY(10px);transition:transform .9s var(--ease)}
+.ch-in{text-align:center;transform:translateY(10px)}
 .chapter.show .ch-in{transform:none}
 .ch-n{font-size:18px;letter-spacing:.34em;text-transform:uppercase;color:var(--blue);font-weight:800}
 .ch-t{font-size:76px;font-weight:800;margin:16px 0 10px;color:#fff;letter-spacing:-.01em}
@@ -269,3 +274,5 @@ body.rec .big-start,body.rec .tc-foot,body.rec #controls{display:none!important}
 body.instant .link-line{animation:none;opacity:1}
 .title-card .tc-site{margin-top:18px;font-size:22px;letter-spacing:.08em;color:#a9bdd2;display:none}
 .title-card.end .tc-site{display:block}
+.bin.picked .b-fill{display:none}
+.bin.picked{opacity:.78}
