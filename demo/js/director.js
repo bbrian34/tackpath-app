@@ -204,7 +204,7 @@
       const left = r.meters - s;
       let speed = v;
       if (opts.easeIn) speed = Math.min(speed, 1 + acc * t);
-      if (opts.easeOut) speed = Math.min(speed, Math.max(1.2, Math.sqrt(2 * acc * 0.55 * Math.max(0, left))));
+      if (opts.easeOut) speed = Math.min(speed, Math.max(2.5, Math.sqrt(2 * acc * 1.25 * Math.max(0, left))));
       const dt = 0.12;
       s = Math.min(r.meters, s + speed * dt);
       const p = M.along(r.coords, s);
@@ -351,7 +351,7 @@
   scene('1', 'Orders arrive', async () => {
     S.layout('portal'); S.act('Part 1', 'Orders arrive');
     await opener('Part 1', 'Orders arrive', 'A business books on the customer portal. A Shopify store sends its orders. A client sends a manifest.');
-    S.caption('<b>7:40 AM.</b> A florist in Buckhead books a same-day delivery on Peachline’s <b>TackPath customer portal</b>.');
+    S.caption('A florist in Buckhead books a same-day delivery on Peachline’s <b>TackPath customer portal</b>.');
     await wait(2.4);
     S.highlight('customer', '#recipient', 'Recipient');
     await typeInto('customer', '#recipient', PORTAL.recipient);
@@ -676,11 +676,13 @@
     S.caption('Inside half a mile, TackPath’s <b>floating button</b> appears over Maps.');
     await driveReal(st.coords, 8);
     await offAir(async () => { await driveTo(before(st.coords, 150), 2); });
-    await driveReal(st.coords, 30, { easeOut: true });
-    await until(() => S.bubble.state() === 'arrived', 'arrived bubble', 10);
+    S.caption('Andre pulls up to ' + st.recipient + '.');
+    const park = driveReal(st.coords, 30, { easeOut: true });
+    await until(() => S.bubble.state() === 'arrived', 'arrived bubble', 30);
     S.highlightBox(...(() => { const b = S.bubble.el().getBoundingClientRect(), sr = $('stage').getBoundingClientRect(), k = S.stageScale(); return [(b.left - sr.left) / k - 6, (b.top - sr.top) / k - 6, b.width / k + 12, b.height / k + 12]; })(), 'Arrived · tap to deliver', 'green');
     S.caption('Within 80 m it turns green: <b>Arrived · tap here to deliver</b>.');
-    await wait(2.8);
+    await park;
+    await wait(2.2);
     await returnToApp();
     S.caption('One tap and Andre is back in TackPath, on this stop.');
     await wait(2);
@@ -935,7 +937,7 @@
     await new Promise((r) => setTimeout(r, 1200));
     hub.clock.resume();
     // the florist's portal account (Andre signs in on camera, Part 3)
-    try { const c = W.customer.document; const em = c.getElementById('loginEmail'); if (em) em.value = 'orders@buckheadbloom.com'; W.customer.doLogin(); } catch (e) {}
+    try { const c = W.customer.document; const em = c.getElementById('loginEmail'); if (em) em.value = 'buckhead.bloom@buckheadbloom.com'; W.customer.doLogin(); } catch (e) {}
     await new Promise((r) => setTimeout(r, 900)); hub.clock.pause();
     $('bigStart').disabled = false; $('bigStart').textContent = '▶ START DEMO';
     hub.emit('ready', {});

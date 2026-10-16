@@ -230,7 +230,7 @@ body.rec .big-start,body.rec .tc-foot,body.rec #controls{display:none!important}
 
 /* chapter card: a calm title between scenes and where repeated work is cut */
 .chapter{position:absolute;inset:0;z-index:58;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;
-  background:radial-gradient(900px 560px at 50% 45%,rgba(13,35,64,.97),rgba(4,10,20,.985));transition:opacity .6s var(--ease)}
+  background:radial-gradient(900px 560px at 50% 45%,#0d2340,#040a14);transition:opacity .6s var(--ease)}
 .chapter.show{opacity:1}
 .ch-in{text-align:center;transform:translateY(10px);transition:transform .9s var(--ease)}
 .chapter.show .ch-in{transform:none}
