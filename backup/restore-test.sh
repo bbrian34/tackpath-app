@@ -43,9 +43,9 @@ if [ -n "${BACKUP_DIR:-}" ]; then
 else
   for v in B2_KEY_ID B2_APP_KEY B2_BUCKET B2_ENDPOINT; do [ -n "${!v:-}" ] || fail "$v is not set (or set BACKUP_DIR)"; done
   export AWS_ACCESS_KEY_ID="$B2_KEY_ID" AWS_SECRET_ACCESS_KEY="$B2_APP_KEY" AWS_DEFAULT_REGION="${B2_REGION:-$(echo "$B2_ENDPOINT" | sed -n 's#.*s3\.\([a-z0-9-]*\)\.backblazeb2\.com.*#\1#p')}"
-  S3=(aws --only-show-errors --endpoint-url "$B2_ENDPOINT" s3)
+  S3=(aws --endpoint-url "$B2_ENDPOINT" s3)   # no --only-show-errors here: "s3 ls" rejects it
   SET="${SET:-daily/$("${S3[@]}" ls "s3://$B2_BUCKET/daily/" | awk '/PRE/{print $2}' | tr -d / | sort | tail -1)}"
-  "${S3[@]}" cp --recursive "s3://$B2_BUCKET/$SET/" "$WORK/" || fail "download of $SET failed"
+  "${S3[@]}" cp --only-show-errors --recursive "s3://$B2_BUCKET/$SET/" "$WORK/" || fail "download of $SET failed"
 fi
 log "backup set: $SET"
 head -2 "$WORK/MANIFEST.txt" | sed 's/^/  /'

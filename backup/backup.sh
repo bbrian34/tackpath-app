@@ -124,16 +124,19 @@ if [ -n "${BACKUP_DEST_DIR:-}" ]; then
   done
 else
   export AWS_ACCESS_KEY_ID="$B2_KEY_ID" AWS_SECRET_ACCESS_KEY="$B2_APP_KEY" AWS_DEFAULT_REGION="${B2_REGION:-$(echo "$B2_ENDPOINT" | sed -n 's#.*s3\.\([a-z0-9-]*\)\.backblazeb2\.com.*#\1#p')}" AWS_EC2_METADATA_DISABLED=true
-  S3=(aws --only-show-errors --endpoint-url "$B2_ENDPOINT" s3)
-  for t in $TIERS; do "${S3[@]}" cp --recursive "$OUT/" "s3://$B2_BUCKET/$t/$DAY/" || fail "upload $t/$DAY"; log "stored $t/$DAY"; done
+  S3=(aws --endpoint-url "$B2_ENDPOINT" s3)   # no --only-show-errors here: "s3 ls" rejects it
+  for t in $TIERS; do "${S3[@]}" cp --only-show-errors --recursive "$OUT/" "s3://$B2_BUCKET/$t/$DAY/" || fail "upload $t/$DAY"; log "stored $t/$DAY"; done
   # read back: every file of today's daily set is there with the right size
   for f in "$OUT"/*; do
     got="$("${S3[@]}" ls "s3://$B2_BUCKET/daily/$DAY/$(basename "$f")" | awk '{print $3}')"
     [ "$got" = "$(stat -c %s "$f")" ] || fail "uploaded $(basename "$f") does not match (got '${got}')"
   done
   for t in daily weekly monthly; do
-    "${S3[@]}" ls "s3://$B2_BUCKET/$t/" 2>/dev/null | awk '/PRE/{print $2}' | tr -d / | sort -r | tail -n +"$(( $(keep $t) + 1 ))" \
-      | while read -r old; do "${S3[@]}" rm --recursive "s3://$B2_BUCKET/$t/$old/" && log "pruned $t/$old"; done
+    # "s3 ls" exits 1 when the prefix is empty (no weekly/ or monthly/ set yet); any other failure is a real error
+    rc=0; sets="$("${S3[@]}" ls "s3://$B2_BUCKET/$t/")" || rc=$?
+    [ "$rc" = 0 ] || [ "$rc" = 1 ] || fail "could not list $t/ (aws exit $rc)"
+    printf '%s\n' "$sets" | awk '/PRE/{print $2}' | tr -d / | sort -r | tail -n +"$(( $(keep $t) + 1 ))" \
+      | while read -r old; do "${S3[@]}" rm --only-show-errors --recursive "s3://$B2_BUCKET/$t/$old/" && log "pruned $t/$old"; done
   done
 fi
 log "BACKUP OK: $DAY ($TIERS)"
