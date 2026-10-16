@@ -303,7 +303,15 @@
     await offAir(fn);
     await wait(0.6); S.chapter(null); await wait(0.8);
   }
-  async function opener(n, title, sub) { S.chapter(n, title, sub); await wait(1.9); S.chapter(null); await wait(0.6); }
+  // the next scene's screens are placed while the card is fully opaque, so nothing slides on camera
+  let behindCard = null;
+  async function opener(n, title, sub) {
+    S.chapter(n, title, sub); await wait(0.8);
+    if (behindCard) { S.layout(behindCard, { instant: true }); behindCard = null; }
+    await wait(1.1); S.chapter(null); await wait(0.6);
+  }
+  // a new framing in the middle of a scene: a cut, never a slide
+  async function reframe(name) { await offAir(async () => { S.layout(name, { instant: true }); await wait(0.3); }); }
   // typing into a real field, one character at a time
   async function typeInto(app, sel, text, cps) {
     const el = S.find(app, sel); if (!el) throw new Error('typeInto: not found ' + app + ' ' + sel);
@@ -349,7 +357,7 @@
   const scene = (n, title, run) => SCENES.push({ n, title, run });
   // ── 1. Intake / SmartSort ──
   scene('1', 'SmartSort builds the routes', async () => {
-    S.layout('intake'); S.stage(0);
+    S.stage(0); behindCard = 'intake';
     await opener('Step 1 of 5 · Route Planning', 'SmartSort builds the routes', 'A client’s manifest becomes optimized routes on real road time.');
     setRate(1);
     jumpTo(7, 52);
@@ -365,7 +373,7 @@
     pace.smartsort = true;
     W.dispatcher.openSmartSortDrawer();
     await wait(0.6);
-    S.layout('build');                     // push in on SmartSort while it works
+    await reframe('build');
     await wait(0.9);
     W.dispatcher.handleFile(new W.dispatcher.File([D.manifestCsv()], 'peachline-manifest.csv', { type: 'text/csv' }));
     const status = () => txt('dispatcher', '#statusMsg') || '';
@@ -382,8 +390,8 @@
     await until(() => !S.find('dispatcher', '#smartSortDrawer').classList.contains('open'), 'SmartSort done', 20);
     pace.smartsort = false;
     S.unhighlight();
-    S.layout('board');
-    await wait(1.4);
+    await reframe('board');
+    await wait(0.8);
     const rows = Array.prototype.filter.call(W.dispatcher.document.querySelectorAll('tr[onclick*="openDrawer"]'), (r) => /Surge Route/.test(r.textContent));
     if (rows.length) {
       const a = S.rectOf('dispatcher', rows[0]), b = S.rectOf('dispatcher', rows[rows.length - 1]);
@@ -397,7 +405,7 @@
   // ── 2. The driver signs in with a texted code (Twilio) ──
   scene('2', 'The driver signs in', async () => {
     W.dispatcher.closeSmartSortDrawer();
-    S.layout('signin'); S.stage(0);
+    S.stage(0); behindCard = 'signin';
     await opener('Step 1 of 5 · Route Planning', 'The driver signs in', 'No passwords: TackPath texts a one-time code.');
     jumpTo(7, 55);
     S.caption('<b>7:55 AM.</b> Andre Coleman, a Peachline driver, opens the <b>TackPath driver app</b> and enters his number.');
@@ -423,7 +431,7 @@
 
   // ── 3. Dispatcher assigns ──
   scene('3', 'Dispatch assigns drivers', async () => {
-    S.layout('assign'); S.stage(0);
+    S.stage(0); behindCard = 'assign';
     await opener('Step 1 of 5 · Route Planning', 'Dispatch assigns drivers', 'One click on the board, and the route is on the driver’s phone.');
     S.caption('Three new routes on the board. On the right, Andre’s phone, signed in and waiting.');
     await wait(1.8);
@@ -471,7 +479,7 @@
   const SORT = { held: [] };
   const EXC = 5;   // stop 6 · Gilbert Street Bakery · 3 packages
   scene('4', 'PathIQ · sort and stage', async () => {
-    S.layout('sort'); S.stage(1);
+    S.stage(1); behindCard = 'sort';
     await opener('Step 2 of 5 · Package Sorting', 'PathIQ sorts the warehouse', 'Every package scanned into its route’s bin, every bin staged for pickup.');
     jumpTo(8, 4);
     setRate(1);
@@ -526,7 +534,7 @@
 
   // ── 5. Route ready: WAITING → READY across apps ──
   scene('5', 'Route ready for pickup', async () => {
-    S.layout('ready'); S.stage(1);
+    S.stage(1); behindCard = 'ready';
     await opener('Step 2 of 5 · Package Sorting', 'Ready for pickup', 'The warehouse and the driver’s phone stay in step.');
     S.caption('RT-001’s last package. Watch both screens.');
     await wait(1.8);
@@ -546,8 +554,8 @@
     await wait(4.6);
     S.unlink();
     // the result of the sort: every bin staged
-    S.layout('sort');
-    await wait(1.2);
+    await reframe('sort');
+    await wait(0.6);
     S.highlightBox(...(() => { const r = $('rack').getBoundingClientRect(), sr = $('stage').getBoundingClientRect(), k = S.stageScale(); return [(r.left - sr.left) / k - 6, (r.top - sr.top) / k - 6, r.width / k + 12, r.height / k + 12]; })(), 'Sorting complete · 3 bins staged', 'green');
     S.caption('Sorting complete: <b>30 packages in 3 bins</b>, every bin staged for pickup.');
     await wait(3.4);
@@ -556,7 +564,7 @@
 
   // ── 6. Driver pickup ──
   scene('6', 'Driver pickup', async () => {
-    S.layout('pickup'); S.stage(2);
+    S.stage(2); behindCard = 'pickup';
     await opener('Step 3 of 5 · Driver Handoff', 'Driver pickup', 'The right bin, every package scanned into the van.');
     hub.clock.jump(4 * 60000);   // Andre walks over from the drivers' lounge
     setRate(1);
@@ -617,7 +625,7 @@
     await tap('driver', go, 0.8);
     await until(() => be.jobById(rs[0].id).status === 'in_transit', 'route in transit', 10);
     // the result at dispatch: RT-001 is on the road
-    S.layout('assign');
+    await reframe('assign');
     try { await W.dispatcher.loadJobs(); } catch (e) {}
     const moving = await until(() => S.find('dispatcher', '#pp-transit .pcard'), 'RT-001 in transit on the board', 15);
     await wait(1.2);
@@ -632,7 +640,7 @@
 
   // ── 7. On the road: navigation, live map, back to TackPath ──
   scene('7', 'On the road', async () => {
-    S.layout('drive'); S.stage(3);
+    S.stage(3); behindCard = 'drive';
     await opener('Step 4 of 5 · Delivery', 'On the road', 'Turn-by-turn on the phone and a live map at dispatch.');
     await tap('dispatcher', '.tbtab[onclick*="smarttrack"]', 0.6);
     try { await W.dispatcher.refreshFleetMap(); } catch (e) {}
@@ -726,7 +734,7 @@
 
   // ── 8. One delivery, start to finish; the next stop opens by itself ──
   scene('8', 'Delivery · proof', async () => {
-    S.layout('drive'); S.stage(3);
+    S.layout('drive', { instant: true }); S.stage(3);
     S.caption('<b>Mark arrived</b>, then scan the stop’s packages.');
     await deliver(0, {});
     await until(() => S.find('driver', '#dxNext'), 'next-stop countdown', 10);
@@ -750,7 +758,7 @@
   // ── 9. The rest of the route, route complete, the day's picture at dispatch ──
   const hhmm = () => { const d = new Date(hub.clock.now()); let h = d.getHours(); const m = d.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ap; };
   scene('9', 'Route complete', async () => {
-    S.layout('assign'); S.stage(4);
+    S.stage(4); behindCard = 'assign';
     const job = routes()[0], n = job.surge_stops.length;
     const row = () => S.find('dispatcher', 'tr[onclick*="' + job.id + '"]');
     await opener('Step 5 of 5 · Route Complete', 'The rest of the route', 'Six more stops. Each one reaches dispatch the moment it is delivered.');
@@ -787,7 +795,7 @@
       await until(() => sims.length && sims.every((x) => x.finished), 'all routes delivered', 4000);
       await wait(20);
       try { await W.dispatcher.loadJobs(); } catch (e) {}
-      S.layout('board');
+      S.layout('board', { instant: true });
       await wait(1.5);
     });
     const r = reconcile(), done = r.routes.filter((x) => x.s === 'delivered').length;

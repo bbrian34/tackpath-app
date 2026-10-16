@@ -44,6 +44,9 @@
   S.layout = function (name, opts) {
     const L = LAYOUTS[name] || {};
     current = name;
+    // instant: the screens are placed, never slid (used behind a chapter card or at a cut)
+    const snap = !!(opts && opts.instant);
+    if (snap) { Object.values(DEV).forEach((el) => { el.style.transition = 'none'; }); }
     Object.keys(DEV).forEach((k) => {
       const el = DEV[k], p = L[k];
       if (!p || p[3]) { el.classList.add('off'); return; }
@@ -52,6 +55,7 @@
     });
     (opts && opts.dim || []).forEach((k) => DEV[k].classList.add('dim'));
     Object.keys(DEV).forEach((k) => { if (!(opts && opts.dim || []).includes(k)) DEV[k].classList.remove('dim'); });
+    if (snap) { void stage.offsetWidth; if (!document.body.classList.contains('instant')) Object.values(DEV).forEach((el) => { el.style.transition = ''; }); }
   };
   S.dim = (k, on) => DEV[k].classList.toggle('dim', !!on);
   // instant placement (used while fast-forwarding)

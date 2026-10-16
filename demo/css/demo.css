@@ -24,7 +24,7 @@ button{font-family:inherit}
 /* 1920×1080 stage, scaled to the window */
 #viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
 #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;
-  background:radial-gradient(1200px 700px at 30% 20%,#0d2340 0%,rgba(5,11,22,0) 70%),radial-gradient(900px 600px at 85% 90%,#0a2a2a 0%,rgba(5,11,22,0) 70%),var(--bg)}
+  background:var(--bg)}
 #bgGlow{position:absolute;inset:0;background-image:linear-gradient(rgba(120,170,220,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(120,170,220,.035) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
 
 /* top bar */
@@ -148,8 +148,8 @@ button{font-family:inherit}
 .mf-ico{width:52px;height:64px;border-radius:8px;background:linear-gradient(160deg,#21a366,#107c41);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font:800 13px 'DM Mono',monospace;color:#fff}
 .mf-file b{display:block;font-size:17px}.mf-file span{font-size:13px;color:var(--muted)}
 #mfPreview{margin:14px 0 0;font:500 11.5px/1.55 'DM Mono',monospace;color:#9fc2e2;white-space:pre;overflow:hidden;max-height:470px;background:rgba(0,0,0,.25);border-radius:10px;padding:10px 12px}
-.manifest.fly{animation:fly 1.2s var(--ease)}
-@keyframes fly{from{transform:translate(-200px,40px) rotate(-6deg);opacity:0}to{transform:none;opacity:1}}
+.manifest.fly{animation:fly .6s var(--ease)}
+@keyframes fly{from{opacity:0}to{opacity:1}}
 
 .flow{position:absolute;z-index:30;padding:8px 16px;border-radius:999px;background:rgba(25,183,239,.12);border:1px solid rgba(25,183,239,.45);color:#bfeaff;font-size:15px;font-weight:700;white-space:nowrap;box-shadow:0 0 30px rgba(25,183,239,.2);transition:opacity .4s}
 .flow.pulse{animation:flowp 1s ease-in-out 3}
@@ -182,7 +182,7 @@ button{font-family:inherit}
 .caption b{color:#7fd8ff}
 
 /* title card */
-.title-card{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:radial-gradient(900px 600px at 50% 40%,#0d2340,#050b16);transition:opacity .8s}
+.title-card{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .8s}
 .title-card.gone{opacity:0;pointer-events:none}
 .title-card{transition:opacity .6s .3s}.title-card:not(.gone){transition-delay:0s}
 .title-card .tc-inner{transition:opacity .25s}.title-card.gone .tc-inner{opacity:0}.title-card:not(.gone) .tc-inner{opacity:1;transition:opacity .5s .65s}
@@ -232,7 +232,7 @@ body.rec .big-start,body.rec .tc-foot,body.rec #controls{display:none!important}
 
 /* chapter card: a calm title between scenes and where repeated work is cut */
 .chapter{position:absolute;inset:0;z-index:58;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;
-  background:radial-gradient(900px 560px at 50% 45%,#0d2340,#040a14);transition:opacity .5s var(--ease) .3s}
+  background:var(--bg);transition:opacity .5s var(--ease) .3s}
 .chapter.show{transition-delay:0s}
 .chapter .ch-in{opacity:0;transition:opacity .25s,transform .9s var(--ease)}
 .chapter.show .ch-in{opacity:1;transition:opacity .4s .55s,transform .9s var(--ease) .55s}
@@ -276,3 +276,5 @@ body.instant .link-line{animation:none;opacity:1}
 .title-card.end .tc-site{display:block}
 .bin.picked .b-fill{display:none}
 .bin.picked{opacity:.78}
+/* one solid background: no grid, no glow */
+#bgGlow{display:none}
