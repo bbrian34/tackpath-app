@@ -65,15 +65,13 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 .stow-steps .st.on{color:#fff;background:#111418;border-color:#111418;transform:scale(1.06);}
 .stow-steps .st.on.st-stage{background:#c96a00;border-color:#c96a00;}
 .stow-steps .sep{color:#9aa3ad;font-weight:800;font-size:.8rem;}
-/* STAGE step: the same big panel as the BIN step, in its own colour */
-.flip-card-container.tall{height:236px;}
+/* STAGE step: the same panel, heading and line sizes as the BIN step, in its
+   own colour (2026-10-11: it was taller, 236px, with a larger type scale) */
 .flip-card-back.stage-mode{background-color:#c96a00;border-color:#c96a00;}
 .flip-card-back.staged-mode{background-color:#22a559;border-color:#22a559;}
-.flip-card-back.stage-mode .flip-bin-number,.flip-card-back.staged-mode .flip-bin-number{font-size:2.6rem;letter-spacing:.04em;line-height:1.05;text-align:center;}
-.flip-card-back.stage-mode .flip-bin-loc,.flip-card-back.staged-mode .flip-bin-loc{font-size:1.45rem;font-weight:800;opacity:1;text-align:center;padding:0 10px;}
-.flip-card-back.stage-mode .flip-bin-instruction,.flip-card-back.staged-mode .flip-bin-instruction{font-size:1.15rem;text-align:center;padding:0 10px;}
-.flip-card-back.staged-mode .flip-bin-number{font-size:2.1rem;}
-.flip-card-back.stage-mode #flipBinStop,.flip-card-back.staged-mode #flipBinStop{font-size:1rem!important;font-weight:700!important;opacity:.95;text-align:center;padding:0 12px;margin-top:8px!important;}
+.flip-card-back.stage-mode>div,.flip-card-back.staged-mode>div{text-align:center;padding:0 10px;}
+/* the last line is a hint here, not a stop number: the BIN step's line size (1rem) */
+.flip-card-back.stage-mode #flipBinStop,.flip-card-back.staged-mode #flipBinStop{font-size:1rem!important;font-weight:700!important;margin-top:6px!important;}
 .stage-later{display:none;margin:-6px auto 14px;background:none;border:0;color:#5b6672;font-size:.85rem;text-decoration:underline;}
 .result-bin{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:700;}
 .result-bin-num{font-size:2.6rem;font-weight:800;color:var(--blue);line-height:1;margin-bottom:8px;}

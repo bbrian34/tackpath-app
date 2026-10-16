@@ -79,9 +79,10 @@ test('after the last package: a full STAGE step on the big panel, STAGE current 
     assert.equal(t.txt('flipBinStop'), 'STG codes look like STG:S-01');
     assert.deepEqual(t.steps(), ['PACKAGE+', 'BIN+', 'LOCATION+', 'STAGE*']);
     assert.equal(t.w.document.querySelector('#stowSteps .st.on').getAttribute('aria-current'), 'step');
-    // as prominent as the BIN step: the same panel element and the heading at least as large
+    // the BIN step's size (2026-10-11): the same panel element and the BIN heading size, not larger
+    // (stow-stage-size.test.js measures the panel in a real browser)
     const big = t.w.getComputedStyle(t.$('flipBinNumber')).fontSize;
-    assert.ok(['2.6rem', '41.6px'].includes(big), 'STAGE heading size ' + big);
+    assert.ok(['2.2rem', '35.2px'].includes(big), 'STAGE heading size ' + big);
     assert.equal(t.$('stageLaterBtn').style.display, 'block');
   } finally { t.app.cleanup(); }
 });

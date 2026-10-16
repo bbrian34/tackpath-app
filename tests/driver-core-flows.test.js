@@ -186,7 +186,7 @@ test('core 2/3. accept an offer -> Waiting for warehouse; bin ready -> Ready for
     assert.strictEqual(srv.jobs[0].driver_name, 'Dana');
     assert.strictEqual(a.screen(), 'scRouteAccepted');
     assert.match(a.$('scRouteAccepted').textContent, /Waiting for warehouse/i);
-    srv.binding = { bin_code: '2B', location_code: 'A-07', state: 'ready' };
+    srv.binding = { bin_code: '2B', location_code: 'A-07', state: 'ready', staging_code: 'S-01' };   // ready AND staged (v23: staged first, then ready for pickup)
     if (NATIVE) await a.w.eval('tpRefreshStage()'); else await a.w.eval('dx.pollStage()');
     await settle();
     assert.match(a.$('scRouteAccepted').textContent, /Ready for pickup/i);

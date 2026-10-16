@@ -152,9 +152,10 @@ test('2. start of day: one card with route, stops, packages, bin, pickup and war
     assert.match(t, /Route 7/);
     assert.match(t, /3\s*stops/i);
     assert.match(t, /4\s*packages/i, 'packages = sum of required counts');
-    assert.match(t, /Bin 2B · Location L-4/);
+    assert.match(t, /Bin 2B/);
+    assert.doesNotMatch(t, /L-4|Location/, 'the stow location (LOC) is never shown to the driver (2026-10, TP-STG)');
     assert.match(t, /Staging in progress/);
-    a.srv.binding.state = 'ready';
+    a.srv.binding.state = 'ready'; a.srv.binding.staging_code = 'S-01';   // ready AND staged (v23: staged first, then ready for pickup)
     if (NATIVE) await a.w.eval('tpRefreshStage()'); else await a.w.eval('dx.pollStage()');
     await wait(30);
     assert.match(a.text('dxDayCard'), /Ready for pickup/);

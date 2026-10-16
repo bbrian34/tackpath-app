@@ -1,0 +1,9 @@
+# TackPath backup encryption: PUBLIC key(s) only (lines starting with age1).
+# Every backup file is encrypted to the keys listed here. The matching PRIVATE
+# key is held only by Bryan, offline (USB stick + paper copy); it is never put
+# in GitHub, in a secret, in chat or on any server. See docs/backups-runbook.md,
+# step 2. Until a key is added below, the nightly job stops with
+# "no age public key" (by design: nothing is uploaded unencrypted).
+#
+# Paste the public key on the next line (it looks like age1qqx...):
+age13yljzax6j63xkful47emgjamn8fkl4ar4qzfnszhyqytr4j6we3q33wkuk

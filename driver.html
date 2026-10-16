@@ -442,6 +442,40 @@ button,a,input,textarea{font-family:var(--sans);}
 .t-info{background:var(--card);border:1.5px solid rgba(25,183,239,.45);color:var(--blue);}
 .t-warn{background:var(--card);border:1.5px solid rgba(255,150,30,.45);color:var(--orange);}
 </style>
+<!-- TP-LOGIN:BEGIN  Sign-in screen look (2026-10). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). Only #scLogin; no behaviour. -->
+<style>
+/* Explicit colours for the wordmark. TACK was an inline #ffffff, so on the
+   light-mode card (white) it was invisible; the light-mode .wm .t rule never
+   applied because the markup had no .t class. */
+#scLogin{padding:max(40px,8vh,calc(env(safe-area-inset-top) + 16px)) 20px max(28px,calc(env(safe-area-inset-bottom) + 16px));}
+#scLogin .lbox{max-width:400px;flex-shrink:0;}
+#scLogin .lbox-top{padding:36px 24px 22px;}
+#scLogin #tpSymbol{margin:0 auto 12px!important;}
+#scLogin .wm{display:block;line-height:1.2;letter-spacing:0;white-space:nowrap;}
+#scLogin .wm-txt{font-family:'Montserrat','DM Sans',sans-serif;font-size:1.5rem;font-weight:600;letter-spacing:3px;}
+#scLogin .wm .t{color:#ffffff;}
+#scLogin .wm .p{color:#19b7ef;}
+body.light-mode #scLogin .wm .t{color:#111827;}
+body.light-mode #scLogin .wm .p{color:#0a6496;}
+#scLogin .lbox-badge{margin-top:12px;padding:5px 16px;font-size:.8125rem;letter-spacing:.14em;text-transform:uppercase;color:#53ff88;}
+body.light-mode #scLogin .lbox-top{border-bottom-color:rgba(0,0,0,.08);}
+body.light-mode #scLogin .lbox-badge{color:#166534;background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.3);}
+#scLogin .lbox-form{padding:24px 24px 28px;}
+#scLogin .fl{margin-bottom:8px;}
+#scLogin .fi{min-height:52px;margin-bottom:16px;}
+#scLogin .fb{min-height:52px;}
+#scLogin #loginPhaseCode button:not(.fb){min-height:48px;}
+#scLogin .fn{line-height:1.5;}
+@media (max-width:360px){
+  #scLogin{padding-left:14px;padding-right:14px;}
+  #scLogin .lbox-top{padding:28px 18px 18px;}
+  #scLogin .lbox-form{padding:20px 18px 24px;}
+  #scLogin .wm-txt{font-size:1.35rem;letter-spacing:2px;}
+}
+</style>
+<!-- TP-LOGIN:END -->
 </head>
 <body>
 
@@ -457,8 +491,8 @@ button,a,input,textarea{font-family:var(--sans);}
           <path d="M35 47V14Q35 10 39 6"/>
         </g>
       </svg>
-      <div class="wm"><span style="font-family:'Montserrat',sans-serif;font-size:1.19rem;font-weight:500;letter-spacing:1px;"><span style="color:#ffffff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></span></div>
-      <div class="lbox-badge">Driver Portal</div>
+      <div class="wm" role="img" aria-label="TackPath"><span class="wm-txt"><span class="t">T Ʌ C K </span><span class="p">P Ʌ T H</span></span></div>
+      <div class="lbox-badge">Driver</div>
     </div>
     <div class="lbox-form" id="loginPhasePhone">
       <label class="fl">Mobile Number</label>
@@ -4029,7 +4063,8 @@ async function pollStage(){
   try{
     var rows=await sbGet('bin_bindings?select=bin_code,location_code,state&job_id=eq.'+encodeURIComponent(j.id)+'&state=in.(open,ready)&limit=1');
     var b=Array.isArray(rows)&&rows.length?rows[0]:null,st=b&&b.state==='ready'?'ready':(b?'staging':'waiting');
-    if(st==='ready'&&DX.stage!=='ready'){feel('done');say('Route ready for pickup.');}
+    // staged = ready for pickup (2026-10, v25): chime and voice when the STG spot is scanned, not before
+    if(st==='ready'&&b&&b.staging_code&&!(DX.stage==='ready'&&DX.binding&&DX.binding.staging_code)){feel('done');say('Route ready for pickup.');}
     DX.stage=st;DX.binding=b;renderDay();
   }catch(e){}
 }
@@ -4625,18 +4660,38 @@ if(me()&&tpToken())afterBoot();else{countPod();renderSync();}
      3. Delivery scan screen: camera over the top of the screen with a scan
         frame, torch, tap-to-focus and Cancel; the package list sits in a
         sheet at the bottom; "Type the number instead"; a rejected scan says
-        what was read and why, and is logged on the job (SCAN_REJECTED::). -->
+        what was read and why, and is logged on the job (SCAN_REJECTED::).
+     4. Camera size (2026-10-11): the camera gets most of the screen at
+        pickup (loading) and delivery. Delivery: the sheet is at most 26% of
+        the height, without the heading and count the top bar already shows,
+        and the video ends where the sheet begins. Pickup: the loading panel
+        is one compact row at the top (BACK, count, Problem), the typed-entry
+        bar stays at the bottom, and the scan frame is larger. -->
 <style id="tpScanStyle">
 #tpScanUi{display:none;position:fixed;inset:0;z-index:49;pointer-events:none;font-family:var(--sans,system-ui);}
 body.tp-dlv #tpScanUi{display:block;}
 body.tp-dlv #scScan .scan-top,body.tp-dlv #scScan .scan-frame,body.tp-dlv #scScan .scan-bottom,body.tp-dlv #scScan .scan-vignette,
 body.tp-dlv #scScan .scan-confirm{display:none!important;}
-body.tp-dlv #dlvScanOverlay>div:first-child{top:auto!important;bottom:var(--tp-kb,0px)!important;max-height:40%!important;
+body.tp-dlv #dlvScanOverlay>div:first-child{top:auto!important;bottom:var(--tp-kb,0px)!important;max-height:26%!important;
   padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))!important;border-radius:18px 18px 0 0;
   background:rgba(6,12,22,.97)!important;box-shadow:0 -8px 30px rgba(0,0,0,.45);}
 body.tp-dlv.tp-typing #dlvScanOverlay>div:first-child{max-height:62%!important;}
 body.tp-dlv #dlvScanOverlay [onclick^="cancelDeliveryScan"]{display:none!important;}
-body.tp-dlv #dlvScanHeading{font-size:1rem!important;}
+body.tp-dlv #dlvScanHeading,body.tp-dlv #dlvScanCount{display:none!important;}
+body.tp-dlv #dlvScanResult{min-height:0!important;margin-top:4px!important;}
+body.tp-dlv #scanVideo{top:0!important;bottom:auto!important;height:calc(100% - var(--tp-sheet,26%))!important;}
+body.tp-load #scScan .scan-top,body.tp-load #scScan .scan-vignette,body.tp-load #scScan .scan-confirm{display:none!important;}
+body.tp-load #loadPkgOverlay>div:first-child{padding:calc(8px + env(safe-area-inset-top,0px)) 114px 8px 96px!important;min-height:60px;
+  max-height:46%;overflow-y:auto;text-align:left!important;background:rgba(0,0,0,.9)!important;}
+body.tp-load #loadPkgOverlay [onclick^="cancelPackageScan"]{top:calc(8px + env(safe-area-inset-top,0px))!important;left:10px!important;min-height:44px;}
+body.tp-load #loadPkgOverlay .dx-help{position:absolute!important;top:calc(8px + env(safe-area-inset-top,0px));right:10px;margin:0!important;
+  width:96px!important;min-height:44px;padding:4px 8px!important;font-size:.75rem!important;line-height:1.15!important;white-space:normal!important;}
+body.tp-load #loadPkgInstruction,body.tp-load #loadPkgCount+div{display:none!important;}
+body.tp-load #loadPkgHeading{font-size:1rem!important;}
+body.tp-load #loadPkgCount{font-size:1.15rem!important;margin-top:2px!important;line-height:1.2!important;}
+body.tp-load #loadPkgLastScan{min-height:0!important;margin-top:4px!important;}
+body.tp-load #scScan .scan-bottom{background:rgba(0,0,0,.9)!important;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 8px)!important;}
+body.tp-load #scScan .scan-frame-inner{width:88vw;max-width:440px;height:min(34vh,240px);}
 .tp-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;pointer-events:auto;
   padding:calc(10px + env(safe-area-inset-top,0px)) 12px 12px;background:linear-gradient(rgba(0,0,0,.72),rgba(0,0,0,0));}
 .tp-top button{min-height:48px;min-width:48px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.55);
@@ -4927,11 +4982,16 @@ function sync(){
   if(!on){document.body.classList.remove('tp-typing');if(T.torch)setTorch(false);}
   var p=o&&o.firstElementChild;
   if(on&&p)document.body.style.setProperty('--tp-sheet',Math.round(p.getBoundingClientRect().height)+'px');
+  var lo=$('loadPkgOverlay'),sc=$('scScan');
+  document.body.classList.toggle('tp-load',!on&&!!(lo&&lo.style.display==='block'&&sc&&sc.classList.contains('on')));
 }
 T.sync=sync;
 function watch(){
   var o=$('dlvScanOverlay');if(!o)return;
   new MutationObserver(sync).observe(o,{attributes:true,attributeFilter:['style'],childList:true,subtree:true});
+  var lo=$('loadPkgOverlay'),sc=$('scScan');
+  if(lo)new MutationObserver(sync).observe(lo,{attributes:true,attributeFilter:['style']});
+  if(sc)new MutationObserver(sync).observe(sc,{attributes:true,attributeFilter:['class']});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
 var _rd=renderDeliveryScan;
@@ -5097,6 +5157,853 @@ check();
 })();
 </script>
 <!-- TP-GONE:END -->
+<!-- TP-ROUTEMAP:BEGIN  Route map of numbered stops (2026-10-11). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). The Route Map button shows every
+     delivery stop as ONE numbered dot at its location (several packages at a
+     stop are still one dot), numbered by stop_number in delivery order: done
+     stops gray with a check, the current stop highlighted, the rest blue. The
+     base map is the Google Maps Embed map the app already used (view mode
+     instead of directions; no new service, no new library); the dots are drawn
+     over it and the map pans (drag) and zooms (pinch, wheel, + / -). A stop
+     without coordinates is geocoded the way the app already does it
+     (resolveNavDest on the phone app, the Maps geocoder on the web app); one
+     that still has no spot is listed under "Not on map", so dots + not on map
+     = stops. Tapping a dot shows its number, recipient, address and packages.
+     The pickup preview (TP-PICKUP) mounts the same map with tpRouteMap.mount:
+     read-only, no Google map under the dots, dots joined in route order.
+     2026-10 (v26): a real street map under the dots, in the app, for the
+     Route Map button AND the pickup preview: Leaflet 1.9.4 (shipped in
+     vendor/leaflet, no CDN) with OpenStreetMap tiles and their attribution.
+     Each dot is a marker on its coordinates (it stays there while panning and
+     zooming), every stop is fitted on open, no line between the dots, done
+     stops gray with a check. Few tile requests (only what is on screen, loaded
+     when the map is still). Offline (or the tiles fail): the dots on the plain
+     background with "Map unavailable offline". If Leaflet itself cannot load,
+     the earlier in-app dot map (no tiles) is used. The Google Embed map is no
+     longer used here. -->
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<script src="vendor/leaflet/leaflet.js"></script>
+<style>
+#routeMapOverlay .tprm{position:relative;flex:1;overflow:hidden;background:#e5e3df;touch-action:none;user-select:none;-webkit-user-select:none;}
+/* v26: Leaflet + OpenStreetMap under the dots (both the Route Map and the pickup preview) */
+.tprm-l .tprm-leaf{position:absolute;inset:0;z-index:0;background:#e5e3df;}
+.tprm-preview .tprm-l .tprm-leaf{background:#eef2f6;}
+.tprm-l .tprm-pin{background:none;border:0;}
+#routeMapOverlay .tprm-l .tprm-pin .tprm-dot,.tprm-preview .tprm-l .tprm-pin .tprm-dot{position:relative;left:auto;top:auto;margin:0;display:block;}
+.tprm-l .tprm-offline{position:absolute;left:10px;top:10px;z-index:7;background:#0f172a;color:#fff;padding:6px 10px;border-radius:8px;
+  font:700 .8125rem/1.2 system-ui,sans-serif;}
+.tprm-l .tprm-offline[hidden]{display:none;}
+.tprm-l .tprm-card{bottom:24px;}
+.tprm-l .leaflet-control-attribution{font:500 11px/1.4 system-ui,sans-serif;}
+#routeMapOverlay .tprm-dots{position:absolute;inset:0;transform-origin:0 0;}
+#routeMapOverlay .tprm-dot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;padding:0;border-radius:50%;
+  border:2px solid #fff;background:#0a58ca;color:#fff;font:800 12px/22px system-ui,-apple-system,sans-serif;text-align:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.55);cursor:pointer;z-index:2;letter-spacing:-.5px;}
+#routeMapOverlay .tprm-dot.st-done{background:#8a8f98;color:#fff;z-index:1;}
+#routeMapOverlay .tprm-dot.st-done::after{content:'\2713';position:absolute;right:-6px;top:-6px;width:14px;height:14px;border-radius:50%;
+  background:#3a3f47;color:#fff;font:900 9px/14px system-ui,sans-serif;border:1px solid #fff;}
+#routeMapOverlay .tprm-dot.st-cur{width:34px;height:34px;margin:-17px 0 0 -17px;background:#ff8a00;color:#000;font-size:14px;line-height:30px;
+  border-color:#000;box-shadow:0 0 0 4px rgba(255,138,0,.45),0 1px 5px rgba(0,0,0,.6);z-index:3;}
+#routeMapOverlay .tprm-dot.sel{outline:3px solid #000;outline-offset:1px;}
+#routeMapOverlay .tprm-ctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:5;}
+#routeMapOverlay .tprm-ctl button{width:44px;height:44px;border-radius:10px;border:0;background:#fff;color:#0f172a;font:800 1.25rem/1 system-ui,sans-serif;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer;}
+#routeMapOverlay .tprm-ctl button.fit{font-size:.75rem;}
+#routeMapOverlay .tprm-bar{flex-shrink:0;background:#0f172a;color:#fff;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));font:600 .8125rem/1.35 system-ui,sans-serif;}
+#routeMapOverlay .tprm-key{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+#routeMapOverlay .tprm-key i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid #fff;}
+#routeMapOverlay .tprm-off{margin-top:6px;color:#ffd27a;}
+#routeMapOverlay .tprm-off b{display:inline-block;min-width:22px;margin:2px 4px 0 0;padding:1px 6px;border-radius:11px;background:#fff;color:#000;text-align:center;}
+#routeMapOverlay .tprm-card{position:absolute;left:10px;right:64px;bottom:10px;z-index:6;background:#fff;color:#0f172a;border-radius:12px;padding:10px 40px 10px 12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.4);font:500 .875rem/1.35 system-ui,sans-serif;}
+#routeMapOverlay .tprm-card b{font-size:1rem;}
+#routeMapOverlay .tprm-card button{position:absolute;right:6px;top:6px;width:32px;height:32px;border:0;border-radius:50%;background:#eef1f5;font-size:1rem;cursor:pointer;}
+/* the pickup preview (TP-PICKUP mounts the same map): dots on a plain in-app background, joined in route order */
+.tprm-preview{display:flex;flex-direction:column;}
+.tprm-preview .tprm{position:relative;flex:1;overflow:hidden;background:#eef2f6;background-image:linear-gradient(#dfe5ec 1px,transparent 1px),linear-gradient(90deg,#dfe5ec 1px,transparent 1px);
+  background-size:40px 40px;touch-action:none;user-select:none;-webkit-user-select:none;}
+.tprm-preview .tprm-dots{position:absolute;inset:0;transform-origin:0 0;}
+.tprm-preview .tprm-dot{position:absolute;width:26px;height:26px;min-height:0;margin:-13px 0 0 -13px;padding:0;border-radius:50%;
+  border:2px solid #fff;background:#0a58ca;color:#fff;font:800 12px/22px system-ui,-apple-system,sans-serif;text-align:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.55);cursor:pointer;z-index:2;letter-spacing:-.5px;}
+.tprm-preview .tprm-dot.sel{outline:3px solid #000;outline-offset:1px;}
+.tprm-preview .tprm-ctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:5;}
+.tprm-preview .tprm-ctl button{width:44px;height:44px;min-height:0;border-radius:10px;border:0;background:#fff;color:#0f172a;font:800 1.25rem/1 system-ui,sans-serif;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer;}
+.tprm-preview .tprm-ctl button.fit{font-size:.75rem;}
+.tprm-preview .tprm-bar{flex-shrink:0;background:#0f172a;color:#fff;padding:6px 14px;font:600 .75rem/1.35 system-ui,sans-serif;}
+.tprm-preview .tprm-off{margin-top:4px;color:#ffd27a;}
+.tprm-preview .tprm-off b{display:inline-block;min-width:22px;margin:2px 4px 0 0;padding:1px 6px;border-radius:11px;background:#fff;color:#000;text-align:center;}
+.tprm-preview .tprm-card{position:absolute;left:10px;right:64px;bottom:10px;z-index:6;background:#fff;color:#0f172a;border-radius:12px;padding:10px 40px 10px 12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.4);font:500 .875rem/1.35 system-ui,sans-serif;}
+.tprm-preview .tprm-card button{position:absolute;right:6px;top:6px;width:32px;height:32px;border:0;border-radius:50%;background:#eef1f5;font-size:1rem;cursor:pointer;}
+</style>
+<script>
+(function(){
+var W=window,D=document,TILE=256,ZMIN=3,ZMAX=19;
+function $(id){return D.getElementById(id);}
+function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function list(){try{return (typeof surgeStops!=='undefined'&&surgeStops)||[];}catch(e){return [];}}
+function curIdx(){try{return typeof currentSurgeStop!=='undefined'?(currentSurgeStop|0):0;}catch(e){return 0;}}
+function num(s,i){var n=parseInt(s&&s.stop_number,10);return n>0?n:i+1;}
+function pkgCount(s){
+  if(s&&Array.isArray(s.pkgs)&&s.pkgs.length)return s.pkgs.reduce(function(a,p){return a+Math.max(1,parseInt(p&&p.required_count,10)||1);},0);
+  var n=parseInt(s&&s.packages,10);return n>0?n:1;
+}
+function ll(c){
+  if(!c)return null;var la=+c.lat,ln=+c.lng;
+  return isFinite(la)&&isFinite(ln)&&(la||ln)&&Math.abs(la)<=85&&Math.abs(ln)<=180?{lat:la,lng:ln}:null;
+}
+var geo={};   // address -> {lat,lng} | null (not found) | 'wait'
+function geocode(addr){
+  var p;
+  if(typeof resolveNavDest==='function')p=resolveNavDest({address:addr});
+  else if(typeof loadMapsApi==='function')p=loadMapsApi().then(function(){return new Promise(function(res){
+    new google.maps.Geocoder().geocode({address:addr},function(r,st){
+      res(st==='OK'&&r&&r[0]?{lat:r[0].geometry.location.lat(),lng:r[0].geometry.location.lng()}:null);});});});
+  else p=Promise.resolve(null);
+  return Promise.race([Promise.resolve(p).catch(function(){return null;}),new Promise(function(r){setTimeout(function(){r(null);},10000);})]);
+}
+// Every stop, in delivery order, with where it goes on the map (or null).
+// preview: before the route starts nothing is done or current yet.
+function model(preview){
+  var st=list(),ci=curIdx(),out={};
+  if(!preview)try{out=(W.dx&&W.dx.outcomes&&W.dx.outcomes())||{};}catch(e){}
+  return st.map(function(s,i){
+    var a=(s&&s.address)||'',pos=ll(s&&s.coords)||(a&&geo[a]&&geo[a]!=='wait'?geo[a]:null);
+    var done=!preview&&(!!out[i]||i<ci);
+    return {i:i,n:num(s,i),s:s,pos:pos,wait:!pos&&a&&geo[a]==='wait',
+      state:preview?'up':done?'done':(i===ci?'cur':'up'),pk:pkgCount(s)};
+  });
+}
+// Web Mercator, in CSS pixels at zoom z (the Embed map's own projection).
+function px(p,z){var w=TILE*Math.pow(2,z),s=Math.sin(p.lat*Math.PI/180);
+  s=Math.min(Math.max(s,-0.9999),0.9999);
+  return {x:(p.lng+180)/360*w,y:(0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*w};}
+function unpx(x,y,z){var w=TILE*Math.pow(2,z),n=Math.PI-2*Math.PI*y/w;
+  return {lat:180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))),lng:x/w*360-180};}
+// One map of numbered dots inside `ov` (2026-10-12: one implementation for the
+// Route Map button and the pickup preview). opt.ids: the Route Map's element
+// ids; opt.preview: nothing done or current yet. With Leaflet (v26) the dots
+// sit on an OpenStreetMap street map; without it, the in-app dot map below.
+function create(ov,before,opt){
+  if(W.L&&W.L.map&&W.L.tileLayer)return createLeaflet(ov,before,opt);
+  var V={z:12,c:null},M=[],sel=-1,frames=[],act=0,pendingSrc='',moved=false;
+  var id=function(n){return opt.ids?' id="'+n+'"':'';};
+  var wrap=D.createElement('div');wrap.className='tprm';if(opt.ids)wrap.id='tprmMap';
+  wrap.innerHTML='<div class="tprm-dots"'+id('tprmDots')+'></div>'
+    +'<div class="tprm-ctl"><button type="button" data-z="1" aria-label="Zoom in">+</button><button type="button" data-z="-1" aria-label="Zoom out">−</button>'
+    +'<button type="button" class="fit" aria-label="Show all stops">ALL</button></div>'
+    +'<div class="tprm-card"'+id('tprmCard')+' style="display:none"></div>';
+  var bar=keyBar(opt);
+  if(before&&before.parentNode===ov){ov.insertBefore(wrap,before);ov.insertBefore(bar,before);}else{ov.appendChild(wrap);ov.appendChild(bar);}
+  var dots=wrap.querySelector('.tprm-dots'),cardEl=wrap.querySelector('.tprm-card'),offEl=bar.querySelector('.tprm-off');
+  frames=[].slice.call(wrap.querySelectorAll('iframe'));
+  function size(){var r=wrap.getBoundingClientRect();
+    return {w:r.width||wrap.clientWidth||W.innerWidth||360,h:r.height||wrap.clientHeight||(W.innerHeight||640)-120};}
+  function fit(){
+    var pts=M.filter(function(m){return m.pos;}).map(function(m){return m.pos;});
+    if(!pts.length){V.c=V.c||{lat:39.5,lng:-98.35};V.z=V.c.lat===39.5?4:V.z;return;}
+    var sz=size(),pad=26,ctl=60,z;   // ctl: room for the zoom buttons on the right
+    for(z=17;z>ZMIN;z--){
+      var xs=pts.map(function(p){return px(p,z);});
+      var w=Math.max.apply(null,xs.map(function(q){return q.x;}))-Math.min.apply(null,xs.map(function(q){return q.x;}));
+      var hh=Math.max.apply(null,xs.map(function(q){return q.y;}))-Math.min.apply(null,xs.map(function(q){return q.y;}));
+      if(w<=sz.w-ctl-2*pad&&hh<=sz.h-2*pad)break;
+    }
+    var q=pts.map(function(p){return px(p,z);});
+    var cx=(Math.max.apply(null,q.map(function(a){return a.x;}))+Math.min.apply(null,q.map(function(a){return a.x;})))/2;
+    var cy=(Math.max.apply(null,q.map(function(a){return a.y;}))+Math.min.apply(null,q.map(function(a){return a.y;})))/2;
+    V.z=z;V.c=unpx(cx+ctl/2,cy,z);
+  }
+  function base(){}   // no map under the dots in this fallback (v26: no Google Embed map)
+  function draw(){
+    var sz=size(),c=px(V.c,V.z),placed=[];
+    M.forEach(function(m){if(m.pos){var p=px(m.pos,V.z);placed.push({m:m,x:p.x-c.x+sz.w/2,y:p.y-c.y+sz.h/2});}});
+    // Spread dots that would sit on top of each other (same building, close
+    // neighbours) in a small spiral around their middle, so every number shows.
+    var used=[];
+    placed.forEach(function(d){
+      if(used.indexOf(d)>=0)return;
+      var grp=placed.filter(function(o){return used.indexOf(o)<0&&Math.abs(o.x-d.x)<22&&Math.abs(o.y-d.y)<22;});
+      grp.forEach(function(o){used.push(o);});
+      if(grp.length<2)return;
+      var mx=0,my=0;grp.forEach(function(o){mx+=o.x;my+=o.y;});mx/=grp.length;my/=grp.length;
+      grp.forEach(function(o,j){var r=15*Math.sqrt(j+0.6),a=j*2.39996;o.x=mx+r*Math.cos(a);o.y=my+r*Math.sin(a);});
+    });
+    // then nudge any two dots still closer than a dot apart away from each other.
+    for(var it=0;it<40;it++){var hit=0;
+      for(var a=0;a<placed.length;a++)for(var b=a+1;b<placed.length;b++){
+        var p=placed[a],q=placed[b],dx=q.x-p.x,dy=q.y-p.y,dd=Math.sqrt(dx*dx+dy*dy);
+        if(dd>=27)continue;hit=1;if(dd<0.01){dx=Math.cos(b);dy=Math.sin(b);dd=1;}
+        var k=(27-dd)/2/dd;p.x-=dx*k;p.y-=dy*k;q.x+=dx*k;q.y+=dy*k;}
+      if(!hit)break;}
+    dots.style.transform='';
+    // 2026-10 (v21): no line joining the dots (30-75 stops: it was noise)
+    dots.innerHTML=placed.map(function(d){var m=d.m;
+      return '<button type="button" class="tprm-dot st-'+m.state+(m.i===sel?' sel':'')+'" data-i="'+m.i+'" data-stop="'+m.n+'"'
+        +' aria-label="Stop '+m.n+'" style="left:'+d.x.toFixed(1)+'px;top:'+d.y.toFixed(1)+'px">'+m.n+'</button>';}).join('');
+    var off=M.filter(function(m){return !m.pos;});
+    offEl.style.display=off.length?'':'none';
+    offEl.innerHTML=off.length?('Not on map: '+off.map(function(m){return '<b data-i="'+m.i+'" data-stop="'+m.n+'">'+m.n+'</b>';}).join('')
+      +(off.some(function(m){return m.wait;})?' <span>(finding)</span>':'')):'';
+    base();
+  }
+  function card(i){
+    var m=M[i];sel=m?i:-1;
+    if(!m){cardEl.style.display='none';draw();return;}
+    cardEl.innerHTML='<b>Stop '+m.n+'</b>'+(opt.preview?'':' · '+(m.state==='done'?'Done':m.state==='cur'?'Current stop':'Upcoming'))
+      +'<div>'+h(m.s&&m.s.recipient||'')+'</div><div>'+h(m.s&&m.s.address||'')+'</div>'
+      +'<div>'+m.pk+' package'+(m.pk===1?'':'s')+'</div><button type="button" aria-label="Close">✕</button>';
+    cardEl.style.display='';
+    cardEl.querySelector('button').onclick=function(){card(-1);};
+    draw();
+  }
+  function zoomBy(dz,ax,ay){
+    var nz=Math.min(ZMAX,Math.max(ZMIN,V.z+dz));if(nz===V.z||!V.c)return;
+    var sz=size();ax=ax==null?sz.w/2:ax;ay=ay==null?sz.h/2:ay;
+    var c=px(V.c,V.z),ox=c.x+ax-sz.w/2,oy=c.y+ay-sz.h/2,k=Math.pow(2,nz-V.z);
+    V.z=nz;V.c=unpx(ox*k-(ax-sz.w/2),oy*k-(ay-sz.h/2),nz);draw();
+  }
+  function panBy(dx,dy){var c=px(V.c,V.z);V.c=unpx(c.x-dx,c.y-dy,V.z);draw();}
+  bar.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('b[data-i]');if(t)card(+t.getAttribute('data-i'));});
+  wrap.querySelectorAll('.tprm-ctl button').forEach(function(b){
+    b.onclick=function(){if(b.className==='fit'){fit();draw();}else zoomBy(+b.getAttribute('data-z'));};});
+  wrap.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.tprm-dot');if(t&&!moved)card(+t.getAttribute('data-i'));});
+  // Drag to pan; two fingers to pinch-zoom (snaps to the map's whole zoom steps).
+  var pts={},start=null;
+  function two(){var k=Object.keys(pts);return k.length===2?[pts[k[0]],pts[k[1]]]:null;}
+  function dist(p){return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}
+  function shift(tx,ty,s,ox,oy){var t='translate('+tx+'px,'+ty+'px)'+(s?' translate('+ox+'px,'+oy+'px) scale('+s+') translate('+(-ox)+'px,'+(-oy)+'px)':'');
+    dots.style.transform=t;if(frames[act])frames[act].style.transform=t;}
+  wrap.addEventListener('pointerdown',function(e){
+    if(e.target.closest&&e.target.closest('.tprm-ctl,.tprm-card'))return;
+    pts[e.pointerId]={x:e.clientX,y:e.clientY};moved=false;
+    var r=wrap.getBoundingClientRect(),p=two();
+    start=p?{pinch:true,d:dist(p),ox:(p[0].x+p[1].x)/2-r.left,oy:(p[0].y+p[1].y)/2-r.top}:{x:e.clientX,y:e.clientY};
+  });
+  wrap.addEventListener('pointermove',function(e){
+    if(!start||!pts[e.pointerId])return;pts[e.pointerId]={x:e.clientX,y:e.clientY};
+    var p=two();
+    if(start.pinch&&p){start.s=dist(p)/start.d;moved=true;shift(0,0,start.s,start.ox,start.oy);return;}
+    if(start.pinch)return;
+    var dx=e.clientX-start.x,dy=e.clientY-start.y;
+    if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
+    if(moved){start.dx=dx;start.dy=dy;shift(dx,dy);}
+  });
+  function end(e){
+    delete pts[e.pointerId];if(!start)return;var s=start;start=null;
+    if(s.pinch&&s.s){var dz=Math.round(Math.log(s.s)/Math.LN2);if(dz)zoomBy(dz,s.ox,s.oy);else draw();}
+    else if(!s.pinch&&moved)panBy(s.dx||0,s.dy||0);
+    if(moved)setTimeout(function(){moved=false;},0);
+  }
+  wrap.addEventListener('pointerup',end);wrap.addEventListener('pointercancel',end);
+  var wt=0;
+  wrap.addEventListener('wheel',function(e){e.preventDefault();var now=Date.now();if(now-wt<250)return;wt=now;
+    var r=wrap.getBoundingClientRect();zoomBy(e.deltaY<0?1:-1,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  W.addEventListener('resize',function(){if(opt.shown())draw();});
+  // Show the current route: fit every dot, then place stops without coordinates once geocoded.
+  function render(){
+    M=model(opt.preview);sel=-1;cardEl.style.display='none';
+    fit();draw();
+    M.forEach(function(m){
+      var a=m.s&&m.s.address;if(m.pos||!a||a in geo)return;
+      geo[a]='wait';
+      geocode(a).then(function(p){geo[a]=ll(p);if(opt.shown()){M=model(opt.preview);fit();draw();}});
+    });
+    M=model(opt.preview);draw();
+  }
+  return {render:render,view:function(){return {z:V.z,c:V.c};},model:function(){return M;}};
+}
+// The key under the map: what each colour means (Route Map) / the order (preview), and stops not on the map.
+function keyBar(opt){
+  var bar=D.createElement('div');bar.className='tprm-bar';if(opt.ids)bar.id='tprmBar';
+  bar.innerHTML=(opt.preview?'<div class="tprm-key"><span>Stops in delivery order, 1 first</span></div>'
+    :'<div class="tprm-key"><span><i style="background:#ff8a00"></i>Current</span><span><i style="background:#0a58ca"></i>Upcoming</span>'
+    +'<span><i style="background:#8a8f98"></i>Done ✓</span></div>')+'<div class="tprm-off"'+(opt.ids?' id="tprmOff"':'')+' style="display:none"></div>';
+  return bar;
+}
+// v26: the same dots on an OpenStreetMap street map (Leaflet, shipped in the app).
+var OSM_URL='https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+var OSM_ATTR='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+function createLeaflet(ov,before,opt){
+  var L=W.L,M=[],sel=-1,marks=[],tiles=null,bad=0,good=0;
+  var id=function(n){return opt.ids?' id="'+n+'"':'';};
+  var wrap=D.createElement('div');wrap.className='tprm tprm-l';if(opt.ids)wrap.id='tprmMap';
+  wrap.innerHTML='<div class="tprm-leaf"></div><div class="tprm-offline" role="status" hidden>Map unavailable offline</div>'
+    +'<div class="tprm-ctl"><button type="button" data-z="1" aria-label="Zoom in">+</button><button type="button" data-z="-1" aria-label="Zoom out">−</button>'
+    +'<button type="button" class="fit" aria-label="Show all stops">ALL</button></div>'
+    +'<div class="tprm-card"'+id('tprmCard')+' style="display:none"></div>';
+  var bar=keyBar(opt);
+  if(before&&before.parentNode===ov){ov.insertBefore(wrap,before);ov.insertBefore(bar,before);}else{ov.appendChild(wrap);ov.appendChild(bar);}
+  var el=wrap.querySelector('.tprm-leaf'),note=wrap.querySelector('.tprm-offline'),cardEl=wrap.querySelector('.tprm-card'),offEl=bar.querySelector('.tprm-off');
+  var map=L.map(el,{zoomControl:false,attributionControl:true,minZoom:3,maxZoom:19,zoomSnap:1,inertia:false,worldCopyJump:false});
+  map.attributionControl.setPrefix(false);
+  function online(){return navigator.onLine!==false;}
+  function noteNow(){note.hidden=online()&&!(bad>=3&&good===0);}
+  // Tiles only while online: what is on screen (+1 tile around), loaded when the map is still.
+  function addTiles(){
+    if(tiles||!online())return;
+    tiles=L.tileLayer(OSM_URL,{maxZoom:19,attribution:OSM_ATTR,keepBuffer:1,updateWhenIdle:true,updateWhenZooming:false,
+      referrerPolicy:'strict-origin-when-cross-origin'});
+    tiles.on('tileload',function(){good++;noteNow();});
+    tiles.on('tileerror',function(){bad++;noteNow();});
+    tiles.addTo(map);
+  }
+  W.addEventListener('online',function(){bad=0;addTiles();noteNow();});
+  W.addEventListener('offline',noteNow);
+  function icon(m){
+    var s=m.state==='cur'?34:26;
+    return L.divIcon({className:'tprm-pin',iconSize:[s,s],iconAnchor:[s/2,s/2],
+      html:'<button type="button" class="tprm-dot st-'+m.state+(m.i===sel?' sel':'')+'" data-i="'+m.i+'" data-stop="'+m.n+'" aria-label="Stop '+m.n+'">'+m.n+'</button>'});
+  }
+  function draw(){
+    marks.forEach(function(k){map.removeLayer(k);});marks=[];
+    M.forEach(function(m){
+      if(!m.pos)return;
+      var k=L.marker([m.pos.lat,m.pos.lng],{icon:icon(m),keyboard:false,riseOnHover:false,
+        zIndexOffset:m.state==='cur'?1000:m.state==='done'?-500:-m.i});
+      k.on('click',function(){card(m.i);});
+      k.addTo(map);marks.push(k);
+    });
+    var off=M.filter(function(m){return !m.pos;});
+    offEl.style.display=off.length?'':'none';
+    offEl.innerHTML=off.length?('Not on map: '+off.map(function(m){return '<b data-i="'+m.i+'" data-stop="'+m.n+'">'+m.n+'</b>';}).join('')
+      +(off.some(function(m){return m.wait;})?' <span>(finding)</span>':'')):'';
+  }
+  function fit(){
+    var pts=M.filter(function(m){return m.pos;}).map(function(m){return [m.pos.lat,m.pos.lng];});
+    if(!pts.length){map.setView([39.5,-98.35],4,{animate:false});return;}
+    if(pts.length===1){map.setView(pts[0],15,{animate:false});return;}
+    map.fitBounds(L.latLngBounds(pts),{paddingTopLeft:[28,28],paddingBottomRight:[64,28],maxZoom:17,animate:false});
+  }
+  function card(i){
+    var m=M[i];sel=m?i:-1;
+    if(!m){cardEl.style.display='none';draw();return;}
+    cardEl.innerHTML='<b>Stop '+m.n+'</b>'+(opt.preview?'':' · '+(m.state==='done'?'Done':m.state==='cur'?'Current stop':'Upcoming'))
+      +'<div>'+h(m.s&&m.s.recipient||'')+'</div><div>'+h(m.s&&m.s.address||'')+'</div>'
+      +'<div>'+m.pk+' package'+(m.pk===1?'':'s')+'</div><button type="button" aria-label="Close">✕</button>';
+    cardEl.style.display='';
+    cardEl.querySelector('button').onclick=function(){card(-1);};
+    draw();
+  }
+  bar.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('b[data-i]');if(t)card(+t.getAttribute('data-i'));});
+  wrap.querySelectorAll('.tprm-ctl button').forEach(function(b){
+    b.onclick=function(){if(b.className==='fit')fit();else if(+b.getAttribute('data-z')>0)map.zoomIn();else map.zoomOut();};});
+  L.DomEvent.disableClickPropagation(wrap.querySelector('.tprm-ctl'));
+  L.DomEvent.disableClickPropagation(cardEl);
+  W.addEventListener('resize',function(){if(opt.shown())map.invalidateSize(false);});
+  function render(){
+    M=model(opt.preview);sel=-1;cardEl.style.display='none';
+    map.invalidateSize(false);
+    fit();draw();noteNow();addTiles();
+    M.forEach(function(m){
+      var a=m.s&&m.s.address;if(m.pos||!a||a in geo)return;
+      geo[a]='wait';
+      geocode(a).then(function(p){geo[a]=ll(p);if(opt.shown()){M=model(opt.preview);fit();draw();}});
+    });
+    M=model(opt.preview);draw();
+  }
+  return {render:render,view:function(){var c=map.getCenter();return {z:map.getZoom(),c:{lat:c.lat,lng:c.lng}};},
+    model:function(){return M;},leaflet:function(){return map;}};
+}
+var overlay=null;
+function open(){
+  if(!list().length)return;
+  var ov=$('routeMapOverlay');if(!ov)return;
+  if(!overlay){
+    var fr=$('routeMapFrame');if(fr)fr.style.display='none';
+    overlay=create(ov,fr,{ids:true,shown:function(){return ov.classList.contains('on');}});
+  }
+  ov.classList.add('on');
+  overlay.render();
+}
+// The pickup preview (TP-PICKUP): the same dots and street map, read-only.
+function mount(host,shown){
+  host.classList.add('tprm-preview');
+  var m=create(host,null,{preview:true,shown:shown||function(){return true;}});
+  return m;
+}
+W.showRouteMapOverlay=open;
+W.tpRouteMap={open:open,mount:mount,model:function(){return model();},view:function(){return overlay?overlay.view():{z:12,c:null};},
+  leaflet:function(){return overlay&&overlay.leaflet?overlay.leaflet():null;}};
+})();
+</script>
+<!-- TP-ROUTEMAP:END -->
+<!-- TP-PICKUP:BEGIN  Pickup: route preview + Load tab (2026-10-12). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). After the bin scan the driver sees two
+     tabs: Route (a read-only preview of the route inside the app: the
+     TP-ROUTEMAP numbered dots in delivery order, no Google map, and the stop
+     list) and Load (the existing package scanning, unchanged, with the TP-SCAN
+     camera, "N of M loaded" and the packages still to scan). Start Route stays
+     off, saying how many packages remain, until every package is loaded; it
+     then calls the app's own confirmPickup(), so the route goes in_transit and
+     the bin / location / STG release happens exactly as before. Google Maps is
+     only opened after that, from a stop, as before. Loaded counts are the
+     app's own (saved on the phone by TP-DX after every scan). -->
+<style>
+#scPickup .tpk{position:absolute;inset:0;display:flex;flex-direction:column;background:#f5f7fa;}
+#scPickup .tpk-head{flex-shrink:0;background:#0f172a;color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;}
+.tpk-tabs{display:flex;gap:6px;}
+.tpk-tabs button{flex:1;min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;
+  font:800 .9375rem/1 system-ui,-apple-system,sans-serif;cursor:pointer;}
+.tpk-tabs button.on{background:#fff;color:#0f172a;border-color:#fff;}
+#scPickup .tpk-sum{margin-top:8px;font:600 .8125rem/1.3 system-ui,sans-serif;color:rgba(255,255,255,.8);}
+#scPickup .tpk-map{flex:1 1 55%;min-height:200px;}
+#scPickup .tpk-list{flex:1 1 30%;overflow-y:auto;background:#fff;border-top:1px solid #dfe5ec;}
+#scPickup .tpk-stop{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #eef1f5;font:500 .8125rem/1.3 system-ui,sans-serif;color:#0f172a;}
+#scPickup .tpk-stop>b{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#0a58ca;color:#fff;font:800 12px/26px system-ui,sans-serif;text-align:center;}
+#scPickup .tpk-stop>div{flex:1;min-width:0;}
+#scPickup .tpk-stop small{display:block;color:#5b6672;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#scPickup .tpk-stop>span{flex-shrink:0;font-weight:800;color:#5b6672;}
+#scPickup .tpk-stop>span.ok{color:#15803d;}
+#scPickup .tpk-foot{flex-shrink:0;background:#fff;border-top:1px solid #dfe5ec;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));}
+#tpPickStart{width:100%;min-height:56px;border-radius:14px;border:0;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;
+  font:900 1.0625rem/1.2 system-ui,sans-serif;cursor:pointer;}
+#tpPickStart:disabled{background:#cbd2da;color:#334155;cursor:not-allowed;}
+/* Load tab: the tabs and the count sit in the scanner's top panel (TP-SCAN keeps the camera size) */
+body.tp-pick-load #loadPkgOverlay>div:first-child>div:first-of-type,body.tp-pick-load #loadPkgHeading,
+body.tp-pick-load #loadPkgCount,body.tp-pick-load #loadPkgInstruction{display:none!important;}
+#loadPkgOverlay .tpk-load{text-align:center;}
+#loadPkgOverlay .tpk-load .tpk-tabs button{min-height:36px;font-size:.875rem;}
+#loadPkgOverlay .tpk-count{margin-top:4px;font:900 1.05rem/1.2 system-ui,sans-serif;color:#fff;}
+#loadPkgOverlay .tpk-left{display:flex;gap:6px;overflow-x:auto;margin:6px -104px 0 -86px;padding:0 4px;scrollbar-width:none;}
+#loadPkgOverlay .tpk-left span{flex-shrink:0;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;
+  font:700 .7rem/1.3 ui-monospace,monospace;white-space:nowrap;}
+</style>
+<script>
+(function(){
+var W=window,D=document;
+function $(id){return D.getElementById(id);}
+function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function list(){try{return (typeof surgeStops!=='undefined'&&surgeStops)||[];}catch(e){return [];}}
+function job(){try{return (typeof currentJob!=='undefined'&&currentJob)||null;}catch(e){return null;}}
+// The app's own names: phone app / web app.
+var LOAD=typeof W.startPackageScan==='function'?'startPackageScan':'startPackageLoadingVerification';
+var DONE=typeof W.finishPackageScan==='function'?'finishPackageScan':'showPickupCompleteScreen';
+// Every real barcode on the route with its stop and how many boxes carry it,
+// from the app's own loading lists, and how many are loaded.
+function pieces(){
+  var out=[];
+  try{
+    if(typeof routePackageList==='function')routePackageList().forEach(function(p){out.push({stop:p.stop,key:p.code,required:p.required});});
+    else if(typeof buildLoadingPieces==='function')buildLoadingPieces().pieces.forEach(function(p){out.push({stop:p.stopNum-1,key:p.key,required:p.required});});
+  }catch(e){}
+  return out;
+}
+function loadedMap(){
+  try{if(typeof loadedPackages!=='undefined'&&loadedPackages)return loadedPackages;}catch(e){}
+  try{if(typeof loadedCounts!=='undefined'&&loadedCounts)return loadedCounts;}catch(e){}
+  return new Map();
+}
+function progress(){
+  var m=loadedMap(),done=0,total=0,left=[],byStop={};
+  pieces().forEach(function(p){
+    var n=Math.min(m.get(p.key)||0,p.required);
+    done+=n;total+=p.required;
+    var s=byStop[p.stop]||(byStop[p.stop]={done:0,total:0});s.done+=n;s.total+=p.required;
+    if(n<p.required)left.push({stop:p.stop,key:p.key,n:n,required:p.required});
+  });
+  return {done:done,total:total,left:left,byStop:byStop};
+}
+function plural(n,w){return n+' '+w+(n===1?'':'s');}
+function num(s,i){var n=parseInt(s&&s.stop_number,10);return n>0?n:i+1;}
+var P={tab:null,armed:false,switching:false,map:null};
+function tabsHtml(on){
+  return '<nav class="tpk-tabs" role="tablist"><button type="button" role="tab" data-tab="route"'+(on==='route'?' class="on" aria-selected="true"':'')+'>Route</button>'
+    +'<button type="button" role="tab" data-tab="load"'+(on==='load'?' class="on" aria-selected="true"':'')+'>Load</button></nav>';
+}
+function onTabs(el){el.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-tab]');if(!b)return;
+  if(b.getAttribute('data-tab')==='route')showRoute();else showLoad();});}
+function setMode(tab){
+  P.tab=tab;
+  D.body.classList.toggle('tp-pick',!!tab);
+  D.body.classList.toggle('tp-pick-load',tab==='load');
+}
+function screen(){
+  var s=$('scPickup');if(s)return s;
+  s=D.createElement('div');s.className='screen';s.id='scPickup';
+  s.innerHTML='<div class="tpk"><div class="tpk-head">'+tabsHtml('route')+'<div class="tpk-sum" id="tpPickSum"></div></div>'
+    +'<div class="tpk-map" id="tpPickMap"></div><div class="tpk-list" id="tpPickList"></div>'
+    +'<div class="tpk-foot"><button type="button" id="tpPickStart" disabled></button></div></div>';
+  var ra=$('scRouteAccepted');
+  if(ra&&ra.parentNode)ra.parentNode.insertBefore(s,ra.nextSibling);else D.body.appendChild(s);
+  onTabs(s.querySelector('.tpk-tabs'));
+  $('tpPickStart').onclick=start;
+  return s;
+}
+function renderRoute(){
+  var st=list(),pr=progress(),j=job()||{},left=pr.total-pr.done;
+  $('tpPickSum').textContent=(j.title?j.title+' · ':'')+plural(st.length,'stop')+' · '+pr.done+' of '+plural(pr.total,'package')+' loaded';
+  $('tpPickList').innerHTML=st.map(function(s,i){var b=pr.byStop[i]||{done:0,total:0},ok=b.total&&b.done>=b.total;
+    return '<div class="tpk-stop" data-stop="'+num(s,i)+'"><b>'+num(s,i)+'</b><div>'+h(s.recipient||'Stop '+num(s,i))+'<small>'+h(s.address||'')+'</small></div>'
+      +'<span'+(ok?' class="ok"':'')+'>'+b.done+'/'+b.total+(ok?' ✓':'')+'</span></div>';}).join('');
+  var btn=$('tpPickStart');
+  btn.disabled=left>0;
+  btn.textContent=left>0?('Start Route · '+plural(left,'package')+' left to load'):'START ROUTE';
+}
+// Load tab -> Route tab: leave package scanning the app's own way, without the
+// Route Accepted screen it goes back to.
+function leaveLoad(){
+  var o=$('loadPkgOverlay');
+  if(!o||o.style.display==='none')return;
+  P.switching=true;
+  try{cancelLoad.call(W);}catch(e){}
+  P.switching=false;
+}
+function showRoute(){
+  leaveLoad();
+  var s=screen();
+  setMode('route');
+  P.switching=true;try{showScreen('scPickup');}finally{P.switching=false;}
+  if(!P.map&&W.tpRouteMap&&W.tpRouteMap.mount)P.map=W.tpRouteMap.mount($('tpPickMap'),function(){return P.tab==='route';});
+  renderRoute();
+  if(P.map)P.map.render();
+  return s;
+}
+function renderLoad(){
+  var o=$('loadPkgOverlay'),panel=o&&o.firstElementChild;if(!panel)return;
+  var box=panel.querySelector('.tpk-load');
+  if(!box){
+    box=D.createElement('section');box.className='tpk-load';
+    box.innerHTML=tabsHtml('load')+'<div class="tpk-count" id="tpPickCount"></div><div class="tpk-left" id="tpPickLeft"></div>';
+    var first=panel.querySelector('div');panel.insertBefore(box,first||null);onTabs(box.querySelector('.tpk-tabs'));
+  }
+  box.hidden=P.tab!=='load';
+  var pr=progress(),st=list();
+  $('tpPickCount').textContent=pr.done+' of '+pr.total+' loaded';
+  $('tpPickLeft').innerHTML=pr.left.length?pr.left.map(function(p){return '<span>Stop '+num(st[p.stop],p.stop)+' · '+h(p.key)
+    +(p.required>1?' ('+p.n+'/'+p.required+')':'')+'</span>';}).join(''):'';
+}
+function showLoad(){
+  setMode('load');
+  P.switching=true;try{origLoad.apply(W,[]);}finally{P.switching=false;}
+  renderLoad();
+}
+function start(){
+  var pr=progress(),left=pr.total-pr.done;
+  if(left>0){try{toast('Load '+plural(left,'more package')+' first','warn');}catch(e){}renderRoute();return;}
+  setMode(null);
+  return confirmPickup();
+}
+function wrap(name,fn){var o=W[name];if(typeof o!=='function')return null;W[name]=fn(o);return o;}
+// The bin scan arms the preview; the loading that follows it opens on the Route tab.
+wrap('startBinScan',function(o){return function(){P.armed=true;return o.apply(this,arguments);};});
+wrap('cancelBinScan',function(o){return function(){P.armed=false;return o.apply(this,arguments);};});
+var origLoad=wrap(LOAD,function(o){return function(){
+  if(!P.armed)return o.apply(this,arguments);
+  P.armed=false;
+  var r=o.apply(this,arguments);   // the app sets up loading (progress kept)
+  showRoute();
+  return r;
+};});
+var cancelLoad=wrap('cancelPackageScan',function(o){return function(){
+  var r=o.apply(this,arguments);
+  if(P.tab&&!P.switching)showRoute();   // BACK on the Load tab: back to the Route tab
+  return r;
+};});
+// The last package loaded: back to the Route tab with Start Route on.
+wrap(DONE,function(o){return function(){
+  if(!P.tab)return o.apply(this,arguments);
+  P.switching=true;var r;try{r=o.apply(this,arguments);}finally{P.switching=false;}
+  showRoute();
+  return r;
+};});
+wrap('processScan',function(o){return function(){
+  var r=o.apply(this,arguments);
+  try{if(P.tab==='load')renderLoad();else if(P.tab==='route')renderRoute();}catch(e){}
+  return r;
+};});
+// Any other screen ends the pickup tabs (Start Route, home, a removed route).
+wrap('showScreen',function(o){return function(id){
+  if(P.tab&&!P.switching&&id!=='scPickup'&&id!=='scScan')setMode(null);
+  return o.apply(this,arguments);
+};});
+W.tpPickup={state:function(){return {tab:P.tab,progress:progress()};},showRoute:showRoute,showLoad:showLoad,start:start};
+})();
+</script>
+<!-- TP-PICKUP:END -->
+<!-- TP-STG:BEGIN  Pickup location = the STAGING spot (2026-10). Kept IDENTICAL in
+     bbrian34/tackpath-app driver.html and bbrian34/tackpath-driver www/index.html
+     (a test in each repo checks this). The driver walks to where the route is
+     STAGED (STG, e.g. S-01) and scans the BIN as before; the LOC the PathIQ
+     worker used while stowing is never shown (it is dropped from every bin
+     answer here, and migration 67 stops sending it). Only the pickup line
+     changes; the BIN scan, Route preview, Load, Start Route are untouched.
+     2026-10 (v22): the BIN scan waits for staging. A route that has a bin
+     binding without a staging spot (staging_code null) cannot be scanned:
+     AT PICKUP shows "Not staged yet. Wait for the warehouse to stage your
+     route." with a Refresh button that reads the binding again. A route with
+     no bin binding at all scans exactly as before.
+     2026-10 (v23): staged first, then "ready for pickup". While the binding
+     has no staging spot, nothing the driver sees or hears says ready: the
+     status line reads "Waiting for the warehouse to stage your route" (and
+     the ready toast / voice wait). Once staged: "Ready for pickup" with the
+     STG spot and the Bin, and the ready announcement, once. Wording only.
+     2026-10 (v25): staged = the pickup is ready. No pickup alert of any kind
+     (tones, vibration, toast, voice) before the STG scan; all of it, once,
+     after. -->
+<style>
+#dxDayCard .tp-stg{margin:10px 0 4px;padding:14px 16px;border-radius:14px;background:rgba(25,183,239,.1);border:1px solid rgba(25,183,239,.35);}
+#dxDayCard .tp-stg-loc{font-size:1.1rem;font-weight:900;line-height:1.2;color:#ffffff;}
+#dxDayCard .tp-stg-bin{font-size:1.1rem;font-weight:900;line-height:1.2;margin-top:6px;color:#ffffff;}
+#dxDayCard .tp-stg-note{font-size:1rem;font-weight:700;margin-top:6px;color:#ffb020;}
+body.light-mode #dxDayCard .tp-stg-note{color:#9a5b00;}
+#tpStgGate{width:100%;max-width:340px;margin:0 auto 14px;padding:14px 16px;border-radius:14px;background:rgba(255,176,32,.12);
+  border:1px solid rgba(255,176,32,.55);color:#ffb020;font-weight:800;font-size:1rem;line-height:1.35;text-align:center;box-sizing:border-box;}
+body.light-mode #tpStgGate{color:#7a4800;background:#fff4e0;}
+#tpStgGate button{display:block;width:100%;min-height:48px;margin-top:10px;border-radius:12px;border:0;background:#ffb020;color:#111;
+  font-weight:900;font-size:1rem;cursor:pointer;}
+</style>
+<script>
+(function(){
+var W=window;
+// 1. Bin answers carry the bin, its state and the staging spot only: no LOC.
+function clean(rows){
+  if(!Array.isArray(rows))return rows;
+  return rows.map(function(b){
+    if(!b||typeof b!=='object')return b;
+    return {bin_code:b.bin_code,state:b.state,staging_code:b.staging_code||null};
+  });
+}
+if(typeof W.tpDriver==='function'){
+  var origDriver=W.tpDriver;
+  W.tpDriver=async function(action){
+    var r=await origDriver.apply(this,arguments);
+    return action==='bin_binding'?clean(r):r;
+  };
+}
+// 2. The pickup line on the route card (Waiting for warehouse / Ready for pickup).
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function state(){var d=W.dx&&W.dx.state;return d?{stage:d.stage,b:d.binding||null}:{stage:null,b:null};}
+function apply(){
+  var card=document.getElementById('dxDayCard');if(!card)return;
+  var kv=card.querySelector('.dx-kv'),s=state();
+  if(!kv||s.stage!=='ready')return;                 // not ready: Waiting for warehouse, unchanged
+  var j=null;try{j=(typeof currentJob!=='undefined'&&currentJob)||null;}catch(e){}
+  var bin=(s.b&&s.b.bin_code)||(j&&j.bin_label)||'';
+  var spot=s.b&&s.b.staging_code;
+  if(spot)hideGate();                               // staged by now: the wait message goes
+  wording(card,s.b,spot);
+  var html=spot
+    ?'<div class="tp-stg-loc">Pickup location: STG '+esc(spot)+'</div>'+(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')
+    :(bin?'<div class="tp-stg-bin">Bin '+esc(bin)+'</div>':'')+'<div class="tp-stg-note">Not staged yet - check with the warehouse</div>';
+  var box=card.querySelector('.tp-stg');
+  if(box&&box.getAttribute('data-k')===html)return;
+  if(!box){box=document.createElement('div');box.className='tp-stg';kv.parentNode.insertBefore(box,kv);}
+  box.setAttribute('data-k',html);box.innerHTML=html;
+  kv.style.display='none';
+}
+// 3. The BIN scan waits for staging (v22). Only a route WITH a bin binding and
+// no staging spot is held; no binding at all = exactly as before.
+var GATE_MSG='Not staged yet. Wait for the warehouse to stage your route.';
+function jobId(){try{return (typeof currentJob!=='undefined'&&currentJob&&currentJob.id)||null;}catch(e){return null;}}
+function liveRow(rows){
+  if(!Array.isArray(rows)||!rows.length)return null;
+  for(var i=0;i<rows.length;i++){var r=rows[i];if(r&&(r.state==='ready'||r.state==='open'))return r;}
+  return rows[0];
+}
+// The job's binding now: a fresh read; offline, the one the warehouse poll last saw.
+async function binding(){
+  var id=jobId();if(!id)return {known:false};
+  try{
+    if(typeof W.tpDriver==='function'){var rows=await W.tpDriver('bin_binding',{job_id:id});return {known:true,row:liveRow(rows)};}
+  }catch(e){}
+  var s=state();return s.b?{known:true,row:s.b}:{known:false};
+}
+function gateEl(){return document.getElementById('tpStgGate');}
+function hideGate(){var g=gateEl();if(g)g.remove();}
+function showGate(){
+  var scr=document.getElementById('scRouteAccepted'),g=gateEl();
+  if(!scr)return;
+  if(!g){
+    g=document.createElement('div');g.id='tpStgGate';g.setAttribute('role','alert');
+    g.innerHTML='<div class="tp-stg-gate-msg"></div><button type="button" id="tpStgRefresh">Refresh</button>';
+    var btn=scr.querySelector('button[onclick^="startBinScan"]');
+    if(btn&&btn.parentNode)btn.parentNode.insertBefore(g,btn);else scr.appendChild(g);
+    g.querySelector('#tpStgRefresh').onclick=refresh;
+  }
+  g.querySelector('.tp-stg-gate-msg').textContent=GATE_MSG;
+  try{toast(GATE_MSG,'warn');}catch(e){}
+}
+function notStaged(b){return !!(b&&b.row&&!b.row.staging_code);}
+function remember(row){try{if(W.dx&&W.dx.state&&row){W.dx.state.binding=row;if(row.state==='ready')W.dx.state.stage='ready';}}catch(e){}}
+async function refresh(){
+  var b=await binding();
+  if(b.known&&b.row)remember(b.row);
+  if(notStaged(b)){showGate();return false;}
+  hideGate();
+  try{if(W.dx&&typeof W.dx.renderDay==='function')W.dx.renderDay();}catch(e){}
+  apply();
+  return true;
+}
+if(typeof W.startBinScan==='function'){
+  var origScan=W.startBinScan;
+  W.startBinScan=async function(){
+    var self=this,args=arguments,b=await binding();
+    if(notStaged(b)){remember(b.row);showGate();return;}
+    hideGate();
+    return origScan.apply(self,args);
+  };
+}
+// 4. Staged first, then "ready for pickup" (v23). Only the words change.
+var WAIT_LINE='Waiting for the warehouse to stage your route';
+var WAIT_HINT='We will alert you when your route is staged.';
+var heldFor=null;                                   // the job whose ready announcement is waiting
+function setText(el,t){if(el&&el.textContent!==t)el.textContent=t;}
+function wording(card,b,spot){
+  var pill=document.getElementById('dxStage'),hint=card.querySelector('.dx-hint'),ban=document.getElementById('tpStageBanner');
+  if(b&&!spot){
+    if(pill&&(pill.lastChild&&pill.lastChild.nodeType===3?pill.lastChild.nodeValue:'')!==WAIT_LINE){
+      pill.className='dx-status dx-st-waiting';
+      pill.innerHTML='<i></i>';pill.appendChild(document.createTextNode(WAIT_LINE));
+    }
+    setText(hint,WAIT_HINT);
+    setText(ban,WAIT_LINE.toUpperCase());
+  }else if(spot&&heldFor&&heldFor===jobId()){      // staged now: the held announcement, once
+    heldFor=null;
+    try{origPlayAlert();}catch(e){}
+    try{origToast('Route ready for pickup','ok');}catch(e){}
+    try{origSpeak('Route ready for pickup.');}catch(e){}
+  }
+}
+function readyWords(m){return /ready for pickup/i.test(String(m||''));}
+function notStagedNow(){var s=state();return s.stage==='ready'&&!!s.b&&!s.b.staging_code;}
+// "Route ready for pickup" (the warehouse poll's toast and voice): held while not staged.
+// Decided a moment later, once the poll has recorded the binding it just read.
+function holdReady(orig){return function(m){
+  var self=this,args=arguments;
+  if(!readyWords(m))return orig.apply(self,args);
+  setTimeout(function(){if(notStagedNow()){heldFor=jobId();return;}orig.apply(self,args);},0);
+};}
+var origToast=typeof W.toast==='function'?W.toast:function(){},origSpeak=typeof W.speak==='function'?W.speak:function(){};
+if(typeof W.toast==='function')W.toast=holdReady(origToast);
+// The pickup alert (tones + vibration) the phone app's warehouse check plays when the bin turns
+// ready: held the same way while the route is not staged (v25). Other alerts (a new route,
+// an offer) are not made during that check and play as before.
+var inCheck=0,origPlayAlert=typeof W.playAlert==='function'?W.playAlert:function(){};
+if(typeof W.tpRefreshStage==='function'){
+  var origCheck=W.tpRefreshStage;
+  W.tpRefreshStage=async function(){inCheck++;try{return await origCheck.apply(this,arguments);}finally{inCheck--;}};
+}
+if(typeof W.playAlert==='function')W.playAlert=function(){
+  var self=this,args=arguments;
+  if(!inCheck)return origPlayAlert.apply(self,args);
+  setTimeout(function(){if(notStagedNow()){heldFor=jobId();return;}origPlayAlert.apply(self,args);},0);
+};
+if(typeof W.speak==='function')W.speak=holdReady(origSpeak);
+// The card is redrawn by the warehouse poll (and on screen changes): follow it.
+var scr=document.getElementById('scRouteAccepted');
+if(scr&&W.MutationObserver)new MutationObserver(function(){apply();}).observe(scr,{childList:true,subtree:true});
+W.tpStg={apply:apply,clean:clean,refresh:refresh,message:GATE_MSG};
+apply();
+})();
+</script>
+<!-- TP-STG:END -->
+<!-- TP-RSTATE:BEGIN  Per-route saved state belongs to ONE job id (2026-10, v20).
+     Kept IDENTICAL in bbrian34/tackpath-app driver.html and
+     bbrian34/tackpath-driver www/index.html (a test in each repo checks this).
+     Cause fixed: a route finished on the server (delivered, completed, ...)
+     while its state was still saved on the phone came back on every app open
+     as in transit, with every package "loaded" (the next route reuses the
+     same tracking numbers) and the last delivery's arrival service still
+     armed: the BIN scan of the next route then landed in the old route's
+     delivery flow and the old "you have arrived" fired. TP-GONE only let go
+     of REMOVED routes (archived, cancelled, deleted, reassigned).
+     Now: (1) a route the server no longer has as assigned / in transit is let
+     go everywhere, on app open and on every poll (TP-GONE's own clear);
+     (2) on app open, saved scans of any job that is not the active job are
+     dropped; (3) loaded counts and delivery scans in memory are kept only for
+     the job they were made for: a different job id starts from zero, so the
+     BIN scan always opens the Route preview and the Load tab unless THIS job
+     has every package loaded; (4) Google Maps, the arrival service and
+     "you have arrived" only for the current job once it is in transit
+     (Start Route), and an arrival from another job's service is ignored. -->
+<script>
+(function(){
+var W=window;
+var NAV_KEY='tp_nav_job',SCANS_KEY='tp_dx_route';
+var LIVE=['assigned','in_transit'];
+var MSG_DONE='Your last route is finished.';
+function lsGet(k){try{var r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch(e){return null;}}
+function lsSet(k,v){try{if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function active(){try{return (typeof currentJob!=='undefined'&&currentJob)||null;}catch(e){return null;}}
+function id(){var j=active();return j&&j.id!=null?String(j.id):null;}
+function inTransit(){var j=active();return !!(j&&j.status==='in_transit');}
+function notStarted(){var j=active();return !!(j&&j.status!=='in_transit');}
+function wrapFn(name,fn){var orig=W[name];if(typeof orig!=='function')return;W[name]=fn(orig);}
+function call(fn){try{if(typeof W[fn]==='function')W[fn]();}catch(e){}}
+// (3) In-memory scans belong to the job they were made for.
+var owner=id();
+function resetScans(){
+  try{if(typeof loadedPackages!=='undefined')loadedPackages=new Map();}catch(e){}
+  try{if(typeof loadedCounts!=='undefined')loadedCounts=new Map();}catch(e){}
+  try{deliveryScans=new Map();deliveryDamaged=new Map();}catch(e){}
+  W._deliveryScan=null;W._loadedPackageIds=new Set();
+}
+function own(){
+  var k=id();if(!k||k===owner)return;
+  var was=owner;owner=k;
+  if(was!=null)resetScans();          // a different job: its counts start at zero
+  var s=lsGet(SCANS_KEY);if(s&&String(s.job)!==k)lsSet(SCANS_KEY,null);
+  var nav=lsGet(NAV_KEY);if(nav!=null&&String(nav)!==k){lsSet(NAV_KEY,null);call('stopArrivalService');}
+}
+['acceptOffer','tpAdoptAssignedRoute'].forEach(function(n){wrapFn(n,function(orig){return function(){
+  var r=orig.apply(this,arguments);
+  if(r&&typeof r.then==='function')return r.then(function(v){own();return v;});
+  own();return r;
+};});});
+wrapFn('startBinScan',function(orig){return function(){own();return orig.apply(this,arguments);};});
+wrapFn('confirmPickup',function(orig){return function(){own();return orig.apply(this,arguments);};});
+// (4) Navigation and arrival: only the current job, only once it is in transit.
+wrapFn('startTurnByTurn',function(orig){return function(){
+  if(notStarted())return;
+  own();if(id())lsSet(NAV_KEY,id());
+  return orig.apply(this,arguments);
+};});
+wrapFn('startArrivalService',function(orig){return function(){
+  if(notStarted())return Promise.resolve(false);
+  if(id())lsSet(NAV_KEY,id());
+  return orig.apply(this,arguments);
+};});
+wrapFn('showArrivalPrompt',function(orig){return function(){
+  var nav=lsGet(NAV_KEY);
+  if(!inTransit()||(nav!=null&&String(nav)!==id())){call('stopArrivalService');return;}
+  return orig.apply(this,arguments);
+};});
+// (1) A route the server has finished is let go, the same way TP-GONE lets go
+// of a removed one. No signal or a server error: keep it, ask again.
+var checking=false;
+async function check(){
+  var j=active();if(!j||!j.id||checking)return;
+  if(navigator.onLine===false||typeof tpDriver!=='function'||!W.tpGone)return;
+  if(document.getElementById('dxSummary'))return;   // the phone itself just finished it
+  checking=true;
+  try{
+    var row;try{row=await tpDriver('job',{id:j.id});}catch(e){return;}
+    if(!row||!active()||String(active().id)!==String(j.id))return;
+    if(row.archived===true||row.status==='cancelled')return;   // TP-GONE's case
+    if(LIVE.indexOf(row.status)<0){lsSet(NAV_KEY,null);W.tpGone.forget(j.id,MSG_DONE);}
+  }finally{checking=false;}
+}
+wrapFn('pollJobs',function(orig){return function(){if(active())check();return orig.apply(this,arguments);};});
+wrapFn('tpRefreshStage',function(orig){return async function(){await check();if(!active())return;return orig.apply(this,arguments);};});
+setInterval(check,5000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)check();});
+// (2) One-time cleanup on app open: saved state of any job that is not the
+// active job goes (scans, navigation target and its arrival service).
+(function(){
+  var k=id(),s=lsGet(SCANS_KEY),nav=lsGet(NAV_KEY);
+  if(s&&String(s.job)!==k)lsSet(SCANS_KEY,null);
+  if(nav!=null&&String(nav)!==k){lsSet(NAV_KEY,null);call('stopArrivalService');}
+})();
+W.tpRouteState={check:check,owner:function(){return owner;}};
+check();
+})();
+</script>
+<!-- TP-RSTATE:END -->
 </body>
 </html>
 
