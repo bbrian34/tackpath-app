@@ -30,6 +30,7 @@
     portal:   { portal: [240, 92, 0.99] },
     board:    { desk: [240, 92, 0.99] },
     build:    { desk: [240, 92, 0.99] },
+    sortzoom: { tc56: [712, 66, 1.15] },
     signin:   { phone: [747, 92, 0.98] },
     track:    { phone: [96, 96, 0.96], desk: [600, 150, 0.56], rphone: [1452, 96, 0.96] },
     intake:   { desk: [470, 92, 0.94], manifest: [44, 150, 1] },
@@ -346,6 +347,14 @@
     tick(); skipT = setInterval(tick, 100);
   };
   // Chapter card: a calm full-screen title between scenes, and over a cut.
+  // Recap card: what the film showed, as a short list
+  S.recap = function (title, items) {
+    const c = $('recap');
+    if (!title) { c.classList.remove('show'); return; }
+    c.querySelector('.rc-t').textContent = title;
+    c.querySelector('ul').innerHTML = items.map((t) => '<li>' + t + '</li>').join('');
+    c.classList.add('show');
+  };
   S.chapter = function (n, title, sub) {
     const c = $('chapter');
     if (!title) { c.classList.remove('show'); return; }

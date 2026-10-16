@@ -278,3 +278,8 @@ body.instant .link-line{animation:none;opacity:1}
 .bin.picked{opacity:.78}
 /* one solid background: no grid, no glow */
 #bgGlow{display:none}
+.recap .ch-in{text-align:left}
+.recap .rc-t{font-size:22px;letter-spacing:.3em;text-transform:uppercase;color:var(--blue);font-weight:800;margin-bottom:26px}
+.recap ul{list-style:none;margin:0;padding:0}
+.recap li{font-size:34px;line-height:1.35;color:#eaf4ff;font-weight:600;padding:9px 0 9px 44px;position:relative}
+.recap li::before{content:'✓';position:absolute;left:0;color:#53ff88;font-weight:800}

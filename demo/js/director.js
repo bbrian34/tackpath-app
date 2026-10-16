@@ -260,9 +260,9 @@
       const wrong = Object.values(BIN).find((x) => x.code !== b.code && shownBins[x.code]);
       S.rack.feed('BIN ' + wrong.code, 'qr');
       await piqScan('BIN:' + wrong.code, /Wrong Bin/, false);
-      S.highlight('pathiq', '#stowResult', 'Wrong bin — nothing counted', 'red');
-      S.caption('Wrong bin? PathIQ rejects it and keeps the package waiting for <b>BIN ' + b.code + '</b>.');
-      await wait(2.6);
+      S.highlight('pathiq', '#stowResult', 'Wrong bin · rejected, nothing counted', 'red');
+      S.caption('Keisha scans <b>BIN ' + wrong.code + '</b>, the wrong bin. PathIQ rejects it: <b>nothing is counted</b>, and the package waits for <b>BIN ' + b.code + '</b>.');
+      await wait(4.4);
       S.unhighlight();
     }
     const useLoc = opts.useLoc;
@@ -506,6 +506,8 @@
       if (!show && S.onAir()) { await air(false); }
       if (show && !S.onAir()) { await air(true); if (completes) S.caption('Later in the sort: the last package for <b>' + u.job.title.replace('Surge Route ', '') + '</b>.'); }
       const gap = k === 0 ? 1.4 : 1.0;
+      if (k === 3) await reframe('sortzoom');
+      if (k === 5) { if (S.onAir()) await reframe('sort'); else S.layout('sort', { instant: true }); }
       if (k === 3) S.caption('PathIQ flips the card to the package’s bin; the bin scan confirms it. Every scan is counted.');
       await stowUnit(u, gap, { narrate: k === 0, wrongFirst: k === 4 });
       if (k === 0) {
@@ -580,8 +582,8 @@
     await wait(1);
     await cameraScan('BIN:2A', '#binScanLastResult', /WRONG BIN/, 'bin');
     S.highlight('driver', '#binScanLastResult', 'Wrong bin · rejected', 'red');
-    S.caption('<b>Wrong bin.</b> The app checks the scan against PathIQ: this route is in bin 1A.');
-    await wait(2.8);
+    S.caption('Andre scans <b>bin 2A</b>. The app checks it against PathIQ: <b>wrong bin</b>. Loading stays locked until he scans <b>bin 1A</b>.');
+    await wait(4.4);
     S.unhighlight();
     await cameraScan('BIN:1A', '#binScanLastResult', /CONFIRMED/, 'bin');
     S.highlight('driver', '#binScanLastResult', 'Bin 1A confirmed', 'green');
@@ -654,7 +656,7 @@
     const st = firstStop();
     S.flow('one GPS stream → driver phone + dispatcher map', 470, 110);
     S.caption('The <b>same GPS stream</b> moves the phone’s navigation and Andre’s dot on the dispatcher’s map.');
-    await driveReal(st.coords, 5, { easeIn: true });
+    await driveReal(st.coords, 7, { easeIn: true });
     S.flow('');
     // cut to half a mile out: the floating button appears over Maps
     await offAir(async () => { await driveTo(before(st.coords, 860), 2); });
@@ -804,6 +806,19 @@
     S.caption('<b>' + hhmm() + '.</b> Back at dispatch, where the morning began: ' + done + ' routes complete. The 7:52 manifest’s <b>' + r.received + ' packages: ' + r.delivered + ' delivered</b>.');
     await wait(6);
     S.unhighlight();
+    // what the film showed, in one calm card (only what was on screen)
+    S.caption('');
+    S.recap('What you just saw', [
+      'Routes built from a client manifest on real road time',
+      'Every package scanned into its route’s bin, and wrong bins rejected',
+      'The STG scan on the Zebra unlocks the driver’s pickup',
+      'Wrong bin caught at pickup; every package scanned onto the van',
+      'One GPS stream for the driver’s navigation and the dispatch map',
+      'Photo proof at the door, and dispatch updated at every step'
+    ]);
+    await wait(11);
+    S.recap(null);
+    await wait(0.4);
   });
 
   // ════════════════ reconciliation from the demo backend ════════════════
