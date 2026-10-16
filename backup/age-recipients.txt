@@ -6,3 +6,4 @@
 # "no age public key" (by design: nothing is uploaded unencrypted).
 #
 # Paste the public key on the next line (it looks like age1qqx...):
+age13yljzax6j63xkful47emgjamn8fkl4ar4qzfnszhyqytr4j6we3q33wkuk
