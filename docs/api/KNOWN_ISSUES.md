@@ -6,6 +6,25 @@ are fixed on `claude/api-v1`, each with a failing-first test in
 `tests/api/hardening.test.mjs`. The items below are not fixed yet. Each says
 what it is, why it was left for later, and what fixing it means.
 
+## Must fix before real customers or client keys
+
+These came from the independent re-review of commit `18c478e`. Each one was
+reproduced by a probe, against PGlite or a local PostgreSQL 16. None of them
+blocks a pilot on one test company with no drivers, provided that no
+own-orders client keys exist, test keys go only to people who would also get
+live keys, and the trigger off switch is not used without a resync. All six
+must be fixed, each with a failing-first test, before a real customer company
+or a client key is set up.
+
+| Id | Severity | Issue | Where | Proof | Planned fix |
+|---|---|---|---|---|---|
+| RR-M1 | Medium | **A test-mode key reaches live data.** Test mode separates orders only. A `tpk_test_` key can read live routes (stops include recipients and addresses), live events (the probe showed a phone number) and live batch results. It can also rotate or delete live webhook endpoints, and endpoints it registers receive live events. | `69_public_api.sql` `run`: `routes.list`, `routes.get`, `events.list`, `batches.get`; `find_webhook` | The probe's test key got 200 on `GET /events` (with the phone number), on `/routes`, `/routes/{live}` and `/batches/{live}`, and on rotate-secret and delete of a live endpoint | Add `mode` to webhook endpoints and events, and filter on it. Refuse routes, live batches, live events and live endpoints to test keys. |
+| RR-M2 | Medium | **At a shared stop, a client sees another client's delivery record.** When dispatch links client B by a package at a stop that carries client A's order, B's proof of delivery returns the whole stop's record: A's signer, the driver's notes about A's package, and the photo. | `69_public_api.sql` `stop_record` (looks up by stop number), `order_pod` | B got `recipient_name` "Alice Private", the notes "A medication box left with neighbour at 12B", and one photo link | For an order linked by package, leave out the signer, notes and media whenever another client's order is linked to the same stop, or return a minimal record. |
+| RR-M3 | Medium (platform behavior not verified) | **The per-IP limit trusts headers a client may be able to set, and also blocks valid keys.** `clientIp` falls back to the first `x-forwarded-for` entry, which the client controls. After 30 failures from one address, every request from it gets 429, valid keys included, in both the gateway and the edge limiter. With no IP header at all, there is no IP limit. | `supabase/functions/_shared/tp_api.js` `clientIp`, `createAuthLimiter().blocked`; `69_public_api.sql` `handle` (address check) | 30 bad keys sent with a spoofed `x-forwarded-for` made a valid key get 429. 60 invalid keys sent with no IP header: all 401, 60 database calls. | Read the address only from a header the platform overwrites (confirm in the pilot). Apply the IP limit to failed attempts only, never to a request whose key is valid. |
+| RR-M4 | Medium (operations) | **Turning the triggers back on does not fully restore things.** Routes published while the triggers were off never link their orders. `GET /orders` keeps stale statuses, and the status history has gaps. DEPLOY.md says orders show their current state on the next read; that is true only for a single order's GET. | `docs/api/DEPLOY.md` (off switch section); `69_public_api.sql` `on_job_change` | After re-enabling: the order was not on its new route, the list said `received` while the order was `assigned`, and the history was missing `assigned` | Add a tested resync step: queue a `stops` row and a `job` row for every job, of companies that use the API, changed during the off window. Correct DEPLOY.md. Until then, use the kill switch, not the trigger off switch. |
+| RR-L1 | Low | **External ids collide across clients of one company.** Client B cannot use an external id that client A already has, and the `409 duplicate_order` shows A's order id, in single and batch intake. | `69_public_api.sql` `create_order` (duplicate check) | Client B got 409 with `order_id` equal to client A's order. The batch result showed the same id. | Make external ids unique per client label for own-orders keys, or leave out `order_id` when the caller cannot see that order. |
+| RR-L2 | Low | **Parallel requests can exceed a key's per-minute limit.** `tp_sec.rate_ok` (migration 10) counts and then inserts, with no lock between. | `10_sessions_and_rpcs.sql` `tp_sec.rate_ok`; `69_public_api.sql` `handle` (per-key limit) | On PostgreSQL 16, 30 parallel requests on a 3-per-minute key with 2 requests left: 7 succeeded in one of three runs | Take `pg_advisory_xact_lock(hashtext('api_req:' \|\| key_id))` before `rate_ok` in `handle`. |
+
 ## Open findings from the review
 
 | Id | Severity | Issue | Where | Planned fix |
