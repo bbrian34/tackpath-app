@@ -348,8 +348,8 @@
   const scene = (n, title, run) => SCENES.push({ n, title, run });
   // ── 1. Intake / SmartSort ──
   scene('1', 'SmartSort builds the routes', async () => {
-    S.layout('intake'); S.act('Part 1', 'SmartSort builds the routes');
-    await opener('Part 1', 'SmartSort builds the routes', 'A client’s manifest becomes optimized routes on real road time.');
+    S.layout('intake'); S.stage(0);
+    await opener('Step 1 of 4 · Route Planning', 'SmartSort builds the routes', 'A client’s manifest becomes optimized routes on real road time.');
     setRate(1);
     jumpTo(7, 52);
     S.caption('<b>7:52 AM.</b> A client sends today’s manifest: <b>21 lines</b>, <b>30 packages</b> for <b>17 addresses</b>.');
@@ -396,8 +396,8 @@
   // ── 2. The driver signs in with a texted code (Twilio) ──
   scene('2', 'The driver signs in', async () => {
     W.dispatcher.closeSmartSortDrawer();
-    S.layout('signin'); S.act('Part 2', 'The driver signs in');
-    await opener('Part 2', 'The driver signs in', 'No passwords: TackPath texts a one-time code.');
+    S.layout('signin'); S.stage(0);
+    await opener('Step 1 of 4 · Route Planning', 'The driver signs in', 'No passwords: TackPath texts a one-time code.');
     jumpTo(7, 55);
     S.caption('<b>7:55 AM.</b> Andre Coleman, a Peachline driver, opens the <b>TackPath driver app</b> and enters his number.');
     await wait(1.6);
@@ -422,8 +422,8 @@
 
   // ── 3. Dispatcher assigns ──
   scene('3', 'Dispatch assigns drivers', async () => {
-    S.layout('assign'); S.act('Part 3', 'Dispatch assigns drivers');
-    await opener('Part 3', 'Dispatch assigns drivers', 'One click on the board, and the route is on the driver’s phone.');
+    S.layout('assign'); S.stage(0);
+    await opener('Step 1 of 4 · Route Planning', 'Dispatch assigns drivers', 'One click on the board, and the route is on the driver’s phone.');
     S.caption('Three new routes on the board. On the right, Andre’s phone, signed in and waiting.');
     await wait(1.8);
     const r1 = routes()[0];
@@ -454,10 +454,10 @@
         await wait(3.6);
         await until(() => onScreen('scRouteAccepted'), 'Andre sees his route', 20);
         await wait(0.6);
-        S.highlight('driver', '#dxDayCard', 'Andre’s route · WAITING FOR WAREHOUSE', 'amber');
-        S.caption('His app opens <b>his</b> route: 7 stops, 16 packages. Pickup stays locked: <b>Waiting for warehouse</b>.');
-        await wait(3.4);
-        S.unhighlight();
+        S.link({ app: 'dispatcher', sel: row + ' td:nth-child(2)' }, { app: 'driver', sel: '#dxDayCard' }, 'Dispatch assigns RT-001', 'Andre’s phone: his route', 'amber');
+        S.caption('One click at dispatch, and <b>his</b> route is on his phone: 7 stops, 16 packages. Pickup stays locked: <b>Waiting for warehouse</b>.');
+        await wait(4.4);
+        S.unlink();
       }
     }
     W.dispatcher.closeDrawer();
@@ -470,8 +470,8 @@
   const SORT = { held: [] };
   const EXC = 5;   // stop 6 · Gilbert Street Bakery · 3 packages
   scene('4', 'PathIQ · sort and stage', async () => {
-    S.layout('sort'); S.act('Part 4', 'PathIQ · sort and stage');
-    await opener('Part 4', 'PathIQ sorts the warehouse', 'Every package scanned into its route’s bin, every bin staged for pickup.');
+    S.layout('sort'); S.stage(1);
+    await opener('Step 2 of 4 · Package Sorting', 'PathIQ sorts the warehouse', 'Every package scanned into its route’s bin, every bin staged for pickup.');
     jumpTo(8, 4);
     setRate(1);
     const rs = routes();
@@ -499,6 +499,15 @@
       const gap = k === 0 ? 1.4 : 1.0;
       if (k === 3) S.caption('PathIQ flips the card to the package’s bin; the bin scan confirms it. Every scan is counted.');
       await stowUnit(u, gap, { narrate: k === 0, wrongFirst: k === 4 });
+      if (k === 0) {
+        // the first package in RT-001's bin: Andre's phone notices on its own warehouse check
+        await until(() => /Staging in progress/i.test(txt('driver', '#dxStage')), 'driver app shows staging', 12);
+        S.unhighlight();
+        S.link({ app: 'pathiq', sel: '#stowResult' }, { app: 'driver', sel: '#dxStage' }, 'Zebra: first package in bin 1A', 'Andre’s phone: Staging in progress', 'amber');
+        S.caption('The scan on the Zebra reaches Andre’s phone: his route is now <b>Staging in progress</b>.');
+        await wait(4);
+        S.unlink();
+      }
       if (/Bin Complete/.test(txt('pathiq', '#stowResult'))) {
         if (S.onAir()) { S.highlight('pathiq', '#stowResult', u.job.title.replace('Surge Route ', '') + ' complete', 'green'); S.caption('<b>' + u.job.title.replace('Surge Route ', '') + '</b> is complete: every package is in its bin.'); await wait(2); S.unhighlight(); }
         await stageBin(u.job, S.onAir() && stagedShown++ === 0);
@@ -508,42 +517,46 @@
       await wait(gap * 0.5);
     }
     await air(true);
-    S.caption('RT-002 and RT-003 are staged. Andre’s app reads <b>Staging in progress</b>.');
-    S.highlight('driver', '#dxStage', 'Staging in progress', 'amber');
-    await wait(3);
+    S.highlightBox(...(() => { const r = $('rack').getBoundingClientRect(), sr = $('stage').getBoundingClientRect(), k = S.stageScale(); return [(r.left - sr.left) / k - 6, (r.top - sr.top) / k - 6, r.width / k + 12, r.height / k + 12]; })(), 'RT-002 and RT-003 sorted and staged', 'green');
+    S.caption('RT-002 and RT-003 are sorted and staged. RT-001 has one package to go.');
+    await wait(3.2);
     S.unhighlight();
   });
 
   // ── 5. Route ready: WAITING → READY across apps ──
   scene('5', 'Route ready for pickup', async () => {
-    S.layout('ready'); S.act('Part 5', 'Route ready for pickup');
-    await opener('Part 5', 'Ready for pickup', 'The warehouse and the driver’s phone stay in step.');
+    S.layout('ready'); S.stage(1);
+    await opener('Step 2 of 4 · Package Sorting', 'Ready for pickup', 'The warehouse and the driver’s phone stay in step.');
     S.caption('RT-001’s last package. Watch both screens.');
-    S.flow('PathIQ bin status → driver app', 812, 250);
     await wait(1.8);
     for (let k = 0; k < SORT.held.length; k++) await stowUnit(SORT.held[k], 1.0, {});
     await until(() => /Bin Complete/.test(txt('pathiq', '#stowResult')), 'RT-001 complete', 10);
-    S.highlight('pathiq', '#stowResult', 'Bin 1A complete', 'green');
-    S.caption('All 16 RT-001 packages are in bin 1A. Andre’s app still waits: the route is <b>not staged</b> yet.');
     await until(() => /stage your route|Waiting for warehouse/i.test(txt('driver', '#dxStage')), 'driver app waits for staging', 20);
-    S.highlight('driver', '#dxStage', 'Waiting for the warehouse to stage the route', 'amber');
-    await wait(3);
     S.unhighlight();
+    S.link({ app: 'pathiq', sel: '#stowResult' }, { app: 'driver', sel: '#dxStage' }, 'Zebra: bin 1A complete, 16 of 16', 'Andre’s phone: waiting for staging', 'amber');
+    S.caption('All 16 packages are in bin 1A. Andre’s app still waits: the route is <b>not staged</b> yet.');
+    await wait(3.6);
+    S.unlink();
     S.caption('Keisha moves bin 1A to the staging area and scans <b>STG S-01</b>.');
     await stageBin(routes()[0], false);
-    S.highlight('pathiq', '#stowResult', 'Staged at S-01', 'green');
     await until(() => /ready for pickup/i.test(txt('driver', '#dxStage')), 'driver app turns READY', 20);
-    S.flow('STG S-01 scanned → Andre: READY FOR PICKUP', 760, 250, true);
-    S.highlight('driver', '#dxDayCard', 'READY FOR PICKUP · Bin 1A', 'green');
-    S.caption('The moment it is staged, Andre’s app turns <b>Ready for pickup</b> and unlocks pickup.');
-    await wait(3);
-    S.flow(''); S.unhighlight();
+    S.link({ app: 'pathiq', sel: '#stowResult' }, { app: 'driver', sel: '#dxDayCard' }, 'Zebra: STG S-01 scanned', 'Andre’s phone: Ready for pickup', 'green');
+    S.caption('That STG scan is what unlocks Andre’s pickup: his app turns <b>Ready for pickup</b>, staging spot S-01.');
+    await wait(4.6);
+    S.unlink();
+    // the result of the sort: every bin staged
+    S.layout('sort');
+    await wait(1.2);
+    S.highlightBox(...(() => { const r = $('rack').getBoundingClientRect(), sr = $('stage').getBoundingClientRect(), k = S.stageScale(); return [(r.left - sr.left) / k - 6, (r.top - sr.top) / k - 6, r.width / k + 12, r.height / k + 12]; })(), 'Sorting complete · 3 bins staged', 'green');
+    S.caption('Sorting complete: <b>30 packages in 3 bins</b>, every bin staged for pickup.');
+    await wait(3.4);
+    S.unhighlight();
   });
 
   // ── 6. Driver pickup ──
   scene('6', 'Driver pickup', async () => {
-    S.layout('pickup'); S.act('Part 6', 'Driver pickup');
-    await opener('Part 6', 'Driver pickup', 'The right bin, every package scanned into the van.');
+    S.layout('pickup'); S.stage(2);
+    await opener('Step 3 of 4 · Driver Handoff', 'Driver pickup', 'The right bin, every package scanned into the van.');
     hub.clock.jump(4 * 60000);   // Andre walks over from the drivers' lounge
     setRate(1);
     fix({ lat: C.hub.lat, lng: C.hub.lng, heading: 90 });
@@ -598,12 +611,20 @@
     const go = await until(() => { const x = onScreen('scPickup') && S.find('driver', '#tpPickStart'); return x && !x.disabled && x; }, 'Start Route enabled', 15);
     S.rack.picked('1A');
     S.highlight('driver', go, '16 of 16 loaded', 'green');
-    S.caption('All 16 loaded. Andre taps <b>Start Route</b>: RT-001 is <b>in transit</b>.');
+    S.caption('All 16 loaded. Andre taps <b>Start Route</b>.');
     await wait(2.2);
     S.unhighlight();
     await tap('driver', go, 0.8);
     await until(() => be.jobById(rs[0].id).status === 'in_transit', 'route in transit', 10);
-    await wait(1.4);
+    // the result at dispatch: RT-001 is on the road
+    S.layout('assign');
+    try { await W.dispatcher.loadJobs(); } catch (e) {}
+    const moving = await until(() => S.find('dispatcher', '#pp-transit .pcard'), 'RT-001 in transit on the board', 15);
+    await wait(1.2);
+    S.link({ app: 'driver', sel: '#scSurgeMap' }, { app: 'dispatcher', sel: moving }, 'Andre: route started', 'Dispatch: RT-001 in transit', 'green');
+    S.caption('The handoff is done: Andre’s route is loaded, and dispatch sees RT-001 <b>in transit</b>.');
+    await wait(4);
+    S.unlink();
   });
 
   // stop 1 of Andre’s route
@@ -611,8 +632,8 @@
 
   // ── 7. On the road: navigation, live map, back to TackPath ──
   scene('7', 'On the road', async () => {
-    S.layout('drive'); S.act('Part 7', 'On the road');
-    await opener('Part 7', 'On the road', 'Turn-by-turn on the phone and a live map at dispatch.');
+    S.layout('drive'); S.stage(3);
+    await opener('Step 4 of 4 · Delivery', 'On the road', 'Turn-by-turn on the phone and a live map at dispatch.');
     await tap('dispatcher', '.tbtab[onclick*="smarttrack"]', 0.6);
     try { await W.dispatcher.refreshFleetMap(); } catch (e) {}
     S.highlight('driver', '#surgeRow0', 'Stop 1 · tap to navigate');
@@ -703,17 +724,32 @@
 
   // ── 8. One delivery, start to finish; the next stop opens by itself ──
   scene('8', 'Delivery · proof', async () => {
-    S.layout('drive'); S.act('Part 8', 'Delivery · proof of delivery');
+    S.layout('drive'); S.stage(3);
     S.caption('<b>Mark arrived</b>, then scan the stop’s packages.');
     await deliver(0, {});
     await until(() => S.find('driver', '#dxNext'), 'next-stop countdown', 10);
-    S.highlight('driver', '#dxNext', 'Next stop opens in 5 s', 'green');
-    S.caption('<b>Delivered.</b> Dispatch sees it now. The next stop opens by itself.');
-    await until(() => S.nav.isOpen(), 'navigation opens for stop 2', 15);
-    await wait(1.6);
+    S.highlight('driver', '#dxNext', 'Stop 1 delivered', 'green');
+    S.caption('<b>Delivered.</b> The next stop opens by itself.');
+    await wait(1.2);
+    // the delivery reaches dispatch
+    await tap('dispatcher', '.tbtab[onclick*="\'dispatch\'"]', 0.4);
+    try { await W.dispatcher.loadJobs(); } catch (e) {}
+    const done = await until(() => S.find('dispatcher', '#pp-delivered .pcard'), 'delivery on the dispatch board', 15);
     S.unhighlight();
+    S.link({ app: 'driver', sel: '#dxNext' }, { app: 'dispatcher', sel: done }, 'Andre: stop 1 delivered', 'Dispatch: delivered, with photo proof', 'green');
+    S.caption('The delivery is on the dispatch board at once: <b>stop 1 of 7 delivered</b>, with the photo proof.');
+    await wait(4.4);
+    S.unlink();
+    await until(() => S.nav.isOpen(), 'navigation opens for stop 2', 15);
     S.caption('…and Maps is already guiding Andre to stop 2.');
-    await wait(3.4);
+    await wait(2.6);
+    // close the loop where the morning began: the dispatcher's board
+    S.layout('board');
+    await wait(1.4);
+    S.highlight('dispatcher', '#pp-delivered .pcard', 'Stop 1 of 7 · delivered', 'green');
+    S.caption('Back at dispatch, where the morning began: the first delivery is complete and RT-001 is still <b>in transit</b>.');
+    await wait(4);
+    S.unhighlight();
   });
 
 
@@ -763,7 +799,7 @@
       catch (e) { hub.report('director', 'demo', String(e && e.message || e), 'scene ' + SCENES[i].n); console.error('[demo] scene ' + SCENES[i].n + ':', e); }
     }
     ctl.turbo = false; applySpeed(); S.busy('');
-    S.act('', ''); ctl.done = true; ctl.running = false; markScene();
+    S.stage(null); ctl.done = true; ctl.running = false; markScene();
     hub.emit('done', {});
     S.caption('');
     $('titleCard').classList.add('end'); S.title(true);   // closing card: the logo and the line

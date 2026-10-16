@@ -59,6 +59,12 @@
 
   // ── act title + caption ──
   S.act = function (n, title) { $('actTitle').innerHTML = n ? '<span class="n">' + n + '</span>' + title : ''; };
+  // Where the viewer is in the operation: four steps, the current one lit.
+  S.STAGES = ['Route Planning', 'Package Sorting', 'Driver Handoff', 'Delivery'];
+  S.stage = function (i) {
+    $('actTitle').innerHTML = i == null ? '' : S.STAGES.map((t, k) =>
+      '<span class="st' + (k === i ? ' on' : k < i ? ' done' : '') + '">' + t + '</span>').join('<span class="st-sep">›</span>');
+  };
   let capTimer = null;
   S.caption = function (html) {
     const c = $('caption');
@@ -104,6 +110,27 @@
     hl.innerHTML = tag ? '<span class="hl-tag">' + tag + '</span>' : ''; hl.hidden = false;
   };
   S.unhighlight = () => { $('hl').hidden = true; };
+  // Cause → effect: the action and its result boxed together, joined by a line.
+  function boxOf(t) { if (t.app) { const el = find(t.app, t.sel); if (!el) return null; const r = stageRect(t.app, el); return { x: r.x - 6, y: r.y - 6, w: r.w + 12, h: r.h + 12 }; } return t; }
+  S.link = function (a, b, tagA, tagB, color) {
+    S.unlink();
+    if (S.quiet) return;
+    const A = boxOf(a), B = boxOf(b); if (!A || !B) return;
+    const cls = 'hl link' + (color ? ' ' + color : '');
+    [[A, tagA, 'linkA'], [B, tagB, 'linkB']].forEach(([r, tag, id]) => {
+      const d = document.createElement('div'); d.id = id; d.className = cls;
+      Object.assign(d.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+      d.innerHTML = tag ? '<span class="hl-tag">' + tag + '</span>' : ''; stage.appendChild(d);
+    });
+    const ac = [A.x + A.w / 2, A.y + A.h / 2], bc = [B.x + B.w / 2, B.y + B.h / 2], right = bc[0] >= ac[0];
+    const p0 = [right ? A.x + A.w : A.x, ac[1]], p1 = [right ? B.x : B.x + B.w, bc[1]], dx = (p1[0] - p0[0]) * 0.45;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.id = 'linkLine'; svg.setAttribute('class', 'link-line' + (color ? ' ' + color : ''));
+    svg.setAttribute('width', '1920'); svg.setAttribute('height', '1080');
+    svg.innerHTML = '<defs><marker id="lkArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z"/></marker></defs>'
+      + '<path class="lk" marker-end="url(#lkArrow)" d="M' + p0 + ' C' + [p0[0] + dx, p0[1]] + ' ' + [p1[0] - dx, p1[1]] + ' ' + p1 + '"/>';
+    stage.appendChild(svg);
+  };
+  S.unlink = () => { ['linkA', 'linkB', 'linkLine'].forEach((id) => { const e = document.getElementById(id); if (e) e.remove(); }); };
   S.ripple = function (x, y) {
     if (S.quiet) return;
     const r = document.createElement('div'); r.className = 'ripple'; r.style.left = x + 'px'; r.style.top = y + 'px';

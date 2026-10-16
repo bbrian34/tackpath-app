@@ -253,3 +253,19 @@ body.rec .big-start,body.rec .tc-foot,body.rec #controls{display:none!important}
 .notif.sms.long{top:30px}
 #devPhone .statusbar{background:#f5f7fa;color:#0f172a}
 .title-card.end .tc-inner>p,.title-card.end .big-start,.title-card.end .tc-foot{display:none}
+/* the four steps in the top bar */
+.act-title{letter-spacing:.12em;font-size:14px}
+.act-title .st{color:#6f87a0}.act-title .st.done{color:#a9bdd2}.act-title .st.on{color:#19b7ef}
+.act-title .st-sep{color:#3d5570;margin:0 12px}
+/* cause → effect */
+.hl.link{border-width:3px}
+.link-line{position:absolute;left:0;top:0;z-index:34;pointer-events:none;overflow:visible}
+.link-line{opacity:0;animation:lkin .45s var(--ease) forwards}
+.link-line .lk{fill:none;stroke:#19b7ef;stroke-width:3.5;stroke-linecap:round}
+.link-line marker path{fill:#19b7ef}
+.link-line.green .lk{stroke:#53ff88}.link-line.green marker path{fill:#53ff88}
+.link-line.amber .lk{stroke:#ffb020}.link-line.amber marker path{fill:#ffb020}
+@keyframes lkin{to{opacity:1}}
+body.instant .link-line{animation:none;opacity:1}
+.title-card .tc-site{margin-top:18px;font-size:22px;letter-spacing:.08em;color:#a9bdd2;display:none}
+.title-card.end .tc-site{display:block}
