@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:'TackPath Montserrat';src:url('http://localhost:8765/tackpath-montserrat-500.ttf')}
+html,body{margin:0;width:1080px;height:1920px;background:transparent;color:#e8f1fb;font-family:'DM Sans',system-ui,sans-serif;overflow:hidden}
+body.solid{background:#050b16}
+.top{position:absolute;left:48px;right:48px;top:52px;display:flex;justify-content:space-between;align-items:center}
+.wm{font-family:'TackPath Montserrat',sans-serif;letter-spacing:.15em;font-size:44px;display:flex;align-items:center;gap:18px}
+.wm b{color:#fff;font-weight:500}.wm i{color:#19b7ef;font-style:normal}
+.step{position:absolute;left:48px;top:150px;font-size:30px;letter-spacing:.2em;text-transform:uppercase;color:#19b7ef;font-weight:800}
+.lbl{position:absolute;font-size:28px;letter-spacing:.14em;text-transform:uppercase;color:#8aa0b8;font-weight:700}
+.frame{position:absolute;border-radius:0;box-shadow:0 0 0 2px #254054}
+.arrow{position:absolute;left:0;right:0;text-align:center;font-size:54px;color:#53ff88;font-weight:800;line-height:1}
+.cap{position:absolute;left:48px;right:48px;bottom:118px;background:rgba(4,10,20,.92);border:2px solid #254054;border-radius:28px;padding:34px 40px;font-size:44px;line-height:1.36;text-align:center}
+.cap b{color:#7fd8ff}
+.demo{position:absolute;left:0;right:0;bottom:44px;text-align:center;font:600 24px 'DM Mono',monospace;color:#53ff88;opacity:.8}
+.card{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 80px}
+.card .logo{display:flex;align-items:center;gap:26px;font-family:'TackPath Montserrat',sans-serif;letter-spacing:.15em;font-size:78px}
+.card h1{font-size:62px;line-height:1.2;margin:48px 0 0;font-weight:800}
+.card p{font-size:36px;line-height:1.45;color:#a9bdd2;margin:36px 0 0}
+.card .rt{font-size:30px;letter-spacing:.28em;text-transform:uppercase;color:#19b7ef;font-weight:800;margin-bottom:44px}
+.card ul{list-style:none;margin:0;padding:0}.card li{font-size:44px;line-height:1.3;font-weight:600;padding:16px 0 16px 64px;position:relative}
+.card li::before{content:'✓';position:absolute;left:0;color:#53ff88;font-weight:800}
+.card .site{font-size:36px;color:#a9bdd2;margin-top:44px}
+</style></head><body><div id="root"></div>
+<script>
+const LOGO='<svg viewBox="0 0 48 56" width="SZW" height="SZH" fill="none"><defs><linearGradient id="g" x1="8" y1="48" x2="40" y2="5" gradientUnits="userSpaceOnUse"><stop stop-color="#0e7abf"/><stop offset="1" stop-color="#5dd4f4"/></linearGradient></defs><g stroke="url(#g)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 47V34Q7 30 11 26" opacity=".62"/><path d="M21 47V24Q21 20 25 16" opacity=".82"/><path d="M35 47V14Q35 10 39 6"/></g></svg>';
+const logo=(w,h)=>LOGO.replace('SZW',w).replace('SZH',h);
+const wm='<span><b>T Ʌ C K</b> <i>P Ʌ T H</i></span>';
+window.render=function(o){
+  const r=document.getElementById('root'); document.body.className=o.kind==='shot'?'':'solid';
+  const demo='<div class="demo">● DEMO DATA · fictional company · every screen is the real TackPath app</div>';
+  if(o.kind==='title'){r.innerHTML='<div class="card"><div class="logo">'+logo(64,75)+wm+'</div><h1>From the manifest to the doorstep.</h1><p>One courier company’s morning, run end to end by TackPath.</p></div>'+demo;return;}
+  if(o.kind==='recap'){r.innerHTML='<div class="card"><div class="rt">What you just saw</div><ul>'+o.items.map(t=>'<li>'+t+'</li>').join('')+'</ul></div>'+demo;return;}
+  if(o.kind==='close'){r.innerHTML='<div class="card" style="align-items:center;text-align:center"><div class="logo">'+logo(64,75)+wm+'</div><h1 style="font-size:52px">From the manifest to the doorstep.</h1><div class="site">Request a walkthrough · tackpath.com<br><span style="font-size:28px;color:#8aa0b8">The full 4-minute version is best on a computer.</span></div></div>';return;}
+  let h='<div class="top"><div class="wm">'+logo(36,42)+wm+'</div></div><div class="step">'+o.step+'</div>';
+  o.panels.forEach((p,i)=>{const [x,y,w,hh]=p.out;h+='<div class="lbl" style="left:'+x+'px;top:'+(y-44)+'px">'+p.label+'</div><div class="frame" style="left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+hh+'px"></div>';
+    if(i<o.panels.length-1){h+='<div class="arrow" style="top:'+(y+hh+6)+'px">↓</div>';}});
+  h+='<div class="cap">'+o.caption+'</div>'+demo; r.innerHTML=h;
+};
+</script></body></html>
