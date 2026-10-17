@@ -50,6 +50,7 @@
     if (snap) { Object.values(DEV).forEach((el) => { el.style.transition = 'none'; }); }
     Object.keys(DEV).forEach((k) => {
       const el = DEV[k], p = L[k];
+      el.style.clipPath = '';
       if (!p || p[3]) { el.classList.add('off'); return; }
       el.classList.remove('off');
       el.style.transform = 'translate(' + p[0] + 'px,' + p[1] + 'px) scale(' + p[2] + ')';
@@ -59,6 +60,37 @@
     if (snap) { void stage.offsetWidth; if (!document.body.classList.contains('instant')) Object.values(DEV).forEach((el) => { el.style.transition = ''; }); }
   };
   S.dim = (k, on) => DEV[k].classList.toggle('dim', !!on);
+  S.currentLayout = () => current;
+  // Close-up: one device alone, placed so a rectangle of it (device-local CSS px)
+  // fills the frame above the caption. Always instant (used at a cut).
+  const FOCUS = { x: 110, y: 96, w: 1700, h: 790 };
+  S.focus = function (dev, rx, ry, rw, rh) {
+    const k = Math.min(FOCUS.w / rw, FOCUS.h / rh, 3.2);
+    const tx = FOCUS.x + (FOCUS.w - rw * k) / 2 - rx * k, ty = FOCUS.y + (FOCUS.h - rh * k) / 2 - ry * k;
+    Object.values(DEV).forEach((el) => { el.style.transition = 'none'; });
+    Object.keys(DEV).forEach((d) => {
+      const el = DEV[d];
+      if (d !== dev) { el.classList.add('off'); return; }
+      el.classList.remove('off', 'dim');
+      el.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + k + ')';
+      // only the enlarged area shows: clip the device to the rectangle
+      const W = el.offsetWidth, H = el.offsetHeight, rr = Math.round(14 / k);
+      el.style.clipPath = 'inset(' + Math.max(0, ry) + 'px ' + Math.max(0, W - rx - rw) + 'px ' + Math.max(0, H - ry - rh) + 'px ' + Math.max(0, rx) + 'px round ' + rr + 'px)';
+    });
+    current = 'focus:' + dev;
+    void stage.offsetWidth;
+    if (!document.body.classList.contains('instant')) Object.values(DEV).forEach((el) => { el.style.transition = ''; });
+  };
+  // A short text card: one sentence that tells the viewer what to watch for.
+  S.card = function (text) {
+    const c = $('chapter');
+    if (!text) { c.classList.remove('show'); setTimeout(() => c.classList.remove('msg'), rt(900)); return; }
+    c.classList.add('msg'); $('chN').textContent = ''; $('chT').textContent = text; $('chS').textContent = '';
+    c.classList.add('show');
+  };
+  // Sound cues: logged with the on-air clock; the editor turns them into an audio track.
+  root.__SFX_LOG__ = [];
+  S.sfx = function (name) { if (S.quiet || !S.onAir()) return; root.__SFX_LOG__.push({ t: performance.timeOrigin + performance.now(), name }); };
   // instant placement (used while fast-forwarding)
   S.instant = function (on) { document.body.classList.toggle('instant', !!on); Object.values(DEV).forEach((el) => { el.style.transition = on ? 'none' : ''; }); };
 
@@ -73,6 +105,7 @@
   let capTimer = null;
   S.caption = function (html) {
     const c = $('caption');
+    if (html) S.lastCaption = html;
     if (S.quiet) { c.classList.remove('show'); return; }
     clearTimeout(capTimer);
     if (!html) { c.classList.remove('show'); return; }
@@ -119,6 +152,7 @@
   function boxOf(t) { if (t.app) { const el = find(t.app, t.sel); if (!el) return null; const r = stageRect(t.app, el); return { x: r.x - 6, y: r.y - 6, w: r.w + 12, h: r.h + 12 }; } return t; }
   S.link = function (a, b, tagA, tagB, color) {
     S.unlink();
+    S.sfx('tick');
     if (S.quiet) return;
     const A = boxOf(a), B = boxOf(b); if (!A || !B) return;
     const cls = 'hl link' + (color ? ' ' + color : '');
@@ -228,7 +262,7 @@
     n.className = 'notif sms';
     smsUntil = performance.now() + rt(holdMs || 6500) + 500;
     n.innerHTML = '<div class="n-app"><b>●</b> Messages · now</div><div class="n-t">TackPath · +1 (678) 274-5974</div><div class="n-b">' + body + '</div><div class="n-tag">SMS via Twilio · simulated in the demo</div>';
-    n.hidden = false; void n.offsetWidth; n.classList.add('show');
+    n.hidden = false; void n.offsetWidth; n.classList.add('show'); S.sfx('chime');
     clearTimeout(notifT); notifT = setTimeout(() => { n.classList.remove('show'); setTimeout(() => { n.hidden = true; n.className = 'notif'; }, rt(500)); }, rt(holdMs || 6500));
   };
   let speechT = null;

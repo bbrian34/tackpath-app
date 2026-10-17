@@ -283,3 +283,4 @@ body.instant .link-line{animation:none;opacity:1}
 .recap ul{list-style:none;margin:0;padding:0}
 .recap li{font-size:34px;line-height:1.35;color:#eaf4ff;font-weight:600;padding:9px 0 9px 44px;position:relative}
 .recap li::before{content:'✓';position:absolute;left:0;color:#53ff88;font-weight:800}
+.chapter.msg .ch-t{font-size:60px;max-width:1380px;line-height:1.25;margin:0 auto}
