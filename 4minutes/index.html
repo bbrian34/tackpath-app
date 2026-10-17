@@ -28,9 +28,6 @@ footer{width:100%;padding:20px 16px 32px;text-align:center;font-size:14px;color:
 footer a{color:var(--blue);text-decoration:none}
 footer a:hover{text-decoration:underline}
 @media(max-width:600px){main{padding-top:28px}.film{margin-top:20px;border-radius:10px}}
-/* phones: the portrait cut, made for a vertical screen */
-.film.portrait{aspect-ratio:9/16;max-width:min(100%,62vh);margin-left:auto;margin-right:auto}
-.alt{margin-top:14px;font-size:14px;color:var(--muted)}.alt a{color:var(--blue);text-decoration:none}.alt[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -43,20 +40,7 @@ footer a:hover{text-decoration:underline}
       Your browser cannot play this video. <a href="tackpath-demo-4k.mp4">Download it</a>.
     </video>
   </div>
-  <p class="alt" id="alt" hidden>On a phone: the 90-second version. The full 4-minute demo is best on a computer · <a href="#" id="full">play it here anyway</a></p>
 </main>
-<script>
-// Phones get the portrait cut (1080x1920); everyone else the 4K version.
-(function(){
-  var phone=window.matchMedia('(max-width: 700px) and (pointer: coarse)').matches;
-  var v=document.querySelector('video'),f=document.querySelector('.film'),alt=document.getElementById('alt');
-  var rest=document.querySelector('h1 .rest'),h1=document.querySelector('h1');
-  function use(file,portrait){v.querySelector('source').src=file;if(portrait)v.poster='mobile-poster.jpg';else v.removeAttribute('poster');v.load();
-    f.classList.toggle('portrait',portrait);alt.hidden=!portrait;var t=portrait?'in 90 seconds':'in 4 minutes';rest.textContent=t;h1.setAttribute('aria-label','TackPath '+t);v.setAttribute('aria-label','TackPath '+t);}
-  if(phone)use('tackpath-demo-mobile.mp4',true);
-  document.getElementById('full').onclick=function(e){e.preventDefault();use('tackpath-demo-4k.mp4',false);};
-})();
-</script>
 <footer><a href="https://tackpath.com">tackpath.com</a></footer>
 </body>
 </html>
