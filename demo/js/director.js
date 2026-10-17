@@ -258,6 +258,7 @@
     }
     await piqScan(u.code, /FLIPPED BIN/);
     if (opts.narrate) { S.highlight('pathiq', '#scanFlipContainer', 'Put it in BIN ' + b.code, 'green'); }
+    if (opts.afterFlip) await opts.afterFlip();
     await wait(gap);
     if (opts.wrongFirst) {
       const wrong = Object.values(BIN).find((x) => x.code !== b.code && shownBins[x.code]);
@@ -275,6 +276,7 @@
     await until(() => be.T.events.filter((e) => e.event_type === 'package.stowed').length > before, 'stow recorded', 15);
     S.rack.add(b.code);
     if (opts.narrate) S.unhighlight();
+    if (opts.afterStow) await opts.afterStow();
   }
 
   // PathIQ 2026-10: a completed bin is staged by scanning a STG spot QR.
@@ -384,12 +386,11 @@
   const scene = (n, title, run) => SCENES.push({ n, title, run });
   // ── 1. Intake / SmartSort ──
   scene('1', 'SmartSort builds the routes', async () => {
-    S.stage(0); behindCard = 'intake';
+    S.stage(0); behindCard = 'board';
     await opener('Step 1 of 5 · Route Planning', 'SmartSort builds the routes', 'A client’s manifest becomes optimized routes on real road time.');
     setRate(1);
     jumpTo(7, 52);
     S.caption('<b>7:52 AM.</b> A client sends today’s manifest: <b>21 lines</b>, <b>30 packages</b> for <b>17 addresses</b>.');
-    S.manifest(D.manifestCsv());
     await wait(3.6);
     const btn = byText('dispatcher', 'button', /\+ New Route/);
     S.highlight('dispatcher', btn, 'Dispatcher: + New Route');
@@ -419,18 +420,7 @@
     await until(() => !S.find('dispatcher', '#smartSortDrawer').classList.contains('open'), 'SmartSort done', 20);
     pace.smartsort = false;
     S.unhighlight();
-    // close-up: the three routes on the board
-    const rows = Array.prototype.filter.call(W.dispatcher.document.querySelectorAll('tr[onclick*="openDrawer"]'), (r) => /Surge Route/.test(r.textContent));
-    await offAir(async () => {
-      const a = rows[0].getBoundingClientRect(), b = rows[rows.length - 1].getBoundingClientRect();
-      S.focus('desk', a.left - 10, 36 + a.top - 60, 960, b.bottom - a.top + 80); await wait(0.3);
-    });
-    if (rows.length) {
-      const a = S.rectOf('dispatcher', rows[0]), b = S.rectOf('dispatcher', rows[rows.length - 1]);
-      S.highlightBox(a.x - 6, a.y - 6, Math.min(a.w + 12, 1812 - a.x), b.y + b.h - a.y + 12, 'Published · waiting for a driver', 'green');
-    }
-    S.caption('Published to the board as <b>pending</b>. No driver yet.');
-    await wait(3);
+    await wait(0.8);
     S.unhighlight();
   });
 
@@ -464,8 +454,8 @@
   // ── 3. Dispatcher assigns ──
   scene('3', 'Dispatch assigns drivers', async () => {
     S.stage(0); behindCard = 'assign';
-    await opener('Step 1 of 5 · Route Planning', 'Dispatch assigns drivers', 'One click on the board, and the route is on the driver’s phone.');
-    S.caption('Three new routes on the board. On the right, Andre’s phone, signed in and waiting.');
+    await opener('Step 1 of 5 · Route Planning', 'Dispatch puts every route in a driver’s hands', 'Assign a route to a specific driver, or broadcast it to every driver on shift.');
+    S.caption('Andre gets RT-001 by <b>direct assignment</b>. A route can also be <b>broadcast to all drivers</b>.');
     await wait(1.8);
     const r1 = routes()[0];
     const row = 'tr[onclick*="' + r1.id + '"]';
@@ -485,21 +475,33 @@
       sel2.value = who; sel2.dispatchEvent(new W.dispatcher.Event('change', { bubbles: true }));
       await wait(first ? 0.9 : 0.6);
       const assign = byText('dispatcher', '#drawer button', /^Assign$/);
-      S.highlight('dispatcher', assign, first ? 'Assign to ' + who : null);
-      await wait(first ? 0.8 : 0.5);
-      await tap('dispatcher', assign, 0.6);
+      if (first) {
+        const box = S.find('dispatcher', '#assignDriverSelect').closest('.dr-field');
+        await closeup('dispatcher', box, 0, { pad: 14, stay: true, caption: 'Dispatch picks <b>Andre Coleman</b> and taps <b>Assign</b>. <b>Broadcast to All</b> would offer it to every driver.', during: async () => {
+          S.highlight('dispatcher', assign, 'Assign to ' + who); await wait(1.6);
+          await tap('dispatcher', assign, 0.6);
+          await until(() => be.jobById(r.id).status === 'assigned', 'assigned ' + r.title, 10);
+          S.highlight('dispatcher', box, 'Assigned: Andre Coleman', 'green'); await wait(1.6);
+        } });
+      } else {
+        S.highlight('dispatcher', assign, null);
+        await wait(0.5);
+        await tap('dispatcher', assign, 0.6);
+      }
       await until(() => be.jobById(r.id).status === 'assigned', 'assigned ' + r.title, 10);
       if (first) {
         S.unhighlight();
-        S.caption('Assigned. <b>Twilio</b> texts Andre his new route at that moment.');
-        await wait(3.6);
-        await until(() => onScreen('scRouteAccepted'), 'Andre sees his route', 20);
-        await wait(0.6);
+        await closeup('driver', null, 0, { rect: [0, 0, 425, 470], stay: true, caption: 'At that moment, <b>Twilio</b> texts Andre his new route.', during: async () => {
+          await wait(3.4);
+          await until(() => onScreen('scRouteAccepted'), 'Andre sees his route', 20);
+          await wait(0.6);
+        } });
+        await offAir(async () => { S.layout('assign', { instant: true }); await wait(0.3); });
         S.link({ app: 'dispatcher', sel: row + ' td:nth-child(2)' }, { app: 'driver', sel: '#dxDayCard' }, 'Dispatch assigns RT-001', 'Andre’s phone: his route', 'amber');
         S.caption('One click at dispatch, and <b>his</b> route is on his phone: 7 stops, 16 packages. Pickup stays locked: <b>Waiting for warehouse</b>.');
         await wait(4.4);
         S.unlink();
-        await closeup('driver', '#dxDayCard', 3.2, { stay: true, caption: 'On Andre’s phone: <b>7 stops, 16 packages</b>. Pickup stays locked until the warehouse is ready.' });
+        await closeup('driver', '#dxDayCard', 3.2, { stay: true, caption: 'His route: <b>7 stops, 16 packages</b>. Pickup stays locked until the warehouse is ready.' });
       }
     }
     W.dispatcher.closeDrawer();
@@ -546,7 +548,18 @@
       if (k === 5) { if (S.onAir()) await reframe('sort'); else S.layout('sort', { instant: true }); }
       if (k === 4) await card('What happens when a worker scans the wrong bin?');
       if (k === 3) S.caption('PathIQ flips the card to the package’s bin; the bin scan confirms it. Every scan is counted.');
-      await stowUnit(u, gap, { narrate: k === 0, wrongFirst: k === 4 });
+      const detail = k === 3 && u.job === r1 && u.of > 1;
+      await stowUnit(u, gap, { narrate: k === 0, wrongFirst: k === 4,
+        afterFlip: detail ? async () => {
+          await closeup('pathiq', '#scanFlipContainer', 3.6, { pad: 12, stay: true, tag: 'Stop ' + u.stop + ' · package ' + u.unit + ' of ' + u.of, hl: '#flipBinStop', color: 'green',
+            caption: 'PathIQ knows how many packages each stop has: this is <b>package ' + u.unit + ' of ' + u.of + '</b> for stop ' + u.stop + '.' });
+          await offAir(async () => { S.layout('sortzoom', { instant: true }); await wait(0.3); });
+        } : null,
+        afterStow: detail ? async () => {
+          await closeup('pathiq', '#binsPanel', 3.8, { pad: 14, stay: true, hl: '#binsPanel', tag: 'Route progress', color: 'green',
+            caption: 'And it keeps the count for the whole route: <b>' + txt('pathiq', '#binsPanel .bin-progress').replace(/\s*\(.*$/, '') + '</b>. The rest still need a scan before RT-001 is complete.' });
+          await offAir(async () => { S.layout('sortzoom', { instant: true }); await wait(0.3); });
+        } : null });
       if (k === 0) {
         // the first package in RT-001's bin: Andre's phone notices on its own warehouse check
         S.unhighlight();
@@ -583,6 +596,11 @@
     await wait(1.8);
     for (let k = 0; k < SORT.held.length; k++) await stowUnit(SORT.held[k], 1.0, {});
     await until(() => /Bin Complete/.test(txt('pathiq', '#stowResult')), 'RT-001 complete', 10);
+    await closeup('pathiq', '#stowResult', 3.8, { pad: 16, stay: true, tag: 'Bin 1A · 16 of 16', hl: '#stowResult', color: 'green',
+      caption: 'The last package is in: <b>16 of 16</b>. PathIQ marks bin 1A <b>complete</b>.' });
+    await closeup('pathiq', '#scanFlipContainer', 3.8, { pad: 16, stay: true, tag: 'Next: a staging spot', hl: '#scanFlipContainer', color: 'amber',
+      caption: 'PathIQ now asks for a <b>staging spot</b>. The route can’t go to a driver until it’s staged.' });
+    await offAir(async () => { S.layout('ready', { instant: true }); await wait(0.3); });
     await until(() => /stage your route|Waiting for warehouse/i.test(txt('driver', '#dxStage')), 'driver app waits for staging', 20);
     S.unhighlight();
     S.link({ app: 'pathiq', sel: '#stowResult' }, { app: 'driver', sel: '#dxStage' }, 'Zebra: bin 1A complete, 16 of 16', 'Andre’s phone: waiting for staging', 'amber');
@@ -659,7 +677,11 @@
       if (show !== S.onAir()) await air(show);
       await cameraScan(u.code, '#loadPkgLastScan', /LOADED/);
       S.rack.take('1A');
-      if (k === 0) { S.highlight('driver', '#loadPkgOverlay', 'Loaded · stop number shown', 'green'); S.caption('Each scan is counted against the route and shows its stop.'); await wait(1.8); S.unhighlight(); }
+      if (k === 0) {
+        await closeup('driver', '#loadPkgOverlay .tpk-load', 4, { pad: 28, stay: true, hl: '#tpPickCount', tag: 'The van count', color: 'green',
+          caption: 'Each scan is counted against the route: <b>' + txt('driver', '#tpPickCount') + '</b>, with every package still to load listed by stop.' });
+        await offAir(async () => { S.layout('pickup', { instant: true }); await wait(0.3); });
+      }
       if (k < units.length - 1) {
         const ok = await until(() => S.find('driver', '#loadPkgOkBtn'), 'OK button', 10);
         await wait(0.7);
@@ -669,10 +691,11 @@
     await air(true);
     const go = await until(() => { const x = onScreen('scPickup') && S.find('driver', '#tpPickStart'); return x && !x.disabled && x; }, 'Start Route enabled', 15);
     S.rack.picked('1A', 'Andre');
-    S.highlight('driver', go, '16 of 16 loaded', 'green');
+    await closeup('driver', '#scPickup .tpk-foot', 3.4, { pad: 22, stay: true, hl: go, tag: '16 of 16 loaded', color: 'green',
+      caption: '<b>Start Route</b> unlocks only when all <b>16 of 16</b> are on the van.' });
+    await offAir(async () => { S.layout('pickup', { instant: true }); await wait(0.3); });
     S.caption('All 16 loaded. Andre taps <b>Start Route</b>.');
-    await wait(2.2);
-    S.unhighlight();
+    await wait(1.4);
     await tap('driver', go, 0.8);
     await until(() => be.jobById(rs[0].id).status === 'in_transit', 'route in transit', 10);
     // the result at dispatch: RT-001 is on the road
@@ -840,12 +863,19 @@
         S.caption('<b>' + hhmm() + '</b> · Stop ' + (i + 1) + ' of ' + n + ' · ' + st.recipient + ' · <b>delivered</b>');
         await wait(2.6);
         S.unlink();
+        if (i === 3) {
+          await closeup('dispatcher', row().querySelector('td:nth-child(4)'), 3.4, { pad: 24, stay: true, tag: 'RT-001 · live progress', color: 'green',
+            caption: 'At dispatch, RT-001’s progress bar moves with every stop: <b>' + (i + 1) + ' of ' + n + '</b>, and whether it’s on time.' });
+          await offAir(async () => { S.layout('assign', { instant: true }); await wait(0.3); });
+        }
       } else {
         const pk = +job.total_packages || 0;
         S.link({ app: 'driver', sel: '#dxSummary .dx-center' }, { app: 'dispatcher', sel: row() }, 'Andre: route complete', 'Dispatch: RT-001 delivered', 'green');
         S.caption('<b>' + hhmm() + '</b> · Stop ' + n + ' of ' + n + '. Andre’s route is <b>complete</b>: ' + n + ' stops, ' + pk + ' packages, every one with proof.');
         await wait(4.6);
         S.unlink();
+        await closeup('driver', '#dxSummary .dx-sum', 4, { pad: 16, stay: true, caption: 'Andre’s own summary: <b>' + n + ' stops</b> and <b>' + pk + ' packages delivered</b>, no problems, nothing to bring back.' });
+        await offAir(async () => { S.layout('assign', { instant: true }); await wait(0.3); });
       }
     }
     // Priya and Luis finish their routes; the film cuts to the end of the morning
