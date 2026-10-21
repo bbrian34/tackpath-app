@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "npm --prefix ../operations test"
+    "test": "node ../tools/ci/run-tests.mjs all"
   },
   "keywords": [],
   "author": "",

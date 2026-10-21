@@ -1,0 +1,89 @@
+# Release protection: every proposed change runs TackPath's full test suite,
+# one check per workflow area, so a failure names what broke (pickup,
+# delivery, PathIQ, dispatcher, ...). The site deploys from main, so making
+# "All tests passed" a required check on main blocks a broken change from
+# going live. Tests run against a local copy of the database; nothing here
+# touches production.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  areas:
+    name: Every test file is in an area
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/ci/run-tests.mjs --check
+
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { area: driver-pickup, name: 'Driver app: pickup and staging' }
+          - { area: driver-delivery, name: 'Driver app: delivery, scanning and photo proof' }
+          - { area: driver-session, name: 'Driver app: sign-in, routes and maps' }
+          - { area: dispatcher, name: 'Dispatcher' }
+          - { area: pathiq, name: 'PathIQ: sorting, bins and staging' }
+          - { area: route-planning, name: 'Route planning (SmartSort)' }
+          - { area: database, name: 'Database rules and security' }
+          - { area: operations, name: 'Operations backend' }
+          - { area: website, name: 'Website' }
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            tests/package-lock.json
+            operations/package-lock.json
+      - name: Install test dependencies
+        run: |
+          npm ci --prefix tests
+          npm ci --prefix operations
+      - name: Run ${{ matrix.name }} tests
+        run: node tools/ci/run-tests.mjs ${{ matrix.area }}
+      - name: Report the failed workflow
+        if: failure()
+        run: echo "### ❌ ${{ matrix.name }} failed. This change is blocked until these tests pass." >> "$GITHUB_STEP_SUMMARY"
+
+  all-tests-passed:
+    name: All tests passed
+    if: always()
+    needs: [areas, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Release gate
+        run: |
+          if [ "${{ needs.areas.result }}" != "success" ] || [ "${{ needs.test.result }}" != "success" ]; then
+            echo "### ❌ Release blocked: a regression was detected. See the failed checks above for the workflow that broke." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "### ✅ All TackPath tests passed. This change is safe to release." >> "$GITHUB_STEP_SUMMARY"

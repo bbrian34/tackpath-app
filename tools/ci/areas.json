@@ -1,0 +1,12 @@
+{
+  "_comment": "Every test file belongs to exactly one workflow area. CI runs each area as its own check, so a failure names the workflow that broke. tools/ci/run-tests.mjs --check fails if a test file is in no area.",
+  "driver-pickup": { "name": "Driver app: pickup and staging", "dir": "tests", "files": ["driver-pickup-*.test.js", "driver-bin-scan-staging.test.js", "driver-ready-after-staging.test.js", "driver-no-alert-before-staging.test.js", "driver-loading.test.js"] },
+  "driver-delivery": { "name": "Driver app: delivery, scanning and photo proof", "dir": "tests", "files": ["driver-delivery-scan.test.js", "driver-scan-fix.test.js", "driver-camera-size.test.js", "driver-core-flows.test.js", "driver-experience.test.js", "driver.test.js"] },
+  "driver-session": { "name": "Driver app: sign-in, routes and maps", "dir": "tests", "files": ["driver-login-*.test.js", "driver-route*.test.js", "driver-removed-route.test.js", "driver-dirty-state*.test.js", "driver-apk-page-and-voice.test.js"] },
+  "dispatcher": { "name": "Dispatcher", "dir": "tests", "files": ["dispatcher*.test.js", "customer.test.js"] },
+  "pathiq": { "name": "PathIQ: sorting, bins and staging", "dir": "tests", "files": ["stow*.test.js", "security/pathiq-*.test.mjs", "security/staging-*.test.mjs", "security/bins-release-cycle.test.mjs", "security/driver-staging-spot.test.mjs"] },
+  "route-planning": { "name": "Route planning (SmartSort)", "dir": "tests", "files": ["smartsort_integration.test.js"] },
+  "database": { "name": "Database rules and security", "dir": "tests", "files": ["security/cron.test.mjs", "security/driver-archived.test.mjs", "security/edge.test.mjs", "security/gate-archived.test.mjs", "security/job-timestamps.test.mjs", "security/lockdown.test.mjs", "security/pages.test.mjs", "security/publish-gate.test.mjs", "security/rpc.test.mjs"] },
+  "operations": { "name": "Operations backend", "dir": "operations", "files": ["tests/*.test.mjs"] },
+  "website": { "name": "Website", "dir": "tests", "files": ["website-copy.test.js"] }
+}
