@@ -2,7 +2,8 @@
   "name": "tackpath-platform",
   "private": true,
   "scripts": {
-    "setup": "npm --prefix operations ci",
-    "test": "npm --prefix operations test"
+    "setup": "npm --prefix operations ci && npm --prefix tests ci",
+    "test": "node tools/ci/run-tests.mjs all",
+    "test:check": "node tools/ci/run-tests.mjs --check"
   }
 }
