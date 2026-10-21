@@ -1789,7 +1789,7 @@ async function startBarcodeDetector(video){
 }
 async function startZXing(video){
   try{
-    if(!window.ZXing){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+    if(!window.ZXing){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
     const reader=new ZXing.MultiFormatReader();
     const canvas=document.getElementById('scanCanvas');const ctx=canvas.getContext('2d');
     if(barcodeInterval)clearInterval(barcodeInterval);
