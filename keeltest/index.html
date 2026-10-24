@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Keel test lab | TackPath</title>
+<link rel="icon" href="../logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="lab.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="../keel/"><img src="../logo.svg" alt="" width="20" height="24"><span class="wm">T &#581; C K P &#581; T H</span><span class="sep"></span><img class="keel" src="../keel/keel-logo-white.png" alt="Keel" height="20"><b>Test lab</b></a>
+  <div class="status"><span id="stKeel" class="dot">Keel</span><span id="stTp" class="dot">TackPath</span><span id="clock"></span></div>
+  <div class="actions"><button id="guideBtn" class="ghost">Guide</button><button id="resetBtn" class="ghost">Start over</button></div>
+</header>
+
+<div class="shell">
+  <nav class="side" id="side" aria-label="Stations"></nav>
+  <main class="stage" id="stage">
+    <div id="loading" class="loading"><div><div class="spin"></div><b>Starting Keel and TackPath in your browser…</b><span id="loadStep">Loading the Keel server</span></div></div>
+  </main>
+  <aside class="tools" id="tools" aria-label="Scanner and activity">
+    <section class="card" id="scanCard">
+      <h3>Scanner</h3>
+      <p class="muted" id="scanHelp">Pick a station on the left.</p>
+      <form id="scanForm" class="scanrow"><input id="scanInput" placeholder="Type or paste a barcode" autocomplete="off"><button>Scan</button></form>
+      <div id="scanCodes" class="codes"></div>
+    </section>
+    <section class="card" id="logCard">
+      <h3>Keel ↔ TackPath activity</h3>
+      <ol id="log" class="log"></ol>
+    </section>
+  </aside>
+</div>
+
+<div id="guide" class="modal" hidden>
+  <div class="sheet">
+    <button class="x" id="guideClose" aria-label="Close">×</button>
+    <h2>Test the whole operation, start to finish</h2>
+    <p class="muted">Everything runs in this browser tab: the real Keel app and server, and the real TackPath dispatcher, PathIQ and driver app. Nothing is sent anywhere. <b>Start over</b> (or reloading the page) resets everything.</p>
+    <ol class="steps">
+      <li><b>Online store</b>: place a same-day order for a customer.</li>
+      <li><b>Keel manager</b>: watch it arrive and get released to the floor by itself.</li>
+      <li><b>Picker</b>: open the task, scan the bin, scan the item (use the Scanner panel).</li>
+      <li><b>Packer</b>: scan the order number, scan each item, weigh and seal, <b>Print package labels</b>, then <b>Complete packing</b>. Keel sends the delivery to TackPath.</li>
+      <li><b>Dispatcher</b>: the manifest from Keel is waiting. Upload it to SmartSort, then assign the route to a driver.</li>
+      <li><b>PathIQ</b>: scan the Keel package label, open a bin (BIN, then LOC), scan the package again, then stage it (STG).</li>
+      <li><b>Driver app</b>: sign in (phone (404) 555-0161, the code arrives as a text), go to pickup, scan the bin and load the package, start the route, drive, deliver with a photo.</li>
+      <li><b>Keel manager / Bolt portal</b>: the order shows staged, shipped, out for delivery and delivered, with proof.</li>
+    </ol>
+    <p class="muted">Sign-ins are done for you on every Keel station. All Keel passwords: <code id="pwd"></code>. Same-day cutoff in the lab: 11 PM.</p>
+  </div>
+</div>
+<div id="toasts" class="toasts"></div>
+
+<script src="../jsbarcode.min.js"></script>
+<script src="vendor/qrcode.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/map.js"></script>
+<script src="js/backend.js"></script>
+<script src="js/hub.js"></script>
+<script src="js/camera.js"></script>
+<script type="module" src="lab.js"></script>
+</body>
+</html>
