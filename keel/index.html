@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<title>Keel WMS for 3PLs | TackPath</title>
+<title>Keel | One platform to run your 3PL | TackPath</title>
 <meta name="description" content="Keel is a warehouse management system built for 3PLs: multi-client inventory, scan-verified receiving, picking and packing, automated same-day fulfillment, a client portal and client billing.">
 <link rel="icon" href="../logo.svg" type="image/svg+xml">
 <style>
@@ -27,13 +27,14 @@ h2{font-size:clamp(26px,3.2vw,38px)}
 .btn.ghost:hover{border-color:var(--blue)}
 
 /* nav */
-.bar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+.bar{position:sticky;top:0;z-index:20;background:rgba(1,14,33,.94);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
 .bar .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;gap:20px}
 .brand{display:flex;align-items:center;gap:10px}
 .brand img{width:22px;height:26px}
-.wordmark{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;letter-spacing:.06em;font-size:16px;color:#0b1f33;white-space:nowrap}
+.wordmark{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;letter-spacing:.06em;font-size:16px;color:#fff;white-space:nowrap}
 .bar nav{display:flex;align-items:center;gap:28px;font-size:15px}
-.bar nav a{color:var(--muted)}.bar nav a:hover{color:var(--text)}
+.bar nav a{color:#a9bdd0}.bar nav a:hover{color:#fff}
+footer .wordmark{color:#0b1f33}
 .bar .btn{padding:9px 18px;font-size:14px;color:#fff}
 
 /* hero */
@@ -59,6 +60,26 @@ h2{font-size:clamp(26px,3.2vw,38px)}
 .strip div:first-child{border-left:0}
 .strip b{display:block;font-size:17px;margin-bottom:4px}
 .strip span{color:var(--muted);font-size:14px}
+
+
+/* one platform */
+.unified{padding:96px 0;background:#fff}
+.hub{display:grid;grid-template-columns:1fr minmax(260px,320px) 1fr;gap:28px 40px;align-items:center;margin-top:56px}
+.hub .col{display:grid;gap:18px}
+.mod{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;position:relative;box-shadow:0 6px 20px rgba(16,42,72,.06)}
+.mod h4{font-size:16px;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.mod h4 i{width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block}
+.mod p{color:var(--muted);font-size:14px}
+.col.l .mod::after,.col.r .mod::after{content:'';position:absolute;top:50%;width:40px;border-top:2px dashed #b9d6ea}
+.col.l .mod::after{right:-41px}.col.r .mod::after{left:-41px}
+.core{background:#010e21;color:#edf4fb;border-radius:20px;padding:34px 28px;text-align:center;box-shadow:0 24px 60px rgba(1,14,33,.28);position:relative}
+.core img{height:34px;width:auto;margin:0 auto 18px}
+.core b{display:block;font-size:18px;margin-bottom:12px}
+.core ul{list-style:none;display:grid;gap:8px;font-size:14px;color:#a9bdd0}
+.core li::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:8px;vertical-align:middle}
+.hub-note{margin-top:40px;text-align:center;color:var(--muted);font-size:15px}
+@media(max-width:980px){.hub{grid-template-columns:1fr}.core{order:-1}.col.l .mod::after,.col.r .mod::after{display:none}.hub .col{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.hub .col{grid-template-columns:1fr}.unified{padding:64px 0}}
 
 /* features */
 section{padding:96px 0}
@@ -125,15 +146,15 @@ footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
 <body>
 <header class="bar"><div class="wrap">
   <a class="brand" href="../" aria-label="TackPath home"><img src="../logo.svg" alt="" width="22" height="26"><span class="wordmark">T &#581; C K P &#581; T H</span></a>
-  <nav aria-label="Keel"><a href="#platform">Platform</a><a href="#clients">Clients &amp; billing</a><a href="#sameday">Same-day</a><a href="#watch">Watch it work</a><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20demo">Book a demo</a></nav>
+  <nav aria-label="Keel"><a href="#unified">Platform</a><a href="#platform">Warehouse</a><a href="#clients">Clients &amp; billing</a><a href="#sameday">Same-day</a><a href="#watch">Watch it work</a><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20demo">Book a demo</a></nav>
 </div></header>
 
 <main>
   <div class="hero"><div class="wrap">
     <div>
       <img class="mark" src="keel-logo-white.png" alt="Keel" width="1464" height="406">
-      <h1>The warehouse management system built for 3PLs.</h1>
-      <p class="lead">Run every client from one system: receiving, putaway, picking, packing and shipping, a portal for each brand you serve, and billing that captures every billable event as the work happens.</p>
+      <h1>One platform to run your 3PL.</h1>
+      <p class="lead">Keel puts warehouse management, order management, client billing and a client portal in one system, on one inventory ledger. Every client, every order and every charge, in one place.</p>
       <div class="cta"><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20demo">Book a demo</a><a class="btn ghost" href="#watch">Watch Keel work</a></div>
     </div>
     <div class="hero-visual">
@@ -148,8 +169,25 @@ footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
     <div><b>Client billing</b><span>Rate cards per client, invoiced from real events</span></div>
   </div></div>
 
+  <section id="unified" class="unified"><div class="wrap">
+    <div class="center"><div class="eyebrow">One platform</div><h2 style="margin-top:10px">Not a stack of tools. One system.</h2><p class="lead">Most 3PLs stitch a WMS, an order system, spreadsheets for billing and email for clients together. In Keel they are one platform: a scan on the floor updates the client's portal, the bill and the ledger at the same moment.</p></div>
+    <div class="hub">
+      <div class="col l">
+        <div class="mod"><h4><i></i>Warehouse management</h4><p>Receiving, putaway, picking, packing, cycle counts and returns, scan-verified.</p></div>
+        <div class="mod"><h4><i></i>Order management</h4><p>Orders by API, CSV import or the portal, released to the floor by rule.</p></div>
+        <div class="mod"><h4><i></i>Inventory</h4><p>Multi-client stock by bin, pallets and license plates, every movement in the ledger.</p></div>
+      </div>
+      <div class="core"><img src="keel-logo-white.png" alt="Keel" width="1464" height="406"><b>One system of record</b><ul><li>One inventory ledger</li><li>One order, one status everywhere</li><li>Every client's data kept apart</li><li>Every action under a person's name</li></ul></div>
+      <div class="col r">
+        <div class="mod"><h4><i></i>Client billing</h4><p>Rate cards per client, billable events captured as work happens, invoices.</p></div>
+        <div class="mod"><h4><i></i>Client portal</h4><p>Each client sees its own stock, inbound, orders and invoices, live.</p></div>
+        <div class="mod"><h4><i></i>Shipping &amp; same-day</h4><p>Parcel labels, local delivery and automated same-day release.</p></div>
+      </div>
+    </div>
+  </div></section>
+
   <section id="platform"><div class="wrap">
-    <div class="center"><div class="eyebrow">Platform</div><h2 style="margin-top:10px">From the dock to the doorstep, one system.</h2><p class="lead">Keel covers the full warehouse workflow, with accuracy checks at every step so mistakes are caught before they ship.</p></div>
+    <div class="center"><div class="eyebrow">Warehouse</div><h2 style="margin-top:10px">From the dock to the doorstep.</h2><p class="lead">Keel covers the full warehouse workflow, with accuracy checks at every step so mistakes are caught before they ship.</p></div>
 
     <div class="feature">
       <div class="text"><div class="eyebrow">Receiving &amp; putaway</div><h3>Receive exactly what was promised.</h3>
