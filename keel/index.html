@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#010e21">
+<title>Keel | The 3PL warehouse system by TackPath</title>
+<meta name="description" content="Keel is TackPath's warehouse management system for 3PLs: receiving, putaway, picking, packing, same-day delivery, merchant portal and billing, with every scan checked on the server.">
+<link rel="icon" href="../logo.svg" type="image/svg+xml">
+<style>
+@font-face{font-family:'TackPath Montserrat';font-style:normal;font-weight:500;font-display:swap;src:url('../tackpath-montserrat-500.ttf')}
+:root{--navy:#010e21;--panel:#061a33;--blue:#19b7ef;--green:#2fd8a0;--text:#edf4fb;--muted:#9bb2c7;--line:#1d3a55}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+html,body{background:var(--navy);color:var(--text)}
+body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{width:100%;max-width:1160px;margin:0 auto;padding:0 20px}
+/* TackPath bar */
+.bar{position:sticky;top:0;z-index:10;background:rgba(1,14,33,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none!important}
+.brand img{width:24px;height:28px}
+.wordmark{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;letter-spacing:.06em;font-size:17px;color:#fff;white-space:nowrap}
+.bar nav{display:flex;align-items:center;gap:22px;font-size:15px}
+.bar nav a{color:var(--muted)}.bar nav a:hover{color:#fff;text-decoration:none}
+.btn{display:inline-block;background:var(--blue);color:#012!important;font-weight:600;padding:10px 18px;border-radius:999px;text-decoration:none!important}
+.btn.ghost{background:transparent;color:#fff!important;border:1px solid var(--line)}
+/* hero */
+.hero{padding:72px 0 40px;text-align:center}
+.by{font-family:'TackPath Montserrat','Montserrat',sans-serif;letter-spacing:.22em;font-size:13px;color:var(--blue);text-transform:uppercase}
+.hero .logo{width:min(440px,78vw);height:auto;margin:22px auto 10px;display:block}
+.hero h1{font-size:clamp(28px,4.4vw,50px);line-height:1.15;font-weight:700;letter-spacing:-.01em;margin-top:18px}
+.hero p{max-width:760px;margin:18px auto 0;font-size:clamp(16px,2vw,20px);color:var(--muted)}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+/* film */
+.film{margin:44px auto 0;max-width:1060px;aspect-ratio:16/9;background:#000;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.film video{display:block;width:100%;height:100%}
+.cap{text-align:center;color:var(--muted);font-size:14px;margin-top:10px}
+/* sections */
+section{padding:64px 0;border-top:1px solid var(--line)}
+h2{font-size:clamp(24px,3vw,34px);line-height:1.2;text-align:center}
+.sub{text-align:center;color:var(--muted);max-width:720px;margin:12px auto 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:36px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.card h3{font-size:18px;margin-bottom:8px}
+.card p{color:var(--muted);font-size:15px}
+.card .k{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-size:12px;letter-spacing:.16em;color:var(--blue);margin-bottom:10px;text-transform:uppercase}
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:36px}
+.steps li{list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.steps li::before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:rgba(25,183,239,.15);color:var(--blue);font-weight:700;font-size:14px;margin-bottom:10px}
+.steps b{display:block;margin-bottom:4px}.steps span{color:var(--muted);font-size:15px}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 28px;margin-top:32px;max-width:980px;margin-left:auto;margin-right:auto}
+.checks li{list-style:none;padding-left:28px;position:relative;color:var(--text)}
+.checks li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:700}
+.family{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:36px}
+.family .card{text-align:left}
+.note{font-size:14px;color:var(--muted);text-align:center;margin-top:18px}
+.end{text-align:center}
+footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer nav{display:flex;gap:18px;flex-wrap:wrap}
+.btn{white-space:nowrap}
+@media(max-width:760px){.bar nav a:not(.btn){display:none}.bar .btn{padding:7px 12px;font-size:13px}.wordmark{font-size:14px;letter-spacing:.03em}.bar .wrap{gap:10px;padding:0 14px}.hero{padding-top:44px}section{padding:48px 0}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="brand" href="../" aria-label="TackPath home"><img src="../logo.svg" alt="" width="24" height="28"><span class="wordmark">T &#581; C K P &#581; T H</span></a>
+  <nav aria-label="Keel"><a href="#what">What Keel does</a><a href="#how">How it works</a><a href="#sameday">Same-day</a><a href="#merchants">Merchants</a><a href="#tackpath">With TackPath</a><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20walkthrough">Request a walkthrough</a></nav>
+</div></header>
+
+<main id="main">
+  <div class="hero"><div class="wrap">
+    <div class="by">A TackPath product</div>
+    <img class="logo" src="keel-logo.png" alt="Keel" width="1464" height="406">
+    <h1>The warehouse system for 3PLs.</h1>
+    <p>Keel runs a third-party logistics warehouse from the dock to the doorstep: receiving, putaway, picking, packing, same-day delivery, a portal for every merchant you serve, and billing. Every scan is checked on the server before the screen says yes.</p>
+    <div class="cta"><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20walkthrough">Request a walkthrough</a><a class="btn ghost" href="#film">Watch Keel work</a></div>
+  </div></div>
+
+  <div class="wrap" id="film">
+    <div class="film"><video controls playsinline preload="none" poster="keel-film-poster.jpg" aria-label="Watch Keel work"><source src="../watchkeelwork/watch-keel-work-2k-v2.mp4" type="video/mp4">Your browser cannot play this video. <a href="../watchkeelwork/watch-keel-work-2k-v2.mp4">Download it</a>.</video></div>
+    <p class="cap">Watch Keel work: one same-day order, from receiving to proof of delivery. Every Keel screen is the real app on a real Keel server.</p>
+  </div>
+
+  <section id="what"><div class="wrap">
+    <h2>What Keel does</h2>
+    <p class="sub">One system for the warehouse floor, the office and your merchants, built for 3PLs that store and ship for many brands at once.</p>
+    <div class="grid">
+      <div class="card"><div class="k">Receiving</div><h3>Receive by scan</h3><p>Merchants send advance shipment notices. Receivers scan the shipment, the dock and each carton on a Zebra handheld. Over-receipts are refused and nothing is counted, so stock stays exact.</p></div>
+      <div class="card"><div class="k">Putaway</div><h3>From the dock to a shelf</h3><p>Scan a carton and Keel suggests the bin. Scan the bin label to confirm. Stock becomes available to orders only once it is on a shelf.</p></div>
+      <div class="card"><div class="k">Orders</div><h3>Orders from every channel</h3><p>Orders arrive from merchants' online stores through Keel's API with their own keys, from the merchant portal, or entered by staff. Stock is reserved the moment an order is accepted.</p></div>
+      <div class="card"><div class="k">Picking</div><h3>Right bin, right item</h3><p>Pickers get their work on the handheld, in walking order, with same-day orders first. A wrong bin or a wrong item is refused before anything is picked.</p></div>
+      <div class="card"><div class="k">Packing</div><h3>Checked, weighed, sealed</h3><p>Every item is scanned again at the bench. An item that is not in the order is refused. Boxes are weighed and sealed, then labeled or handed to local delivery.</p></div>
+      <div class="card"><div class="k">Inventory</div><h3>A ledger for every unit</h3><p>Every movement is recorded: received, put away, picked, packed, shipped, returned. By whom and when, people and automation alike, and audited against stock on hand.</p></div>
+      <div class="card"><div class="k">Containers</div><h3>Pallets and license plates</h3><p>Move pallets and cartons as one unit with license-plate numbers, or break them down to the each.</p></div>
+      <div class="card"><div class="k">Returns</div><h3>Returns and substitutions</h3><p>Receive returns back into stock or quarantine. Merchants decide whether a picker may substitute an item, and Keel enforces it.</p></div>
+      <div class="card"><div class="k">Billing</div><h3>Bill every merchant correctly</h3><p>Rate cards per merchant for receiving, storage, picks, packing, materials and shipping. Billable events are captured as the work happens and invoiced with taxes and payments.</p></div>
+    </div>
+  </div></section>
+
+  <section id="how"><div class="wrap">
+    <h2>How an order moves through Keel</h2>
+    <p class="sub">The same path the film follows, on real Keel screens.</p>
+    <ol class="steps">
+      <li><b>Receive</b><span>The merchant's ASN meets the truck at the dock. Every carton is scanned in.</span></li>
+      <li><b>Put away</b><span>Keel suggests the bin. A scan confirms it and the stock becomes available.</span></li>
+      <li><b>Order</b><span>A customer checks out on the merchant's store. The order reaches Keel in seconds.</span></li>
+      <li><b>Pick</b><span>The order appears on the picker's handheld. Wrong bins are refused.</span></li>
+      <li><b>Pack</b><span>Every item is scanned again, weighed and sealed. Wrong items are refused.</span></li>
+      <li><b>Ship or deliver</b><span>A parcel label, or a same-day hand-off to local delivery, with no one pressing start.</span></li>
+    </ol>
+  </div></section>
+
+  <section id="sameday"><div class="wrap">
+    <h2>Same-day delivery that runs itself</h2>
+    <p class="sub">Set a cutoff, a delivery-by time and the ZIP codes your vans serve. Keel does the rest.</p>
+    <ul class="checks">
+      <li>Each order is checked against the address and the clock the moment it arrives</li>
+      <li>Accepted same-day orders get a promise, for example delivered by 9 PM</li>
+      <li>Released to the floor automatically, ahead of everything else, with no manager click</li>
+      <li>When the box is sealed, Keel books local delivery by itself</li>
+      <li>Late or out-of-area orders are declined for same-day with the reason, and go out next day</li>
+      <li>Merchants and the warehouse see the same status: packed, shipped, delivered</li>
+    </ul>
+  </div></section>
+
+  <section id="merchants"><div class="wrap">
+    <h2>A portal for every merchant you serve</h2>
+    <p class="sub">Each merchant signs in to its own view and sees only its own data.</p>
+    <div class="grid">
+      <div class="card"><h3>Inbound</h3><p>Create advance shipment notices and follow each receipt to the last unit, with any variance shown.</p></div>
+      <div class="card"><h3>Orders</h3><p>Place orders, or send them from an online store through the API, and follow each one to delivery.</p></div>
+      <div class="card"><h3>Inventory</h3><p>Live stock by product: available, reserved and on the dock, with low-stock alerts.</p></div>
+      <div class="card"><h3>Invoices</h3><p>Every charge, line by line, traced back to the work that earned it.</p></div>
+    </div>
+  </div></section>
+
+  <section id="floor"><div class="wrap">
+    <h2>Built for the floor and the office</h2>
+    <ul class="checks">
+      <li>Zebra handheld scanning with DataWedge: scan, and the screen answers</li>
+      <li>Every scan confirmed on the server, so a dropped connection never fakes a pick</li>
+      <li>Multiple warehouses, zones and bin locations</li>
+      <li>Roles for owners, managers, receivers, pickers, packers and billing</li>
+      <li>Each person signs in as themselves; every action is recorded under their name</li>
+      <li>Invites and password resets by email</li>
+      <li>One merchant's data is never visible to another</li>
+      <li>Operations dashboard with same-day status, open work and alerts</li>
+    </ul>
+  </div></section>
+
+  <section id="tackpath"><div class="wrap">
+    <h2>Part of the TackPath family</h2>
+    <p class="sub">Keel runs the warehouse. PathIQ sorts and stages. TackPath dispatches and delivers.</p>
+    <div class="family">
+      <div class="card"><div class="k">Keel</div><h3>The 3PL warehouse</h3><p>Receiving to packing, merchant portal and billing.</p></div>
+      <div class="card"><div class="k">PathIQ</div><h3>Sort and stage</h3><p>Every package scanned into its route's bin on the Zebra, every bin staged for pickup.</p></div>
+      <div class="card"><div class="k">TackPath</div><h3>Dispatch and delivery</h3><p>Routes, the driver app, live tracking and photo proof at the door.</p></div>
+    </div>
+    <p class="note">Keel's direct hand-off to TackPath delivery is being prepared; in the film it is simulated.</p>
+  </div></section>
+
+  <section class="end"><div class="wrap">
+    <h2>See Keel on your operation</h2>
+    <p class="sub">We'll walk through Keel with your merchants, your bins and your shipping.</p>
+    <div class="cta"><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20walkthrough">Request a walkthrough</a><a class="btn ghost" href="../">Explore TackPath</a></div>
+  </div></section>
+</main>
+
+<footer><div class="wrap">
+  <span>© 2026 TackPath · Atlanta, GA. All rights reserved.</span>
+  <nav aria-label="Footer"><a href="../">TackPath</a><a href="../watchkeelwork/">Watch Keel work</a><a href="../privacy.html">Privacy Policy</a><a href="../terms.html">Terms of Service</a><a href="mailto:hello@tackpath.com">hello@tackpath.com</a></nav>
+</div></footer>
+</body>
+</html>
