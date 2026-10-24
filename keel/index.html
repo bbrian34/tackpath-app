@@ -37,9 +37,12 @@ h2{font-size:clamp(26px,3.2vw,38px)}
 .bar .btn{padding:9px 18px;font-size:14px;color:#fff}
 
 /* hero */
-.hero{padding:76px 0 72px;background:linear-gradient(180deg,#f2f8fd 0%,#ffffff 100%)}
+.hero{padding:72px 0 72px;background:radial-gradient(900px 480px at 80% 15%,rgba(25,183,239,.16),transparent 65%),#010e21;color:#edf4fb}
+.hero .lead{color:#a9bdd0}
+.hero .btn.ghost{background:transparent;color:#fff;border-color:#2c4c6b}
+.hero .shot{border-color:#23415f;box-shadow:0 30px 80px rgba(0,0,0,.5)}
 .hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:56px;align-items:center}
-.hero .mark{height:44px;width:auto;margin-bottom:28px}
+.hero .mark{height:36px;width:auto;margin-bottom:26px}
 .hero h1{font-size:clamp(34px,4.4vw,54px);font-weight:700}
 .hero .lead{margin-top:20px;max-width:540px}
 .hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
@@ -111,7 +114,7 @@ footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
 @media(max-width:680px){
   .bar nav a:not(.btn){display:none}
   .wrap{padding:0 18px}
-  .hero{padding:44px 0 60px}.hero .mark{height:34px;margin-bottom:22px}
+  .hero{padding:44px 0 60px}.hero .mark{height:30px;margin-bottom:22px}
   section{padding:64px 0}.feature{margin-top:56px}
   .cards{grid-template-columns:1fr}
   .flow{grid-template-columns:1fr 1fr}.flow div{border-left:0}.flow div:nth-child(even){border-left:1px solid var(--line)}.flow div:nth-child(n+3){border-top:1px solid var(--line)}
@@ -128,7 +131,7 @@ footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
 <main>
   <div class="hero"><div class="wrap">
     <div>
-      <img class="mark" src="keel-logo.png" alt="Keel" width="1464" height="406">
+      <img class="mark" src="keel-logo-white.png" alt="Keel" width="1464" height="406">
       <h1>The warehouse management system built for 3PLs.</h1>
       <p class="lead">Run every client from one system: receiving, putaway, picking, packing and shipping, a portal for each brand you serve, and billing that captures every billable event as the work happens.</p>
       <div class="cta"><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20demo">Book a demo</a><a class="btn ghost" href="#watch">Watch Keel work</a></div>
