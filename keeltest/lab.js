@@ -407,6 +407,11 @@ async function boot() {
   if (!sessionStorage.getItem('keellab.guide')) { $('guide').hidden = false; sessionStorage.setItem('keellab.guide', '1'); }
 }
 $('guideBtn').onclick = () => { $('guide').hidden = false; };
-$('guideClose').onclick = () => { $('guide').hidden = true; };
+$('toolsBtn').onclick = () => $('tools').classList.toggle('show');
+$('toolsClose').onclick = () => $('tools').classList.remove('show');
+const closeGuide = () => { $('guide').hidden = true; };
+$('guideClose').onclick = closeGuide; $('guideOk').onclick = closeGuide;
+$('guide').addEventListener('click', (e) => { if (e.target === $('guide')) closeGuide(); });
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGuide(); });
 $('resetBtn').onclick = () => { if (confirm('Start over? Every order and scan in this lab is cleared.')) location.reload(); };
 boot().catch((e) => { console.error(e); $('loadStep').textContent = 'Could not start: ' + e.message; });

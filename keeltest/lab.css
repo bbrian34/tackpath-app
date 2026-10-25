@@ -72,10 +72,30 @@ code{background:#eef3f8;padding:1px 6px;border-radius:5px}
 .modal[hidden]{display:none}
 .sheet{background:#fff;border-radius:14px;max-width:680px;width:100%;max-height:90vh;overflow:auto;padding:22px 24px;position:relative}
 .sheet h2{margin:0 0 8px;font-size:20px}
-.sheet .x{position:absolute;right:12px;top:10px;background:transparent;color:var(--muted);font-size:22px;border:0}
+.sheet .x{position:absolute;right:8px;top:8px;width:44px;height:44px;background:#eef3f8;color:var(--ink);font-size:26px;line-height:1;border:0;border-radius:50%;padding:0}
+.sheet h2{padding-right:52px}
+.gotit{width:100%;padding:12px;font-size:15px}
 .steps{padding-left:20px}.steps li{margin:7px 0}
 .toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:30;max-width:380px}
 .toast{background:var(--navy);color:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:13px}
 .toast b{color:#9fd9f5}
 @media(max-width:1100px){.shell{grid-template-columns:190px minmax(0,1fr)}.tools{display:none}.tools.show{display:flex;position:fixed;right:0;top:52px;bottom:0;width:330px;z-index:10;box-shadow:-10px 0 30px rgba(0,0,0,.15)}}
 @media(max-width:760px){.shell{grid-template-columns:1fr}.side{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px}.side h4{display:none}.side button{white-space:nowrap;width:auto}.shell{grid-template-rows:auto 1fr}.status{display:none}}
+/* phones: nothing wider than the screen */
+html,body{max-width:100%;overflow-x:hidden}
+.store select,.store input{width:100%;max-width:100%}
+.store .lines .ln{grid-template-columns:minmax(0,1fr) 64px 36px}
+@media(max-width:760px){
+  .top{padding:0 10px;gap:8px}
+  .brand .wm,.brand .sep{display:none}
+  .brand .keel{height:18px}
+  .actions button{padding:6px 9px;font-size:13px}
+  .store{padding:12px}
+  .store .grid{grid-template-columns:1fr}
+  .sheet{padding:18px 16px}
+  .view .bar{padding:8px 12px}
+}
+#toolsBtn,.closer{display:none}
+.card h3{display:flex;align-items:center;justify-content:space-between}
+@media(max-width:1100px){#toolsBtn{display:inline-block}.tools.show .closer{display:inline-block;padding:4px 10px;font-size:12px}}
+@media(max-width:760px){.tools.show{width:100%;left:0}}

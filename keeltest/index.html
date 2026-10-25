@@ -12,7 +12,7 @@
 <header class="top">
   <a class="brand" href="../keel/"><img src="../logo.svg" alt="" width="20" height="24"><span class="wm">T &#581; C K P &#581; T H</span><span class="sep"></span><img class="keel" src="../keel/keel-logo-white.png" alt="Keel" height="20"><b>Test lab</b></a>
   <div class="status"><span id="stKeel" class="dot">Keel</span><span id="stTp" class="dot">TackPath</span><span id="clock"></span></div>
-  <div class="actions"><button id="guideBtn" class="ghost">Guide</button><button id="resetBtn" class="ghost">Start over</button></div>
+  <div class="actions"><button id="toolsBtn" class="ghost">Scanner</button><button id="guideBtn" class="ghost">Guide</button><button id="resetBtn" class="ghost">Start over</button></div>
 </header>
 
 <div class="shell">
@@ -22,7 +22,7 @@
   </main>
   <aside class="tools" id="tools" aria-label="Scanner and activity">
     <section class="card" id="scanCard">
-      <h3>Scanner</h3>
+      <h3>Scanner <button id="toolsClose" class="lite closer" aria-label="Close scanner">Close</button></h3>
       <p class="muted" id="scanHelp">Pick a station on the left.</p>
       <form id="scanForm" class="scanrow"><input id="scanInput" placeholder="Type or paste a barcode" autocomplete="off"><button>Scan</button></form>
       <div id="scanCodes" class="codes"></div>
@@ -50,6 +50,7 @@
       <li><b>Keel manager / Bolt portal</b>: the order shows staged, shipped, out for delivery and delivered, with proof.</li>
     </ol>
     <p class="muted">Sign-ins are done for you on every Keel station. All Keel passwords: <code id="pwd"></code>. Same-day cutoff in the lab: 11 PM.</p>
+    <p><button id="guideOk" class="gotit">Got it, start testing</button></p>
   </div>
 </div>
 <div id="toasts" class="toasts"></div>
