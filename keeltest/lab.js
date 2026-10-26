@@ -294,7 +294,7 @@ async function refreshCodes() {
   if (current === 'receiver') {
     const asn = await sql(`select reference from keel.inbound_shipments where status in ('open','receiving') order by created_at`).catch(() => []);
     html = group('Shipments', asn.map((a) => btn(a.reference, 'ASN'))) + group('Docks', [btn('LOC:DOCK-1', 'dock 1'), btn('LOC:DOCK-2', 'dock 2')]) + group('Cartons (product barcodes)', items)
-      + group('Bin labels', ['A-01-04', 'A-01-05', 'A-03-01', 'A-03-02', 'B-01-01'].map((b) => btn('LOC:' + b, 'bin')));
+      + group('Bin labels', ['A-01-04', 'A-01-05', 'A-01-06', 'A-02-03', 'A-03-01', 'A-03-02', 'B-01-01'].map((b) => btn('LOC:' + b, 'bin')));
     help.textContent = 'Click a code to scan it into the handheld. Typing in the handheld works too.';
   } else if (current === 'picker') {
     const t = await sql(`select l.code, p.sku, o.number from keel.pick_tasks t join keel.locations l on l.id = t.location_id join keel.products p on p.id = t.product_id join keel.orders o on o.id = t.order_id where t.status = 'open' order by t.sequence limit 12`).catch(() => []);
