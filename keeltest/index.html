@@ -43,8 +43,8 @@
       <li><b>Online store</b>: place a same-day order for a customer.</li>
       <li><b>Keel manager</b>: watch it arrive and get released to the floor by itself.</li>
       <li><b>Picker</b>: open the task, scan the bin, scan the item (use the Scanner panel).</li>
-      <li><b>Packer</b>: scan the order number, scan each item, weigh and seal, <b>Print package labels</b>, then <b>Complete packing</b>. Keel sends the delivery to TackPath.</li>
-      <li><b>Dispatcher</b>: the manifest from Keel is waiting. Upload it to SmartSort, then assign the route to a driver.</li>
+      <li><b>Packer</b>: scan the order number, scan each item, weigh and seal, <b>Print package labels</b>, then <b>Complete packing</b>. Keel releases the delivery and writes its SmartSort file.</li>
+      <li><b>Dispatcher</b>: Keel's SmartSort file is waiting. Upload it to SmartSort, then assign the route to a driver. Keel follows the route by reading TackPath, and never writes to it.</li>
       <li><b>PathIQ</b>: scan the Keel package label, open a bin (BIN, then LOC), scan the package again, then stage it (STG).</li>
       <li><b>Driver app</b>: sign in (phone (404) 555-0161, the code arrives as a text), go to pickup, scan the bin and load the package, start the route, drive, deliver with a photo.</li>
       <li><b>Keel manager / Bolt portal</b>: the order shows staged, shipped, out for delivery and delivered, with proof.</li>
