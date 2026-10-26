@@ -27,6 +27,7 @@ const STATIONS = [
   { id: 'receiver', label: 'Receiving', kind: 'keel', path: '/scan', email: 'receiver@harbor.test', device: 'tc', sub: 'handheld' },
   { id: 'picker', label: 'Picker', kind: 'keel', path: '/scan/pick', email: 'picker@harbor.test', device: 'tc', sub: 'handheld' },
   { id: 'packer', label: 'Packer', kind: 'keel', path: '/pack', email: 'packer@harbor.test', sub: 'pack station' },
+  { id: 'billing', label: 'Billing', kind: 'keel', path: '/billing', email: 'billing@harbor.test', sub: 'invoices' },
   { id: 'merchant', label: 'Bolt portal', kind: 'keel', path: '/m', email: 'ops@bolt.test', sub: 'the merchant' },
   { group: 'TackPath delivery' },
   { id: 'dispatcher', label: 'Dispatcher', kind: 'tp', app: 'dispatcher', sub: 'desktop' },
@@ -313,10 +314,10 @@ async function refreshCodes() {
     html = group('Hold to the phone camera: bins', ['1A', '2A', '3A'].map((b) => btn('BIN:' + b, 'bin QR'))) + group('Package labels', codes.map((c) => btn(c, 'package')))
       + group('Delivery photo', [`<button data-door="1"><b>Front door</b><span>for the photo</span></button>`]);
     help.textContent = 'The driver app uses the phone camera. Click a code to hold it in front of the camera while the scanner is open.';
-  } else if (current === 'manager' || current === 'merchant') {
+  } else if (current === 'manager' || current === 'merchant' || current === 'billing') {
     html = ''; help.textContent = 'No scanning on this screen.';
   } else if (current === 'dispatcher') {
-    html = ''; help.textContent = 'Dispatcher: upload the Keel manifest above to SmartSort, then open the route and assign a driver.';
+    html = ''; help.textContent = 'Dispatcher: upload Keel\'s SmartSort file above, then open the route and assign a driver.';
   } else { html = ''; help.textContent = 'Place an order here; then follow it through the stations.'; }
   el.innerHTML = html;
 }
