@@ -3,13 +3,15 @@
 //    and the real Keel web app in one iframe per station.
 //  - TackPath: the real dispatcher, PathIQ and driver app on TackPath's
 //    in-browser demo backend (js/hub.js, js/backend.js, js/adapter.js).
-//  - The bridge: Keel's real TackPath connection (ops-api: login, manifest,
-//    state) answered from what the TackPath apps record.
+//  - The bridge: Keel's real TackPath dispatcher connection. Keel signs in
+//    like the dispatcher and reads jobs, PathIQ stows and driver messages;
+//    the bridge answers those calls from the TackPath demo backend's own
+//    tp_org_sign_in and tp_org. The dispatcher uploads Keel's SmartSort file.
 import { startBackend } from './keel-backend.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const OPS = 'https://tackpath-lab.invalid/functions/v1/ops-api';
+const TP_RPC = 'https://tackpath-lab.invalid/rest/v1/rpc/';
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const fmtT = (d = new Date()) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
 
@@ -37,7 +39,7 @@ let current = null;
 // ───────────────────────── Keel ─────────────────────────
 const storages = {};
 let be = null, META = null;
-const inbox = [];      // manifests Keel sent to TackPath
+const inbox = [];      // Keel's SmartSort files waiting for the dispatcher
 window.KEEL_LAB = {
   storage: (st) => storages[st] || (storages[st] = {}),
   startPath: (st) => byId[st]?.path || '/',
@@ -103,7 +105,7 @@ function bootTackPath() {
   return { base, driverBase: new URL('vendor/', location.href).href };
 }
 
-// ───────────────────────── the bridge (TackPath ops-api) ─────────────────────────
+// ───────────────────────── the bridge (TackPath dispatcher RPC) ─────────────────────────
 function parseCsv(text) {
   const rows = []; let row = [], cell = '', q = false;
   for (let i = 0; i < text.length; i++) {
@@ -114,67 +116,46 @@ function parseCsv(text) {
   if (cell || row.length) { row.push(cell); rows.push(row); }
   const head = rows.shift() || []; return rows.filter((r) => r.length > 1).map((r) => Object.fromEntries(head.map((h, i) => [h, r[i]])));
 }
-const csvCell = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-/** Keel's manifest, as the CSV a dispatcher uploads to SmartSort: one line per Keel box, its label barcode as the tracking number. */
-function dispatcherCsv(rows) {
-  const out = ['order_id,recipient,address,packages,tracking_number,unit,delivery_notes'];
-  for (const r of rows) for (const code of String(r.piece_tracking || r.tracking_number).split(';').filter(Boolean)) {
-    const m = /^(.*?)(\s+(?:apt|suite|ste|unit|#)\s*\S+)$/i.exec(r.address || '');
-    out.push([r.order_id, r.recipient, `${m ? m[1] : r.address}, ${r.city}, ${r.state} ${r.zip}`, 1, code, m ? m[2].trim() : '', 'Keel order, same-day'].map(csvCell).join(','));
-  }
-  return out.join('\n') + '\n';
-}
-function opsState() {
-  const T = tpBe.T, packages = [], bins = [], deliveries = [];
-  const delivered = new Map();   // job id -> Set(stop numbers)
-  T.messages.forEach((m) => { if (/^STOP_DELIVERED::/.test(m.body)) { try { const x = JSON.parse(m.body.slice(16)); (delivered.get(String(m.job_id)) || delivered.set(String(m.job_id), new Set()).get(String(m.job_id))).add(x.stop_number); } catch (e) {} } });
-  for (const mf of inbox) for (const code of mf.codes) {
-    let job = null, stopNo = 0;
-    for (const j of T.jobs) (j.surge_stops || []).forEach((s, i) => (s.pkgs || [{ tracking_number: s.tracking_number }]).forEach((p) => { if (String(p.tracking_number || '').toUpperCase() === code.toUpperCase()) { job = j; stopNo = i + 1; } }));
-    const stowed = T.events.some((e) => e.event_type === 'package.stowed' && String((e.payload || {}).code || '').toUpperCase() === code.toUpperCase());
-    const binding = job && T.bin_bindings.filter((b) => String(b.job_id) === String(job.id)).pop();
-    const binId = stowed && binding ? 'BIN-' + binding.bin_code : null;
-    if (binId && !bins.some((b) => b.id === binId)) bins.push({ id: binId, label: `BIN ${binding.bin_code}${binding.stg_code ? ' · ' + binding.stg_code : binding.location_code ? ' · ' + binding.location_code : ''}` });
-    let state = 'awaiting_processing';
-    const stopId = job ? `${job.id}:${stopNo}` : null;
-    if (job && delivered.get(String(job.id))?.has(stopNo)) {
-      state = 'delivered';
-      const pod = [...tpBe.podFiles.keys()].find((k) => k.startsWith(job.id + '/stop-' + stopNo + '-'));
-      if (!deliveries.some((d) => d.stop_id === stopId)) deliveries.push({ id: 'tp-dlv-' + stopId, stop_id: stopId, proof_id: pod || null, recipient: (job.surge_stops[stopNo - 1] || {}).recipient });
-    } else if (job && (job.status === 'in_transit' || job.picked_up_at)) state = 'out_for_delivery';
-    else if (stowed) state = 'stowed';
-    else if (job) state = 'routed';
-    packages.push({ tracking_number: code, state, bin_id: binId, stop_id: stopId, driver_id: job?.driver_name || null, exception_code: job ? null : 'awaiting_processing' });
-  }
-  return { packages, bins, deliveries };
-}
 const realFetch = window.fetch.bind(window);
+let rpcSeen = 0;
 window.fetch = async (input, init) => {
   const url = String(input instanceof Request ? input.url : input);
-  if (!url.startsWith(OPS)) return realFetch(input, init);
-  const body = JSON.parse(init?.body || '{}');
+  if (!url.startsWith(TP_RPC)) return realFetch(input, init);
+  const fn = url.slice(TP_RPC.length), body = JSON.parse(init?.body || '{}');
   const reply = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json' } });
-  if (body.action === 'login') return reply({ token: 'lab-session' });
-  if (body.action === 'manifest') {
-    const prev = inbox.find((m) => m.external_id === body.external_id);
-    if (prev) return reply({ manifest_id: prev.id });
-    const rows = parseCsv(body.text || '');
-    const codes = rows.flatMap((r) => String(r.piece_tracking || r.tracking_number).split(';').filter(Boolean));
-    const mf = { id: 'MF-' + (inbox.length + 1001), external_id: body.external_id, rows, codes, csv: dispatcherCsv(rows), at: new Date(), uploaded: false };
-    inbox.push(mf);
-    log(`<b>Keel → TackPath</b>: manifest ${esc(mf.id)} for ${esc(rows.map((r) => r.order_id).join(', '))} · ${codes.length} package${codes.length === 1 ? '' : 's'} (${esc(codes.join(', '))})`, 'k');
-    toast(`<b>Keel sent a delivery to TackPath.</b> Open the Dispatcher to route it.`);
-    renderInbox(); renderSide(); refreshCodes();
-    return reply({ manifest_id: mf.id });
-  }
-  if (body.action === 'state') return reply(opsState());
-  return reply({ error: 'unknown action' }, 400);
+  if (fn !== 'tp_org_sign_in' && fn !== 'tp_org') return reply({ message: 'not available to Keel' }, 404);
+  if (fn === 'tp_org' && !['jobs', 'events', 'messages'].includes(body.p_action)) return reply({ message: 'Keel only reads' }, 403);
+  try {
+    const out = tpBe.rpc(fn, body);
+    if (fn === 'tp_org_sign_in') log(`<b>Keel → TackPath</b>: signed in to ${esc(body.p_slug)} (read-only)`, 'k');
+    else if (!rpcSeen++) log('<b>Keel → TackPath</b>: reading routes, PathIQ stows and driver updates', 'k');
+    return reply(out);
+  } catch (e) { return reply({ message: String(e.message || e) }, 400); }
 };
+// Keel's released same-day deliveries: the SmartSort file the manager downloads in Keel, ready for the dispatcher
+let mgrToken = null;
+async function collectSmartSortFiles() {
+  const ds = await sql(`select d.id, o.number from keel.local_delivery_dispatches d join keel.orders o on o.id = d.order_id
+                        join keel.integrations i on i.id = d.integration_id where i.config->>'transport' = 'tackpath_org' and d.status <> 'pending_release' order by d.created_at`);
+  for (const d of ds) {
+    if (inbox.some((m) => m.dispatch === d.id)) continue;
+    mgrToken = mgrToken || (await keelCall('POST', '/api/auth/login', { email: 'manager@harbor.test', password: META.password })).token;
+    const r = await be.fetch(new Request(`https://keel.lab/api/t/${META.tenant}/local-delivery/dispatches/${d.id}/smartsort.csv`, { headers: { Authorization: 'Bearer ' + mgrToken } }));
+    if (r.status === 401) { mgrToken = null; continue; }
+    if (!r.ok) { console.warn('smartsort', r.status, await r.text()); continue; }
+    const csv = await r.text(), rows = parseCsv(csv);
+    const mf = { id: d.number, dispatch: d.id, rows, codes: rows.map((x) => x.tracking_number), csv, at: new Date(), uploaded: false };
+    inbox.push(mf);
+    log(`<b>Keel</b>: SmartSort file for ${esc(d.number)} · ${mf.codes.length} package${mf.codes.length === 1 ? '' : 's'} (${esc(mf.codes.join(', '))})`, 'k');
+    toast(`<b>Keel released ${esc(d.number)} for same-day delivery.</b> Its SmartSort file is waiting in the Dispatcher.`);
+    renderInbox(); renderSide(); refreshCodes();
+  }
+}
 async function pollNow() {
   if (!be || !inbox.length) return;
   try {
     await be.db.query(`select keel.enqueue(i.tenant_id, 'tackpath.poll', jsonb_build_object('integration_id', i.id), 'tplab:' || $1) from keel.integrations i
-                       where i.provider = 'tackpath_delivery' and i.status = 'connected'`, [String(Date.now())]);
+                       where i.provider = 'tackpath_delivery' and i.status = 'connected' and i.config->>'transport' = 'tackpath_org'`, [String(Date.now())]);
   } catch (e) { console.warn(e); }
 }
 // Keel's side of the story, from its own delivery events
@@ -287,7 +268,7 @@ async function refreshProducts() { products = await sql(`select p.sku, p.name, c
 // ───────────────────────── dispatcher inbox ─────────────────────────
 function renderInbox() {
   const el = $('inbox'); if (!el) return;
-  el.innerHTML = inbox.slice().reverse().map((m) => `<div class="inbox ${m.uploaded ? 'done' : ''}"><div><b>Manifest from Keel · ${esc(m.id)}</b><div class="muted">${esc(m.rows.map((r) => r.order_id + ' · ' + r.recipient).join('; '))} · ${m.codes.length} package(s): ${esc(m.codes.join(', '))}</div></div>
+  el.innerHTML = inbox.slice().reverse().map((m) => `<div class="inbox ${m.uploaded ? 'done' : ''}"><div><b>SmartSort file from Keel · ${esc(m.id)}</b><div class="muted">${esc(m.rows.map((r) => r.order_id + ' · ' + r.recipient).join('; '))} · ${m.codes.length} package(s): ${esc(m.codes.join(', '))}</div></div>
     ${m.uploaded ? '<span class="pill ok">Uploaded to SmartSort</span>' : `<button data-mf="${m.id}">Upload to SmartSort</button>`}</div>`).join('');
 }
 document.addEventListener('click', async (e) => {
@@ -402,7 +383,7 @@ async function boot() {
   renderSide(); show('store');
   $('loading').remove();
   log('Lab ready. Place an order in the Online store to begin.', '');
-  setInterval(() => { watchKeel(); if (current === 'store') renderStoreOrders(); }, 2500);
+  setInterval(() => { watchKeel(); collectSmartSortFiles().catch((e) => console.warn(e)); if (current === 'store') renderStoreOrders(); }, 2500);
   setInterval(() => { $('clock').textContent = fmtT(); }, 1000);
   if (!sessionStorage.getItem('keellab.guide')) { $('guide').hidden = false; sessionStorage.setItem('keellab.guide', '1'); }
 }
