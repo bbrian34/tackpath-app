@@ -141,6 +141,19 @@ footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
   .flow{grid-template-columns:1fr 1fr}.flow div{border-left:0}.flow div:nth-child(even){border-left:1px solid var(--line)}.flow div:nth-child(n+3){border-top:1px solid var(--line)}
   .strip div{padding:20px 14px}
 }
+.now{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:14px auto 0;max-width:1080px;font-size:15px;color:var(--muted)}
+.now span{color:var(--text);font-weight:600}
+.clips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin:28px auto 0;max-width:1080px}
+.clip{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;border-radius:12px;padding:8px;transition:background .15s}
+.clip:hover,.clip:focus-visible{background:#fff;box-shadow:0 6px 20px rgba(16,42,72,.08)}
+.clip:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.clip .thumb{position:relative;display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/9;background:#030a16}
+.clip img{width:100%;height:100%;object-fit:cover;display:block}
+.clip em{position:absolute;right:6px;bottom:6px;font-style:normal;font-size:12px;font-weight:600;color:#fff;background:rgba(3,10,22,.78);border-radius:4px;padding:1px 6px}
+.clip small{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-top:4px}
+.clip b{font-size:15px;line-height:1.3;color:var(--text)}
+.clip.on .thumb{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue)}
+@media(max-width:860px){.clips{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
 </style>
 </head>
 <body>
@@ -247,8 +260,10 @@ footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
   </div></section>
 
   <section id="watch" class="alt"><div class="wrap">
-    <div class="center"><div class="eyebrow">Watch it work</div><h2 style="margin-top:10px">One order, receiving to proof of delivery.</h2><p class="lead">Every Keel screen in the film is the real application on a real Keel server.</p></div>
-    <div class="film"><video controls playsinline preload="none" poster="keel-film-poster.jpg" aria-label="Watch Keel work"><source src="../watchkeelwork/watch-keel-work-2k-v2.mp4" type="video/mp4"></video></div>
+    <div class="center"><div class="eyebrow">Watch it work</div><h2 style="margin-top:10px">One order, receiving to proof of delivery, in eight short clips.</h2><p class="lead">About a minute each, narrated. Every Keel screen is the real application on a real Keel server.</p></div>
+    <div class="film"><video id="clipPlayer" controls playsinline preload="none" poster="clips/keel-1-receiving.jpg" aria-label="Every carton counted"><source src="clips/keel-1-receiving.mp4" type="video/mp4"></video></div>
+    <div class="now"><span id="clipNow">01 · Every carton counted</span><a href="../watchkeelwork/">Watch the full film (7 min)</a></div>
+    <div class="clips" role="list"><button class="clip on" data-src="clips/keel-1-receiving.mp4" data-poster="clips/keel-1-receiving.jpg" data-title="Every carton counted"><span class="thumb"><img src="clips/keel-1-receiving.jpg" alt="" loading="lazy" width="960" height="540"><em>1:08</em></span><small>01 · Receiving</small><b>Every carton counted</b></button><button class="clip" data-src="clips/keel-2-putaway.mp4" data-poster="clips/keel-2-putaway.jpg" data-title="From the dock to a shelf"><span class="thumb"><img src="clips/keel-2-putaway.jpg" alt="" loading="lazy" width="960" height="540"><em>0:39</em></span><small>02 · Putaway</small><b>From the dock to a shelf</b></button><button class="clip" data-src="clips/keel-3-same-day-order.mp4" data-poster="clips/keel-3-same-day-order.jpg" data-title="A same-day order arrives"><span class="thumb"><img src="clips/keel-3-same-day-order.jpg" alt="" loading="lazy" width="960" height="540"><em>0:36</em></span><small>03 · Order</small><b>A same-day order arrives</b></button><button class="clip" data-src="clips/keel-4-picking.mp4" data-poster="clips/keel-4-picking.jpg" data-title="Scan-checked picking"><span class="thumb"><img src="clips/keel-4-picking.jpg" alt="" loading="lazy" width="960" height="540"><em>0:48</em></span><small>04 · Picking</small><b>Scan-checked picking</b></button><button class="clip" data-src="clips/keel-5-packing.mp4" data-poster="clips/keel-5-packing.jpg" data-title="Checked, weighed, sealed"><span class="thumb"><img src="clips/keel-5-packing.jpg" alt="" loading="lazy" width="960" height="540"><em>0:45</em></span><small>05 · Packing</small><b>Checked, weighed, sealed</b></button><button class="clip" data-src="clips/keel-6-pathiq-sort-stage.mp4" data-poster="clips/keel-6-pathiq-sort-stage.jpg" data-title="PathIQ sorts and stages"><span class="thumb"><img src="clips/keel-6-pathiq-sort-stage.jpg" alt="" loading="lazy" width="960" height="540"><em>1:08</em></span><small>06 · Sort</small><b>PathIQ sorts and stages</b></button><button class="clip" data-src="clips/keel-7-driver-pickup.mp4" data-poster="clips/keel-7-driver-pickup.jpg" data-title="The right bin, every time"><span class="thumb"><img src="clips/keel-7-driver-pickup.jpg" alt="" loading="lazy" width="960" height="540"><em>0:55</em></span><small>07 · Pickup</small><b>The right bin, every time</b></button><button class="clip" data-src="clips/keel-8-delivery-proof.mp4" data-poster="clips/keel-8-delivery-proof.jpg" data-title="To the door, with proof"><span class="thumb"><img src="clips/keel-8-delivery-proof.jpg" alt="" loading="lazy" width="960" height="540"><em>1:35</em></span><small>08 · Delivery</small><b>To the door, with proof</b></button></div>
   </div></section>
 
   <section class="final"><div class="wrap">
@@ -262,5 +277,12 @@ footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
   <nav aria-label="Footer"><a href="../">TackPath</a><a href="../watchkeelwork/">Watch Keel work</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a><a href="mailto:hello@tackpath.com">hello@tackpath.com</a></nav>
   <span>© 2026 TackPath · Atlanta, GA</span>
 </div></footer>
+<script>
+(function(){var v=document.getElementById('clipPlayer'),now=document.getElementById('clipNow'),cs=[].slice.call(document.querySelectorAll('.clip'));
+function pick(c,play){cs.forEach(function(x){x.classList.toggle('on',x===c)});v.poster=c.dataset.poster;v.src=c.dataset.src;v.setAttribute('aria-label',c.dataset.title);
+now.textContent=c.querySelector('small').textContent.split(' · ')[0]+' · '+c.dataset.title;if(play){var p=v.play();if(p&&p.catch)p.catch(function(){});}}
+cs.forEach(function(c){c.addEventListener('click',function(){pick(c,true);v.scrollIntoView({behavior:'smooth',block:'center'})})});
+v.addEventListener('ended',function(){var i=cs.findIndex(function(x){return x.classList.contains('on')});if(i>-1&&i<cs.length-1)pick(cs[i+1],true)});})();
+</script>
 </body>
 </html>
