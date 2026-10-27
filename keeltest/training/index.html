@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Keel Training | TackPath</title>
+<link rel="icon" href="../../logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* A floor manual: one column of numbered steps, each with the screen beside it. */
+:root{--ink:#0e1c2b;--muted:#566476;--line:#d9e0e8;--paper:#f4f6f9;--card:#fff;--navy:#0d1b2a;--blue:#1677c9;--scan:#0f7a52;--scan-bg:#e3f4ec;--tap:#1677c9;--tap-bg:#e4effa;--warn:#9a5b00;--warn-bg:#fff4e0;
+--body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--body)}
+a{color:var(--blue)}
+.top{background:var(--navy);color:#fff;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top .in{max-width:1080px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.top a{color:#fff;text-decoration:none;font-weight:700}.top .open{background:#1f8fd6;padding:8px 14px;border-radius:8px;white-space:nowrap}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.15;margin:0 0 10px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:24px;margin:0 0 6px;text-wrap:balance}
+h3{font-size:18px;margin:0 0 6px}
+.lede{color:var(--muted);max-width:680px;margin:0}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;list-style:none}
+.toc a{display:block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 12px;text-decoration:none;color:var(--ink);font-size:14px;font-weight:600}
+section.part{margin-top:48px}
+.part>header{border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:20px}
+.part>header p{color:var(--muted);margin:0}
+.step{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,auto);gap:16px 20px;padding:22px 0;border-bottom:1px solid var(--line);align-items:start}
+.n{width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800;font-family:var(--mono);font-size:15px}
+.txt{min-width:0}.txt p{margin:0 0 10px;max-width:62ch}
+.txt ol,.txt ul{margin:0 0 10px;padding-left:20px}.txt li{margin:4px 0}
+.shot{margin:0;max-width:100%}
+.shot img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+.shot.dev img{width:240px;border-radius:14px}
+.shot.wide{grid-column:2/-1}.shot.wide img{width:100%}
+.step:has(.pair .wide) .pair{grid-column:2/-1}.pair .shot.wide{flex:1 1 340px;min-width:0}
+.shot figcaption{font-size:13px;color:var(--muted);margin-top:6px;max-width:300px}
+.pair{display:flex;gap:12px;flex-wrap:wrap}
+.do{display:inline-flex;align-items:baseline;gap:6px;border-radius:6px;padding:1px 8px;font-weight:700;font-size:14.5px;white-space:nowrap}
+.do::before{font:700 10.5px var(--mono);letter-spacing:.08em}
+.tap{background:var(--tap-bg);color:var(--tap)}.tap::before{content:"TAP"}
+.scan{background:var(--scan-bg);color:var(--scan);font-family:var(--mono)}.scan::before{content:"SCAN"}
+.see{font-weight:700}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 14px;font-size:14.5px;max-width:62ch}
+.note b{color:var(--ink)}
+.map{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:14px 0}
+.map div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.map b{display:block}.map span{color:var(--muted);font-size:14px}
+.kbd{font-family:var(--mono);font-size:14px;background:#e9edf2;border-radius:4px;padding:0 5px}
+@media(max-width:760px){.step:has(.pair .wide) .pair{grid-column:1/-1}.step{grid-template-columns:36px minmax(0,1fr)}.step .shot{grid-column:2}.shot.wide{grid-column:1/-1}.n{width:30px;height:30px;font-size:13px}.shot.dev img{width:220px}}
+</style>
+</head>
+<body>
+<div class="top"><div class="in"><a href="../">Keel test lab</a><a class="open" href="../" target="_blank" rel="noopener">Open the lab</a></div></div>
+<main class="wrap">
+  <h1>Keel training</h1>
+  <p class="lede">How to get around Keel, and one same-day order walked from the online store to the customer's door. Every screenshot below is from the test lab, taken on the same run, so what you see here is what you'll see.</p>
+  <ul class="toc">
+    <li><a href="#lab">1. How the lab is laid out</a></li>
+    <li><a href="#zebra">2. Set up the Zebra TC56</a></li>
+    <li><a href="#order">3. One order, start to finish</a></li>
+    <li><a href="#receive">4. Receiving a shipment</a></li>
+    <li><a href="#stuck">5. When something goes wrong</a></li>
+  </ul>
+
+  <section class="part" id="lab">
+    <header><h2>1. How the lab is laid out</h2><p>The lab runs a whole warehouse in one browser tab. Each button on the left is one person's screen.</p></header>
+    <div class="step">
+      <div class="n">1</div>
+      <div class="txt">
+        <p><span class="see">Left side: the stations.</span> Tap one to become that person. On a phone or the TC56 this list is a bar across the top. Swipe it sideways to see them all.</p>
+        <div class="map">
+          <div><b>Online store</b><span>The customer placing an order on Bolt Apparel's website.</span></div>
+          <div><b>Manager</b><span>The office screen. Watches everything, sets things up.</span></div>
+          <div><b>Receiving</b><span>Handheld. Trucks in, stock onto shelves.</span></div>
+          <div><b>Picker</b><span>Handheld. Pulls items off shelves for orders.</span></div>
+          <div><b>Packer</b><span>Pack station. Boxes, weighs and labels orders.</span></div>
+          <div><b>Billing / Bolt portal</b><span>Invoices, and what the merchant sees.</span></div>
+          <div><b>Dispatcher</b><span>TackPath. Builds routes, assigns drivers.</span></div>
+          <div><b>PathIQ</b><span>Handheld. Sorts packages into route bins.</span></div>
+          <div><b>Driver app</b><span>The driver's phone. Pickup to proof of delivery.</span></div>
+        </div>
+        <p><span class="see">Top bar:</span> <span class="do tap">Scanner</span> opens the barcode panel, <span class="do tap">Guide</span> shows the short checklist, <span class="do tap">Start over</span> wipes everything back to the beginning.</p>
+        <p><span class="see">Right side:</span> the Scanner panel, and under it a live log of what Keel and TackPath are telling each other.</p>
+      </div>
+      <figure class="shot wide"><img src="img/store.webp" alt="The lab on a computer: stations on the left, the online store in the middle, the scanner panel on the right" loading="lazy" width="1280" height="760"></figure>
+    </div>
+  </section>
+
+  <section class="part" id="zebra">
+    <header><h2>2. Set up the Zebra TC56</h2><p>The TC56's trigger types the barcode into the screen, then presses Enter. The lab listens for that, so you can scan from anywhere on a station.</p></header>
+    <div class="step">
+      <div class="n">1</div>
+      <div class="txt">
+        <p><b>Print the barcodes.</b> On a computer, open the lab, tap <span class="do tap">Scanner</span>, then <span class="do tap">print barcodes</span>. You get every shelf, item, dock, tote and PathIQ bin label on a few pages.</p>
+        <p>Two kinds of barcode only exist once you've made them: the <b>order number</b> and the <b>package label</b>. At those steps, tap the code on screen instead, or print the sheet again after packing.</p>
+      </div>
+      <figure class="shot"><img src="img/sheet.webp" alt="The printed barcode sheet" loading="lazy" width="400" height="320" style="width:300px"></figure>
+    </div>
+    <div class="step">
+      <div class="n">2</div>
+      <div class="txt">
+        <p><b>Make the trigger press Enter.</b> On the TC56 open <b>DataWedge</b>, then Profile0, then <b>Keystroke output</b>, then <b>Basic data formatting</b>, and turn on <b>Send ENTER key</b>.</p>
+        <p class="note"><b>How to check it:</b> scan any barcode into a box in the lab. If the code appears but nothing happens, Send ENTER is off.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="n">3</div>
+      <div class="txt">
+        <p><b>Open the lab on the TC56.</b> In Chrome go to <span class="kbd">tackpath.com/keeltest</span>. Give it a minute to start: it's running the whole warehouse on the handheld.</p>
+        <p>Swipe the station bar to <b>Receiving</b>, <b>Picker</b> or <b>PathIQ</b>. Those are the handheld jobs. The menu shows the jobs this person is allowed to do.</p>
+      </div>
+      <figure class="shot dev"><img src="img/tc-home.webp" alt="The lab on a TC56-size screen showing the Receiving menu" loading="lazy" width="360" height="640"><figcaption>The Receiving handheld menu, at TC56 size.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="part" id="order">
+    <header><h2>3. One order, start to finish</h2><p>A same-day order for Ellis &amp; Grant LLP: a navy hoodie and an olive cap. Follow the stations in this order.</p></header>
+
+    <div class="step"><div class="n">1</div>
+      <div class="txt"><h3>Online store: place the order</h3>
+        <p>Pick a customer, pick items, leave shipping on <b>Same-day delivery</b>, then <span class="do tap">Place order</span>.</p>
+        <p>You're the customer here. Nothing to scan.</p></div>
+      <figure class="shot wide"><img src="img/store.webp" alt="Online store order form" loading="lazy" width="1280" height="760"></figure></div>
+
+    <div class="step"><div class="n">2</div>
+      <div class="txt"><h3>Manager: watch it arrive</h3>
+        <p>Open <b>Manager</b>. The order lands on the Dashboard under Same-day delivery. Keel checks stock and sends it to the floor by itself. You don't press anything.</p>
+        <p>The <b>Outlook</b> column says if it'll make its promise: on track, tight, at risk or late.</p></div>
+      <figure class="shot wide"><img src="img/manager.webp" alt="Manager dashboard" loading="lazy" width="1280" height="760"></figure></div>
+
+    <div class="step"><div class="n">3</div>
+      <div class="txt"><h3>Picker: choose the batch</h3>
+        <p>Open <b>Picker</b>. Keel has grouped the work into a batch. Same-day ones are marked in orange with their deadline.</p>
+        <p><span class="do tap">B-1001</span></p></div>
+      <figure class="shot dev"><img src="img/pick-batch.webp" alt="Choose a batch" loading="lazy" width="380" height="660"></figure></div>
+
+    <div class="step"><div class="n">4</div>
+      <div class="txt"><h3>Picker: bin, then item</h3>
+        <p>The big text is where to walk. Keel sorts the stops so you never double back.</p>
+        <ol><li>Walk to the bin and <span class="do scan">A-01-04</span> its shelf label.</li>
+          <li>Take the item and <span class="do scan">0860002000039</span> its barcode (the hoodie).</li>
+          <li>The next bin comes up by itself. Same again for the cap.</li></ol>
+        <p>The wrong bin or the wrong item gets refused, the same as on the floor. <b>Short pick</b> is for when the shelf is empty.</p></div>
+      <figure class="shot dev"><img src="img/pick-bin.webp" alt="Go to bin A-01-04" loading="lazy" width="380" height="660"></figure></div>
+
+    <div class="step"><div class="n">5</div>
+      <div class="txt"><h3>Picker: done</h3><p>"Batch complete. Take the totes to packing." The order moves to the pack station.</p></div>
+      <figure class="shot dev"><img src="img/pick-done.webp" alt="Batch complete" loading="lazy" width="380" height="660"></figure></div>
+
+    <div class="step"><div class="n">6</div>
+      <div class="txt"><h3>Packer: open the order, scan items in</h3>
+        <ol><li>Open <b>Packer</b>. Under Orders ready to pack, <span class="do tap">O-1002xx</span> or scan the packing slip.</li>
+          <li><span class="do scan">each item</span> into the box. The Left column counts down to 0.</li></ol></div>
+      <figure class="shot wide"><img src="img/pack-open.webp" alt="Pack station with the order open" loading="lazy" width="1280" height="760"></figure></div>
+
+    <div class="step"><div class="n">7</div>
+      <div class="txt"><h3>Packer: weigh, label, finish</h3>
+        <ol><li>Pick the box size, type the weight, <span class="do tap">Weigh &amp; seal</span>.</li>
+          <li><span class="do tap">Print package labels</span>. Stick it on the box.</li>
+          <li><span class="do tap">Complete packing</span>.</li></ol>
+        <p>Keel now hands the delivery to TackPath on its own: it writes the SmartSort file the dispatcher uploads next.</p></div>
+      <figure class="shot wide"><img src="img/packed.webp" alt="Order packed" loading="lazy" width="1280" height="760"></figure></div>
+
+    <div class="step"><div class="n">8</div>
+      <div class="txt"><h3>Dispatcher: upload and assign</h3>
+        <ol><li>Open <b>Dispatcher</b>. Keel's file is waiting at the top. <span class="do tap">Upload to SmartSort</span>.</li>
+          <li>A route appears. Tap its row, choose <b>Andre Coleman</b> as the driver, <span class="do tap">Assign</span>.</li></ol></div>
+      <div class="pair">
+        <figure class="shot wide"><img src="img/dispatch-inbox.webp" alt="SmartSort file waiting" loading="lazy" width="1280" height="760"></figure>
+        <figure class="shot wide"><img src="img/dispatch-assign.webp" alt="Route assigned to a driver" loading="lazy" width="1280" height="760"></figure></div></div>
+
+    <div class="step"><div class="n">9</div>
+      <div class="txt"><h3>PathIQ: sort the package into a bin</h3>
+        <p>Open <b>PathIQ</b>, then <span class="do tap">Stow</span>. The strip across the top (Package, Bin, Location, Stage) shows which scan it wants next.</p>
+        <ol><li><span class="do scan">the package label</span></li>
+          <li>The first package of a route needs a bin: <span class="do scan">BIN:1A</span> then <span class="do scan">LOC:A-01</span></li>
+          <li><span class="do scan">the package label</span> again, then <span class="do scan">BIN:1A</span> to stow it.</li></ol></div>
+      <div class="pair">
+        <figure class="shot dev"><img src="img/piq-scan.webp" alt="Scan package" loading="lazy" width="380" height="660" style="width:200px"></figure>
+        <figure class="shot dev"><img src="img/piq-open.webp" alt="Open new bin" loading="lazy" width="380" height="660" style="width:200px"></figure></div></div>
+
+    <div class="step"><div class="n">10</div>
+      <div class="txt"><h3>PathIQ: stage it for pickup</h3>
+        <p>When every package on the route is in its bin, the screen turns orange: STAGE. Carry the bin to a staging spot and <span class="do scan">STG:S-01</span>.</p>
+        <p>Green "Staged at S-01" means the driver can come get it. Keel marks the order staged by itself.</p></div>
+      <div class="pair">
+        <figure class="shot dev"><img src="img/piq-stage.webp" alt="Stage prompt" loading="lazy" width="380" height="660" style="width:200px"></figure>
+        <figure class="shot dev"><img src="img/piq-staged.webp" alt="Staged at S-01" loading="lazy" width="380" height="660" style="width:200px"></figure></div></div>
+
+    <div class="step"><div class="n">11</div>
+      <div class="txt"><h3>Driver: sign in, go to pickup</h3>
+        <ol><li>Open <b>Driver app</b>. Phone number <span class="kbd">(404) 555-0161</span>, <span class="do tap">Send Code</span>. The code arrives as a text message on screen. Type it in.</li>
+          <li>Today's route says Ready for pickup, at STG S-01, bin 1A. <span class="do tap">AT PICKUP</span></li></ol></div>
+      <div class="pair">
+        <figure class="shot dev"><img src="img/drv-login.webp" alt="Driver sign in" loading="lazy" width="410" height="800" style="width:200px"></figure>
+        <figure class="shot dev"><img src="img/drv-home.webp" alt="Ready for pickup" loading="lazy" width="410" height="800" style="width:200px"></figure></div></div>
+
+    <div class="step"><div class="n">12</div>
+      <div class="txt"><h3>Driver: check the bin, load, go</h3>
+        <ol><li>The phone camera opens. <span class="do scan">BIN:1A</span> to prove it's the right bin.</li>
+          <li><span class="do tap">Load</span> tab, then <span class="do scan">the package label</span>.</li>
+          <li><span class="do tap">START ROUTE</span></li></ol>
+        <p class="note">The driver app uses the phone's camera, not the trigger. In the lab, tap the code in the Scanner panel to hold it up to the camera.</p></div>
+      <div class="pair">
+        <figure class="shot dev"><img src="img/drv-bin.webp" alt="Scan bin 1A" loading="lazy" width="410" height="800" style="width:200px"></figure>
+        <figure class="shot dev"><img src="img/drv-load.webp" alt="Package loaded, start route" loading="lazy" width="410" height="800" style="width:200px"></figure></div></div>
+
+    <div class="step"><div class="n">13</div>
+      <div class="txt"><h3>Driver: deliver with proof</h3>
+        <ol><li>Tap the stop, <span class="do tap">Drive there</span>, then <span class="do tap">Arrived</span> and <span class="do tap">Mark Arrived</span>.</li>
+          <li><span class="do scan">the package label</span> (tap <span class="do tap">Deliver</span> first if the camera isn't open), then <span class="do tap">Proof of delivery</span> and pick <b>Front door</b>.</li>
+          <li>Take the photo (in the lab: <b>Front door</b> in the Scanner panel, then the capture button), then <span class="do tap">Confirm Final Delivery</span>.</li></ol></div>
+      <div class="pair">
+        <figure class="shot dev"><img src="img/drv-arrived.webp" alt="Arrived" loading="lazy" width="410" height="800" style="width:200px"></figure>
+        <figure class="shot dev"><img src="img/drv-pod.webp" alt="Proof of delivery" loading="lazy" width="410" height="800" style="width:200px"></figure></div></div>
+
+    <div class="step"><div class="n">14</div>
+      <div class="txt"><h3>Keel closes it out by itself</h3>
+        <p>Within a few seconds Keel reads the delivery from TackPath and marks the order <b>delivered</b>, with the photo. Nobody presses anything. Check it in <b>Manager</b> or the <b>Bolt portal</b>, where the merchant sees it too.</p>
+        <p>The log on the right shows each hand-off: staged, handed off, out for delivery, delivered.</p></div>
+      <div class="pair">
+        <figure class="shot dev"><img src="img/drv-done.webp" alt="Route complete" loading="lazy" width="410" height="800" style="width:200px"></figure>
+        <figure class="shot wide"><img src="img/portal.webp" alt="Bolt portal showing the delivered order" loading="lazy" width="1280" height="760"></figure></div></div>
+  </section>
+
+  <section class="part" id="receive">
+    <header><h2>4. Receiving a shipment</h2><p>Bolt Apparel has a truck coming: BOLT-PO-77, 54 units.</p></header>
+    <div class="step"><div class="n">1</div>
+      <div class="txt">
+        <ol><li>Open <b>Receiving</b>, then <span class="do tap">Receive</span>.</li>
+          <li><span class="do scan">BOLT-PO-77</span> (the paperwork), then <span class="do scan">LOC:DOCK-2</span> (where you're unloading).</li>
+          <li><span class="do scan">each carton's barcode</span>. Each scan counts one. Use <b>+</b> to count more per scan, for a case of 12.</li>
+          <li>Back, then <span class="do tap">Put away</span>. Scan an item and Keel tells you which shelf it fits on, by size and weight. Scan that shelf to confirm. If one shelf can't hold it all, Keel splits it across two.</li></ol>
+      </div>
+      <div class="pair">
+        <figure class="shot dev"><img src="img/tc-receive.webp" alt="Scan or choose the ASN" loading="lazy" width="720" height="1280" style="width:200px"></figure>
+        <figure class="shot dev"><img src="img/tc-received.webp" alt="One hoodie received into DOCK-2" loading="lazy" width="720" height="1280" style="width:200px"></figure></div></div>
+  </section>
+
+  <section class="part" id="stuck">
+    <header><h2>5. When something goes wrong</h2></header>
+    <div class="step"><div class="n">?</div>
+      <div class="txt"><ul>
+        <li><b>"This screen has no scan field open."</b> You scanned on a menu. Tap into the job first (Receive, Pick, Stow).</li>
+        <li><b>The code shows up in the box but nothing happens.</b> Turn on Send ENTER in DataWedge (part 2, step 2), or tap <b>Type</b> next to the box.</li>
+        <li><b>A red refusal.</b> Keel is protecting you: wrong bin, wrong item, or a shelf that's full. Read the message. It says what it expected.</li>
+        <li><b>Lost track of where you are.</b> <b>‹ Back</b> at the top left goes up one screen. <b>Start over</b> resets the whole lab.</li>
+        <li><b>The lab is slow on the TC56.</b> It's running the whole warehouse on the handheld. Close other apps, or run the lab on a computer and use the TC56 for the handheld stations.</li>
+      </ul></div></div>
+  </section>
+</main>
+</body>
+</html>

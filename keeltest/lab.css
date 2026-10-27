@@ -99,3 +99,16 @@ html,body{max-width:100%;overflow-x:hidden}
 .card h3{display:flex;align-items:center;justify-content:space-between}
 @media(max-width:1100px){#toolsBtn{display:inline-block}.tools.show .closer{display:inline-block;padding:4px 10px;font-size:12px}}
 @media(max-width:760px){.tools.show{width:100%;left:0}}
+
+.small{font-size:12.5px;margin:0}#printBtn{padding:2px 8px;font-size:12.5px}
+.printsheet{display:none}
+@media print{body>*:not(.printsheet){display:none!important}.printsheet{display:block;color:#000;background:#fff;font:12px system-ui,sans-serif}
+.printsheet h1{font-size:18px;margin:0 0 4px}.printsheet h2{font-size:15px;margin:16px 0 4px;border-bottom:1px solid #000}.printsheet h3{font-size:12px;margin:8px 0 4px}
+.printsheet .labels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.printsheet figure{margin:0;break-inside:avoid;text-align:center}.printsheet svg{max-width:100%;height:auto}
+.printsheet section{break-inside:auto}}
+/* On a real handheld (Zebra TC56, about 360px wide) the screen is the device: no pretend frame. */
+@media(max-width:480px){
+  .brand b{display:none}.actions{gap:5px}.actions button{padding:6px 7px;font-size:12.5px;white-space:nowrap}
+  .device{margin:0!important;width:100%!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+  .device iframe{width:100%!important;height:calc(100dvh - 150px)!important;min-height:460px}
+}

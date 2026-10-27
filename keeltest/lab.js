@@ -197,6 +197,7 @@ function viewFor(id) {
     if (id === 'driver') d.insertAdjacentHTML('beforeend', `<div class="nav" id="navPanel"><div class="muted">Maps · navigation (lab)</div><div class="where" id="navWhere"></div><div class="bar2"><i id="navBar"></i></div><button id="navGo">Drive there</button><button class="lite" id="navBack" hidden>Arrived · back to TackPath</button></div>`);
     body.appendChild(d); }
   else { f.className = 'desk'; body.appendChild(f); }
+  f.addEventListener('load', () => { try { wedge(f.contentWindow); } catch (e) {} });
   if (s.kind === 'keel') f.src = 'app/';
   else window.loadDemoApp(f, s.app === 'driver' ? 'vendor/driver-app.html' : s.app === 'pathiq' ? '../stow.html' : '../dispatcher.html', s.app, s.app === 'driver' ? tpBases.driverBase : tpBases.base);
   if (id === 'driver') wireNav();
@@ -283,44 +284,82 @@ document.addEventListener('click', async (e) => {
 });
 
 // ───────────────────────── scanner panel ─────────────────────────
+async function codesFor(id) {
+  const g = (title, list) => ({ title, list });
+  const prods = await sql(`select p.sku, p.name, (select barcode from keel.product_barcodes x where x.product_id = p.id limit 1) as upc from keel.products p order by p.sku`).catch(() => []);
+  const items = prods.map((p) => [p.upc || p.sku, p.sku]);
+  const pkgs = inbox.flatMap((m) => m.codes).map((c) => [c, 'package']);
+  if (id === 'receiver') {
+    const asn = await sql(`select reference from keel.inbound_shipments where status in ('open','receiving') order by created_at`).catch(() => []);
+    return { help: 'Click a code to scan it into the handheld. Typing in the handheld works too.', groups: [g('Shipments', asn.map((a) => [a.reference, 'ASN'])),
+      g('Docks', [['LOC:DOCK-1', 'dock 1'], ['LOC:DOCK-2', 'dock 2']]), g('Cartons (product barcodes)', items),
+      g('Bin labels', ['A-01-01', 'A-01-04', 'A-01-05', 'A-01-06', 'A-02-03', 'A-03-01', 'A-03-02', 'B-01-01'].map((b) => ['LOC:' + b, 'bin']))] };
+  }
+  if (id === 'picker') {
+    const t = await sql(`select l.code from keel.pick_tasks t join keel.locations l on l.id = t.location_id where t.status = 'open' order by t.sequence limit 12`).catch(() => []);
+    const bins = await sql(`select code from keel.locations where type = 'pick' and enabled order by pick_sequence, code`).catch(() => []);
+    return { help: 'Scan the bin first, then the item. The wrong bin or item is refused, as on the floor.', groups: [g('Open pick tasks: bins', [...new Set(t.map((x) => x.code))].map((c) => [c, 'bin'])),
+      g('Items', items), g('Totes', [['T-01', 'tote'], ['T-02', 'tote']]), g('Every pick bin label', bins.map((x) => [x.code, 'pick bin']))] };
+  }
+  if (id === 'packer') {
+    const o = await sql(`select number from keel.orders where status in ('picked','packing') order by created_at desc limit 8`).catch(() => []);
+    return { help: 'Scan the order number, then each item. Then weigh, seal and print the package label.', groups: [g('Orders ready to pack', o.map((x) => [x.number, 'packing slip'])), g('Items', items)] };
+  }
+  if (id === 'pathiq') return { help: 'PathIQ: scan the package, then (first time) BIN and LOC to open its bin, the package again, then BIN to stow. When the route is complete, scan a STG spot.',
+    groups: [g('Keel package labels', pkgs), g('Bins', ['1A', '2A', '3A'].map((b) => ['BIN:' + b, 'bin QR'])), g('Bin locations', ['A-01', 'A-02', 'A-03'].map((b) => ['LOC:' + b, 'location QR'])),
+      g('Staging spots', ['S-01', 'S-02', 'S-03'].map((b) => ['STG:' + b, 'staging QR']))] };
+  if (id === 'driver') return { help: 'The driver app uses the phone camera. Click a code to hold it in front of the camera while the scanner is open.', door: true,
+    groups: [g('Hold to the phone camera: bins', ['1A', '2A', '3A'].map((b) => ['BIN:' + b, 'bin QR'])), g('Package labels', pkgs)] };
+  if (id === 'manager' || id === 'merchant' || id === 'billing') return { help: 'No scanning on this screen.', groups: [] };
+  if (id === 'dispatcher') return { help: 'Dispatcher: upload Keel\'s SmartSort file above, then open the route and assign a driver.', groups: [] };
+  return { help: 'Place an order here; then follow it through the stations.', groups: [] };
+}
 async function refreshCodes() {
   if (!be || !current) return;
-  const s = byId[current], el = $('scanCodes'), help = $('scanHelp');
-  const btn = (code, sub = '') => `<button data-code="${esc(code)}"><b>${esc(code)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</button>`;
-  const group = (t, items) => items.length ? `<h5>${t}</h5><div class="row">${items.join('')}</div>` : '';
-  let html = '';
-  const prods = await sql(`select p.sku, p.name, (select barcode from keel.product_barcodes x where x.product_id = p.id limit 1) as upc from keel.products p order by p.sku`).catch(() => []);
-  const items = prods.map((p) => btn(p.upc || p.sku, p.sku));
-  if (current === 'receiver') {
-    const asn = await sql(`select reference from keel.inbound_shipments where status in ('open','receiving') order by created_at`).catch(() => []);
-    html = group('Shipments', asn.map((a) => btn(a.reference, 'ASN'))) + group('Docks', [btn('LOC:DOCK-1', 'dock 1'), btn('LOC:DOCK-2', 'dock 2')]) + group('Cartons (product barcodes)', items)
-      + group('Bin labels', ['A-01-04', 'A-01-05', 'A-01-06', 'A-02-03', 'A-03-01', 'A-03-02', 'B-01-01'].map((b) => btn('LOC:' + b, 'bin')));
-    help.textContent = 'Click a code to scan it into the handheld. Typing in the handheld works too.';
-  } else if (current === 'picker') {
-    const t = await sql(`select l.code, p.sku, o.number from keel.pick_tasks t join keel.locations l on l.id = t.location_id join keel.products p on p.id = t.product_id join keel.orders o on o.id = t.order_id where t.status = 'open' order by t.sequence limit 12`).catch(() => []);
-    html = group('Open pick tasks: bins', [...new Set(t.map((x) => x.code))].map((c) => btn(c, 'bin'))) + group('Items', items) + group('Totes', [btn('T-01', 'tote'), btn('T-02', 'tote')]);
-    help.textContent = 'Scan the bin first, then the item. The wrong bin or item is refused, as on the floor.';
-  } else if (current === 'packer') {
-    const o = await sql(`select number from keel.orders where status in ('picked','packing') order by created_at desc limit 8`).catch(() => []);
-    html = group('Orders ready to pack', o.map((x) => btn(x.number, 'packing slip'))) + group('Items', items);
-    help.textContent = 'Scan the order number, then each item. Then weigh, seal and print the package label.';
-  } else if (current === 'pathiq') {
-    const codes = inbox.flatMap((m) => m.codes);
-    html = group('Keel package labels', codes.map((c) => btn(c, 'package'))) + group('Bins', ['1A', '2A', '3A'].map((b) => btn('BIN:' + b, 'bin QR')))
-      + group('Bin locations', ['A-01', 'A-02', 'A-03'].map((b) => btn('LOC:' + b, 'location QR'))) + group('Staging spots', ['S-01', 'S-02', 'S-03'].map((b) => btn('STG:' + b, 'staging QR')));
-    help.textContent = 'PathIQ: scan the package, then (first time) BIN and LOC to open its bin, the package again, then BIN to stow. When the route is complete, scan a STG spot.';
-  } else if (current === 'driver') {
-    const codes = inbox.flatMap((m) => m.codes);
-    html = group('Hold to the phone camera: bins', ['1A', '2A', '3A'].map((b) => btn('BIN:' + b, 'bin QR'))) + group('Package labels', codes.map((c) => btn(c, 'package')))
-      + group('Delivery photo', [`<button data-door="1"><b>Front door</b><span>for the photo</span></button>`]);
-    help.textContent = 'The driver app uses the phone camera. Click a code to hold it in front of the camera while the scanner is open.';
-  } else if (current === 'manager' || current === 'merchant' || current === 'billing') {
-    html = ''; help.textContent = 'No scanning on this screen.';
-  } else if (current === 'dispatcher') {
-    html = ''; help.textContent = 'Dispatcher: upload Keel\'s SmartSort file above, then open the route and assign a driver.';
-  } else { html = ''; help.textContent = 'Place an order here; then follow it through the stations.'; }
-  el.innerHTML = html;
+  const c = await codesFor(current);
+  const btn = ([code, sub]) => `<button data-code="${esc(code)}"><b>${esc(code)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</button>`;
+  $('scanHelp').textContent = c.help;
+  $('scanCodes').innerHTML = c.groups.filter((x) => x.list.length).map((x) => `<h5>${x.title}</h5><div class="row">${x.list.map(btn).join('')}</div>`).join('')
+    + (c.door ? `<h5>Delivery photo</h5><div class="row"><button data-door="1"><b>Front door</b><span>for the photo</span></button></div>` : '');
 }
+
+// A real handheld (Zebra TC56 and similar): its scanner types the barcode as fast keystrokes, usually
+// followed by Enter. Text fields handle that themselves; anywhere else on a station, a burst like
+// that is taken as a scan, so pulling the trigger works without tapping into a field first.
+function wedge(win) {
+  let buf = '', last = 0, timer = null;
+  const editable = (t) => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+  const fire = () => { clearTimeout(timer); const code = buf; buf = ''; if (code.length >= 3) scan(code); };
+  win.addEventListener('keydown', (e) => {
+    if (editable(e.target) || e.ctrlKey || e.metaKey || e.altKey) { buf = ''; return; }
+    const now = performance.now(), gap = now - last; last = now;
+    if (e.key === 'Enter') { if (buf.length >= 3) { e.preventDefault(); fire(); } return; }
+    if (e.key.length !== 1) return;
+    if (gap > 100) buf = '';
+    buf += e.key; clearTimeout(timer);
+    timer = setTimeout(() => { if (buf.length >= 4) fire(); else buf = ''; }, 250);   // scanners set to send no Enter
+  }, true);
+}
+wedge(window);
+
+// Printed barcodes for a real scanner: every code the stations use right now.
+async function printCodes() {
+  if (!be) return;
+  const stations = [['receiver', 'Receiving'], ['picker', 'Picker'], ['packer', 'Packer'], ['pathiq', 'PathIQ'], ['driver', 'Driver app']];
+  const seen = new Set(); let html = '<h1>Keel test lab barcodes</h1><p>Scan these with the handheld. Print again after packing to get the new package labels.</p>';
+  for (const [id, label] of stations) {
+    const c = await codesFor(id); const parts = [];
+    for (const grp of c.groups) {
+      const list = grp.list.filter(([code]) => !seen.has(code)); list.forEach(([code]) => seen.add(code));
+      if (list.length) parts.push(`<h3>${esc(grp.title)}</h3><div class="labels">${list.map(([code, sub]) => `<figure><svg data-bc="${esc(code)}"></svg><figcaption>${esc(code)}${sub ? ' · ' + esc(sub) : ''}</figcaption></figure>`).join('')}</div>`);
+    }
+    if (parts.length) html += `<section><h2>${label}</h2>${parts.join('')}</section>`;
+  }
+  const sheet = $('printSheet'); sheet.innerHTML = html;
+  sheet.querySelectorAll('svg[data-bc]').forEach((el) => { try { JsBarcode(el, el.dataset.bc, { format: 'CODE128', width: 2, height: 60, displayValue: false, margin: 8 }); } catch (e) { el.outerHTML = '<b>' + esc(el.dataset.bc) + '</b>'; } });
+  window.print();
+}
+$('printBtn').onclick = () => printCodes().catch((e) => toast('Could not build the sheet: ' + esc(e.message)));
 function scan(code) {
   code = String(code || '').trim(); if (!code) return;
   const s = byId[current];

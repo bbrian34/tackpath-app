@@ -25,6 +25,7 @@
       <h3>Scanner <button id="toolsClose" class="lite closer" aria-label="Close scanner">Close</button></h3>
       <p class="muted" id="scanHelp">Pick a station on the left.</p>
       <form id="scanForm" class="scanrow"><input id="scanInput" placeholder="Type or paste a barcode" autocomplete="off"><button>Scan</button></form>
+      <p class="muted small">Have a Zebra TC56? Open this page in its browser, <button id="printBtn" class="lite">print barcodes</button>, and pull the trigger.</p>
       <div id="scanCodes" class="codes"></div>
     </section>
     <section class="card" id="logCard">
@@ -38,6 +39,7 @@
   <div class="sheet">
     <button class="x" id="guideClose" aria-label="Close">×</button>
     <h2>Test the whole operation, start to finish</h2>
+    <p><a href="training/" target="_blank" rel="noopener"><b>New to Keel? Open the step-by-step training</b></a>: every screen, what to tap and what to scan.</p>
     <p class="muted">Everything runs in this browser tab: the real Keel app and server, and the real TackPath dispatcher, PathIQ and driver app. Nothing is sent anywhere. <b>Start over</b> (or reloading the page) resets everything.</p>
     <ol class="steps">
       <li><b>Online store</b>: place a same-day order for a customer.</li>
@@ -53,11 +55,13 @@
       <li><b>Returns</b> (optional): authorize an RMA in Manager › Returns, receive and inspect it on the Receiving handheld (Returns).</li>
       <li><b>Billing</b>: every pick, pack, label and return is a billable event. Create an invoice draft for Bolt, issue it, record a payment. Bolt sees it in its portal.</li>
     </ol>
+    <p><b>With a real handheld (Zebra TC56):</b> open tackpath.com/keeltest in Chrome on the TC56. On a computer, open the same page, tap <b>Scanner</b>, then <b>print barcodes</b>. Pull the trigger at a printed code and it scans into whichever station is open. Print again after packing to get the package labels. If a scan types into a field but nothing happens, turn on DataWedge › Keystroke output › Basic data formatting › Send ENTER key.</p>
     <p class="muted">Sign-ins are done for you on every Keel station. All Keel passwords: <code id="pwd"></code>. Same-day cutoff in the lab: 11 PM.</p>
     <p><button id="guideOk" class="gotit">Got it, start testing</button></p>
   </div>
 </div>
 <div id="toasts" class="toasts"></div>
+<div id="printSheet" class="printsheet"></div>
 
 <script src="../jsbarcode.min.js"></script>
 <script src="vendor/qrcode.min.js"></script>
