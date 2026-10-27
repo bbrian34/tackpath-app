@@ -48,7 +48,7 @@
       <li><b>Packer</b>: scan the order number, scan each item, weigh and seal, <b>Print package labels</b>, then <b>Complete packing</b>. Keel releases the delivery and writes its SmartSort file.</li>
       <li><b>Dispatcher</b>: Keel's SmartSort file is waiting. Upload it to SmartSort, then assign the route to a driver. Keel follows the route by reading TackPath, and never writes to it.</li>
       <li><b>PathIQ</b>: scan the Keel package label, open a bin (BIN, then LOC), scan the package again, then stage it (STG).</li>
-      <li><b>Driver app</b>: sign in (phone (404) 555-0161, the code arrives as a text), go to pickup, scan the bin and load the package, start the route, drive, deliver with a photo.</li>
+      <li><b>Driver app</b>: type the phone number (404) 555-0161 (the number already shown in the box is only an example), tap Send Code, then type the code from the simulated text that pops up at the bottom of the lab. Then go to pickup, scan the bin and load the package, start the route, drive, deliver with a photo.</li>
       <li><b>Keel manager / Bolt portal</b>: the order shows staged, shipped, out for delivery and delivered, with proof.</li>
       <li><b>Putaway</b> (optional): on the Receiving handheld, receive BOLT-PO-77 onto DOCK-2, then open Put away. Bins have standard sizes: pick shelving A-01/A-02 is 24 × 24 × 15 in (200 lb), small-parts bins A-03 are 18 × 11 × 10 in (40 lb), pallet rack B is a 48 × 40 in pallet spot, 60 in high (2,500 lb). Keel counts what fits and splits the load when one bin can't take it all. Try scanning a full bin.</li>
       <li><b>Replenishment</b> (optional): Manager › Replenishment. Blue mugs on shelf A-01-01 are below their minimum, so Keel has made a task to bring more down from the pallet rack, only as many as fit. Open the Move tasks scanner and do it.</li>
@@ -56,7 +56,8 @@
       <li><b>Billing</b>: every pick, pack, label and return is a billable event. Create an invoice draft for Bolt, issue it, record a payment. Bolt sees it in its portal.</li>
     </ol>
     <p><b>With a real handheld (Zebra TC56):</b> open tackpath.com/keeltest in Chrome on the TC56. On a computer, open the same page, tap <b>Scanner</b>, then <b>print barcodes</b>. Pull the trigger at a printed code and it scans into whichever station is open. Print again after packing to get the package labels. If a scan types into a field but nothing happens, turn on DataWedge › Keystroke output › Basic data formatting › Send ENTER key.</p>
-    <p class="muted">Sign-ins are done for you on every Keel station. All Keel passwords: <code id="pwd"></code>. Same-day cutoff in the lab: 11 PM.</p>
+    <p class="muted">The lab starts with four weeks of made-up history (about 215 shipped orders and earlier receiving), so dashboards, reports and invoices include that history as well as what you do. Text messages and payments are simulated: nothing is sent and no money moves.</p>
+    <p class="muted">Sign-ins are done for you on every Keel station. All Keel passwords: <code id="pwd"></code>. Same-day in the lab: orders placed by 11 PM go out the same day, and Keel promises delivery by 11:59 PM.</p>
     <p><button id="guideOk" class="gotit">Got it, start testing</button></p>
   </div>
 </div>

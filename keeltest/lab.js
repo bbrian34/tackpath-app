@@ -87,8 +87,8 @@ function bootTackPath() {
   // texts and notifications the real apps would send to a phone
   hub.on('suppressed', (e) => {
     if (e.kind !== 'sms') return;
-    if (e.what === 'sign-in code') toast('Text message to the driver: <b>TackPath sign-in code 481562</b>', 15000);
-    else if (e.job_id) toast('Text message: the driver has a new route assigned.');
+    if (e.what === 'sign-in code') toast('Simulated text message (nothing is sent): <b>TackPath sign-in code 481562</b>', 15000);
+    else if (e.job_id) toast('Simulated text message (nothing is sent): the driver has a new route assigned.');
   });
   hub.on('notification', (e) => { const n = e.n || {}; if (n.title || n.body) toast(`<b>${esc(n.title || 'TackPath')}</b> ${esc(n.body || '')}`); });
   // the driver taps a stop: TackPath hands navigation to the phone's maps app
@@ -215,6 +215,8 @@ function show(id) {
   current = id; viewFor(id);
   Object.entries(views).forEach(([k, v]) => v.classList.toggle('on', k === id));
   renderSide(); refreshCodes();
+  // Keel screens reload their data when they get focus; switching stations here never focuses them
+  try { views[id]?.querySelector('iframe')?.contentWindow?.dispatchEvent(new Event('keel:refresh')); } catch (e) {}
 }
 
 // ───────────────────────── online store ─────────────────────────
