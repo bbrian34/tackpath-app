@@ -2268,7 +2268,8 @@ async function populateDriverPicker(){
     }
     const allDrivers=await res.json();
     sel.innerHTML='<option value="">Select a driver...</option>'+
-      allDrivers.map(d=>`<option value="${d.name}">${d.name}</option>`).join('');
+      // the value is the driver's id: two drivers with the same name are never mixed up
+      allDrivers.filter(d=>!d.status||d.status==='active'||d.status==='approved').map(d=>`<option value="${d.id}" data-name="${String(d.name||'').replace(/"/g,'&quot;')}">${d.name}${allDrivers.filter(x=>x.name===d.name).length>1&&d.phone?' ('+String(d.phone).slice(-4)+')':''}</option>`).join('');
   }catch(e){
     sel.innerHTML='<option value="">No drivers available</option>';
   }
@@ -2326,10 +2327,14 @@ async function sendDriverAssignmentSMS(driverName,jobId){
 
 async function assignJobToDriver(jobId){
   const sel=document.getElementById('assignDriverSelect');
-  const driverName=sel?sel.value:'';
-  if(!driverName){toast('Select a driver first','warn');return;}
+  const driverId=sel?sel.value:'';
+  const opt=sel&&sel.selectedOptions&&sel.selectedOptions[0];
+  const driverName=opt?(opt.getAttribute('data-name')||opt.textContent):'';
+  if(!driverId){toast('Select a driver first','warn');return;}
   try{
-    await fetch(sbUrl('jobs?id=eq.'+jobId),{method:'PATCH',headers:H,body:JSON.stringify({driver_name:driverName,status:'assigned'})});
+    // assigned by id (migration 69); the server fills in the name
+    const r=await fetch(sbUrl('jobs?id=eq.'+jobId),{method:'PATCH',headers:H,body:JSON.stringify({driver_id:driverId,status:'assigned'})});
+    if(r&&r.ok===false)throw new Error('assign failed');
     sendDriverAssignmentSMS(driverName,jobId); // added 2026-09-24: driver SMS, non-blocking
     toast('Assigned to '+driverName,'ok');
     openDrawer(jobId);
@@ -2834,7 +2839,31 @@ function connectShopify(){
     .catch(e=>{if(win)win.close();toast(e.message,'warn');});
 }
 
+// Migration 69: routes whose driver could not be matched with certainty (two drivers with the same
+// name, or a name that matches no driver) are never guessed. They are listed here for the dispatcher,
+// who confirms the driver by picking them in the route's Assign box.
+let identityReviewAt=0;
+async function loadIdentityReview(){
+  if(Date.now()-identityReviewAt<60000)return;identityReviewAt=Date.now();
+  let items=[];
+  try{items=await tpOrg('identity_review',{});}catch(e){return;}   // before migration 69 the action does not exist
+  if(!Array.isArray(items))return;
+  const routes=items.filter(i=>i.kind==='route_driver');
+  let el=document.getElementById('identityReviewBar');
+  if(!routes.length){if(el)el.remove();return;}
+  if(!el){
+    el=document.createElement('div');el.id='identityReviewBar';
+    el.style.cssText='margin:0 0 14px;padding:10px 14px;border-radius:10px;border:1px solid var(--amber,#c27a00);background:rgba(194,122,0,.08);font-size:0.9rem;';
+    const pipeline=document.querySelector('.pipeline-wrap');
+    if(pipeline&&pipeline.parentNode)pipeline.parentNode.insertBefore(el,pipeline);
+  }
+  el.innerHTML='<b>'+routes.length+' route'+(routes.length!==1?'s need':' needs')+' the driver confirmed.</b> '
+    +routes.slice(0,5).map(r=>'<a href="#" data-job="'+r.id+'" style="margin-left:8px;">'+(r.title||String(r.id).slice(0,8))+' ('+(r.name||'?')+')</a>').join('')
+    +'<div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Open the route and pick the right driver in Assign. Until then no driver can work it.</div>';
+  el.querySelectorAll('a[data-job]').forEach(a=>a.onclick=(e)=>{e.preventDefault();openDrawer(a.getAttribute('data-job'));});
+}
 async function loadJobs(){
+  loadIdentityReview();
   await orgReady;
   const ring=document.getElementById('pollRing');
   const ps=document.getElementById('pollStatus');
