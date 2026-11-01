@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Keel | One platform to run your 3PL | TackPath</title>
+<meta name="description" content="Keel is a warehouse management system built for 3PLs: multi-client inventory, scan-verified receiving, picking and packing, automated same-day fulfillment, a client portal and client billing.">
+<link rel="icon" href="../logo.svg" type="image/svg+xml">
+<style>
+@font-face{font-family:'TackPath Montserrat';font-style:normal;font-weight:500;font-display:swap;src:url('../tackpath-montserrat-500.ttf')}
+:root{--navy:#ffffff;--panel:#f5f8fc;--blue:#0a84c6;--green:#12a575;--text:#0b1f33;--muted:#4f6377;--line:#e2e9f1}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+html,body{background:var(--navy);color:var(--text)}
+body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.6;font-size:16px}
+a{color:var(--blue);text-decoration:none}
+img{max-width:100%;height:auto;display:block}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 24px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--blue)}
+h1,h2,h3{letter-spacing:-.015em;line-height:1.15}
+h2{font-size:clamp(26px,3.2vw,38px)}
+.lead{color:var(--muted);font-size:clamp(16px,1.6vw,19px)}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;font-weight:600;font-size:15px;padding:12px 22px;border-radius:8px;white-space:nowrap;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:#fff;color:var(--text);border:1px solid #c9d5e2}
+.btn.ghost:hover{border-color:var(--blue)}
+
+/* nav */
+.bar{position:sticky;top:0;z-index:20;background:rgba(1,14,33,.94);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;gap:20px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{width:22px;height:26px}
+.wordmark{font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;letter-spacing:.06em;font-size:16px;color:#fff;white-space:nowrap}
+.bar nav{display:flex;align-items:center;gap:28px;font-size:15px}
+.bar nav a{color:#a9bdd0}.bar nav a:hover{color:#fff}
+footer .wordmark{color:#0b1f33}
+.bar .btn{padding:9px 18px;font-size:14px;color:#fff}
+
+/* hero */
+.hero{padding:72px 0 72px;background:radial-gradient(900px 480px at 80% 15%,rgba(25,183,239,.16),transparent 65%),#010e21;color:#edf4fb}
+.hero .lead{color:#a9bdd0}
+.hero .btn.ghost{background:transparent;color:#fff;border-color:#2c4c6b}
+.hero .shot{border-color:#23415f;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:56px;align-items:center}
+.hero .mark{height:36px;width:auto;margin-bottom:26px}
+.hero h1{font-size:clamp(34px,4.4vw,54px);font-weight:700}
+.hero .lead{margin-top:20px;max-width:540px}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+.shot{border-radius:12px;overflow:hidden;border:1px solid #d6e0ea;background:#fff;box-shadow:0 24px 60px rgba(16,42,72,.14)}
+.shot .chrome{height:30px;display:flex;align-items:center;gap:6px;padding:0 12px;background:#eef3f8;border-bottom:1px solid #dde6ef}
+.shot .chrome i{width:9px;height:9px;border-radius:50%;background:#c6d2de}
+.hero-visual{position:relative}
+.hero-visual .phone{position:absolute;right:-18px;bottom:-34px;width:31%;border-radius:22px;border:6px solid #0d1b2c;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden;background:#fff}
+
+/* proof strip */
+.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel)}
+.strip .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.strip div{padding:26px 20px;border-left:1px solid var(--line)}
+.strip div:first-child{border-left:0}
+.strip b{display:block;font-size:17px;margin-bottom:4px}
+.strip span{color:var(--muted);font-size:14px}
+
+
+/* one platform */
+.unified{padding:96px 0;background:#fff}
+.hub{display:grid;grid-template-columns:1fr minmax(260px,320px) 1fr;gap:28px 40px;align-items:center;margin-top:56px}
+.hub .col{display:grid;gap:18px}
+.mod{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;position:relative;box-shadow:0 6px 20px rgba(16,42,72,.06)}
+.mod h4{font-size:16px;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.mod h4 i{width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block}
+.mod p{color:var(--muted);font-size:14px}
+.col.l .mod::after,.col.r .mod::after{content:'';position:absolute;top:50%;width:40px;border-top:2px dashed #b9d6ea}
+.col.l .mod::after{right:-41px}.col.r .mod::after{left:-41px}
+.core{background:#010e21;color:#edf4fb;border-radius:20px;padding:34px 28px;text-align:center;box-shadow:0 24px 60px rgba(1,14,33,.28);position:relative}
+.core img{height:34px;width:auto;margin:0 auto 18px}
+.core b{display:block;font-size:18px;margin-bottom:12px}
+.core ul{list-style:none;display:grid;gap:8px;font-size:14px;color:#a9bdd0}
+.core li::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:8px;vertical-align:middle}
+.hub-note{margin-top:40px;text-align:center;color:var(--muted);font-size:15px}
+@media(max-width:980px){.hub{grid-template-columns:1fr}.core{order:-1}.col.l .mod::after,.col.r .mod::after{display:none}.hub .col{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.hub .col{grid-template-columns:1fr}.unified{padding:64px 0}}
+
+/* features */
+section{padding:96px 0}
+.center{text-align:center;max-width:760px;margin:0 auto}
+.center .lead{margin-top:14px}
+.feature{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:64px;align-items:center;margin-top:88px}
+.feature.flip>.text{order:2}
+.feature h3{font-size:clamp(22px,2.4vw,30px);margin:10px 0 14px}
+.feature p{color:var(--muted)}
+.feature ul{margin-top:18px;list-style:none;display:grid;gap:10px}
+.feature li{padding-left:26px;position:relative}
+.feature li::before{content:'';position:absolute;left:2px;top:8px;width:12px;height:7px;border-left:2px solid var(--green);border-bottom:2px solid var(--green);transform:rotate(-45deg)}
+
+/* cards */
+.alt{background:var(--panel)}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:64px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:26px}
+.card svg{width:26px;height:26px;color:var(--blue);margin-bottom:16px}
+.card h4{font-size:17px;margin-bottom:8px}
+.card p{color:var(--muted);font-size:15px}
+
+/* flow */
+.flow{display:grid;grid-template-columns:repeat(6,1fr);margin-top:72px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.flow div{padding:22px 18px;border-left:1px solid var(--line);background:var(--panel)}
+.flow div:first-child{border-left:0}
+.flow small{display:block;font-size:12px;letter-spacing:.1em;color:var(--blue);font-weight:600;margin-bottom:6px}
+.flow b{display:block;margin-bottom:4px}
+.flow span{font-size:14px;color:var(--muted)}
+
+/* film */
+.film{margin:48px auto 0;max-width:1040px;aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid #d6e0ea;background:#000;box-shadow:0 24px 60px rgba(16,42,72,.14)}
+.film video{width:100%;height:100%;display:block}
+
+/* cta */
+.final{background:#eaf5fc;border-top:1px solid var(--line)}
+.final .wrap{display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap}
+.final h2{max-width:620px}
+.final .cta{display:flex;gap:12px;flex-wrap:wrap}
+
+footer{border-top:1px solid var(--line);padding:30px 0 44px;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+footer nav{display:flex;gap:22px;flex-wrap:wrap}
+footer nav a{color:var(--muted)}footer nav a:hover{color:var(--text)}
+
+@media(max-width:980px){
+  .hero .wrap,.feature{grid-template-columns:1fr;gap:40px}
+  .feature.flip>.text{order:0}
+  .cards{grid-template-columns:1fr 1fr}
+  .flow{grid-template-columns:repeat(3,1fr)}.flow div:nth-child(4){border-left:0}.flow div:nth-child(n+4){border-top:1px solid var(--line)}
+  .strip .wrap{grid-template-columns:1fr 1fr}.strip div:nth-child(3){border-left:0}.strip div:nth-child(n+3){border-top:1px solid var(--line)}
+  .hero-visual .phone{right:-6px;bottom:-24px}
+}
+@media(max-width:680px){
+  .bar nav a:not(.btn){display:none}
+  .wrap{padding:0 18px}
+  .hero{padding:44px 0 60px}.hero .mark{height:30px;margin-bottom:22px}
+  section{padding:64px 0}.feature{margin-top:56px}
+  .cards{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}.flow div{border-left:0}.flow div:nth-child(even){border-left:1px solid var(--line)}.flow div:nth-child(n+3){border-top:1px solid var(--line)}
+  .strip div{padding:20px 14px}
+}
+.now{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:14px auto 0;max-width:1080px;font-size:15px;color:var(--muted)}
+.now span{color:var(--text);font-weight:600}
+.clips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin:28px auto 0;max-width:1080px}
+.clip{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;border-radius:12px;padding:8px;transition:background .15s}
+.clip:hover,.clip:focus-visible{background:#fff;box-shadow:0 6px 20px rgba(16,42,72,.08)}
+.clip:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.clip .thumb{position:relative;display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/9;background:#030a16}
+.clip img{width:100%;height:100%;object-fit:cover;display:block}
+.clip em{position:absolute;right:6px;bottom:6px;font-style:normal;font-size:12px;font-weight:600;color:#fff;background:rgba(3,10,22,.78);border-radius:4px;padding:1px 6px}
+.clip small{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-top:4px}
+.clip b{font-size:15px;line-height:1.3;color:var(--text)}
+.clip.on .thumb{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue)}
+@media(max-width:860px){.clips{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="brand" href="../" aria-label="TackPath home"><img src="../logo.svg" alt="" width="22" height="26"><span class="wordmark">T &#581; C K P &#581; T H</span></a>
+  <nav aria-label="Keel"><a href="#unified">Platform</a><a href="#platform">Warehouse</a><a href="#clients">Clients &amp; billing</a><a href="#sameday">Same-day</a><a href="#watch">Watch it work</a><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20demo">Book a demo</a></nav>
+</div></header>
+
+<main>
+  <div class="hero"><div class="wrap">
+    <div>
+      <img class="mark" src="keel-logo-white.png" alt="Keel" width="1464" height="406">
+      <h1>One platform to run your 3PL.</h1>
+      <p class="lead">Keel puts warehouse management, order management, client billing and a client portal in one system, on one inventory ledger. Every client, every order and every charge, in one place.</p>
+      <div class="cta"><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20demo">Book a demo</a><a class="btn ghost" href="#watch">Watch Keel work</a></div>
+    </div>
+    <div class="hero-visual">
+      <div class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shot-dashboard.png" alt="Keel operations dashboard" width="1440" height="600"></div>
+    </div>
+  </div></div>
+
+  <div class="strip"><div class="wrap">
+    <div><b>Multi-client</b><span>Every brand's stock, orders and data kept separate</span></div>
+    <div><b>Scan-verified</b><span>Every scan confirmed on the server</span></div>
+    <div><b>Automated same-day</b><span>Cutoffs, zones and release, without a manager</span></div>
+    <div><b>Client billing</b><span>Rate cards per client, invoiced from real events</span></div>
+  </div></div>
+
+  <section id="unified" class="unified"><div class="wrap">
+    <div class="center"><div class="eyebrow">One platform</div><h2 style="margin-top:10px">Not a stack of tools. One system.</h2><p class="lead">Most 3PLs stitch a WMS, an order system, spreadsheets for billing and email for clients together. In Keel they are one platform: a scan on the floor updates the client's portal, the bill and the ledger at the same moment.</p></div>
+    <div class="hub">
+      <div class="col l">
+        <div class="mod"><h4><i></i>Warehouse management</h4><p>Receiving, putaway, picking, packing, cycle counts and returns, scan-verified.</p></div>
+        <div class="mod"><h4><i></i>Order management</h4><p>Orders by API, CSV import or the portal, released to the floor by rule.</p></div>
+        <div class="mod"><h4><i></i>Inventory</h4><p>Multi-client stock by bin, pallets and license plates, every movement in the ledger.</p></div>
+      </div>
+      <div class="core"><img src="keel-logo-white.png" alt="Keel" width="1464" height="406"><b>One system of record</b><ul><li>One inventory ledger</li><li>One order, one status everywhere</li><li>Every client's data kept apart</li><li>Every action under a person's name</li></ul></div>
+      <div class="col r">
+        <div class="mod"><h4><i></i>Client billing</h4><p>Rate cards per client, billable events captured as work happens, invoices.</p></div>
+        <div class="mod"><h4><i></i>Client portal</h4><p>Each client sees its own stock, inbound, orders and invoices, live.</p></div>
+        <div class="mod"><h4><i></i>Shipping &amp; same-day</h4><p>Parcel labels, local delivery and automated same-day release.</p></div>
+      </div>
+    </div>
+  </div></section>
+
+  <section id="platform"><div class="wrap">
+    <div class="center"><div class="eyebrow">Warehouse</div><h2 style="margin-top:10px">From the dock to the doorstep.</h2><p class="lead">Keel covers the full warehouse workflow, with accuracy checks at every step so mistakes are caught before they ship.</p></div>
+
+    <div class="feature">
+      <div class="text"><div class="eyebrow">Receiving &amp; putaway</div><h3>Receive exactly what was promised.</h3>
+        <p>Clients send advance shipment notices. Your team receives against them by scan, and Keel directs every carton to a bin.</p>
+        <ul><li>Receive against ASNs, with variances shown</li><li>Over-receipts refused before anything is counted</li><li>Directed putaway with suggested bins</li><li>Stock available to orders only once it is on a shelf</li></ul></div>
+      <div class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shot-receiving.png" alt="Stock by item in Keel, including units still to put away" width="1440" height="410"></div>
+    </div>
+
+    <div class="feature flip">
+      <div class="text"><div class="eyebrow">Fulfillment</div><h3>Pick and pack with nothing left to chance.</h3>
+        <p>Work goes to pickers in walking order, priority orders first. Every item is scanned again at the pack bench before the box is sealed.</p>
+        <ul><li>Wave, batch and single-order picking on any handheld or scanner</li><li>Wrong bin or wrong item refused at the scan</li><li>Pack verification with carton weights</li><li>Parcel shipping or local delivery hand-off</li></ul></div>
+      <div class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shot-pick.png" alt="Releasing orders to the floor in Keel" width="1440" height="285"></div>
+    </div>
+
+    <div class="feature">
+      <div class="text"><div class="eyebrow">Inventory</div><h3>Inventory you can stand behind.</h3>
+        <p>Every unit's movement is recorded with who did it and when, and stock on hand is audited against the ledger.</p>
+        <ul><li>Available, reserved and on-dock quantities by bin</li><li>Pallets and license plates, broken down to the each</li><li>Returns to stock or quarantine</li><li>Low-stock alerts per client SKU</li></ul></div>
+      <div class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shot-ledger.png" alt="Movement ledger in Keel" width="1440" height="620"></div>
+    </div>
+  </div></section>
+
+  <section id="clients" class="alt"><div class="wrap">
+    <div class="center"><div class="eyebrow">Clients &amp; billing</div><h2 style="margin-top:10px">Built for the business of a 3PL.</h2><p class="lead">Give every client visibility, and bill them for exactly the work you did.</p></div>
+    <div class="feature">
+      <div class="text"><div class="eyebrow">Client portal</div><h3>A dedicated view for every client.</h3>
+        <p>Each client signs in to see only its own inventory, inbound shipments, orders and invoices, live.</p>
+        <ul><li>Create ASNs and orders, or send orders from an online store by API</li><li>Follow every order from release to delivery</li><li>Invoices with every charge traced to the work</li></ul></div>
+      <div class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shot-portal.png" alt="Keel client portal" width="1440" height="380"></div>
+    </div>
+    <div class="cards">
+      <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><h4>Rate cards per client</h4><p>Receiving, storage, picks, packing, materials, shipping and returns, each priced the way you sell them.</p></div>
+      <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h4>Captured as it happens</h4><p>Billable events are recorded the moment the work is done, so nothing is missed at month end.</p></div>
+      <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><h4>Invoices, taxes, payments</h4><p>Generate invoices per client with taxes, and record payments against them.</p></div>
+      <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg><h4>Data kept apart</h4><p>One client's inventory, orders and invoices are never visible to another.</p></div>
+      <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M17 11h4M19 9v4"/></svg><h4>Roles and accountability</h4><p>Owners, managers, receivers, pickers, packers and billing staff each sign in as themselves.</p></div>
+      <div class="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 6l-2 12"/></svg><h4>Orders by API</h4><p>Clients' stores send orders straight to Keel with their own API keys.</p></div>
+    </div>
+  </div></section>
+
+  <section id="sameday"><div class="wrap">
+    <div class="feature flip" style="margin-top:0">
+      <div class="text"><div class="eyebrow">Same-day fulfillment</div><h3>Same-day delivery that runs itself.</h3>
+        <p>Set a cutoff, a delivery-by time and the ZIP codes you serve. Keel accepts or declines each order the moment it arrives and moves accepted orders through the floor on its own.</p>
+        <ul><li>Every order checked against the address and the clock</li><li>Released to the floor ahead of everything else, automatically</li><li>Local delivery booked the moment the box is sealed</li><li>Late or out-of-area orders declined with the reason, next-day instead</li></ul></div>
+      <div class="shot"><div class="chrome"><i></i><i></i><i></i></div><img src="shot-sameday.png" alt="A same-day order in Keel, released and handed off by automation" width="1440" height="590"></div>
+    </div>
+    <div class="flow">
+      <div><small>01</small><b>Receive</b><span>Against the client's ASN</span></div>
+      <div><small>02</small><b>Put away</b><span>Directed to a bin</span></div>
+      <div><small>03</small><b>Order</b><span>From the client's store</span></div>
+      <div><small>04</small><b>Pick</b><span>Scan-verified</span></div>
+      <div><small>05</small><b>Pack</b><span>Checked and weighed</span></div>
+      <div><small>06</small><b>Deliver</b><span>Parcel or same-day</span></div>
+    </div>
+  </div></section>
+
+  <section id="watch" class="alt"><div class="wrap">
+    <div class="center"><div class="eyebrow">Watch it work</div><h2 style="margin-top:10px">One order, receiving to proof of delivery, in eight short clips.</h2><p class="lead">About a minute each, narrated. Every Keel screen is the real application on a real Keel server.</p></div>
+    <div class="film"><video id="clipPlayer" controls playsinline preload="none" poster="clips/keel-1-receiving.jpg" aria-label="Every carton counted"><source src="clips/keel-1-receiving-v2.mp4" type="video/mp4"></video></div>
+    <div class="now"><span id="clipNow">01 · Every carton counted</span><a href="../watchkeelwork/">Watch the full film (7 min)</a></div>
+    <div class="clips" role="list"><button class="clip on" data-src="clips/keel-1-receiving-v2.mp4" data-poster="clips/keel-1-receiving.jpg" data-title="Every carton counted"><span class="thumb"><img src="clips/keel-1-receiving.jpg" alt="" loading="lazy" width="960" height="540"><em>1:08</em></span><small>01 · Receiving</small><b>Every carton counted</b></button><button class="clip" data-src="clips/keel-2-putaway-v2.mp4" data-poster="clips/keel-2-putaway.jpg" data-title="From the dock to a shelf"><span class="thumb"><img src="clips/keel-2-putaway.jpg" alt="" loading="lazy" width="960" height="540"><em>0:39</em></span><small>02 · Putaway</small><b>From the dock to a shelf</b></button><button class="clip" data-src="clips/keel-3-same-day-order-v2.mp4" data-poster="clips/keel-3-same-day-order.jpg" data-title="A same-day order arrives"><span class="thumb"><img src="clips/keel-3-same-day-order.jpg" alt="" loading="lazy" width="960" height="540"><em>0:36</em></span><small>03 · Order</small><b>A same-day order arrives</b></button><button class="clip" data-src="clips/keel-4-picking-v2.mp4" data-poster="clips/keel-4-picking.jpg" data-title="Scan-checked picking"><span class="thumb"><img src="clips/keel-4-picking.jpg" alt="" loading="lazy" width="960" height="540"><em>0:48</em></span><small>04 · Picking</small><b>Scan-checked picking</b></button><button class="clip" data-src="clips/keel-5-packing-v2.mp4" data-poster="clips/keel-5-packing.jpg" data-title="Checked, weighed, sealed"><span class="thumb"><img src="clips/keel-5-packing.jpg" alt="" loading="lazy" width="960" height="540"><em>0:45</em></span><small>05 · Packing</small><b>Checked, weighed, sealed</b></button><button class="clip" data-src="clips/keel-6-pathiq-sort-stage-v2.mp4" data-poster="clips/keel-6-pathiq-sort-stage.jpg" data-title="PathIQ sorts and stages"><span class="thumb"><img src="clips/keel-6-pathiq-sort-stage.jpg" alt="" loading="lazy" width="960" height="540"><em>1:08</em></span><small>06 · Sort</small><b>PathIQ sorts and stages</b></button><button class="clip" data-src="clips/keel-7-driver-pickup-v2.mp4" data-poster="clips/keel-7-driver-pickup.jpg" data-title="The right bin, every time"><span class="thumb"><img src="clips/keel-7-driver-pickup.jpg" alt="" loading="lazy" width="960" height="540"><em>0:55</em></span><small>07 · Pickup</small><b>The right bin, every time</b></button><button class="clip" data-src="clips/keel-8-delivery-proof-v2.mp4" data-poster="clips/keel-8-delivery-proof.jpg" data-title="To the door, with proof"><span class="thumb"><img src="clips/keel-8-delivery-proof.jpg" alt="" loading="lazy" width="960" height="540"><em>1:35</em></span><small>08 · Delivery</small><b>To the door, with proof</b></button></div>
+  </div></section>
+
+  <section class="final"><div class="wrap">
+    <h2>See Keel running your warehouse, your clients and your rates.</h2>
+    <div class="cta"><a class="btn" href="mailto:hello@tackpath.com?subject=Keel%20demo">Book a demo</a><a class="btn ghost" href="../">Explore TackPath</a></div>
+  </div></section>
+</main>
+
+<footer><div class="wrap">
+  <a class="brand" href="../"><img src="../logo.svg" alt="" width="22" height="26"><span class="wordmark">T &#581; C K P &#581; T H</span></a>
+  <nav aria-label="Footer"><a href="../">TackPath</a><a href="../watchkeelwork/">Watch Keel work</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a><a href="mailto:hello@tackpath.com">hello@tackpath.com</a></nav>
+  <span>© 2026 TackPath · Atlanta, GA</span>
+</div></footer>
+<script>
+(function(){var v=document.getElementById('clipPlayer'),now=document.getElementById('clipNow'),cs=[].slice.call(document.querySelectorAll('.clip'));
+function pick(c,play){cs.forEach(function(x){x.classList.toggle('on',x===c)});v.poster=c.dataset.poster;v.src=c.dataset.src;v.setAttribute('aria-label',c.dataset.title);
+now.textContent=c.querySelector('small').textContent.split(' · ')[0]+' · '+c.dataset.title;if(play){var p=v.play();if(p&&p.catch)p.catch(function(){});}}
+cs.forEach(function(c){c.addEventListener('click',function(){pick(c,true);v.scrollIntoView({behavior:'smooth',block:'center'})})});
+v.addEventListener('ended',function(){var i=cs.findIndex(function(x){return x.classList.contains('on')});if(i>-1&&i<cs.length-1)pick(cs[i+1],true)});})();
+</script>
+</body>
+</html>
