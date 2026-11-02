@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keel Videos | TackPath</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../logo.svg">
+<style>
+:root{--navy:#0b2545;--blue:#1f8fd6;--ink:#1d2b3a;--muted:#5b6b7d;--line:#e3e9f0;--bg:#ffffff;--card:#f6f8fb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--navy:#e8eef6;--ink:#e8eef6;--muted:#9fb0c3;--line:#26364a;--bg:#0d1724;--card:#132233}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+header{max-width:1040px;margin:0 auto;padding:28px 16px 8px;display:flex;align-items:center;gap:12px}
+header img{height:30px}
+header span{font-weight:600;letter-spacing:.32em;color:var(--navy);font-size:15px}
+main{max-width:1040px;margin:0 auto;padding:8px 16px 48px}
+h1{font-size:clamp(26px,3.4vw,38px);margin:10px 0 4px;color:var(--navy)}
+.lead{color:var(--muted);margin:0 0 28px;max-width:640px}
+.video{margin:0 0 36px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin:0 0 4px}
+h2{font-size:22px;margin:0 0 12px;color:var(--navy)}
+video{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--line);background:var(--card)}
+footer{max-width:1040px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<header><img src="../logo.svg" alt=""><span>TACKPATH</span></header>
+<main>
+  <h1>Keel, warehouse management by TackPath</h1>
+  <p class="lead">Follow one order from the dock to the customer's door.</p>
+  <section class="video">
+    <p class="eyebrow">Introduction</p>
+    <h2>Introducing Keel</h2>
+    <video controls playsinline preload="metadata" poster="keel-0-introduction.jpg" src="keel-0-introduction.mp4"></video>
+  </section>
+  <section class="video">
+    <p class="eyebrow">Part 1 of 5</p>
+    <h2>Receiving and putaway</h2>
+    <video controls playsinline preload="metadata" poster="keel-1-receiving-and-putaway.jpg" src="keel-1-receiving-and-putaway.mp4"></video>
+  </section>
+</main>
+<footer>© TackPath</footer>
+</body>
+</html>
