@@ -1222,6 +1222,14 @@ html[data-theme="light"] .tb-theme .ic-moon{display:block;}
           <div id="excDetailBody"></div>
         </div>
 
+        <!-- DECISIONS (operations loop, migration 70): issues, predictions, recommendations, approvals -->
+        <div class="panel" id="opsDecisionsPanel" style="display:none;margin-bottom:16px;">
+          <div class="panel-hdr">
+            <div><div class="panel-ttl" style="color:var(--purple);">Decisions</div><div class="panel-sub">Routes heading late, what to do, and what happened</div></div>
+          </div>
+          <div id="opsDecisionsBody"></div>
+        </div>
+
         <!-- PIPELINE -->
         <div class="pipeline-wrap">
           <div class="pipeline-lbl">Signal Pipeline · Live</div>
@@ -2376,6 +2384,86 @@ async function logAgentMemory(agentName, eventType, jobId, driverName, details, 
   }
 }
 
+// ── SERVER AGENTS (migration 70) ──
+// SmartTrack, SmartComms, Ruby and the Swarm Coordinator run on the server (swarm-watch, every minute),
+// for every company, whether or not this page is open. While they do, the agents in this page stand
+// down and the Intel feed shows what the server agents did. If the server agents are switched off,
+// this page acts again, and claims every action first: the server and every open tab claim the same
+// keys, so a check-in or alert is never sent twice.
+function opsEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+let SERVER_AGENTS=null;            // null = not known yet (treated as on: never risk a duplicate)
+let serverModeCheckedAt=0;
+async function serverAgentsOn(){
+  if(Date.now()-serverModeCheckedAt>5*60000){
+    serverModeCheckedAt=Date.now();
+    try{ const m=await tpOrg('agent_mode',{}); SERVER_AGENTS=!!(m&&m.server_agents); }
+    catch(e){ if(SERVER_AGENTS===null)SERVER_AGENTS=true; }
+  }
+  return SERVER_AGENTS!==false;
+}
+async function claimAgentAction(key,agent,jobId){
+  try{ const r=await tpOrg('agent_claim',{key:key,agent:agent,job_id:jobId||null}); return !!(r&&r.claimed); }
+  catch(e){ return false; }     // could not confirm: do nothing rather than risk a duplicate
+}
+function tpOpsDay(d){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(d||new Date()); }
+
+let serverFeedSince=null;
+const SERVER_FEED_SEEN=new Set();
+async function showServerAgentActivity(){
+  try{
+    const since=serverFeedSince||new Date(Date.now()-15*60000).toISOString();
+    const rows=await tpOrg('agent_memory',{since:since,limit:100});
+    serverFeedSince=new Date().toISOString();
+    (rows||[]).slice().reverse().forEach(function(m){
+      if(SERVER_FEED_SEEN.has(m.id)||!m.details||m.details.source!=='server')return;
+      SERVER_FEED_SEEN.add(m.id);
+      const d=m.details;
+      if(m.agent_name==='SmartTrack'&&m.event_type==='stop_past_eta'){
+        addIntelEvent('&#127947; SmartTrack flagged <strong>'+opsEsc(m.driver_name||'')+'</strong> — '+d.minutes_late+' min late on stop '+d.stop_number,'var(--orange)');
+        toast('SmartTrack: '+String(m.driver_name||'').split(' ')[0]+' '+d.minutes_late+' min late on stop '+d.stop_number,'warn');
+        const fab=document.getElementById('chatFab'); if(fab)fab.classList.add('has-unread');
+      }else if(m.agent_name==='SwarmCoordinator'&&d.insight){
+        addIntelEvent('&#129504; Swarm Coordinator: '+opsEsc(d.insight),'var(--purple)');
+      }else if(m.agent_name==='PromiseWatch'){
+        addIntelEvent('&#9201; Promise watch: stop '+d.stop_number+' is likely '+Math.round(d.expected_late_min)+' min past its delivery promise','var(--orange)');
+      }else if(m.agent_name==='Ruby'&&d.category_breakdown){
+        const c=d.category_breakdown;
+        if((c.vehicle_issue||0)>=2)addIntelEvent('&#128172; Ruby noticed '+c.vehicle_issue+' vehicle issue reports — may be worth checking in with affected drivers.','var(--purple)');
+        if((c.customer_issue||0)>=3)addIntelEvent('&#128172; Ruby noticed '+c.customer_issue+' customer issue reports (not home, wrong address, etc).','var(--purple)');
+      }
+    });
+  }catch(e){ console.warn('Server agent feed:',e); }
+}
+
+// Decisions: what the loop found, what it predicts, what it recommends; changes to a route need a person
+async function loadOpsDecisions(){
+  const panel=document.getElementById('opsDecisionsPanel'), body=document.getElementById('opsDecisionsBody');
+  if(!panel||!body)return;
+  try{
+    const list=(await tpOrg('decisions',{status:'awaiting_approval,open,approved',limit:20}))||[];
+    panel.style.display=list.length?'':'none';
+    body.innerHTML=list.map(function(d){
+      const late=d.prediction&&d.prediction.expected_late_min!=null?Math.round(d.prediction.expected_late_min):(d.prediction&&d.prediction.late_min_at_detection);
+      const btns=d.status==='awaiting_approval'
+        ?'<button onclick="decideOps(\''+d.id+'\',\'approve\')" style="padding:6px 12px;border-radius:8px;font-weight:700;background:var(--purple);color:#fff;border:0;cursor:pointer;">Approve</button> '
+         +'<button onclick="decideOps(\''+d.id+'\',\'reject\')" style="padding:6px 12px;border-radius:8px;font-weight:700;background:var(--card2);color:var(--muted);border:1px solid var(--border);cursor:pointer;">Reject</button>'
+        :'<span style="font-size:0.769rem;color:var(--muted);">'+(d.status==='approved'?'Approved, waiting for the route change':'Recommended')+'</span>';
+      return '<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--border);">'
+        +'<div><div style="font-weight:700;">'+opsEsc(d.issue)+'</div>'
+        +'<div style="font-size:0.846rem;color:var(--muted);">'+opsEsc(d.expected_impact||'')+(late!=null&&d.kind==='promise_risk'?'':'')+'</div>'
+        +'<div style="font-size:0.846rem;">'+opsEsc(d.recommendation)+(d.requires_approval?' · needs approval':'')+'</div></div>'
+        +'<div style="white-space:nowrap;">'+btns+'</div></div>';
+    }).join('');
+  }catch(e){ console.warn('Decisions:',e); }
+}
+async function decideOps(id,verdict){
+  try{
+    await tpOrg('decide',{id:id,verdict:verdict,by:'Dispatcher'});
+    toast(verdict==='approve'?'Approved. Make the route change; it is recorded when the route changes.':'Rejected. The outcome is still measured.','ok');
+  }catch(e){ toast('Could not record the decision','warn'); }
+  loadOpsDecisions();
+}
+
 // Tracks the locked deadline for each job's CURRENT stop -- resets every time the driver advances
 const SMARTTRACK_STOP_DEADLINE={}; // {jobId: {stopIndex, deadline}}
 
@@ -2414,6 +2502,7 @@ function brainAnalyzeDriverPattern(driverName,historicalJobs){
 }
 
 async function runProactiveCoordinator(){
+  if(await serverAgentsOn())return;
   const now=Date.now();
   if(now-lastProactiveCheck<PROACTIVE_CHECK_INTERVAL_MIN*60000)return;
   lastProactiveCheck=now;
@@ -2426,8 +2515,7 @@ async function runProactiveCoordinator(){
     const trackEvents=recentEvents.filter(e=>e.agent_name==='SmartTrack'&&e.event_type==='stop_past_eta');
     if(trackEvents.length>=3){
       const patternKey='multi_exception_'+todayStart.toISOString().slice(0,10);
-      if(!PROACTIVE_ALERTED.has(patternKey)){
-        PROACTIVE_ALERTED.add(patternKey);
+      if(!PROACTIVE_ALERTED.has(patternKey)&&(PROACTIVE_ALERTED.add(patternKey),await claimAgentAction('brain:repeated:'+tpOpsDay(),'SwarmCoordinator',null))){
         const driverNames=[...new Set(trackEvents.map(e=>e.driver_name))];
         const insight=trackEvents.length+' delivery exceptions flagged today across '+driverNames.length+' driver(s). Worth reviewing whether SmartSort route estimates need adjustment for current conditions.';
         await logAgentMemory('SwarmCoordinator','pattern_detected',null,null,{
@@ -2450,6 +2538,7 @@ async function runProactiveCoordinator(){
         const insight=brainAnalyzeDriverPattern(driverName,historicalJobs);
         if(insight){
           PROACTIVE_ALERTED.add(patternKey);
+          if(!(await claimAgentAction('brain:driver:'+driverName+':'+tpOpsDay(),'SwarmCoordinator',null)))continue;
           await logAgentMemory('SwarmCoordinator','historical_pattern',null,driverName,{
             pattern:'driver_exception_history',
             insight:insight
@@ -2466,6 +2555,7 @@ async function runProactiveCoordinator(){
       const patternKey='geocode_issue_'+e.id;
       if(failedPct>15&&!PROACTIVE_ALERTED.has(patternKey)){
         PROACTIVE_ALERTED.add(patternKey);
+        claimAgentAction('brain:geocode:'+e.id,'SwarmCoordinator',null).then(function(ok){ if(!ok)return;
         const insight=Math.round(failedPct)+'% of addresses in a recent manifest failed to geocode ('+e.details.failed_geocodes+' of '+e.details.total_stops+'). May indicate address formatting issues in the source CSV.';
         logAgentMemory('SwarmCoordinator','pattern_detected',null,null,{
           pattern:'high_geocode_failure',
@@ -2474,6 +2564,7 @@ async function runProactiveCoordinator(){
           insight:insight
         },'flagged');
         addIntelEvent('&#129504; Swarm Coordinator detected a pattern: '+insight,'var(--purple)');
+        });
       }
     });
 
@@ -2567,6 +2658,7 @@ function rubyCategorize(body){
 }
 
 async function runRuby(){
+  if(await serverAgentsOn())return;
   const now=Date.now();
   if(now-lastRubyCheck<RUBY_CHECK_INTERVAL_MIN*60000)return;
   lastRubyCheck=now;
@@ -2579,6 +2671,8 @@ async function runRuby(){
     if(!newMsgs.length)return;
 
     const categoryCounts={};
+    for(const m of newMsgs.slice()){ if(!(await claimAgentAction('ruby:msg:'+m.id,'Ruby',null)))newMsgs.splice(newMsgs.indexOf(m),1); }
+    if(!newMsgs.length)return;
     newMsgs.forEach(m=>{
       RUBY_CATEGORIZED.add(m.id);
       const cat=rubyCategorize(m.body);
@@ -2619,6 +2713,7 @@ async function runRuby(){
 }
 
 async function runSmartComms(){
+  if(await serverAgentsOn())return;
   try{
     const now=Date.now();
     const activeJobs=jobs.filter(j=>j.status==='in_transit'||j.status==='customer_confirmed');
@@ -2639,6 +2734,7 @@ async function runSmartComms(){
         const checkinKey=job.id+'-checkin-'+checkinWindow;
         if(checkinWindow>=1&&doneStops<totalStops&&!SMARTCOMMS_CHECKED_IN.has(checkinKey)){
           SMARTCOMMS_CHECKED_IN.add(checkinKey);
+          if(!(await claimAgentAction('checkin:'+job.id+':'+checkinWindow,'SmartComms',job.id)))continue;
           const firstName=job.driver_name.split(' ')[0];
           const rushHourContext=await sharedKnowledgeIsRushHour();
           const msg='Hey '+firstName+', quick check-in — how is the route going? You are on stop '+(doneStops+1)+' of '+totalStops+'.'+(rushHourContext?' No worries if traffic is heavy right now.':' Let us know if you need anything.');
@@ -2657,6 +2753,7 @@ async function runSmartComms(){
     for(const job of completedJobs){
       if(SMARTCOMMS_COMPLETED_MSG.has(job.id))continue;
       SMARTCOMMS_COMPLETED_MSG.add(job.id);
+      if(!(await claimAgentAction('complete:'+job.id,'SmartComms',job.id)))continue;
       let stops=job.surge_stops;
       if(typeof stops==='string'){try{stops=JSON.parse(stops);}catch(e){stops=null;}}
       const totalStops=stops&&Array.isArray(stops)?stops.filter(s=>!s.cancelled).length:1;
@@ -2718,6 +2815,7 @@ async function sharedKnowledgeIsRushHour(){
 
 async function runSmartTrack(){
   if(!smartTrackEnabled)return;
+  if(await serverAgentsOn())return;
   try{
     const now=Date.now();
     const activeJobs=jobs.filter(j=>j.status==='in_transit'||j.status==='customer_confirmed');
@@ -2749,6 +2847,7 @@ async function runSmartTrack(){
 
       if(minsLate>=SMARTTRACK_LATE_TOLERANCE_MIN&&!SMARTTRACK_ALERTED.has(job.id+'-'+currentStopIdx)){
         SMARTTRACK_ALERTED.add(job.id+'-'+currentStopIdx);
+        if(!(await claimAgentAction('smarttrack:'+job.id+':'+currentStopIdx,'SmartTrack',job.id)))continue;
         await sbPatch('jobs?id=eq.'+job.id,{exception_flag:true});
 
         // Call the Swarm Coordinator to join SmartSort's route intelligence with this exception
@@ -2904,6 +3003,9 @@ async function loadJobs(){
     runSmartComms().catch(function(){});
     runRuby().catch(function(){});
     runProactiveCoordinator().catch(function(){});
+    // server agents: their activity in the Intel feed, and the decisions waiting for a person
+    serverAgentsOn().then(function(on){ if(on)showServerAgentActivity(); }).catch(function(){});
+    if(!window.__opsDecAt||Date.now()-window.__opsDecAt>20000){ window.__opsDecAt=Date.now(); loadOpsDecisions(); }
 
     // ── BIN SHORTFALL INTELLIGENCE ──
     // The bin_shortfall view was built when the memory spine went in.
@@ -4611,6 +4713,8 @@ function parseCSVLine(line){
   return result;
 }
 
+// a delivery promise as an ISO time, or null when the manifest has none (or an unreadable one)
+function tpPromise(v){ if(!v)return null; const t=Date.parse(v); return isNaN(t)?null:new Date(t).toISOString(); }
 function parseCSV(text){
   const lines=text.trim().split('\n');
   if(lines.length<2){toast('CSV needs a header and at least one row','warn');return;}
@@ -4631,7 +4735,10 @@ function parseCSV(text){
     access_notes:headers.indexOf('access_notes'),
     gate_code:headers.indexOf('gate_code'),
     delivery_notes:headers.indexOf('delivery_notes'),
-    signature_required:headers.indexOf('signature_required')
+    signature_required:headers.indexOf('signature_required'),
+    // Optional: the delivery promise for this stop (ISO time, e.g. Keel's same-day "deliver by").
+    // The server's promise watch predicts each stop against it (migration 70).
+    deliver_by:headers.indexOf('deliver_by')
   };
   const opt=(c,k)=>idx[k]>=0?((c[idx[k]]||'').trim()||null):null;
   if(idx.order_id<0||idx.recipient<0||idx.address<0){
@@ -4652,7 +4759,8 @@ function parseCSV(text){
       tracking_number: idx.tracking_number>=0 ? (c[idx.tracking_number]||null) : null,
       route_hint: hint||null,
       phone:opt(c,'phone'),unit:opt(c,'unit'),access_notes:opt(c,'access_notes'),gate_code:opt(c,'gate_code'),
-      delivery_notes:opt(c,'delivery_notes'),signature_required:/^(true|yes|y|1)$/i.test(opt(c,'signature_required')||'')
+      delivery_notes:opt(c,'delivery_notes'),signature_required:/^(true|yes|y|1)$/i.test(opt(c,'signature_required')||''),
+      deliver_by:tpPromise(opt(c,'deliver_by'))
     });
   }
   if(!packages.length){toast('No valid packages found','warn');return;}
@@ -6371,6 +6479,8 @@ async function buildRoutes(){
     // Driver-facing stop details: the first package that has each one.
     ['phone','unit','access_notes','gate_code','delivery_notes'].forEach(k=>{if(!stop[k]&&pkg[k])stop[k]=pkg[k];});
     if(pkg.signature_required)stop.signature_required=true;
+    // the stop's promise is the earliest promise of the packages delivered there
+    if(pkg.deliver_by&&(!stop.deliver_by||pkg.deliver_by<stop.deliver_by))stop.deliver_by=pkg.deliver_by;
     stop.pkgs.push(normalizePackage(pkg));
     stop.packages+=(parseInt(pkg.packages)||1);
   }
@@ -6972,6 +7082,7 @@ async function assignSSRoute(routeId){
       phone: s.phone||null, unit: s.unit||null, access_notes: s.access_notes||null,
       gate_code: s.gate_code||null, delivery_notes: s.delivery_notes||null,
       signature_required: !!s.signature_required,
+      deliver_by: s.deliver_by||null,
       // Every real, distinct manifest line at this stop. piece_id is the
       // real, physical, scannable barcode as supplied (tracking_number or
       // order_id) -- never an invented per-unit id. required_count is how
