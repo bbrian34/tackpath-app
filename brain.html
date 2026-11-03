@@ -166,6 +166,13 @@ body::before{
 .feed-agent.comms{color:#ff6bcb;}
 .feed-agent.marco{color:#8d5cff;}
 .feed-detail{color:rgba(255,255,255,.7);}
+.feed-item.promise{border-left:3px solid #ff9f40;}
+.feed-agent.promise{color:#ff9f40;}
+.feed-item.ruby{border-left:3px solid #ff6bcb;}
+.feed-agent.ruby{color:#ff6bcb;}
+.brain-signin{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:200;background:rgba(7,16,30,.95);border:1px solid rgba(25,183,239,.3);
+  border-radius:16px;padding:26px 30px;text-align:center;font-family:'DM Sans',sans-serif;color:#fff;max-width:360px;}
+.brain-signin a{color:#19b7ef;font-weight:700;}
 .feed-time{font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:4px;}
 .feed-empty{padding:30px 10px;text-align:center;color:rgba(255,255,255,.3);font-family:'DM Mono',monospace;font-size:.72rem;}
 
@@ -227,6 +234,22 @@ body::before{
   <div class="stat-chip">
     <div class="stat-val" id="statJoint">—</div>
     <div class="stat-lbl">Joint Analyses</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-val" id="statDecisions">—</div>
+    <div class="stat-lbl">Decisions (30 days)</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-val" id="statAwaiting">—</div>
+    <div class="stat-lbl">Awaiting Approval</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-val" id="statError">—</div>
+    <div class="stat-lbl">Prediction Error (avg min)</div>
+  </div>
+  <div class="stat-chip">
+    <div class="stat-val" id="statPromises">—</div>
+    <div class="stat-lbl">Promises At Risk Now</div>
   </div>
 </div>
 
@@ -325,6 +348,11 @@ body::before{
   <div class="feed-list" id="feedList">
     <div class="feed-empty">Loading agent memory...</div>
   </div>
+  <div class="feed-title" style="margin-top:14px;">&#127919; Decisions &amp; Outcomes</div>
+  <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.35);margin-bottom:8px;margin-top:-8px;">Detected, predicted, decided, measured</div>
+  <div class="feed-list" id="decisionList" style="flex:0 1 38%;">
+    <div class="feed-empty">Loading decisions...</div>
+  </div>
 </div>
 
 <div class="agent-modal" id="agentModal">
@@ -362,11 +390,29 @@ function openModal(id){
 }
 function closeModal(){document.getElementById('agentModal').classList.remove('open');}
 
-async function sbGet(path){
-  const r=await fetch(SB+'/rest/v1/'+path,{headers:H});
-  if(!r.ok)throw new Error(await r.text());
-  return r.json();
+// Secured data (security hardening 2026-10, migration 70): the public key cannot read tables.
+// The Brain reads through the company gateway tp_org with the company session the dispatcher
+// signed in with (same site, same storage), so it only ever shows this company's activity.
+function tpSession(){
+  try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}
 }
+function showSignIn(){
+  if(document.getElementById('brainSignIn'))return;
+  const d=document.createElement('div');d.id='brainSignIn';d.className='brain-signin';
+  d.innerHTML='<div style="font-weight:700;font-size:1.05rem;margin-bottom:8px;">Sign in to see your company\'s Brain</div>'
+    +'<div style="color:rgba(255,255,255,.65);font-size:.86rem;margin-bottom:14px;">The Brain shows your own agents, decisions and outcomes. Sign in on the dispatcher, then come back.</div>'
+    +'<a href="dispatcher.html">Go to the dispatcher sign-in</a>';
+  document.body.appendChild(d);
+}
+async function tpOrg(action,args){
+  const s=tpSession(); if(!s){showSignIn();throw new Error('TP_AUTH: not signed in');}
+  const r=await fetch(SB+'/rest/v1/rpc/tp_org',{method:'POST',headers:{...H,'Content-Type':'application/json'},
+    body:JSON.stringify({p_token:s.token,p_action:action,p_args:args||{}})});
+  const t=await r.text(); let d=null; try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok){const m=(d&&d.message)||t||('HTTP '+r.status); if(/TP_AUTH/.test(m))showSignIn(); throw new Error(m);}
+  return d;
+}
+const esc=(v)=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function positionNodes(){
   const stage=document.querySelector('.stage');
@@ -446,14 +492,15 @@ function positionNodes(){
 
 async function loadFeed(){
   try{
-    const events=await sbGet('agent_memory?order=created_at.desc&limit=25');
+    const events=(await tpOrg('agent_memory',{limit:25}))||[];
     const list=document.getElementById('feedList');
     if(!events.length){
       list.innerHTML='<div class="feed-empty">No agent activity yet — upload a manifest to see Sam and Todd in action</div>';
       return;
     }
     list.innerHTML=events.map(e=>{
-      const cls=e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':e.agent_name==='Sponge'?'sponge':e.agent_name==='SmartComms'?'comms':e.agent_name==='Marco'?'marco':e.agent_name==='Ruby'?'comms':'swarm';
+      e.details=e.details||{};
+      const cls=e.agent_name==='PromiseWatch'?'promise':e.agent_name==='SmartSort'?'smartsort':e.agent_name==='SmartTrack'?'smarttrack':e.agent_name==='Sponge'?'sponge':e.agent_name==='SmartComms'?'comms':e.agent_name==='Marco'?'marco':e.agent_name==='Ruby'?'comms':'swarm';
       let detail='';
       if(e.event_type==='cluster_created'){
         detail='Clustered '+(e.details.total_stops||'?')+' stops into '+(e.details.clusters_created||'?')+' routes ('+(e.details.total_packages||'?')+' packages)';
@@ -471,6 +518,10 @@ async function loadFeed(){
         detail='Analyzed '+(e.details.messages_analyzed||'?')+' driver messages — '+(e.details.summary||'');
       } else if(e.event_type==='pattern_detected'){
         detail=e.details.insight||'Pattern detected';
+      } else if(e.event_type==='historical_pattern'){
+        detail=e.details.insight||'Driver history pattern';
+      } else if(e.event_type==='promise_at_risk'){
+        detail='Stop '+(e.details.stop_number||'?')+' likely '+Math.round(e.details.expected_late_min||0)+' min past its delivery promise';
       } else if(e.event_type==='knowledge_learned'){
         detail='Learned '+(e.details.label||e.details.file)+' — '+(e.details.summary||'').slice(0,120);
       } else {
@@ -483,8 +534,8 @@ async function loadFeed(){
         return Math.floor(s/3600)+'h ago';
       })();
       return `<div class="feed-item ${cls}">
-        <div class="feed-agent ${cls}">${e.agent_name}</div>
-        <div class="feed-detail">${detail}</div>
+        <div class="feed-agent ${cls}">${esc(e.agent_name)}${e.details.source==='server'?' · server':''}</div>
+        <div class="feed-detail">${esc(detail)}</div>
         <div class="feed-time">${timeAgo}</div>
       </div>`;
     }).join('');
@@ -500,6 +551,37 @@ async function loadFeed(){
   }
 }
 
+// Decisions and outcomes (migration 70): what the loop detected, predicted and recommended,
+// who decided, and what actually happened -- the record OWL learns from.
+const KIND_LABEL={late_stop:'Late stop',reassign_review:'Reassignment review',promise_risk:'Delivery promise'};
+async function loadDecisions(){
+  try{
+    const [ins,list]=await Promise.all([tpOrg('ops_insights',{}),tpOrg('decisions',{limit:15})]);
+    const k=Object.values((ins&&ins.by_kind)||{});
+    const sum=(f)=>k.reduce((a,x)=>a+(Number(x[f])||0),0);
+    const errs=k.filter(x=>x.mean_abs_error_min!=null);
+    document.getElementById('statDecisions').textContent=sum('detected');
+    document.getElementById('statAwaiting').textContent=sum('awaiting_approval');
+    document.getElementById('statError').textContent=errs.length?(errs.reduce((a,x)=>a+Number(x.mean_abs_error_min),0)/errs.length).toFixed(1):'—';
+    const now=(ins&&ins.promises_now)||{};
+    document.getElementById('statPromises').textContent=(Number(now.at_risk)||0)+(Number(now.late)||0);
+    const el=document.getElementById('decisionList');
+    if(!list||!list.length){el.innerHTML='<div class="feed-empty">No decisions yet. Late stops and promises at risk appear here with their outcome.</div>';return;}
+    el.innerHTML=list.map(d=>{
+      const out=d.actual&&d.actual.actual_at
+        ?('Outcome: '+(Number(d.actual.actual_late_min)>0?Math.round(d.actual.actual_late_min)+' min late':'on time')
+          +(d.error_min!=null?' · prediction off by '+Math.abs(Math.round(d.error_min))+' min':''))
+        :(d.status==='awaiting_approval'?'Waiting for a dispatcher to approve or reject':d.status==='approved'?'Approved by '+(d.decided_by||'dispatcher')
+          :d.status==='rejected'?'Rejected by '+(d.decided_by||'dispatcher'):'Open: '+(d.executed_action||'recommended').replace(/_/g,' '));
+      return `<div class="feed-item ${d.kind==='promise_risk'?'promise':d.kind==='late_stop'?'smarttrack':'swarm'}">
+        <div class="feed-agent ${d.kind==='promise_risk'?'promise':d.kind==='late_stop'?'smarttrack':'swarm'}">${esc(KIND_LABEL[d.kind]||d.kind)}${d.requires_approval?' · needs approval':''}</div>
+        <div class="feed-detail">${esc(d.issue)}. ${esc(d.recommendation)}.</div>
+        <div class="feed-time">${esc(out)}</div>
+      </div>`;
+    }).join('');
+  }catch(e){ console.error('Decisions load error:',e); }
+}
+
 window.addEventListener('resize',positionNodes);
 positionNodes();
 async function feedBrain(){
@@ -512,7 +594,7 @@ async function feedBrain(){
   try{
     const resp=await fetch('https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/sponge',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY}
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY,'x-tp-session':(tpSession()||{}).token||''}
     });
     const result=await resp.json();
 
@@ -535,8 +617,8 @@ async function feedBrain(){
   },4000);
 }
 
-loadFeed();
-setInterval(loadFeed,8000);
+if(tpSession()){ loadFeed(); loadDecisions(); } else showSignIn();
+setInterval(()=>{ if(tpSession()){ loadFeed(); loadDecisions(); } },8000);
 </script>
 </body>
 </html>
