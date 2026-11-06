@@ -228,27 +228,27 @@ body::before{
     <div class="stat-lbl">Active Agents</div>
   </div>
   <div class="stat-chip">
-    <div class="stat-val" id="statEvents">—</div>
+    <div class="stat-val" id="statEvents">--</div>
     <div class="stat-lbl">Events Today</div>
   </div>
   <div class="stat-chip">
-    <div class="stat-val" id="statJoint">—</div>
+    <div class="stat-val" id="statJoint">--</div>
     <div class="stat-lbl">Joint Analyses</div>
   </div>
   <div class="stat-chip">
-    <div class="stat-val" id="statDecisions">—</div>
+    <div class="stat-val" id="statDecisions">--</div>
     <div class="stat-lbl">Decisions (30 days)</div>
   </div>
   <div class="stat-chip">
-    <div class="stat-val" id="statAwaiting">—</div>
+    <div class="stat-val" id="statAwaiting">--</div>
     <div class="stat-lbl">Awaiting Approval</div>
   </div>
   <div class="stat-chip">
-    <div class="stat-val" id="statError">—</div>
+    <div class="stat-val" id="statError">--</div>
     <div class="stat-lbl">Prediction Error (avg min)</div>
   </div>
   <div class="stat-chip">
-    <div class="stat-val" id="statPromises">—</div>
+    <div class="stat-val" id="statPromises">--</div>
     <div class="stat-lbl">Promises At Risk Now</div>
   </div>
 </div>
@@ -321,30 +321,11 @@ body::before{
     <div class="agent-online" style="font-size:.52rem;">&#9679; ONLINE</div>
   </div>
 
-  <div class="agent-node" id="node-match" onclick="openModal('match')">
-    <div class="agent-orb dormant">
-      <div class="agent-status-dot dormant"></div>
-      &#128260;
-    </div>
-    <div class="agent-name">SmartMatch</div>
-    <div class="agent-role">Reassignment</div>
-    <div class="agent-offline">&#9679; OFFLINE</div>
-  </div>
-
-  <div class="agent-node" id="node-owl" onclick="openModal('owl')">
-    <div class="agent-orb dormant">
-      <div class="agent-status-dot dormant"></div>
-      &#129417;
-    </div>
-    <div class="agent-name">OWL</div>
-    <div class="agent-role">Intelligence</div>
-    <div class="agent-offline">&#9679; OFFLINE</div>
-  </div>
 </div>
 
 <div class="feed-panel">
   <div class="feed-title">&#9889; Swarm Activity Log</div>
-  <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.35);margin-bottom:12px;margin-top:-8px;">Real events from agent_memory — not a chat</div>
+  <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.35);margin-bottom:12px;margin-top:-8px;">Real events from agent_memory: not a chat</div>
   <div class="feed-list" id="feedList">
     <div class="feed-empty">Loading agent memory...</div>
   </div>
@@ -371,14 +352,14 @@ const H={'apikey':KEY,'Authorization':'Bearer '+KEY};
 
 const agentInfo={
   brain:{title:"Swarm Coordinator",role:"The Brain",desc:"Sits above all specialized agents. Reads what each agent detects and remembers, joins their findings together, and produces recommendations neither agent could reach alone. Currently connects SmartSort route intelligence with SmartTrack exception detection."},
-  sam:{title:"Sam — SmartSort",role:"Route Clustering Agent · Active",desc:"Geocodes manifests, clusters stops into driver-sized geographic zones using k-means++, creates and broadcasts jobs. Logs every clustering run to shared memory."},
-  path:{title:"Piper — SmartPath",role:"Route Sequencing Agent · Active",desc:"Works directly with Sam. Once SmartSort clusters stops into driver zones, Piper sequences each zone using nearest-neighbor optimization for minimum drive time, and calculates the traffic-aware ETA for the full route."},
-  todd:{title:"Todd — SmartTrack",role:"Delivery Pace Agent · Active",desc:"Locks a live deadline for each driver current stop based on real traffic ETA. Watches for drivers falling behind that specific deadline, flags exceptions, messages drivers directly, and calls the Swarm Coordinator to pull in Sam route context when something goes wrong."},
-  comms:{title:"Mario — SmartComms",role:"Driver Communication Agent · Active",desc:"Sends automated check-ins every 30 minutes during an active route asking how things are going and confirming stop progress. Sends end-of-route completion confirmations when all stops finish. Narrow, safe scope — no free-text message interpretation yet."},
-  ruby:{title:"Ruby — Comms Pattern Agent",role:"Communication Intelligence · Active",desc:"Works directly with Mario. Reads through every driver message logged in the system, categorizes them by type — traffic delays, customer issues, simple acknowledgments — and identifies patterns over time. Builds the foundation for smarter, more responsive driver communication as more data accumulates."},
-  marco:{title:"Marco — Geocoding Agent",role:"Shared Infrastructure · Active",desc:"Serves both Sam and Todd. Converts addresses into coordinates, caches every result so the same address is never geocoded twice, and tracks success/failure rate. Reports geocoding health every 15 minutes and flags the dispatcher if failure rate climbs above 15% — often a sign of address formatting issues in a manifest."},
+  sam:{title:"Sam: SmartSort",role:"Route Clustering Agent · Active",desc:"Geocodes manifests, clusters stops into driver-sized geographic zones using k-means++, creates and broadcasts jobs. Logs every clustering run to shared memory."},
+  path:{title:"Piper: SmartPath",role:"Route Sequencing Agent · Active",desc:"Works directly with Sam. Once SmartSort clusters stops into driver zones, Piper sequences each zone using nearest-neighbor optimization for minimum drive time, and calculates the traffic-aware ETA for the full route."},
+  todd:{title:"Todd: SmartTrack",role:"Delivery Pace Agent · Active",desc:"Locks a live deadline for each driver current stop based on real traffic ETA. Watches for drivers falling behind that specific deadline, flags exceptions, messages drivers directly, and calls the Swarm Coordinator to pull in Sam route context when something goes wrong."},
+  comms:{title:"Mario: SmartComms",role:"Driver Communication Agent · Active",desc:"Sends automated check-ins every 30 minutes during an active route asking how things are going and confirming stop progress. Sends end-of-route completion confirmations when all stops finish. Narrow, safe scope: no free-text message interpretation yet."},
+  ruby:{title:"Ruby: Comms Pattern Agent",role:"Communication Intelligence · Active",desc:"Works directly with Mario. Reads through every driver message logged in the system, categorizes them by type: traffic delays, customer issues, simple acknowledgments: and identifies patterns over time. Builds the foundation for smarter, more responsive driver communication as more data accumulates."},
+  marco:{title:"Marco: Geocoding Agent",role:"Shared Infrastructure · Active",desc:"Serves both Sam and Todd. Converts addresses into coordinates, caches every result so the same address is never geocoded twice, and tracks success/failure rate. Reports geocoding health every 15 minutes and flags the dispatcher if failure rate climbs above 15%: often a sign of address formatting issues in a manifest."},
   match:{title:"SmartMatch",role:"Reassignment Agent · Dormant",desc:"Not yet built. Will find the nearest available driver when a route needs reassignment and execute the handoff automatically."},
-  owl:{title:"OWL",role:"Intelligence Agent · Dormant",desc:"Not yet built. Will analyze patterns across days and weeks — which zones run late, which drivers outperform, revenue trends — and surface strategic insights."}
+  owl:{title:"OWL",role:"Intelligence Agent · Dormant",desc:"Not yet built. Will analyze patterns across days and weeks: which zones run late, which drivers outperform, revenue trends: and surface strategic insights."}
 };
 
 function openModal(id){
@@ -420,13 +401,11 @@ function positionNodes(){
   const radius=Math.min(stage.clientWidth,stage.clientHeight)*0.32;
   const satelliteOffset=58; // how far a satellite sits from its lead node
 
-  // 5 lead agents evenly spaced across the 6-to-12 o'clock arc
+  // the lead agents spaced across the 6-to-12 o'clock arc
   const leads=[
-    {id:'node-sam',angle:90},
-    {id:'node-todd',angle:135},
-    {id:'node-comms',angle:180},
-    {id:'node-match',angle:225},
-    {id:'node-owl',angle:270}
+    {id:'node-sam',angle:110},
+    {id:'node-todd',angle:170},
+    {id:'node-comms',angle:230}
   ];
 
   const svg=document.getElementById('connectorSvg');
@@ -495,7 +474,7 @@ async function loadFeed(){
     const events=(await tpOrg('agent_memory',{limit:25}))||[];
     const list=document.getElementById('feedList');
     if(!events.length){
-      list.innerHTML='<div class="feed-empty">No agent activity yet — upload a manifest to see Sam and Todd in action</div>';
+      list.innerHTML='<div class="feed-empty">No agent activity yet. Upload a manifest to see Sam and Todd in action</div>';
       return;
     }
     list.innerHTML=events.map(e=>{
@@ -509,13 +488,13 @@ async function loadFeed(){
       } else if(e.event_type==='joint_analysis'){
         detail=e.details.recommendation||'Joint analysis completed';
       } else if(e.event_type==='routine_checkin'){
-        detail='Checked in with '+(e.driver_name||'driver')+' — stop '+(e.details.stop_at_checkin||'?')+' of '+(e.details.total_stops||'?');
+        detail='Checked in with '+(e.driver_name||'driver')+' at stop '+(e.details.stop_at_checkin||'?')+' of '+(e.details.total_stops||'?');
       } else if(e.event_type==='route_completed'){
-        detail='Sent completion confirmation to '+(e.driver_name||'driver')+' — '+(e.details.total_stops||'?')+' stops done';
+        detail='Sent completion confirmation to '+(e.driver_name||'driver')+': '+(e.details.total_stops||'?')+' stops done';
       } else if(e.event_type==='geocoding_report'){
         detail=(e.details.total_requests||'?')+' addresses processed, '+(e.details.fail_rate_pct||0)+'% fail rate, '+(e.details.cache_size||'?')+' cached';
       } else if(e.event_type==='pattern_analysis'){
-        detail='Analyzed '+(e.details.messages_analyzed||'?')+' driver messages — '+(e.details.summary||'');
+        detail='Analyzed '+(e.details.messages_analyzed||'?')+' driver messages. '+(e.details.summary||'');
       } else if(e.event_type==='pattern_detected'){
         detail=e.details.insight||'Pattern detected';
       } else if(e.event_type==='historical_pattern'){
@@ -523,7 +502,7 @@ async function loadFeed(){
       } else if(e.event_type==='promise_at_risk'){
         detail='Stop '+(e.details.stop_number||'?')+' likely '+Math.round(e.details.expected_late_min||0)+' min past its delivery promise';
       } else if(e.event_type==='knowledge_learned'){
-        detail='Learned '+(e.details.label||e.details.file)+' — '+(e.details.summary||'').slice(0,120);
+        detail='Learned '+(e.details.label||e.details.file)+': '+(e.details.summary||'').slice(0,120);
       } else {
         detail=e.event_type;
       }
@@ -562,15 +541,17 @@ async function loadDecisions(){
     const errs=k.filter(x=>x.mean_abs_error_min!=null);
     document.getElementById('statDecisions').textContent=sum('detected');
     document.getElementById('statAwaiting').textContent=sum('awaiting_approval');
-    document.getElementById('statError').textContent=errs.length?(errs.reduce((a,x)=>a+Number(x.mean_abs_error_min),0)/errs.length).toFixed(1):'—';
+    document.getElementById('statError').textContent=errs.length?(errs.reduce((a,x)=>a+Number(x.mean_abs_error_min),0)/errs.length).toFixed(1):'--';
     const now=(ins&&ins.promises_now)||{};
     document.getElementById('statPromises').textContent=(Number(now.at_risk)||0)+(Number(now.late)||0);
     const el=document.getElementById('decisionList');
     if(!list||!list.length){el.innerHTML='<div class="feed-empty">No decisions yet. Late stops and promises at risk appear here with their outcome.</div>';return;}
     el.innerHTML=list.map(d=>{
+      const changed=d.executed_action==='route_changed';
       const out=d.actual&&d.actual.actual_at
         ?('Outcome: '+(Number(d.actual.actual_late_min)>0?Math.round(d.actual.actual_late_min)+' min late':'on time')
-          +(d.error_min!=null?' · prediction off by '+Math.abs(Math.round(d.error_min))+' min':''))
+          +(changed?' · route changed after approval'+(Number(d.actual.actual_late_min)<=0?', promise kept':'')
+                   :(d.error_min!=null?' · prediction off by '+Math.abs(Math.round(d.error_min))+' min':'')))
         :(d.status==='awaiting_approval'?'Waiting for a dispatcher to approve or reject':d.status==='approved'?'Approved by '+(d.decided_by||'dispatcher')
           :d.status==='rejected'?'Rejected by '+(d.decided_by||'dispatcher'):'Open: '+(d.executed_action||'recommended').replace(/_/g,' '));
       return `<div class="feed-item ${d.kind==='promise_risk'?'promise':d.kind==='late_stop'?'smarttrack':'swarm'}">

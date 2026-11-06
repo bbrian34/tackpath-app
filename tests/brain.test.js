@@ -26,7 +26,8 @@ async function open({ session }) {
         if (body.p_action === 'ops_insights') return json({ by_kind: { promise_risk: { detected: 2, awaiting_approval: 1, mean_abs_error_min: 3 }, late_stop: { detected: 3, awaiting_approval: 0, mean_abs_error_min: 5 } }, promises_now: { at_risk: 1, late: 1, on_track: 4 } });
         if (body.p_action === 'decisions') return json([
           { kind: 'promise_risk', status: 'measured', issue: 'Stop 3 is heading past its delivery promise', recommendation: 'Review moving stop 3', requires_approval: true, actual: { actual_at: 'x', actual_late_min: 6 }, error_min: -3 },
-          { kind: 'reassign_review', status: 'awaiting_approval', issue: 'Dana is 25 min behind with 3 stops left', recommendation: 'Review moving some of the remaining 3 stops', requires_approval: true }]);
+          { kind: 'reassign_review', status: 'awaiting_approval', issue: 'Dana is 25 min behind with 3 stops left', recommendation: 'Review moving some of the remaining 3 stops', requires_approval: true },
+          { kind: 'promise_risk', status: 'measured', executed_action: 'route_changed', issue: 'Stop 5 is heading past its delivery promise', recommendation: 'Review moving stop 5 to a driver who can reach it sooner', requires_approval: true, actual: { actual_at: 'x', actual_late_min: -8.1 }, error_min: -24.1 }]);
         return json([]);
       };
     },
@@ -52,6 +53,8 @@ test('signed in: activity, decisions and outcomes come from tp_org with the comp
   const dec = t.d.getElementById('decisionList').textContent;
   assert.match(dec, /Outcome: 6 min late · prediction off by 3 min/);
   assert.match(dec, /Waiting for a dispatcher to approve or reject/);
+  assert.match(dec, /Outcome: on time · route changed after approval, promise kept/, 'a changed route is not scored as a missed prediction');
+  assert.doesNotMatch(dec, /prediction off by 24/);
   assert.ok(t.d.querySelector('.stage') && t.d.getElementById('node-todd'), 'the agent visualization is still there');
   t.dom.window.close();
 });
@@ -62,6 +65,11 @@ test('not signed in: the Brain asks for the dispatcher sign-in and reads nothing
   assert.ok(t.d.getElementById('brainSignIn'));
   assert.match(t.d.getElementById('brainSignIn').innerHTML, /dispatcher\.html/);
   t.dom.window.close();
+});
+
+test('no agent is shown offline and no em dash is shown', () => {
+  assert.doesNotMatch(HTML, /OFFLINE/);
+  assert.doesNotMatch(HTML, /\u2014/);
 });
 
 test('no direct table reads remain, and Sponge is called with the company session', () => {
