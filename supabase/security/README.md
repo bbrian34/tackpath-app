@@ -43,6 +43,7 @@ dispatcher clicks **Approve** in the Drivers tab; removing a driver signs them o
 | `64_driver_hide_archived.sql` / `.rollback.sql` | The driver gateway `tp_driver` never returns an archived job (Clear board keeps the status, so drivers were left on Waiting for warehouse and the app adopted the route again): `jobs` leaves archived jobs out before the limit; `job`, `claim`, `update_job`, `messages`, `post_message` and `bin_binding` are refused for an archived job with `TP_DENIED: this route was removed by dispatch`; `location` answers `{ok:false}` and stores nothing. Everything else is unchanged. Wrapped like 60/63: migration 10's gateway moves to `tp_sec.tp_driver_v10` (not callable with the public key) and a new `public.tp_driver` with the same name, arguments and grants takes its place; still nine public entry points. The driver app also drops removed routes on the phone, so it works before and after 64. Needs 10; preflight stops, changing nothing, if already applied. The rollback restores migration 10's gateway. |
 | `65_bins_self_heal.sql` / `.rollback.sql` | BIN, LOC and STG spots free themselves; no SQL is ever needed. A spot is held only while its route is live (not archived, and not cancelled, delivered, completed_with_exceptions, closed_with_exceptions, in_transit or deleted). Before PathIQ's gateway checks or lists spots (`bindings`, `open_binding`, `stage_binding`, the PathIQ route poll) `tp_sec.heal_spots` releases that company's bindings of routes that are not live, in the same transaction, rows kept as history; leftover stuck rows are released on PathIQ's first request. `open_binding` refuses a bin a live route holds, naming it (`bin_taken`, route, status); `bindings` rows carry `job_title` / `job_status`; `stage_binding`'s `spot_taken` carries the status. The release trigger also fires for `closed_with_exceptions`, and deleting a job releases its bindings first. Only the requesting company; repeats change nothing; live routes never touched. Wrapped like 60/63 (`tp_sec.tp_org_v63`); same name, arguments and grants. Needs 60–63; roll back 65 before 63. |
 | `67_driver_staging_spot.sql` / `.rollback.sql` | The driver sees where the route is staged, not where it was stowed: `tp_driver` `bin_binding` answers `[{bin_code, state, staging_code}]` (staging_code = the STG spot PathIQ's `stage_binding` wrote; null = not staged yet) and no longer sends `location_code`. The same checks run first through the gateway in place (driver session, own route or open offer, not archived), and only bindings of that job's company are returned. Every other action unchanged. Wrapped like 60/63/64 (`tp_sec.tp_driver_v64`); same name, arguments and grants; still nine public entry points. Needs 60 and 64; preflight stops, changing nothing, if already applied. The rollback restores 64's gateway. (There is no migration 66.) |
+| `69_isolation_and_driver_identity.sql` / `.rollback.sql` | Company isolation and driver identity (SmartSort automation step 1). (1) A message with no route is shown only to the company that posted it (it was shown to every company); `messages.org_id`, set from the poster or the route. (2) Approving a self-signed-up driver puts them in the approving company; active drivers with no company are matched to one company only when every route they drove is that company's, otherwise listed for review; `driver_without_org_sees_all` switched off (a driver with no company saw every company's routes). (3) `jobs.driver_id`: kept in step with `driver_name` by a trigger; set only when the name names exactly one active driver of the company, otherwise left empty and listed in `tp_sec.identity_review` (never guessed); the dispatcher assigns by id; Accept stores the driver's id; a driver works a route only by id, or by name when the name is unique. (4) Open routes reach drivers as a summary (no stops, recipients or delivery addresses; delivery area only); the full route arrives with Accept. (5) A phone that is a driver in two companies chooses the company at sign-in (`TP_CHOOSE_COMPANY`, then `p_org`); one-company phones sign in exactly as before. Wrapped like 60-67 (`tp_org_v65`, `tp_driver_v67`, `tp_driver_sign_in_v10`); still nine public entry points. Needs 65 and 67; preflight stops, changing nothing, if already applied. Before applying, run the read-only check below to see what it will match and flag. |
 | `30_review_account.sql` | Creates the review company and driver (idempotent) |
 | `../functions/_shared/tp_security.js` | Logic for send-sms, driver-login, pod, Shopify HMAC (unit-tested under Node) |
 | `../functions/{send-sms,driver-login,pod}/index.ts`, `shopify-webhook/index.ts` | Edge functions |
@@ -429,3 +430,26 @@ retired pages too)
   if the console lists it for this key). After saving, open the Play build and confirm a push arrives.
 
 Do not use key B or C for anything else. Keys changes take a few minutes to apply.
+
+## Migration 69: read-only check before applying
+
+Paste into the SQL Editor and run. It reads only; it changes nothing. It shows what 69 will do:
+
+```sql
+-- routes whose driver name matches exactly one / several / no active driver of the company
+select case n when 1 then 'will be matched' when 0 then 'flagged: no such driver' else 'flagged: ' || n || ' drivers share the name' end as result,
+       count(*) as routes
+  from (select j.id, (select count(*) from public.drivers d where d.org_id::text = j.org_id::text
+                        and lower(btrim(d.name)) = lower(btrim(j.driver_name))
+                        and coalesce(d.status,'') not in ('removed','rejected')) as n
+          from public.jobs j where j.driver_name is not null) x
+ group by 1 order by 1;
+-- active drivers with no company (they see every company's routes today)
+select count(*) as drivers_without_company from public.drivers
+ where org_id is null and coalesce(status,'') in ('','active','approved');
+-- messages with no route and no company (shown to every company today, to nobody after 69)
+select count(*) as general_messages from public.messages where job_id is null;
+-- phones that are approved drivers in more than one company (they will choose at sign-in)
+select count(*) as shared_phones from (select regexp_replace(phone,'\D','','g') p from public.drivers
+  where org_id is not null and coalesce(status,'') in ('','active','approved') group by 1 having count(distinct org_id) > 1) x;
+```

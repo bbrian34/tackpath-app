@@ -116,7 +116,8 @@ test('inputs and the primary buttons are at least 48 px tall, with labels', asyn
     }));
     for (const [id, v] of h) assert.ok(v >= 48, `${id}: ${v}px`);
     const labels = await s.p.evaluate(() => [...document.querySelectorAll('#scLogin .fl')].map((l) => l.textContent.trim()));
-    assert.deepStrictEqual(labels, ['Mobile Number', 'Verification Code']);
+    // the third shows only when one phone drives for two companies (migration 69)
+    assert.deepStrictEqual(labels, ['Mobile Number', 'Verification Code', 'Which company are you driving for?']);
   } finally { await s.close(); }
 });
 

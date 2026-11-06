@@ -529,6 +529,11 @@ body.light-mode #scLogin .lbox-badge{color:#166534;background:rgba(22,163,74,.08
       <button class="fb" onclick="verifyCode()" id="loginVerifyBtn">Verify &amp; Sign In</button>
       <button onclick="showPhoneInput()" style="width:100%;padding:14px;border-radius:12px;background:none;border:1px solid rgba(255,255,255,.08);color:#4a6e88;font-size:0.875rem;cursor:pointer;margin-top:10px;">Change number</button>
     </div>
+    <!-- a phone that drives for more than one company chooses which one to sign in to -->
+    <div class="lbox-form" id="loginPhaseCompany" style="display:none;">
+      <label class="fl">Which company are you driving for?</label>
+      <div id="loginCompanyList"></div>
+    </div>
   </div>
 </div>
 
@@ -1220,6 +1225,7 @@ let pendingPhone='',pendingCode='';
 function showPhoneInput(){
   document.getElementById('loginPhasePhone').style.display='block';
   document.getElementById('loginPhaseCode').style.display='none';
+  document.getElementById('loginPhaseCompany').style.display='none';
 }
 async function requestCode(){
   const raw=document.getElementById('loginPhone').value.trim();
@@ -1240,13 +1246,24 @@ async function requestCode(){
   document.getElementById('loginPhaseCode').style.display='block';
   document.getElementById('loginCode').focus();
 }
-async function verifyCode(){
+async function verifyCode(org){
   const entered=(document.getElementById('loginCode').value||'').trim().replace(/\D/g,'');
   if(entered.length!==6){toast('Enter a 6-digit code','warn');return;}
   if(!pendingPhone){toast('Enter your mobile number first','warn');return;}
   let res=null;
-  try{res=await tpRpc('tp_driver_sign_in',{p_phone:pendingPhone,p_code:entered});}
+  const args={p_phone:pendingPhone,p_code:entered};if(org)args.p_org=org;
+  try{res=await tpRpc('tp_driver_sign_in',args);}
   catch(e){toast('Could not sign in. Check your connection and try again.','warn');return;}
+  if(res&&!res.ok&&res.error==='TP_CHOOSE_COMPANY'&&Array.isArray(res.companies)){
+    // the same code signs in to the company the driver picks
+    const list=document.getElementById('loginCompanyList');
+    list.innerHTML='';
+    res.companies.forEach(c=>{const b=document.createElement('button');b.className='fb';b.style.marginBottom='10px';
+      b.textContent=c.name||c.slug;b.onclick=()=>verifyCode(c.slug);list.appendChild(b);});
+    document.getElementById('loginPhaseCode').style.display='none';
+    document.getElementById('loginPhaseCompany').style.display='block';
+    return;
+  }
   if(!res||!res.ok){
     const err=(res&&res.error)||'';
     toast(/TP_RATE/.test(err)?'Too many attempts. Try again later.':(/approved/.test(err)?'This number is not an approved TackPath driver yet.':'Wrong or expired code'),'warn');
@@ -1450,7 +1467,7 @@ function showOffer(job){
   document.getElementById('offerDropoff').textContent=
     job.job_type==='surge'?
     (job.total_stops+' stops — '+job.total_packages+' packages'):
-    (job.dropoff_address||'--');
+    (job.dropoff_address||job.dropoff_area||'--');   // an open offer carries only the delivery area
   document.getElementById('offerPay').textContent='$'+(job.price||'--');
   document.getElementById('offerDist').textContent=
     job.job_type==='surge'?

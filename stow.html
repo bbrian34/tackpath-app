@@ -104,6 +104,101 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
 </style>
 </head>
 <body>
+<!-- Launch splash: a swarm of parts flies together into the TackPath logo, then
+     fades to the menu. Plays once per app session; a tap skips it. -->
+<div id="tpSplash" style="position:fixed;inset:0;z-index:100000;background:#071828;transition:opacity .4s ease-out;">
+  <canvas id="tpSplashCv" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+  <div id="tpSplashLk" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:12px;opacity:0;white-space:nowrap;">
+    <svg id="tpSplashMk" width="40" height="47" viewBox="0 0 48 56" fill="none" aria-hidden="true"><defs><linearGradient id="tpSplashG" x1="8" y1="48" x2="40" y2="5" gradientUnits="userSpaceOnUse"><stop stop-color="#0e7abf"/><stop offset="1" stop-color="#5dd4f4"/></linearGradient></defs><g stroke="url(#tpSplashG)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 47V34Q7 30 11 26" opacity=".62"/><path d="M21 47V24Q21 20 25 16" opacity=".82"/><path d="M35 47V14Q35 10 39 6"/></g></svg>
+    <div id="tpSplashWm" style="font-family:'TackPath Montserrat','Montserrat',sans-serif;font-weight:500;font-size:28px;letter-spacing:1px;line-height:1.2;"><span style="color:#fff;">T Ʌ C K </span><span style="color:#19b7ef;">P Ʌ T H</span></div>
+  </div>
+</div>
+<script>
+(function(){
+  var el=document.getElementById('tpSplash');
+  var seen=false;
+  try{seen=sessionStorage.getItem('tpSplashSeen')==='1';sessionStorage.setItem('tpSplashSeen','1');}catch(e){}
+  var still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(seen||still){el.parentNode.removeChild(el);return;}
+  var done=false;
+  function finish(){if(done)return;done=true;el.style.opacity='0';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},420);}
+  el.addEventListener('click',finish);
+  setTimeout(finish,6000); // never hold the menu hostage if a frame stalls
+
+  var MARK=['M7 47V34Q7 30 11 26','M21 47V24Q21 20 25 16','M35 47V14Q35 10 39 6'];
+  var PALETTE=['#19b7ef','#80d9fa','#a9e4f8','#ffffff','#0e7abf'];
+  function clamp(x){return x<0?0:x>1?1:x;}
+  function seg(t,a,b){return clamp((t-a)/(b-a));}
+  function io4(x){return x<.5?8*x*x*x*x:1-Math.pow(-2*x+2,4)/2;}
+
+  function start(){
+    if(done)return;
+    var cv=document.getElementById('tpSplashCv'),lk=document.getElementById('tpSplashLk');
+    var mk=document.getElementById('tpSplashMk'),wm=document.getElementById('tpSplashWm');
+    var W=el.clientWidth,H=el.clientHeight,dpr=Math.min(window.devicePixelRatio||1,2);
+    // size the lockup to about 80% of the screen width
+    var fs=28*Math.min(2.2,(W*.8)/lk.offsetWidth);
+    wm.style.fontSize=fs+'px';mk.setAttribute('width',fs*1.43);mk.setAttribute('height',fs*1.67);lk.style.gap=(fs*.43)+'px';
+    cv.width=W*dpr;cv.height=H*dpr;var cx=cv.getContext('2d');cx.scale(dpr,dpr);
+
+    // sample the real lockup into target points, one character at a time
+    var off=document.createElement('canvas');off.width=W;off.height=H;var o=off.getContext('2d');
+    var base=el.getBoundingClientRect(),mr=mk.getBoundingClientRect(),k=mr.width/48;
+    o.save();o.translate(mr.left-base.left,mr.top-base.top);o.scale(k,k);
+    o.strokeStyle='#000';o.lineWidth=6;o.lineCap='round';o.lineJoin='round';
+    MARK.forEach(function(d){o.stroke(new Path2D(d));});o.restore();
+    o.fillStyle='#000';o.strokeStyle='#000';o.lineWidth=Math.max(1,fs*.06);o.font='500 '+fs+'px '+getComputedStyle(wm).fontFamily;o.textBaseline='alphabetic';
+    var blueFrom=0;
+    Array.prototype.forEach.call(wm.children,function(sp,si){
+      var tn=sp.firstChild,r=document.createRange();
+      for(var i=0;i<tn.length;i++){
+        var ch=tn.data[i];if(ch===' ')continue;
+        r.setStart(tn,i);r.setEnd(tn,i+1);var b=r.getBoundingClientRect();
+        if(si===1&&!blueFrom)blueFrom=b.left-base.left;
+        o.fillText(ch,b.left-base.left,b.top-base.top+b.height*.8);o.strokeText(ch,b.left-base.left,b.top-base.top+b.height*.8);
+      }
+    });
+    var data=o.getImageData(0,0,W,H).data,pts=[],step=W<500?3:4,seed=7;
+    function R(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646;}
+    for(var y=0;y<H;y+=step)for(var x=0;x<W;x+=step)if(data[(y*W+x)*4+3]>128)pts.push({x:x,y:y});
+    var markRight=mr.right-base.left;
+    pts=pts.map(function(p){
+      return {tx:p.x,ty:p.y,sx:R()*W,sy:R()*H,a:R()*6.28,r:30+R()*W*.3,w:(R()-.5)*5,
+        c:PALETTE[Math.floor(R()*PALETTE.length)],s:5+R()*6,d:R()*.3,
+        end:p.x<=markRight?'#19b7ef':(p.x>=blueFrom?'#19b7ef':'#ffffff')};
+    });
+
+    var t0=performance.now();
+    function frame(now){
+      if(done)return;
+      var t=(now-t0)/1000,show=seg(t,2.0,2.4);
+      cx.clearRect(0,0,W,H);
+      var fade=1-show;
+      if(fade>0){
+        for(var i=0;i<pts.length;i++){
+          var p=pts[i],ang=p.a+t*p.w,chx=p.sx+Math.cos(ang)*p.r,chy=p.sy+Math.sin(ang*1.3)*p.r*.6;
+          var st=.6+p.d+p.tx/W*.4,q=io4(seg(t,st,st+.9));
+          var px=chx+(p.tx-chx)*q,py=chy+(p.ty-chy)*q,s=p.s+(step*.9-p.s)*q;
+          cx.globalAlpha=fade*(q<1?.9:1);cx.fillStyle=q>.98?p.end:p.c;cx.fillRect(px-s/2,py-s/2,s,s);
+        }
+        cx.globalAlpha=1;
+      }
+      lk.style.opacity=show;
+      if(t>=2.9){finish();return;}
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // wait briefly for the brand font so the letters land in the right shape
+  var go=function(){requestAnimationFrame(start);};
+  try{
+    var ff=new FontFace('TackPath Montserrat',"url('tackpath-montserrat-500.ttf')",{weight:'500'});
+    document.fonts.add(ff);
+    Promise.race([ff.load(),new Promise(function(r){setTimeout(r,700);})]).then(go,go);
+  }catch(e){go();}
+})();
+</script>
 
 <div class="top" id="topBar">
   <span id="topTitle" class="top-title"></span>
