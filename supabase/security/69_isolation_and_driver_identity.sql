@@ -164,7 +164,8 @@ create trigger tp_job_driver_id before insert or update of driver_name, driver_i
 do $backfill$
 declare j record; ids uuid[];
 begin
-  for j in select id, org_id, driver_name from public.jobs where driver_name is not null and driver_id is null loop
+  -- closed operations routes are read-only (protect_job_projection): left as they are
+  for j in select id, org_id, driver_name from public.jobs where driver_name is not null and driver_id is null and not tp_sec.job_locked(id::text) loop
     ids := array(select tp_sec.drivers_named(j.org_id::text, j.driver_name));
     if cardinality(ids) = 1 then
       update public.jobs set driver_id = ids[1] where id = j.id;
