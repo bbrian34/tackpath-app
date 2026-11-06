@@ -238,7 +238,7 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
     
   </div>
   <div class="hdr-right">
-    <div class="hdr-time" id="tp1Clock">—</div>
+    <div class="hdr-time" id="tp1Clock">--</div>
     <div class="hdr-status"><div class="hdr-dot"></div>All Systems Operational</div>
     <a href="symphony.html" class="hdr-link">Symphony+ &#8599;</a>
     <div class="hdr-avatar">B</div>
@@ -255,7 +255,7 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
       <div style="font-size:12px;color:var(--muted);" id="briefText">Loading operational summary...</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);" id="briefDate">—</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);" id="briefDate">--</div>
       <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);font-family:var(--mono);font-size:9px;font-weight:700;color:var(--gold);">&#9889; OWL AI &middot; <span id="briefActions">0</span> decisions</div>
     </div>
   </div>
@@ -481,18 +481,18 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
             </div>
           </div>
           <div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Driver Performance — Today</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Driver Performance: Today</div>
             <div id="riaTeamSummary" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
               <div class="card" style="padding:10px;text-align:center;">
-                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--blue);" id="riaTeamDrivers">—</div>
+                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--blue);" id="riaTeamDrivers">--</div>
                 <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;">Active Drivers</div>
               </div>
               <div class="card" style="padding:10px;text-align:center;">
-                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--green);" id="riaTeamOnTime">—</div>
+                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--green);" id="riaTeamOnTime">--</div>
                 <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;">Team On-Time Rate</div>
               </div>
               <div class="card" style="padding:10px;text-align:center;">
-                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--orange);" id="riaTeamExceptions">—</div>
+                <div style="font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--orange);" id="riaTeamExceptions">--</div>
                 <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;">Exceptions Today</div>
               </div>
             </div>
@@ -522,9 +522,35 @@ html,body{margin:0;padding:0;background:var(--bg);min-height:100vh;font-family:v
 const SB='https://hofijsiphyjpdvujjzfi.supabase.co';
 const KEY='sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';
 const SBH={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
-const sbGet=async p=>{const r=await fetch(SB+'/rest/v1/'+p+(p.includes('?')?'&':'?')+'apikey='+KEY,{headers:SBH});if(!r.ok)throw Error(await r.text());return r.json();};
-const sbPost=async(p,b)=>{const r=await fetch(SB+'/rest/v1/'+p,{method:'POST',headers:SBH,body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
-const sbPatch=async(p,b)=>{const r=await fetch(SB+'/rest/v1/'+p,{method:'PATCH',headers:{...SBH,'Prefer':'return=representation'},body:JSON.stringify(b)});if(!r.ok)throw Error(await r.text());return r.json();};
+// no direct table reads: everything goes through tpOrg below
+
+// ── COMPANY GATEWAY ── OWL reads only through tp_org with the dispatcher's company session
+// (the October lockdown closed direct table reads with the public key).
+function tpSession(){try{const s=JSON.parse(localStorage.getItem('tp_dispatch_org')||'null');return s&&s.token?s:null;}catch(e){return null;}}
+function showSignIn(){
+  if(document.getElementById('owlSignIn'))return;
+  const d=document.createElement('div');d.id='owlSignIn';
+  d.style.cssText='position:fixed;left:50%;top:90px;transform:translateX(-50%);z-index:999;background:#0b1a2e;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 22px;max-width:380px;font-family:inherit;box-shadow:0 12px 40px rgba(0,0,0,.4)';
+  d.innerHTML='<div style="font-weight:700;margin-bottom:8px;">Sign in to see your company in OWL</div><div style="opacity:.7;font-size:.86rem;margin-bottom:12px;">OWL shows your own deliveries, revenue, agent activity and decisions. Sign in on the dispatcher, then come back.</div><a href="dispatcher.html" style="color:#5dd4f4;font-weight:700;">Go to the dispatcher sign-in</a>';
+  document.body.appendChild(d);
+}
+async function tpOrg(action,args){
+  const s=tpSession(); if(!s){showSignIn();throw new Error('TP_AUTH: not signed in');}
+  const r=await fetch(SB+'/rest/v1/rpc/tp_org',{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({p_token:s.token,p_action:action,p_args:args||{}})});
+  const t=await r.text(); let d=null; try{d=t?JSON.parse(t):null;}catch(e){}
+  if(!r.ok){const m=(d&&d.message)||t||('HTTP '+r.status); if(/TP_AUTH/.test(m))showSignIn(); throw new Error(m);}
+  return d;
+}
+const esc=(v)=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const AGENT_TEXT=(e)=>{const d=e.details||{};
+  if(e.event_type==='stop_past_eta')return (e.driver_name||'Driver')+' is '+(d.minutes_late||'?')+' min late on stop '+(d.stop_number||'?');
+  if(e.event_type==='promise_at_risk')return 'Stop '+(d.stop_number||'?')+' likely '+Math.round(d.expected_late_min||0)+' min past its delivery promise';
+  if(e.event_type==='routine_checkin')return 'Checked in with '+(e.driver_name||'driver')+' at stop '+(d.stop_at_checkin||'?')+' of '+(d.total_stops||'?');
+  if(e.event_type==='route_completed')return 'Route complete: '+(d.total_stops||'?')+' stops';
+  if(e.event_type==='joint_analysis')return d.recommendation||'Route analysis completed';
+  if(e.event_type==='pattern_analysis')return 'Analyzed '+(d.messages_analyzed||'?')+' driver messages';
+  return d.insight||String(e.event_type||'').replace(/_/g,' ');};
 
 // ── ANTHROPIC ──
 const ANT_KEY=''; // REMOVED 2026-10 (security hardening): an Anthropic API key was committed here and must be revoked. AI calls must go through a server-side function.
@@ -563,7 +589,7 @@ async function loadData(){
   try{
     // Jobs
     const today=new Date();today.setHours(0,0,0,0);
-    jobs=await sbGet('jobs?select=*&order=created_at.desc&limit=200');
+    jobs=(await tpOrg('jobs',{limit:200}))||[];
 
     const todayJobs=jobs.filter(j=>new Date(j.created_at||j.updated_at)>=today);
     const activeJobs=jobs.filter(j=>['pending','assigned','customer_confirmed','in_transit'].includes(j.status));
@@ -599,19 +625,16 @@ async function loadData(){
 
 async function loadAgentData(){
   try{
-    // Work items
-    const wi=await sbGet('work_items?status=eq.pending&order=created_at.desc&limit=20');
-    workItems=wi||[];
+    // Decisions waiting for approval (the operations loop's routes heading late)
+    const dec=(await tpOrg('decisions',{status:'awaiting_approval',limit:20}))||[];
+    workItems=dec.map(d=>({id:d.id,status:'pending',title:d.issue,description:(d.expected_impact?d.expected_impact+'. ':'')+d.recommendation,
+      priority:d.risk==='high'?'critical':d.risk==='medium'?'high':'standard',agent_name:d.kind==='promise_risk'?'Promise watch':d.kind==='reassign_review'?'Reassignment review':'SmartTrack'}));
     renderWorkItems(workItems);
 
-    // Audit log
-    const al=await sbGet('agent_audit_log?order=created_at.desc&limit=30');
-    agentLog=al||[];
+    // What the agents did
+    const mem=(await tpOrg('agent_memory',{limit:30}))||[];
+    agentLog=mem.map(e=>({agent_name:e.agent_name,action_type:String(e.event_type||'').replace(/_/g,' '),decision_json:{summary:AGENT_TEXT(e)},created_at:e.created_at}));
     renderAgentFeed(agentLog);
-
-    // OCA summary
-    const snaps=await sbGet('bcl_snapshots?order=created_at.desc&limit=1');
-    if(snaps&&snaps.length)renderOCASummary(snaps[0]);
 
     // Exception count
     const excEl=document.getElementById('tp1Exceptions');
@@ -652,7 +675,7 @@ function renderAgentFeed(log){
   const el=document.getElementById('tp1AgentFeed');
   if(!el)return;
   if(!log.length){
-    el.innerHTML='<div class="af-item"><div class="af-dot" style="background:var(--gold);box-shadow:0 0 5px rgba(201,168,76,.4);animation:pulse 2s infinite;"></div><div class="af-content"><div class="af-agent">OCA &middot; monitoring</div><div class="af-text">Operations Coordinator is running every 60 seconds. Activity will appear here as agents make decisions.</div></div><div class="af-time">live</div></div>';
+    el.innerHTML='<div class="af-item"><div class="af-dot" style="background:var(--gold);box-shadow:0 0 5px rgba(201,168,76,.4);animation:pulse 2s infinite;"></div><div class="af-content"><div class="af-agent">OCA &middot; monitoring</div><div class="af-text">Agent activity appears here while routes are running.</div></div><div class="af-time">live</div></div>';
     return;
   }
   const dotColors={OCA:'var(--gold)',BILLING:'var(--green)',COMM:'var(--blue)',INTAKE:'var(--purple)'};
@@ -662,8 +685,8 @@ function renderAgentFeed(log){
     return `<div class="af-item">
       <div class="af-dot" style="background:${dot};box-shadow:0 0 5px ${dot}40;"></div>
       <div class="af-content">
-        <div class="af-agent">${a.agent_name} &middot; ${a.action_type}</div>
-        <div class="af-text">${dec.summary||dec.operational_status||'Agent scan completed'}</div>
+        <div class="af-agent">${esc(a.agent_name)} &middot; ${esc(a.action_type)}</div>
+        <div class="af-text">${esc(dec.summary||dec.operational_status||'Agent scan completed')}</div>
       </div>
       <div class="af-time">${new Date(a.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}</div>
     </div>`;
@@ -680,11 +703,10 @@ function renderWorkItems(items){
     <div class="wi-item">
       <div class="wi-priority" style="background:${pColors[i.priority]||'var(--gold)'};"></div>
       <div class="wi-body">
-        <div class="wi-title">${i.title||'Work Item'}</div>
-        <div class="wi-desc">${i.description||''}</div>
+        <div class="wi-title">${esc(i.title||'Decision')}</div>
+        <div class="wi-desc">${esc(i.description||'')}</div>
         <div class="wi-meta">
-          <span class="wi-conf">&#129504; ${Math.round((i.confidence_score||0)*100)}% confidence</span>
-          <span class="wi-source">${i.agent_name||'OCA'}</span>
+          <span class="wi-source">${esc(i.agent_name||'')}</span>
         </div>
       </div>
       <div class="wi-acts">
@@ -695,12 +717,10 @@ function renderWorkItems(items){
 }
 
 async function approveWI(id){
-  await sbPatch('work_items?id=eq.'+id,{status:'approved'}).catch(()=>{});
-  toast('Approved');loadAgentData();
+  try{await tpOrg('decide',{id:id,verdict:'approve',by:'Owner'});toast('Approved');}catch(e){toast('Could not record the decision');}loadAgentData();
 }
 async function rejectWI(id){
-  await sbPatch('work_items?id=eq.'+id,{status:'rejected'}).catch(()=>{});
-  toast('Rejected');loadAgentData();
+  try{await tpOrg('decide',{id:id,verdict:'reject',by:'Owner'});toast('Rejected');}catch(e){toast('Could not record the decision');}loadAgentData();
 }
 
 function renderDeliveries(delivered){
@@ -831,7 +851,7 @@ async function runRIA(){
   try{
     // Pull all jobs
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const allJobs = (await sbGet('jobs?select=*&order=created_at.desc&limit=500')).filter(j=>new Date(j.updated_at||j.created_at)>=todayStart);
+    const allJobs = ((await tpOrg('jobs',{limit:500}))||[]).filter(j=>new Date(j.updated_at||j.created_at)>=todayStart);
     const delivered = allJobs.filter(j=>j.status==='delivered');
 
     if(!delivered.length){
