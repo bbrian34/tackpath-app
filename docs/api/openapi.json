@@ -1,0 +1,3415 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TackPath API",
+    "version": "v1",
+    "description": "Submit delivery orders, follow routes and packages, receive webhooks and read proof of delivery. Guide: docs/api/README.md."
+  },
+  "servers": [
+    {
+      "url": "https://hofijsiphyjpdvujjzfi.supabase.co/functions/v1/api/v1",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "ApiKey": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "tpk_live_<prefix>_<secret>",
+        "description": "Authorization: Bearer tpk_live_..."
+      },
+      "CompanySession": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-TackPath-Session",
+        "description": "The developer page only (a dispatcher company session)"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "examples": [
+                  "invalid_address"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string",
+                "examples": [
+                  "req_5f1c0e9a2b7d4c6e8f0a1b2c"
+                ]
+              },
+              "order_id": {
+                "type": "string",
+                "description": "For duplicate_order: the existing order"
+              }
+            }
+          }
+        }
+      },
+      "OrderInput": {
+        "type": "object",
+        "required": [
+          "external_id",
+          "recipient_name",
+          "address"
+        ],
+        "properties": {
+          "external_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,64}$",
+            "description": "Your order reference. Unique per company: a second order with it is refused (409)."
+          },
+          "recipient_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "address": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300,
+            "description": "Full delivery address"
+          },
+          "packages": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99,
+            "default": 1
+          },
+          "tracking_number": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]{6,40}$",
+            "description": "The barcode on the package. Generated (TPA...) if omitted. Unique per company; a number already used by another order or on any of the company routes is refused (409)."
+          },
+          "recipient_phone": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "access_notes": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "gate_code": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "delivery_notes": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "signature_required": {
+            "type": "boolean"
+          },
+          "pickup_address": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Your own key/values, returned as is (at most 2 KB)"
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "ord_45ff5ef99ddf4ae6b369899a184ffd70"
+            ]
+          },
+          "object": {
+            "const": "order"
+          },
+          "mode": {
+            "enum": [
+              "live",
+              "test"
+            ],
+            "description": "test: created with a test-mode key; never on the dispatch board"
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "tracking_number": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "received",
+              "sorted",
+              "staged",
+              "assigned",
+              "out_for_delivery",
+              "delivered",
+              "delivery_attempted",
+              "exception",
+              "cancelled"
+            ],
+            "description": "See the status table in the guide"
+          },
+          "recipient": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "address": {
+            "type": "string"
+          },
+          "packages": {
+            "type": "integer"
+          },
+          "details": {
+            "type": "object"
+          },
+          "route": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "awaiting_confirmation",
+                  "unassigned",
+                  "assigned",
+                  "in_progress",
+                  "completed",
+                  "completed_with_exceptions",
+                  "cancelled"
+                ]
+              },
+              "stop_number": {
+                "type": "integer"
+              },
+              "driver": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "First name and initial only"
+                  }
+                }
+              }
+            }
+          },
+          "sorted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "staged_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "staging_spot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "out_for_delivery_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "delivered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "proof_of_delivery_available": {
+            "type": "boolean"
+          },
+          "batch_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OrderEvent": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "received",
+              "received_at_warehouse",
+              "sorted",
+              "staged",
+              "assigned",
+              "unassigned",
+              "out_for_delivery",
+              "delivered",
+              "delivery_attempted",
+              "exception",
+              "cancelled"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "enum": [
+              "api",
+              "pathiq",
+              "dispatch",
+              "driver"
+            ]
+          },
+          "bin": {
+            "type": "string"
+          },
+          "staging_spot": {
+            "type": "string"
+          },
+          "driver": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "reason_label": {
+            "type": "string"
+          }
+        }
+      },
+      "Batch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "const": "batch"
+          },
+          "received": {
+            "type": "integer"
+          },
+          "created": {
+            "type": "integer"
+          },
+          "duplicates": {
+            "type": "integer"
+          },
+          "rejected": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "result": {
+                  "enum": [
+                    "created",
+                    "duplicate",
+                    "rejected"
+                  ]
+                },
+                "order_id": {
+                  "type": "string"
+                },
+                "external_id": {
+                  "type": "string"
+                },
+                "tracking_number": {
+                  "type": "string"
+                },
+                "error": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProofOfDelivery": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "object": {
+            "const": "proof_of_delivery"
+          },
+          "delivered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recipient_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delivery_method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delivery_method_label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "packages_verified": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "media_pending": {
+            "type": "boolean",
+            "description": "A photo was taken but has not finished uploading yet"
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "photo",
+                    "signature"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "The link works for 15 minutes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Route": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "rte_2ed955a68399451b82cefff2c794a79f"
+            ]
+          },
+          "object": {
+            "const": "route"
+          },
+          "type": {
+            "enum": [
+              "route",
+              "single_delivery"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "awaiting_confirmation",
+              "unassigned",
+              "assigned",
+              "in_progress",
+              "completed",
+              "completed_with_exceptions",
+              "cancelled"
+            ]
+          },
+          "stops_total": {
+            "type": "integer"
+          },
+          "stops_completed": {
+            "type": "integer"
+          },
+          "packages_total": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "driver": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "bin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staging_spot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staged_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estimated_delivery_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "picked_up_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "stops": {
+            "type": "array",
+            "description": "GET /routes/{id} only",
+            "items": {
+              "type": "object",
+              "properties": {
+                "stop_number": {
+                  "type": "integer"
+                },
+                "order_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tracking_number": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "recipient": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "address": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "packages": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "enum": [
+                    "pending",
+                    "delivered",
+                    "exception",
+                    "cancelled"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "WebhookEndpointInput": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "https, port 443, public host name"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "order.status_changed",
+                "route.assignment_changed",
+                "delivery.completed",
+                "delivery.exception",
+                "pod.available"
+              ]
+            },
+            "description": "Default: all"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "active": {
+            "type": "boolean",
+            "description": "PATCH only"
+          }
+        }
+      },
+      "WebhookEndpoint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "const": "webhook_endpoint"
+          },
+          "url": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "order.status_changed",
+                "route.assignment_changed",
+                "delivery.completed",
+                "delivery.exception",
+                "pod.available"
+              ]
+            }
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Only in the create and rotate-secret responses"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "WebhookDelivery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "delivered",
+              "failed"
+            ]
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "last_status_code": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "next_attempt_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delivered_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "type",
+          "api_version",
+          "created_at",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "evt_9c2f0d41e1b84d6f9f3a2b1c0d9e8f7a"
+            ]
+          },
+          "object": {
+            "const": "event"
+          },
+          "type": {
+            "enum": [
+              "order.status_changed",
+              "route.assignment_changed",
+              "delivery.completed",
+              "delivery.exception",
+              "pod.available",
+              "webhook.test"
+            ]
+          },
+          "api_version": {
+            "const": "v1"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "order": {
+                "$ref": "#/components/schemas/Order"
+              },
+              "route": {
+                "$ref": "#/components/schemas/Route"
+              },
+              "previous_status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reason_label": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "const": "api_key"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "live",
+              "test"
+            ]
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "orders:write",
+                "orders:read",
+                "routes:read",
+                "tracking:read",
+                "pod:read",
+                "webhooks:manage"
+              ]
+            }
+          },
+          "own_orders_only": {
+            "type": "boolean"
+          },
+          "client_label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rate_per_minute": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "revoked",
+              "expired"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "description": "Only in the create and rotate responses"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check (no credentials)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The API is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "api_version": {
+                      "const": "v1"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "summary": "Submit one delivery order",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "orders:write",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Any unique string (max 200). A retry with the same key and body returns the first response; with another body, 409.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "duplicate_order, duplicate_tracking_number or idempotency_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body over 1 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field is not valid (see error.code)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List orders, newest first",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "orders:read",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filter by status",
+            "schema": {
+              "enum": [
+                "received",
+                "sorted",
+                "staged",
+                "assigned",
+                "out_for_delivery",
+                "delivered",
+                "delivery_attempted",
+                "exception",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "external_id",
+            "in": "query",
+            "required": false,
+            "description": "Exact",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tracking_number",
+            "in": "query",
+            "required": false,
+            "description": "Exact, any case",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_after",
+            "in": "query",
+            "required": false,
+            "description": "ISO 8601",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "created_before",
+            "in": "query",
+            "required": false,
+            "description": "ISO 8601",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1-200, default 50",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "next_cursor from the previous page",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "data",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "object": {
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Order"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as ?cursor= to get the next page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad filter or cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/batch": {
+      "post": {
+        "summary": "Submit a manifest (1-500 orders)",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "orders:write",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Any unique string (max 200). A retry with the same key and body returns the first response; with another body, 409.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "orders"
+                ],
+                "properties": {
+                  "orders": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "items": {
+                      "$ref": "#/components/schemas/OrderInput"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-order results (created, duplicate, rejected)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Batch"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a list of 1-500 orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "summary": "Get an order (by ord_... id or your external_id)",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "orders:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ord_... or external_id",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such order for this key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/events": {
+      "get": {
+        "summary": "Lifecycle events of an order, oldest first",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "tracking:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ord_... or external_id",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "object": {
+                      "const": "list"
+                    },
+                    "order_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "received",
+                        "sorted",
+                        "staged",
+                        "assigned",
+                        "out_for_delivery",
+                        "delivered",
+                        "delivery_attempted",
+                        "exception",
+                        "cancelled"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderEvent"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/proof-of-delivery": {
+      "get": {
+        "summary": "Proof of delivery (photos and signatures as 15-minute links)",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "pod:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ord_... or external_id",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proof of delivery",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProofOfDelivery"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found, or pod_not_available when no delivery was recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/batches/{id}": {
+      "get": {
+        "summary": "Get a batch result",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "orders:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "bat_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The batch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Batch"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such batch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tracking/{id}": {
+      "get": {
+        "summary": "Track by tracking number",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "tracking:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The tracking number (any case)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order and events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "object": {
+                      "const": "tracking"
+                    },
+                    "order": {
+                      "$ref": "#/components/schemas/Order"
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderEvent"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown tracking number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/routes": {
+      "get": {
+        "summary": "List routes and deliveries, newest first",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "routes:read",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filter",
+            "schema": {
+              "enum": [
+                "awaiting_confirmation",
+                "unassigned",
+                "assigned",
+                "in_progress",
+                "completed",
+                "completed_with_exceptions",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "created_after",
+            "in": "query",
+            "required": false,
+            "description": "ISO 8601",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1-200, default 50",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "next_cursor from the previous page",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of routes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "data",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "object": {
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Route"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as ?cursor= to get the next page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/routes/{id}": {
+      "get": {
+        "summary": "Get a route with its stops",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "routes:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "rte_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Route"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such route",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "post": {
+        "summary": "Register a webhook endpoint (returns the signing secret once)",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Any unique string (max 200). A retry with the same key and body returns the first response; with another body, 409.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEndpointInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid_url, invalid_events or too_many_endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List webhook endpoints",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "responses": {
+          "200": {
+            "description": "Endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "data",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "object": {
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WebhookEndpoint"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as ?cursor= to get the next page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "get": {
+        "summary": "Get a webhook endpoint",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "whk_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Change url, events, description or active",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "whk_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEndpointInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete (disable) an endpoint; pending deliveries are dropped",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "whk_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "deleted": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/rotate-secret": {
+      "post": {
+        "summary": "Replace the signing secret (returned once)",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "whk_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Any unique string (max 200). A retry with the same key and body returns the first response; with another body, 409.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Endpoint with the new secret",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/test": {
+      "post": {
+        "summary": "Queue a webhook.test event to this endpoint",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "whk_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "event_id": {
+                      "type": "string"
+                    },
+                    "queued": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/deliveries": {
+      "get": {
+        "summary": "The last 100 deliveries to this endpoint",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "whk_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deliveries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "data",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "object": {
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WebhookDelivery"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as ?cursor= to get the next page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "summary": "Recent events (the same ones sent to webhooks), newest first",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "x-required-scope": "webhooks:manage",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "1-200, default 50",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "next_cursor from the previous page",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "data",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "object": {
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as ?cursor= to get the next page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error on TackPath side (safe to retry with the same Idempotency-Key)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "api_disabled: the API is switched off for maintenance (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/keys": {
+      "get": {
+        "summary": "List API keys (developer page)",
+        "security": [
+          {
+            "CompanySession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "object",
+                    "data",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "object": {
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ApiKey"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as ?cursor= to get the next page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an API key (the key is returned once)",
+        "security": [
+          {
+            "CompanySession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "orders:write",
+                        "orders:read",
+                        "routes:read",
+                        "tracking:read",
+                        "pod:read",
+                        "webhooks:manage"
+                      ]
+                    }
+                  },
+                  "mode": {
+                    "enum": [
+                      "live",
+                      "test"
+                    ]
+                  },
+                  "own_orders_only": {
+                    "type": "boolean"
+                  },
+                  "client_label": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "expires_in_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3650
+                  },
+                  "rate_per_minute": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 600
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/keys/{id}/revoke": {
+      "post": {
+        "summary": "Revoke a key (effective immediately)",
+        "security": [
+          {
+            "CompanySession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "key_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/keys/{id}/rotate": {
+      "post": {
+        "summary": "Create a replacement key; the old one keeps working for grace_hours (0-168, default 24)",
+        "security": [
+          {
+            "CompanySession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "key_...",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grace_hours": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 168
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The key is revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "order.status_changed": {
+      "post": {
+        "summary": "order.status_changed event",
+        "parameters": [
+          {
+            "name": "TackPath-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>"
+          },
+          {
+            "name": "TackPath-Event-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TackPath-Delivery-Attempt",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event; anything else is retried"
+          }
+        }
+      }
+    },
+    "route.assignment_changed": {
+      "post": {
+        "summary": "route.assignment_changed event",
+        "parameters": [
+          {
+            "name": "TackPath-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>"
+          },
+          {
+            "name": "TackPath-Event-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TackPath-Delivery-Attempt",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event; anything else is retried"
+          }
+        }
+      }
+    },
+    "delivery.completed": {
+      "post": {
+        "summary": "delivery.completed event",
+        "parameters": [
+          {
+            "name": "TackPath-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>"
+          },
+          {
+            "name": "TackPath-Event-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TackPath-Delivery-Attempt",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event; anything else is retried"
+          }
+        }
+      }
+    },
+    "delivery.exception": {
+      "post": {
+        "summary": "delivery.exception event",
+        "parameters": [
+          {
+            "name": "TackPath-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>"
+          },
+          {
+            "name": "TackPath-Event-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TackPath-Delivery-Attempt",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event; anything else is retried"
+          }
+        }
+      }
+    },
+    "pod.available": {
+      "post": {
+        "summary": "pod.available event",
+        "parameters": [
+          {
+            "name": "TackPath-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "t=<unix seconds>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>"
+          },
+          {
+            "name": "TackPath-Event-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "TackPath-Delivery-Attempt",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event; anything else is retried"
+          }
+        }
+      }
+    }
+  }
+}

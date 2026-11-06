@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>TackPath Developers | API keys and webhooks</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://hofijsiphyjpdvujjzfi.supabase.co; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'">
+<style>
+@font-face{font-family:'TackPath Montserrat';font-weight:500;font-display:swap;src:url('tackpath-montserrat-500.ttf')}
+:root{--navy:#010e21;--blue:#19b7ef;--ink:#102b43;--muted:#566b7d;--line:#dbe4eb;--paper:#f6f8fb;--ok:#127a46;--bad:#b42318}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;font-size:15px}
+header{background:var(--navy);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px}
+header img{width:26px;height:30px}
+.wm{font-family:'TackPath Montserrat',sans-serif;font-weight:500;letter-spacing:1px;font-size:18px}.wm b{font-weight:500;color:#fff}.wm i{font-style:normal;color:var(--blue)}
+header .sub{margin-left:8px;color:#9bb2c7;font-size:14px}
+header .right{margin-left:auto;font-size:14px;color:#dce7f0}
+header button{margin-left:10px}
+main{max-width:1060px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:24px;margin:0 0 6px}h2{font-size:18px;margin:0 0 12px}
+p.lead{color:var(--muted);margin:0 0 20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px}
+label{display:block;font-weight:600;margin:10px 0 4px}
+input[type=text],input[type=password],input[type=url],input[type=number]{width:100%;padding:9px 10px;border:1px solid #c5d2dc;border-radius:8px;font-size:15px}
+.row{display:flex;gap:14px;flex-wrap:wrap}.row>div{flex:1;min-width:200px}
+.checks{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:4px}.checks label{font-weight:400;margin:0;display:flex;gap:6px;align-items:center}
+button{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+button.ghost{background:#fff;color:var(--ink);border:1px solid #c5d2dc}button.danger{background:#fff;color:var(--bad);border:1px solid #f0b8b2}
+button:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;border-top:0}
+code,.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.active{background:#e3f6ec;color:var(--ok)}.pill.revoked,.pill.expired,.pill.off{background:#fde8e6;color:var(--bad)}
+.secret{background:#fff8e1;border:1px solid #f2d488;border-radius:10px;padding:14px;margin:14px 0}
+.secret code{display:block;word-break:break-all;background:#fff;border:1px solid #f2d488;padding:10px;border-radius:6px;margin:8px 0}
+.msg{margin-top:10px;font-weight:600}.msg.err{color:var(--bad)}.msg.ok{color:var(--ok)}
+.hidden{display:none}
+.small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.svg" alt=""><span class="wm"><b>T &#581; C K</b> <i>P &#581; T H</i></span><span class="sub">Developers</span>
+  <span class="right" id="who"></span>
+</header>
+<main>
+  <section id="signin" class="card hidden">
+    <h1>Sign in</h1>
+    <p class="lead">Use your company name and company code, the same as the dispatcher.</p>
+    <div class="row"><div><label for="slug">Company</label><input id="slug" type="text" autocomplete="organization" autocapitalize="off"></div>
+      <div><label for="code">Company code</label><input id="code" type="password" autocomplete="current-password"></div></div>
+    <p><button id="signinBtn">Sign in</button></p>
+    <div id="signinMsg" class="msg err"></div>
+  </section>
+
+  <div id="app" class="hidden">
+    <h1>API keys and webhooks</h1>
+    <p class="lead">Keys let your software use the TackPath API for this company. Each key is shown once, when it is created. Docs: <a href="docs/api/README.md">API guide</a>.</p>
+
+    <section class="card">
+      <h2>Create an API key</h2>
+      <div class="row">
+        <div><label for="kName">Name</label><input id="kName" type="text" maxlength="80" placeholder="e.g. Warehouse system"></div>
+        <div><label for="kDays">Expires after (days, optional)</label><input id="kDays" type="number" min="1" max="3650"></div>
+      </div>
+      <label>Scopes</label>
+      <div class="checks" id="kScopes"></div>
+      <label><input type="checkbox" id="kOwn"> Limit this key to the orders it creates (for a client of yours)</label>
+      <div id="kLabelWrap" class="hidden"><label for="kLabel">Client label (keys with the same label share orders)</label><input id="kLabel" type="text" maxlength="80"></div>
+      <p><button id="kCreate">Create key</button></p>
+      <div id="kMsg" class="msg"></div>
+      <div id="kSecret" class="secret hidden"><b>Copy this key now. It will not be shown again.</b><code id="kSecretVal"></code>
+        <button class="ghost" data-copy="kSecretVal">Copy</button></div>
+    </section>
+
+    <section class="card">
+      <h2>Your API keys</h2>
+      <table><thead><tr><th>Name</th><th>Key</th><th>Scopes</th><th>Status</th><th>Last used</th><th></th></tr></thead><tbody id="keys"></tbody></table>
+    </section>
+
+    <section class="card">
+      <h2>Add a webhook endpoint</h2>
+      <label for="wUrl">HTTPS URL</label><input id="wUrl" type="url" placeholder="https://example.com/tackpath/webhooks">
+      <label>Events</label><div class="checks" id="wEvents"></div>
+      <p><button id="wCreate">Add endpoint</button></p>
+      <div id="wMsg" class="msg"></div>
+      <div id="wSecret" class="secret hidden"><b>Signing secret. Copy it now; it will not be shown again.</b><code id="wSecretVal"></code>
+        <button class="ghost" data-copy="wSecretVal">Copy</button></div>
+    </section>
+
+    <section class="card">
+      <h2>Webhook endpoints</h2>
+      <table><thead><tr><th>URL</th><th>Events</th><th>Status</th><th></th></tr></thead><tbody id="hooks"></tbody></table>
+      <div id="dlv" class="hidden"><h2 style="margin-top:18px">Recent deliveries</h2>
+        <table><thead><tr><th>Event</th><th>Status</th><th>Attempts</th><th>Last result</th><th>Time</th></tr></thead><tbody id="dlvRows"></tbody></table></div>
+    </section>
+  </div>
+</main>
+<script>
+const SB = 'https://hofijsiphyjpdvujjzfi.supabase.co';
+const KEY = 'sb_publishable_wTbmXugtlItd1VGIzTMJZQ_Thd5v1Gp';     // the public key every TackPath page uses
+const API = SB + '/functions/v1/api/v1';
+const SCOPES = [['orders:write','Create orders'],['orders:read','Read orders'],['tracking:read','Tracking'],['pod:read','Proof of delivery'],
+                ['routes:read','Routes'],['webhooks:manage','Webhooks']];
+const EVENTS = ['order.status_changed','route.assignment_changed','delivery.completed','delivery.exception','pod.available'];
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); Object.assign(e, props);
+  kids.flat().forEach((k) => e.append(k instanceof Node ? k : document.createTextNode(k == null ? '' : String(k)))); return e; };
+const session = () => { try { const s = JSON.parse(localStorage.getItem('tp_dispatch_org') || 'null'); return s && s.token ? s : null; } catch (e) { return null; } };
+const when = (t) => t ? new Date(t).toLocaleString() : 'never';
+
+async function api(method, path, body) {
+  const s = session();
+  const r = await fetch(API + path, { method, headers: { 'X-TackPath-Session': s ? s.token : '', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined });
+  let data = null; try { data = await r.json(); } catch (e) {}
+  if (r.status === 401) { localStorage.removeItem('tp_dispatch_org'); show(); throw new Error('Please sign in again'); }
+  if (!r.ok) throw new Error((data && data.error && data.error.message) || ('Request failed (' + r.status + ')'));
+  return data;
+}
+function say(id, text, ok) { const m = $(id); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
+
+function show() {
+  const s = session();
+  $('signin').classList.toggle('hidden', !!s); $('app').classList.toggle('hidden', !s);
+  $('who').textContent = '';
+  if (s) {
+    $('who').append(s.name || s.slug, el('button', { className: 'ghost', textContent: 'Sign out', onclick: () => { localStorage.removeItem('tp_dispatch_org'); show(); } }));
+    loadKeys(); loadHooks();
+  }
+}
+$('signinBtn').onclick = async () => {
+  say('signinMsg', '');
+  try {
+    const r = await fetch(SB + '/rest/v1/rpc/tp_org_sign_in', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KEY, Authorization: 'Bearer ' + KEY },
+      body: JSON.stringify({ p_slug: $('slug').value.trim(), p_code: $('code').value }) });
+    const res = await r.json();
+    if (!r.ok || !res || !res.ok) throw new Error(/TP_RATE/.test((res && res.error) || '') ? 'Too many attempts. Try again in 15 minutes.' : 'Company or code not recognised.');
+    localStorage.setItem('tp_dispatch_org', JSON.stringify({ id: res.org.id, slug: res.org.slug, name: res.org.name, token: res.token }));
+    $('code').value = ''; show();
+  } catch (e) { say('signinMsg', e.message || 'Could not sign in'); }
+};
+
+SCOPES.forEach(([s, label]) => $('kScopes').append(el('label', {}, el('input', { type: 'checkbox', value: s, checked: true }), label)));
+EVENTS.forEach((e) => $('wEvents').append(el('label', {}, el('input', { type: 'checkbox', value: e, checked: true }), e)));
+$('kOwn').onchange = () => { $('kLabelWrap').classList.toggle('hidden', !$('kOwn').checked);
+  const r = [...$('kScopes').querySelectorAll('input')].find((i) => i.value === 'routes:read'); r.disabled = $('kOwn').checked; if (r.disabled) r.checked = false; };
+document.querySelectorAll('[data-copy]').forEach((b) => b.onclick = () => navigator.clipboard && navigator.clipboard.writeText($(b.dataset.copy).textContent));
+
+$('kCreate').onclick = async () => {
+  say('kMsg', ''); $('kSecret').classList.add('hidden');
+  const body = { name: $('kName').value.trim(), scopes: [...$('kScopes').querySelectorAll('input:checked')].map((i) => i.value),
+    own_orders_only: $('kOwn').checked };
+  if ($('kOwn').checked && $('kLabel').value.trim()) body.client_label = $('kLabel').value.trim();
+  if ($('kDays').value) body.expires_in_days = Number($('kDays').value);
+  try { const k = await api('POST', '/admin/keys', body); $('kSecretVal').textContent = k.key; $('kSecret').classList.remove('hidden');
+    say('kMsg', 'Key created.', true); $('kName').value = ''; loadKeys(); }
+  catch (e) { say('kMsg', e.message); }
+};
+function keyActions(k) {
+  if (k.status !== 'active') return '';
+  const rotate = el('button', { className: 'ghost', textContent: 'Rotate' });
+  rotate.onclick = async () => {
+    if (!confirm('Create a new key and keep this one working for 24 hours?')) return;
+    try {
+      const n = await api('POST', '/admin/keys/' + k.id + '/rotate', { grace_hours: 24 });
+      $('kSecretVal').textContent = n.key; $('kSecret').classList.remove('hidden');
+      say('kMsg', 'New key created. The old key stops at ' + when(n.previous_key_expires_at) + '.', true); loadKeys();
+    } catch (e) { say('kMsg', e.message); }
+  };
+  const revoke = el('button', { className: 'danger', textContent: 'Revoke' });
+  revoke.onclick = async () => {
+    if (!confirm('Revoke "' + k.name + '"? Software using it stops working at once.')) return;
+    try { await api('POST', '/admin/keys/' + k.id + '/revoke'); loadKeys(); } catch (e) { say('kMsg', e.message); }
+  };
+  return [rotate, ' ', revoke];
+}
+function keyRow(k) {
+  const name = el('td', {}, k.name);
+  if (k.own_orders_only) name.append(el('div', { className: 'small' }, 'Own orders only' + (k.client_label ? ': ' + k.client_label : '')));
+  const status = el('td', {}, el('span', { className: 'pill ' + k.status }, k.status));
+  if (k.expires_at && k.status === 'active') status.append(el('div', { className: 'small' }, 'until ' + when(k.expires_at)));
+  return el('tr', {}, name, el('td', { className: 'mono' }, k.prefix + '_...'), el('td', { className: 'small' }, k.scopes.join(', ')),
+            status, el('td', { className: 'small' }, when(k.last_used_at)), el('td', {}, keyActions(k)));
+}
+async function loadKeys() {
+  const tb = $('keys'); tb.textContent = '';
+  try {
+    const { data } = await api('GET', '/admin/keys');
+    if (!data.length) tb.append(el('tr', {}, el('td', { colSpan: 6, className: 'small' }, 'No keys yet.')));
+    data.forEach((k) => tb.append(keyRow(k)));
+  } catch (e) { tb.append(el('tr', {}, el('td', { colSpan: 6, className: 'msg err' }, e.message))); }
+}
+
+$('wCreate').onclick = async () => {
+  say('wMsg', ''); $('wSecret').classList.add('hidden');
+  try { const w = await api('POST', '/webhooks', { url: $('wUrl').value.trim(), events: [...$('wEvents').querySelectorAll('input:checked')].map((i) => i.value) });
+    $('wSecretVal').textContent = w.secret; $('wSecret').classList.remove('hidden'); say('wMsg', 'Endpoint added.', true); $('wUrl').value = ''; loadHooks(); }
+  catch (e) { say('wMsg', e.message); }
+};
+function button(text, cls, fn) { const b = el('button', { className: cls, textContent: text }); b.onclick = fn; return b; }
+function hookActions(w) {
+  if (!w.active) return '';
+  return [
+    button('Send test', 'ghost', async () => { try { await api('POST', '/webhooks/' + w.id + '/test'); say('wMsg', 'Test event queued.', true); } catch (e) { say('wMsg', e.message); } }), ' ',
+    button('Deliveries', 'ghost', () => loadDeliveries(w.id)), ' ',
+    button('New secret', 'ghost', async () => {
+      if (!confirm('Replace the signing secret? Update your receiver right away.')) return;
+      try { const r = await api('POST', '/webhooks/' + w.id + '/rotate-secret'); $('wSecretVal').textContent = r.secret; $('wSecret').classList.remove('hidden'); }
+      catch (e) { say('wMsg', e.message); }
+    }), ' ',
+    button('Delete', 'danger', async () => {
+      if (!confirm('Delete this endpoint?')) return;
+      try { await api('DELETE', '/webhooks/' + w.id); loadHooks(); } catch (e) { say('wMsg', e.message); }
+    })];
+}
+async function loadHooks() {
+  const tb = $('hooks'); tb.textContent = '';
+  try {
+    const { data } = await api('GET', '/webhooks');
+    if (!data.length) tb.append(el('tr', {}, el('td', { colSpan: 4, className: 'small' }, 'No endpoints yet.')));
+    data.forEach((w) => tb.append(el('tr', {}, el('td', { className: 'mono' }, w.url), el('td', { className: 'small' }, w.events.join(', ')),
+      el('td', {}, el('span', { className: 'pill ' + (w.active ? 'active' : 'off') }, w.active ? 'active' : 'off')), el('td', {}, hookActions(w)))));
+  } catch (e) { tb.append(el('tr', {}, el('td', { colSpan: 4, className: 'msg err' }, e.message))); }
+}
+async function loadDeliveries(id) {
+  const tb = $('dlvRows'); tb.textContent = ''; $('dlv').classList.remove('hidden');
+  try { const { data } = await api('GET', '/webhooks/' + id + '/deliveries');
+    if (!data.length) tb.append(el('tr', {}, el('td', { colSpan: 5, className: 'small' }, 'No deliveries yet.')));
+    data.forEach((d) => tb.append(el('tr', {}, el('td', { className: 'mono' }, d.event_type), el('td', {}, d.status), el('td', {}, d.attempts),
+      el('td', { className: 'small' }, d.last_error || (d.last_status_code ? 'HTTP ' + d.last_status_code : '')), el('td', { className: 'small' }, when(d.delivered_at || d.created_at)))));
+  } catch (e) { tb.append(el('tr', {}, el('td', { colSpan: 5, className: 'msg err' }, e.message))); }
+}
+show();
+</script>
+</body>
+</html>
