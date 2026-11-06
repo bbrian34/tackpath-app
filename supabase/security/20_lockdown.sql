@@ -191,9 +191,16 @@ end
 $svc$;
 revoke execute on all routines in schema public from public, anon, authenticated;  -- functions, procedures, aggregates
 grant execute on function public.tp_org_lookup(text), public.tp_org_sign_in(text,text), public.tp_sign_out(text),
-  public.tp_org(text,text,jsonb), public.tp_driver_sign_in(text,text), public.tp_driver(text,text,jsonb),
+  public.tp_org(text,text,jsonb), public.tp_driver(text,text,jsonb),
   public.tp_customer(text,jsonb), public.tp_track(text,jsonb), public.tp_driver_signup(jsonb)
   to anon, authenticated;
+-- driver sign-in: (phone, code) from migration 10, or (phone, code, company) once 69 is applied
+do $si$ declare f regprocedure; begin
+  for f in select p.oid::regprocedure from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.proname = 'tp_driver_sign_in' loop
+    execute format('grant execute on function %s to anon, authenticated', f);
+  end loop;
+end $si$;
 
 -- ── 5. FUTURE OBJECTS ARE NOT AUTO-GRANTED TO THE PUBLIC KEY ─────────────
 alter default privileges in schema public revoke all on tables from anon, authenticated;
@@ -219,7 +226,7 @@ $pod$;
 do $post$
 declare extra text; missing text;
   entry constant text[] := array['tp_org_lookup(text)', 'tp_org_sign_in(text,text)', 'tp_sign_out(text)',
-    'tp_org(text,text,jsonb)', 'tp_driver_sign_in(text,text)', 'tp_driver(text,text,jsonb)',
+    'tp_org(text,text,jsonb)', 'tp_driver_sign_in(text,text)', 'tp_driver_sign_in(text,text,text)', 'tp_driver(text,text,jsonb)',
     'tp_customer(text,jsonb)', 'tp_track(text,jsonb)', 'tp_driver_signup(jsonb)'];
 begin
   select string_agg(p.oid::regprocedure::text || ' (owner ' || pg_get_userbyid(p.proowner) || ')', ', ') into extra
@@ -230,8 +237,12 @@ begin
   if extra is not null then
     raise exception 'Migration 20 stopped, nothing was changed: still executable by anon/authenticated: %. Run this as the owner of those functions (or revoke execute from them first) and send this message for review.', extra;
   end if;
+  -- every entry point that exists must be callable (the driver sign-in exists in one of its two forms)
   select string_agg(e, ', ') into missing from unnest(entry) e
-   where not has_function_privilege('anon', ('public.' || e)::regprocedure, 'EXECUTE');
+   where to_regprocedure('public.' || e) is not null and not has_function_privilege('anon', ('public.' || e)::regprocedure, 'EXECUTE');
+  if to_regprocedure('public.tp_driver_sign_in(text,text)') is null and to_regprocedure('public.tp_driver_sign_in(text,text,text)') is null then
+    missing := coalesce(missing || ', ', '') || 'tp_driver_sign_in';
+  end if;
   if missing is not null then
     raise exception 'Migration 20 stopped, nothing was changed: tp_* entry points not executable by anon: %', missing;
   end if;
