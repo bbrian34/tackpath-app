@@ -4683,6 +4683,33 @@ function openSmartSortDrawer(){
 function closeSmartSortDrawer(){
   document.getElementById('smartSortDrawer').classList.remove('open');
 }
+// ── Deliveries from Keel arrive by themselves (TackPath migration 71) ──
+// Keel puts each delivery's SmartSort file in the company inbox. While this
+// screen is open it claims each new file once and runs it through SmartSort
+// exactly like an upload: load, build the route, dispatch. It waits while a
+// dispatcher is working on another file. Without migration 71 the inbox call
+// fails quietly and files are uploaded by hand as before.
+let keelInboxBusy=false;
+async function pullKeelInbox(){
+  if(keelInboxBusy||typeof tpSession!=='function'||!tpSession())return;
+  const btn=document.getElementById('buildBtn');
+  if((typeof packages!=='undefined'&&packages.length)||(btn&&btn.disabled))return;
+  keelInboxBusy=true;
+  try{
+    const waiting=await tpRpc('tp_org',{p_token:tpSession().token,p_action:'inbox',p_args:{}});
+    if(!Array.isArray(waiting)||!waiting.length)return;
+    const c=await tpRpc('tp_org',{p_token:tpSession().token,p_action:'inbox_claim',p_args:{id:waiting[0].id,by:'dispatcher'}});
+    if(!c||!c.ok||!c.csv)return;
+    toast('Delivery from Keel: '+(c.filename||c.ref)+' · building the route','ok');
+    openSmartSortDrawer();
+    packages=[];ssRoutes=[];
+    parseCSV(c.csv);
+    if(packages.length)await buildRoutes();
+  }catch(e){console.log('[Keel inbox] '+(e&&e.message||e));}
+  finally{keelInboxBusy=false;}
+}
+setInterval(function(){pullKeelInbox();},15000);
+setTimeout(function(){pullKeelInbox();},3000);
 
 function handleFile(file){
   if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file','warn');return;}
