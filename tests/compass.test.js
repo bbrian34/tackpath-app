@@ -4,15 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-// The Brain reads only through the company gateway (tp_org) with the dispatcher's company
+// Compass (formerly the Brain) reads only through the company gateway (tp_org) with the dispatcher's company
 // session: since the October lockdown the public key can read no table, so the old direct
 // reads showed nothing. It shows the company's own agent activity, decisions and outcomes.
-const HTML = fs.readFileSync(path.join(__dirname, '..', 'brain.html'), 'utf-8');
+const HTML = fs.readFileSync(path.join(__dirname, '..', 'compass.html'), 'utf-8');
 
 async function open({ session }) {
   const calls = [];
   const dom = new JSDOM(HTML, {
-    runScripts: 'dangerously', url: 'https://tackpath.com/brain.html', pretendToBeVisual: true,
+    runScripts: 'dangerously', url: 'https://tackpath.com/compass.html', pretendToBeVisual: true,
     beforeParse(w) {
       if (session) w.localStorage.setItem('tp_dispatch_org', JSON.stringify({ token: 'tok-A', org: { id: 'org-A' } }));
       w.fetch = async (url, o) => {
@@ -59,7 +59,7 @@ test('signed in: activity, decisions and outcomes come from tp_org with the comp
   t.dom.window.close();
 });
 
-test('not signed in: the Brain asks for the dispatcher sign-in and reads nothing', async () => {
+test('not signed in: Compass asks for the dispatcher sign-in and reads nothing', async () => {
   const t = await open({ session: false });
   assert.strictEqual(t.calls.length, 0);
   assert.ok(t.d.getElementById('brainSignIn'));
@@ -75,4 +75,11 @@ test('no agent is shown offline and no em dash is shown', () => {
 test('no direct table reads remain, and Sponge is called with the company session', () => {
   assert.doesNotMatch(HTML, /rest\/v1\/(?!rpc\/tp_org)/, 'no /rest/v1/<table> requests');
   assert.match(HTML, /'x-tp-session':\(tpSession\(\)\|\|\{\}\)\.token\|\|''/);
+});
+
+test('the old /brain address sends people to Compass, and the page is named Compass', () => {
+  const old = fs.readFileSync(path.join(__dirname, '..', 'brain.html'), 'utf-8');
+  assert.match(old, /url=compass\.html/); assert.match(old, /location\.replace\('compass\.html'/);
+  assert.match(HTML, /<title>TackPath · Compass<\/title>/);
+  assert.doesNotMatch(HTML.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]*>/g, ''), /Brain/);   // the words on the page, not code names
 });
