@@ -68,6 +68,18 @@ const tokB = (await asRole('anon', `select public.tp_org_sign_in('otherco', 'oth
 const b = await asRole('anon', `select public.tp_org($1, 'attention', '{}') as r`, [tokB]);
 assert.equal(b[0].r.items.length, 0);
 
+// 73 and 74: twenty people put the same returned box on twenty open routes at the same moment: exactly one succeeds
+await one(sqlFile('73_pieces_and_returns.sql')); await one(sqlFile('74_recovery_rules.sql'));
+const first = await org('publish_route', { payload: plan('RET-1', ['RET-BOX']) });
+await one(`update public.jobs set status = 'in_transit', picked_up_at = now() where id = $1`, [first.job.id]);
+await one(`insert into public.messages (job_id, sender, sender_role, body) values ($1, 'D', 'driver', $2)`, [first.job.id, 'STOP_EXCEPTION::' + JSON.stringify({ stop_number: 1, reason: 'refused' })]);
+await org('receive_return', { piece_id: 'RET-BOX', condition: 'intact' });
+const open = []; for (let i = 0; i < SCREENS; i++) open.push((await org('publish_route', { payload: plan('OPEN-' + i, ['OPEN-OWN-' + i]) })).job.id);
+const tries = await Promise.allSettled(open.map((id) => org('assign_piece', { piece_id: 'RET-BOX', job_id: id })));
+assert.equal(tries.filter((t) => t.status === 'fulfilled' && t.value.ok).length, 1, 'exactly one assign wins');
+assert.equal(await routesWith('RET-BOX'), 1, 'the box is on exactly one live route');
+console.log(`74: ${SCREENS} simultaneous assigns of one returned box: exactly one route has it`);
+await one(sqlFile('74_recovery_rules.rollback.sql')); await one(sqlFile('73_pieces_and_returns.rollback.sql'));
 await one(sqlFile('72_box_by_box_publishing.rollback.sql'));
 assert.equal((await one(`select to_regclass('public.dispatch_attention') r`))[0].r, null);
 await one(sqlFile('72_box_by_box_publishing.sql'));

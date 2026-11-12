@@ -284,7 +284,10 @@ begin
     return res;
   end if;
 
-  -- assign_piece: the box joins an open route
+  -- assign_piece: the box joins an open route. One at a time per company (the publication gate's lock), and the
+  -- box's record re-read under lock: two people putting the same box on two routes at once, only one succeeds.
+  perform pg_advisory_xact_lock(hashtext('tp_publish:' || pc.org_id::text));
+  select * into pc from public.pieces p where p.org_id = pc.org_id and p.piece_id = pc.piece_id for update;
   if pc.custody not in ('warehouse_returns', 'awaiting_route') or pc.hold is not null or pc.current_assignment_id is not null then
     raise exception 'TP_STATE: box % is not ready for a route (%)', pc.piece_id, pc.custody || coalesce(', hold ' || pc.hold, '');
   end if;
