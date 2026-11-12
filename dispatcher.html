@@ -7279,6 +7279,13 @@ function attnWhat(it){
   const d=it.detail||{};
   if(it.kind==='piece_held')return '<b>Box '+attnEsc(it.piece_id)+'</b> was held back from '+attnEsc(d.route_title||it.ref)+': it is already on live route '+attnEsc(d.live_job_title||d.live_job_id)+'.';
   if(it.kind==='route_refused')return '<b>'+attnEsc(d.route_title||it.ref)+'</b> was not published: '+attnEsc(d.reason||'no reason given')+(Array.isArray(d.pieces)&&d.pieces.length?' ('+d.pieces.length+' box'+(d.pieces.length===1?'':'es')+')':'')+'.';
+  if(it.kind==='piece_conflict')return '<b>Box '+attnEsc(it.piece_id)+'</b> was offered to '+attnEsc(d.route_title||it.ref)+' while it is on live route '+attnEsc(d.live_job_title||d.live_job_id)+'; it stays on that route.';
+  if(it.kind==='investigation')return '<b>Box '+attnEsc(it.piece_id)+' is missing</b> (day '+attnEsc(d.day||0)+' of 5): '+attnEsc(d.reason||'')+'. Route '+attnEsc(d.route_title||'')+(d.driver?', driver '+attnEsc(d.driver):'')+'. Ask the driver and search the van and the returns area; it is declared lost on day 5.';
+  if(it.kind==='piece_lost')return '<b>Box '+attnEsc(it.piece_id)+' was declared lost</b> after a 5-day investigation ('+attnEsc(d.reason||'')+'). Keel has told the merchant. If it turns up, scan it in PathIQ Returns.';
+  if(it.kind==='contents_damaged')return '<b>Box '+attnEsc(it.piece_id)+'</b> came back with damaged contents: it is at the problem-solving station (Keel problem).';
+  if(it.kind==='driver_pattern')return '<b>Driver '+attnEsc(d.driver||it.ref)+'</b>: '+attnEsc(d.why||'')+' ('+attnEsc(d.failures)+' not delivered of '+attnEsc(d.attempts)+' in 14 days'
+    +(d.by_reason?': '+Object.entries(d.by_reason).map(([k,v])=>attnEsc(k.replace(/_/g,' '))+' '+attnEsc(v)).join(', '):'')+(d.unit_failures?'; '+attnEsc(d.unit_failures)+' at apartment or unit addresses':'')
+    +'). For you to look into; nothing is done to the driver automatically.';
   return '<b>Keel file '+attnEsc(it.ref)+'</b> was not built: '+attnEsc(d.reason||'no reason given')+'.';
 }
 function renderAttention(){
@@ -7288,7 +7295,8 @@ function renderAttention(){
     '<div style="margin-top:8px;"><button type="button" onclick="attnRetry(\''+attnEsc(f.id)+'\')">Send again</button></div></div>'));
   attnData.items.forEach(it=>{
     const d=it.detail||{};
-    const retry=d.file_id&&it.kind!=='piece_held'?'<button type="button" onclick="attnRetry(\''+attnEsc(d.file_id)+'\')">Send the file again</button> ':'';
+    const retry=(d.file_id&&it.kind!=='piece_held'?'<button type="button" onclick="attnRetry(\''+attnEsc(d.file_id)+'\')">Send the file again</button> ':'')
+      +(it.kind==='investigation'||it.kind==='piece_lost'?'<button type="button" onclick="attnFound(\''+attnEsc(it.piece_id)+'\')">Found it</button> ':'');
     rows.push('<div class="attn-row" style="padding:12px 0;border-bottom:1px solid var(--border,#e2e8f0);"><div>'+attnWhat(it)+'</div>'+
       '<div style="font-size:.8rem;opacity:.7;margin-top:2px;">'+attnEsc(new Date(it.created_at).toLocaleString())+'</div>'+
       '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">'+retry+'<button type="button" onclick="attnResolve(\''+attnEsc(it.id)+'\')">Close with a note</button></div></div>');
@@ -7302,6 +7310,13 @@ async function attnResolve(id){
   if(!note||!note.trim())return;
   try{const r=await tpOrg('attention_resolve',{id,note:note.trim(),by:'dispatcher'});toast(r&&r.ok?'Closed':'Already closed','ok');}
   catch(e){toast('Could not close: '+String(e&&e.message||e).slice(0,60),'warn');}
+  await loadAttention();
+}
+async function attnFound(pieceId){
+  const note=prompt('Where was it found? (kept with the record)');
+  if(!note||!note.trim())return;
+  try{const r=await tpOrg('mark_found',{piece_id:pieceId,note:note.trim(),by:'dispatcher'});toast(r&&r.ok?'Marked found: scan it in PathIQ Returns to send it out again':'Not changed','ok');}
+  catch(e){toast('Could not mark found: '+String(e&&e.message||e).slice(0,60),'warn');}
   await loadAttention();
 }
 async function attnRetry(fileId){

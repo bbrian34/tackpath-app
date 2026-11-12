@@ -329,10 +329,12 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     </div>
     <div class="hw-hint">Scan each box a driver brought back. It leaves its old route and can go out again.</div>
     <div class="result-card" id="returnsResult"></div>
-    <div id="returnsAsk" style="display:none;gap:12px;margin-bottom:16px;">
-      <button type="button" class="action-btn" id="returnsIntact" style="flex:1;" onclick="returnsReceive('intact')">Box is intact</button>
-      <button type="button" class="action-btn" id="returnsDamaged" style="flex:1;background:var(--red);" onclick="returnsReceive('damaged')">Box is damaged</button>
+    <div id="returnsAsk" style="display:none;flex-direction:column;gap:10px;margin-bottom:16px;">
+      <button type="button" class="action-btn" id="returnsIntact" onclick="returnsReceive('intact')">Intact</button>
+      <button type="button" class="action-btn" id="returnsCarton" style="background:#c96a00;" onclick="returnsReceive('carton_damaged')">Carton damaged, contents fine</button>
+      <button type="button" class="action-btn" id="returnsContents" style="background:var(--red);" onclick="returnsReceive('contents_damaged')">Contents damaged</button>
     </div>
+    <div id="returnsNext" style="display:none;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
   </div>
 
   <!-- PROBLEM: INDUCT -->
@@ -729,45 +731,92 @@ function goTo(screen){
 // route assignment closes, and Keel sends it out again. A damaged box is put on
 // hold. Scanning the same box twice changes nothing.
 let returnsCode=null;
-const returnsEsc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const returnsEsc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const RETURN_REASONS={no_access:'No access',business_closed:'Business closed',refused:'Refused',damaged:'Damaged',wrong_address:'Wrong address',unsafe:'Unsafe to deliver'};
+function returnsCard(cls,big,small){
+  const card=document.getElementById('returnsResult');card.className='result-card'+(cls?' '+cls:'');
+  card.innerHTML='<div class="result-bin">'+returnsEsc(big)+'</div><div class="result-bin-num" style="font-size:1.1rem;">'+small+'</div>';
+}
+function returnsNext(html){const n=document.getElementById('returnsNext');n.innerHTML=html||'';n.style.display=html?'flex':'none';}
 function returnsReset(){
   returnsCode=null;
-  const card=document.getElementById('returnsResult');card.className='result-card';
-  card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a returned box</div>';
-  document.getElementById('returnsAsk').style.display='none';
+  returnsCard('','Ready','<span style="color:var(--faint);font-size:1.3rem;">Scan a returned box</span>');
+  document.getElementById('returnsAsk').style.display='none';returnsNext('');
 }
 function handleReturnsScan(code){
   const clean=String(code||'').trim().toUpperCase();
   if(!clean)return;
   returnsCode=clean;
-  const card=document.getElementById('returnsResult');card.className='result-card';
-  card.innerHTML='<div class="result-bin">'+returnsEsc(clean)+'</div><div class="result-bin-num" style="font-size:1.2rem;">Is the box intact?</div>';
-  document.getElementById('returnsAsk').style.display='flex';
+  returnsCard('',clean,'What condition is it in?');
+  document.getElementById('returnsAsk').style.display='flex';returnsNext('');
+}
+async function returnsCall(action,args){
+  let r,body;
+  try{r=await tpOrgResp(action,args);body=await r.text();}catch(e){r={ok:false};body=String(e&&e.message||e);}
+  let d=null;try{d=JSON.parse(body);}catch(e){}
+  if(!r.ok||d==null)return {error:/unknown action|Unknown action|not allowed/i.test(body)?'Returns are not switched on for this company yet.':String((d&&d.message)||body||'Could not record it. Scan again.').replace(/^.*?TP_[A-Z]+:\s*/,'')};
+  return d;
 }
 async function returnsReceive(condition){
   const code=returnsCode;if(!code)return;
   document.getElementById('returnsAsk').style.display='none';
-  const card=document.getElementById('returnsResult');
-  let r,body;
-  try{r=await tpOrgResp('receive_return',{piece_id:code,condition:condition,by:'PathIQ'});body=await r.text();}
-  catch(e){r={ok:false};body=String(e&&e.message||e);}
-  let d=null;try{d=JSON.parse(body);}catch(e){}
-  returnsCode=null;
-  if(!r.ok||!d||!d.ok){
-    const msg=String((d&&d.message)||body||'').replace(/^.*?TP_[A-Z]+:\s*/,'');
-    card.className='result-card error';
-    card.innerHTML='<div class="result-bin">'+returnsEsc(code)+'</div><div class="result-bin-num" style="font-size:1.1rem;">'+returnsEsc(/unknown action|Unknown action|not allowed/i.test(msg)?'Returns are not switched on for this company yet.':(msg||'Could not record it. Scan again.'))+'</div>';
+  const d=await returnsCall('receive_return',{piece_id:code,condition:condition,by:'PathIQ'});
+  if(d.error||!d.ok){returnsCode=null;returnsCard('error',code,returnsEsc(d.error||'Could not record it. Scan again.'));return;}
+  if(d.replayed){returnsCode=null;returnsCard('success','RECEIVED',returnsEsc(code)+' was already received.');return;}
+  const why=d.last_reason?(RETURN_REASONS[d.last_reason]||d.last_reason):'';
+  const was=why?' ('+returnsEsc(why)+(d.attempts?', attempt '+d.attempts:'')+')':'';
+  if(d.next==='problem_station'){
+    returnsCode=null;
+    returnsCard('error','PROBLEM SHELF',returnsEsc(code)+was+': contents damaged. Take it to the problem-solving station. Keel has opened a problem for it.');
     return;
   }
-  const why=d.last_reason?(RETURN_REASONS[d.last_reason]||d.last_reason):'';
-  if(d.hold){
-    card.className='result-card error';
-    card.innerHTML='<div class="result-bin">ON HOLD</div><div class="result-bin-num" style="font-size:1.1rem;">'+returnsEsc(code)+' is damaged. Put it on the problem shelf.</div>';
-  }else{
-    card.className='result-card success';
-    card.innerHTML='<div class="result-bin">RECEIVED</div><div class="result-bin-num" style="font-size:1.1rem;">'+returnsEsc(code)+(d.replayed?' was already received.':' is back'+(why?' ('+returnsEsc(why)+(d.attempts?', attempt '+d.attempts:'')+')':'')+'. It will go out again.')+'</div>';
+  if(d.next==='rebox'){
+    returnsCard('','REBOX',returnsEsc(code)+was+' keeps its identity. 1. Move the contents into a new carton. 2. Print its label (the same barcode) and stick it on. 3. Confirm.');
+    returnsNext('<button type="button" class="action-btn" style="background:#4b5563" onclick="returnsPrint()">Print label</button>'
+      +'<button type="button" class="action-btn" onclick="returnsReboxed()">Reboxed and labeled</button>');
+    return;
   }
+  await returnsReady(code,'RECEIVED',returnsEsc(code)+' is back'+was+'.');
+}
+// out again: an open route in the same area if there is one, otherwise the next route batch (Keel sends it)
+async function returnsReady(code,big,msg){
+  returnsCode=code;
+  const c=await returnsCall('piece_candidates',{piece_id:code});
+  const open=Array.isArray(c)?c.filter(x=>!x.avoided_driver).slice(0,3):[];
+  returnsCard('success',big,msg+(open.length?' It can join an open route now:':' It goes out on the next route batch. Put it on the returns shelf.'));
+  returnsNext(open.map(x=>'<button type="button" class="action-btn" onclick="returnsAssign(\''+returnsEsc(x.job_id)+'\')">Add to '+returnsEsc(x.title)+'</button>').join('')
+    +(open.length?'<button type="button" class="action-btn" style="background:#4b5563" onclick="returnsShelf()">Next route batch instead</button>':''));
+}
+async function returnsAssign(jobId){
+  const code=returnsCode;if(!code)return;
+  const d=await returnsCall('assign_piece',{piece_id:code,job_id:jobId});
+  returnsNext('');returnsCode=null;
+  if(d.error||!d.ok){returnsCard('error',code,returnsEsc(d.error||'Could not add it.')+' It goes out on the next route batch.');return;}
+  returnsCard('success','ON '+String(d.title||'ROUTE').toUpperCase(),returnsEsc(code)+' is on '+returnsEsc(d.title)+'. Stow it in that route\'s bin (Stow).');
+  if(typeof loadRoutes==='function')await loadRoutes();
+}
+function returnsShelf(){
+  const code=returnsCode;returnsNext('');returnsCode=null;
+  returnsCard('success','RETURNS SHELF',returnsEsc(code)+' goes out on the next route batch.');
+}
+async function returnsPrint(){
+  const code=returnsCode;if(!code)return;
+  const d=await returnsCall('reprint_label',{piece_id:code});
+  if(d.error){returnsCard('error',code,returnsEsc(d.error));return;}
+  const w=window.open('','_blank');
+  if(!w){returnsCard('error',code,'The label window was blocked. Allow pop-ups for PathIQ and print again.');return;}
+  w.document.write('<!DOCTYPE html><html><head><title>'+returnsEsc(code)+'</title><style>body{font-family:Arial;margin:0;padding:12px;width:4in}h1{font-size:26px;margin:4px 0}p{margin:2px 0;font-size:15px}</style>'
+    +'<script src="'+location.href.replace(/[^/]*$/,'')+'jsbarcode.min.js"><\/script></head><body>'
+    +'<svg id="bc"></svg><h1>'+returnsEsc(code)+'</h1><p><b>'+returnsEsc(d.recipient||'')+'</b></p><p>'+returnsEsc(d.address||'')+(d.unit?' · '+returnsEsc(d.unit):'')+'</p>'
+    +'<p>Order '+returnsEsc(d.order_id||'')+' · reboxed</p>'
+    +'<script>window.onload=function(){try{JsBarcode("#bc",'+JSON.stringify(code)+',{format:"CODE128",displayValue:false,height:70,margin:4});}catch(e){}window.print();};<\/script></body></html>');
+  w.document.close();
+}
+async function returnsReboxed(){
+  const code=returnsCode;if(!code)return;
+  const d=await returnsCall('rebox_done',{piece_id:code,by:'PathIQ'});
+  if(d.error){returnsCard('error',code,returnsEsc(d.error));return;}
+  await returnsReady(code,'REBOXED',returnsEsc(code)+' is reboxed'+(d.avoid_driver?'. A driver other than '+returnsEsc(d.avoid_driver)+' takes it':'')+'.');
 }
 
 // ── OPEN ROUTES (2026-10) ──

@@ -121,3 +121,24 @@ test('before migration 72 is applied the panel stays hidden and nothing breaks',
     assert.strictEqual(w.document.getElementById('attnBtn').hidden, true);
   } finally { a.cleanup(); }
 });
+
+test('Needs attention: missing boxes, lost boxes, damaged returns and driver patterns, with Found it', async () => {
+  const items = [
+    { id: 'i1', kind: 'investigation', piece_id: 'O-1-1', ref: 'j1', detail: { reason: 'Reported not delivered, never received back', route_title: 'Route RT-9', driver: 'Dana Brooks', day: 3 }, created_at: '2026-11-12T15:00:00Z' },
+    { id: 'i2', kind: 'piece_lost', piece_id: 'O-2-1', ref: 'O-2-1', detail: { reason: 'Route ended without a delivery or a report' }, created_at: '2026-11-12T15:00:00Z' },
+    { id: 'i3', kind: 'contents_damaged', piece_id: 'O-3-1', ref: 'O-3-1', detail: {}, created_at: '2026-11-12T15:00:00Z' },
+    { id: 'i4', kind: 'driver_pattern', ref: 'Avoider', detail: { driver: 'Avoider', why: '3 boxes they could not deliver were delivered by another driver', failures: 4, attempts: 10, by_reason: { no_access: 3, refused: 1 }, unit_failures: 2 }, created_at: '2026-11-12T15:00:00Z' }];
+  const { a, w, of } = app({ attention: { items, stale_files: [] }, mark_found: { ok: true } });
+  try {
+    await w.eval('openAttention()');
+    const t = w.document.getElementById('attnBody').textContent;
+    assert.match(t, /Box O-1-1 is missing \(day 3 of 5\): Reported not delivered, never received back\. Route Route RT-9, driver Dana Brooks/);
+    assert.match(t, /Box O-2-1 was declared lost after a 5-day investigation/);
+    assert.match(t, /Box O-3-1 came back with damaged contents: it is at the problem-solving station/);
+    assert.match(t, /Driver Avoider: 3 boxes they could not deliver were delivered by another driver \(4 not delivered of 10 in 14 days: no access 3, refused 1; 2 at apartment or unit addresses\)\. For you to look into; nothing is done to the driver automatically\./);
+    assert.strictEqual([...w.document.querySelectorAll('#attnBody button')].filter((b) => b.textContent === 'Found it').length, 2);
+    w.prompt = () => 'under the seat';
+    await w.eval(`attnFound('O-1-1')`);
+    assert.deepStrictEqual(of('mark_found')[0].args, { piece_id: 'O-1-1', note: 'under the seat', by: 'dispatcher' });
+  } finally { a.cleanup(); }
+});
