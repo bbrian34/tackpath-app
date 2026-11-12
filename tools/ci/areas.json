@@ -6,7 +6,7 @@
   "dispatcher": { "name": "Dispatcher", "dir": "tests", "files": ["dispatcher*.test.js", "customer.test.js", "compass.test.js"] },
   "pathiq": { "name": "PathIQ: sorting, bins and staging", "dir": "tests", "files": ["stow*.test.js", "security/pathiq-*.test.mjs", "security/staging-*.test.mjs", "security/bins-release-cycle.test.mjs", "security/driver-staging-spot.test.mjs"] },
   "route-planning": { "name": "Route planning (SmartSort)", "dir": "tests", "files": ["smartsort_integration.test.js"] },
-  "database": { "name": "Database rules and security", "dir": "tests", "files": ["security/cron.test.mjs", "security/driver-archived.test.mjs", "security/edge.test.mjs", "security/gate-archived.test.mjs", "security/job-timestamps.test.mjs", "security/lockdown.test.mjs", "security/pages.test.mjs", "security/publish-gate.test.mjs", "security/rpc.test.mjs", "security/isolation-identity.test.mjs", "security/ops-loop.test.mjs"] },
+  "database": { "name": "Database rules and security", "dir": "tests", "files": ["security/cron.test.mjs", "security/driver-archived.test.mjs", "security/edge.test.mjs", "security/gate-archived.test.mjs", "security/job-timestamps.test.mjs", "security/lockdown.test.mjs", "security/pages.test.mjs", "security/publish-gate.test.mjs", "security/rpc.test.mjs", "security/isolation-identity.test.mjs", "security/ops-loop.test.mjs", "security/box-by-box.test.mjs"] },
   "operations": { "name": "Operations backend", "dir": "operations", "files": ["tests/*.test.mjs"] },
   "website": { "name": "Website", "dir": "tests", "files": ["website-copy.test.js"] }
 }

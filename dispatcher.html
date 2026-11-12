@@ -1098,6 +1098,7 @@ html[data-theme="light"] .tb-theme .ic-moon{display:block;}
       <button class="tbtab" onclick="setTab('drivers',this)">Drivers</button>
     </div>
     <div class="tb-right">
+      <button id="attnBtn" type="button" onclick="openAttention()" hidden style="font-family:var(--mono);font-size:0.769rem;font-weight:700;color:#b45309;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.45);padding:5px 12px;border-radius:8px;cursor:pointer;">Needs attention <span id="attnCount">0</span></button>
       <div class="sys-status"><div class="sys-dot"></div>SYSTEMS NOMINAL</div>
       <div class="tb-sep"></div>
       <div class="tb-poll"><div class="poll-ring" id="pollRing"></div><span id="pollStatus">Live</span></div>
@@ -4690,6 +4691,33 @@ function closeSmartSortDrawer(){
 // dispatcher is working on another file. Without migration 71 the inbox call
 // fails quietly and files are uploaded by hand as before.
 let keelInboxBusy=false;
+// The Keel file being built now. When its build ends, whatever was not
+// published is written to Needs attention (on the server, so it is not lost
+// with this tab) and the screen is cleared, so the next file is never stuck
+// behind it (migration 72).
+let keelInboxCurrent=null;
+async function keelInboxFinish(failure){
+  const f=keelInboxCurrent;if(!f)return;
+  keelInboxCurrent=null;
+  const left=(typeof ssRoutes!=='undefined'&&Array.isArray(ssRoutes))?ssRoutes:[];
+  const reasons=window._ssPublishFailures||[];
+  try{
+    if(failure||(!f.published&&!left.length)){
+      await tpOrg('attention_add',{kind:'file_failed',ref:f.ref,reason:failure||'no route was published from this file',file_ref:f.ref,file_id:f.id});
+    }
+    for(const r of left){
+      const pieces=[];(r.stops||[]).forEach(st=>(st.pkgs||[]).forEach(p=>{if(p.piece_id)pieces.push(p.piece_id);}));
+      const why=reasons.filter(x=>x.indexOf(r.id+':')===0).map(x=>x.slice(r.id.length+1).trim()).join('; ');
+      await tpOrg('attention_add',{kind:'route_refused',ref:r.master_code||r.id,title:'Route '+r.id,reason:why||'not published',file_ref:f.ref,file_id:f.id,pieces});
+    }
+    await tpOrg('inbox_done',{id:f.id,result:{published:f.published,held:f.held,refused:left.length,failed:!!failure}});
+  }catch(e){console.log('[Keel inbox] could not record the result: '+(e&&e.message||e));}
+  if(left.length||failure){
+    toast('Keel file '+(f.filename||f.ref)+': '+(failure||left.length+' route'+(left.length===1?'':'s')+' not published')+' · see Needs attention','warn');
+    ssClearWorkspace();
+  }
+  await loadAttention();
+}
 async function pullKeelInbox(){
   if(keelInboxBusy||typeof tpSession!=='function'||!tpSession())return;
   const btn=document.getElementById('buildBtn');
@@ -4701,10 +4729,12 @@ async function pullKeelInbox(){
     const c=await tpRpc('tp_org',{p_token:tpSession().token,p_action:'inbox_claim',p_args:{id:waiting[0].id,by:'dispatcher'}});
     if(!c||!c.ok||!c.csv)return;
     toast('Delivery from Keel: '+(c.filename||c.ref)+' · building the route','ok');
+    keelInboxCurrent={id:waiting[0].id,ref:c.ref,filename:c.filename,published:0,held:0};
     openSmartSortDrawer();
     packages=[];ssRoutes=[];
     parseCSV(c.csv);
-    if(packages.length)await buildRoutes();
+    if(!packages.length){await keelInboxFinish('the file has no deliverable packages');return;}
+    await buildRoutes();
   }catch(e){console.log('[Keel inbox] '+(e&&e.message||e));}
   finally{keelInboxBusy=false;}
 }
@@ -5610,6 +5640,8 @@ async function runSmartSortSelfCheck(routes, audit){
   // instead of only "could not match" below.
   const publishFailures=window._ssPublishFailures||[];
   if(publishFailures.length)add('Every route published',false,'not published: '+publishFailures.join(' \u00b7 '));
+  const heldPieces=window._ssHeldPieces||[];
+  if(heldPieces.length)add('Every box published',false,heldPieces.length+' held, already on a live route ('+heldPieces.slice(0,6).join(', ')+(heldPieces.length>6?'\u2026':'')+'): see Needs attention');
 
   // ── Read back what was actually persisted ──
   let persisted=[];
@@ -5845,6 +5877,10 @@ function renderSelfCheckPanel(checks,pass,audit){
 }
 
 async function buildAndAutoDispatch(){
+  try{ return await buildAndAutoDispatchRun(); }
+  finally{ await keelInboxFinish(); }
+}
+async function buildAndAutoDispatchRun(){
   // Runs the full pipeline automatically after CSV upload:
   // geocode → sequence → create job in Supabase → broadcast to drivers
 
@@ -5899,6 +5935,7 @@ async function buildAndAutoDispatch(){
   const routesToAssign=[...ssRoutes];
   console.log('[SmartSort] routesToAssign snapshot: '+routesToAssign.length+' routes');
   window._ssPublishFailures=[];
+  window._ssHeldPieces=[];
   const assignedIds=[];
   try{
     for(const route of routesToAssign){
@@ -7126,6 +7163,9 @@ async function assignSSRoute(routeId){
       }))
     })),
     master_code: route.master_code,
+    // box by box (migration 72): a box already on a live route is held back
+    // and listed under Needs attention; the rest of the route is published
+    partial: true,
     total_stops: route.stops.length,
     total_packages: route.total_packages,
     price: (route.stops.length * 8 + route.total_packages * 2).toFixed(2),
@@ -7167,27 +7207,37 @@ async function assignSSRoute(routeId){
       return;
     }
     console.log('[SmartSort] assignSSRoute SUCCESS: '+route.id+' persisted to DB'+(gateResult.idempotent?' (idempotent replay)':''));
-    toast('Route '+route.id+' created and broadcast to drivers','ok');
+    const held=Array.isArray(gateResult.held)?gateResult.held:[];
+    if(keelInboxCurrent){keelInboxCurrent.published++;keelInboxCurrent.held+=held.length;}
+    if(held.length){
+      (window._ssHeldPieces=window._ssHeldPieces||[]).push(...held.map(h=>h.piece_id));
+      toast('Route '+route.id+' created · '+held.length+' box'+(held.length===1?'':'es')+' held (already on a live route): see Needs attention','warn');
+      loadAttention();
+    }else toast('Route '+route.id+' created and broadcast to drivers','ok');
     ssRoutes=ssRoutes.filter(r=>r.id!==routeId);
     renderSSRoutes();
     loadJobs();
-    if(!ssRoutes.length){
-      packages=[];
-      closeSmartSortDrawer();
-      document.getElementById('dropZone').style.display='block';
-      document.getElementById('demoDataBtn').style.display='flex';
-      document.getElementById('packageTable').style.display='none';
-      document.getElementById('statsRow').style.display='none';
-      document.getElementById('buildBtn').style.display='none';
-      const rcrEl=document.getElementById('routeCountRow');if(rcrEl)rcrEl.style.display='none';
-      ssRouteCountOverride=0;const rci=document.getElementById('routeCountInput');if(rci)rci.value='';
-      document.getElementById('ssEmptyState').style.display='flex';
-      document.getElementById('routeGrid').style.display='none';
-    }
+    if(!ssRoutes.length)ssClearWorkspace();
   }catch(e){
     toast('Could not assign route','warn');
     ssNotePublishFailure(routeId,e&&e.message?e.message:String(e));
   }
+}
+function ssClearWorkspace(){
+  ssRoutes=[];
+  renderSSRoutes();
+  packages=[];
+  closeSmartSortDrawer();
+  document.getElementById('dropZone').style.display='block';
+  document.getElementById('demoDataBtn').style.display='flex';
+  document.getElementById('packageTable').style.display='none';
+  document.getElementById('statsRow').style.display='none';
+  const bb=document.getElementById('buildBtn');bb.style.display='none';
+  if(bb.disabled){bb.disabled=false;bb.innerHTML='Build Routes';}
+  const rcrEl=document.getElementById('routeCountRow');if(rcrEl)rcrEl.style.display='none';
+  ssRouteCountOverride=0;const rci=document.getElementById('routeCountInput');if(rci)rci.value='';
+  document.getElementById('ssEmptyState').style.display='flex';
+  document.getElementById('routeGrid').style.display='none';
 }
 // Why a route was not published, kept until the self-check has shown it
 // (the toast that also says it disappears after a few seconds).
@@ -7195,6 +7245,72 @@ function ssNotePublishFailure(routeId,reason){
   (window._ssPublishFailures=window._ssPublishFailures||[]).push(routeId+': '+String(reason||'unknown reason').slice(0,160));
 }
 
+</script>
+<!-- NEEDS ATTENTION (migration 72): boxes held back, routes and Keel files not published -->
+<div id="attnModal" style="position:fixed;inset:0;z-index:9000;background:rgba(5,12,24,.55);display:none;align-items:flex-start;justify-content:center;padding:70px 16px 16px;">
+  <div style="background:var(--panel,#fff);color:var(--text,#0b1730);width:min(760px,100%);max-height:calc(100vh - 100px);overflow:auto;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.35);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border,#e2e8f0);">
+      <b style="font-size:1rem;">Needs attention</b>
+      <button type="button" onclick="closeAttention()" style="background:none;border:0;font-size:1.2rem;cursor:pointer;color:inherit;">&#10005;</button>
+    </div>
+    <div id="attnBody" style="padding:8px 18px 18px;"></div>
+  </div>
+</div>
+<script>
+// Problems the dispatcher must look at, kept on the server (tp_org 'attention'):
+// a box held back because it is already on a live route, a route or a Keel
+// file that could not be published, and a Keel file taken by a screen that
+// never finished it. Each is closed with a note, or the file is sent again.
+let attnData={items:[],stale_files:[]};
+const attnEsc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+async function loadAttention(){
+  if(typeof tpSession!=='function'||!tpSession())return;
+  try{
+    const r=await tpOrg('attention',{});
+    if(!r||!Array.isArray(r.items))return;   // the server does not have this yet
+    attnData={items:r.items,stale_files:Array.isArray(r.stale_files)?r.stale_files:[]};
+  }catch(e){return;}
+  const n=attnData.items.length+attnData.stale_files.length;
+  const b=document.getElementById('attnBtn');if(b)b.hidden=n===0;
+  const c=document.getElementById('attnCount');if(c)c.textContent=n;
+  if(document.getElementById('attnModal').style.display==='flex')renderAttention();
+}
+function attnWhat(it){
+  const d=it.detail||{};
+  if(it.kind==='piece_held')return '<b>Box '+attnEsc(it.piece_id)+'</b> was held back from '+attnEsc(d.route_title||it.ref)+': it is already on live route '+attnEsc(d.live_job_title||d.live_job_id)+'.';
+  if(it.kind==='route_refused')return '<b>'+attnEsc(d.route_title||it.ref)+'</b> was not published: '+attnEsc(d.reason||'no reason given')+(Array.isArray(d.pieces)&&d.pieces.length?' ('+d.pieces.length+' box'+(d.pieces.length===1?'':'es')+')':'')+'.';
+  return '<b>Keel file '+attnEsc(it.ref)+'</b> was not built: '+attnEsc(d.reason||'no reason given')+'.';
+}
+function renderAttention(){
+  const body=document.getElementById('attnBody');
+  const rows=[];
+  attnData.stale_files.forEach(f=>rows.push('<div class="attn-row" style="padding:12px 0;border-bottom:1px solid var(--border,#e2e8f0);"><div><b>Keel file '+attnEsc(f.filename||f.ref)+'</b> was taken by '+attnEsc(f.claimed_by||'a dispatcher screen')+' at '+attnEsc(new Date(f.claimed_at).toLocaleTimeString())+' and never finished.</div>'+
+    '<div style="margin-top:8px;"><button type="button" onclick="attnRetry(\''+attnEsc(f.id)+'\')">Send again</button></div></div>'));
+  attnData.items.forEach(it=>{
+    const d=it.detail||{};
+    const retry=d.file_id&&it.kind!=='piece_held'?'<button type="button" onclick="attnRetry(\''+attnEsc(d.file_id)+'\')">Send the file again</button> ':'';
+    rows.push('<div class="attn-row" style="padding:12px 0;border-bottom:1px solid var(--border,#e2e8f0);"><div>'+attnWhat(it)+'</div>'+
+      '<div style="font-size:.8rem;opacity:.7;margin-top:2px;">'+attnEsc(new Date(it.created_at).toLocaleString())+'</div>'+
+      '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">'+retry+'<button type="button" onclick="attnResolve(\''+attnEsc(it.id)+'\')">Close with a note</button></div></div>');
+  });
+  body.innerHTML=rows.length?rows.join(''):'<p style="opacity:.7;">Nothing needs attention.</p>';
+}
+async function openAttention(){document.getElementById('attnModal').style.display='flex';renderAttention();await loadAttention();}
+function closeAttention(){document.getElementById('attnModal').style.display='none';}
+async function attnResolve(id){
+  const note=prompt('What was done about it? (kept with the record)');
+  if(!note||!note.trim())return;
+  try{const r=await tpOrg('attention_resolve',{id,note:note.trim(),by:'dispatcher'});toast(r&&r.ok?'Closed':'Already closed','ok');}
+  catch(e){toast('Could not close: '+String(e&&e.message||e).slice(0,60),'warn');}
+  await loadAttention();
+}
+async function attnRetry(fileId){
+  try{const r=await tpOrg('inbox_retry',{id:fileId});toast(r&&r.ok?'Sent to the inbox again: it will be built shortly':'That file is no longer in the inbox','ok');}
+  catch(e){toast('Could not send again: '+String(e&&e.message||e).slice(0,60),'warn');}
+  await loadAttention();
+}
+setInterval(loadAttention,30000);
+setTimeout(loadAttention,4000);
 </script>
 <!-- RECOVERY PLAN GENERATOR -->
 <div id="rpModal">
