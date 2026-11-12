@@ -224,6 +224,10 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
         <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
         <div class="big-card-title">Problem</div>
       </button>
+      <button class="big-card" onclick="goTo('returns')">
+        <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        <div class="big-card-title">Returns</div>
+      </button>
       <button class="big-card" onclick="goTo('reset')">
         <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
         <div class="big-card-title">Reset Bin</div>
@@ -315,6 +319,19 @@ body{background:#e9ecef;color:var(--text);font-family:'DM Sans',sans-serif;overf
     <div class="result-card" id="receiveResult">
       <div class="result-bin">Ready</div>
       <div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan the package to receive it</div>
+    </div>
+  </div>
+
+  <!-- RETURNS (migration 73): a box a driver brought back is scanned RECEIVED -->
+  <div class="screen" id="scReturns">
+    <div class="hw-input-row">
+      <input type="text" id="returnsInput" inputmode="none" placeholder="Scan the returned box"/>
+    </div>
+    <div class="hw-hint">Scan each box a driver brought back. It leaves its old route and can go out again.</div>
+    <div class="result-card" id="returnsResult"></div>
+    <div id="returnsAsk" style="display:none;gap:12px;margin-bottom:16px;">
+      <button type="button" class="action-btn" id="returnsIntact" style="flex:1;" onclick="returnsReceive('intact')">Box is intact</button>
+      <button type="button" class="action-btn" id="returnsDamaged" style="flex:1;background:var(--red);" onclick="returnsReceive('damaged')">Box is damaged</button>
     </div>
   </div>
 
@@ -684,9 +701,9 @@ let stowDetail={};   // code -> {bin, actor, at}  rebuilt from events
 let resetEpoch={};   // bin  -> ISO timestamp of that bin's last reset
 let pendingInduct=null;
 
-const SCREENS=['scHome','scAssignbins','scStow','scReceive','scInduct','scReset'];
-const TITLES={scHome:'', scAssignbins:'Assign bins', scStow:'Stow', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin'};
-const BACK_TARGET={scAssignbins:'home', scStow:'home', scReceive:'home', scInduct:'receive', scReset:'home'};
+const SCREENS=['scHome','scAssignbins','scStow','scReceive','scInduct','scReset','scReturns'];
+const TITLES={scHome:'', scAssignbins:'Assign bins', scStow:'Stow', scReceive:'Receive', scInduct:'Induct', scReset:'Reset bin', scReturns:'Returns'};
+const BACK_TARGET={scAssignbins:'home', scStow:'home', scReceive:'home', scInduct:'receive', scReset:'home', scReturns:'home'};
 
 function goTo(screen){
   const id='sc'+screen.charAt(0).toUpperCase()+screen.slice(1);
@@ -703,6 +720,54 @@ function goTo(screen){
   if(id==='scReceive'){ resetReceiveResult(); document.getElementById('receiveInput').focus(); }
   if(id==='scReset'){ renderResetBinsPanel(); document.getElementById('resetConfirmArea').innerHTML=''; }
   if(id==='scInduct'){ renderInductSummary(); }
+  if(id==='scReturns'){ returnsReset(); document.getElementById('returnsInput').focus(); }
+}
+
+// ── RETURNS (migration 73) ──
+// The box comes back: scan it, say whether it is intact, and TackPath records it
+// RECEIVED (tp_org receive_return): custody "back in the warehouse", its old
+// route assignment closes, and Keel sends it out again. A damaged box is put on
+// hold. Scanning the same box twice changes nothing.
+let returnsCode=null;
+const returnsEsc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const RETURN_REASONS={no_access:'No access',business_closed:'Business closed',refused:'Refused',damaged:'Damaged',wrong_address:'Wrong address',unsafe:'Unsafe to deliver'};
+function returnsReset(){
+  returnsCode=null;
+  const card=document.getElementById('returnsResult');card.className='result-card';
+  card.innerHTML='<div class="result-bin">Ready</div><div class="result-bin-num" style="font-size:1.3rem;color:var(--faint);">Scan a returned box</div>';
+  document.getElementById('returnsAsk').style.display='none';
+}
+function handleReturnsScan(code){
+  const clean=String(code||'').trim().toUpperCase();
+  if(!clean)return;
+  returnsCode=clean;
+  const card=document.getElementById('returnsResult');card.className='result-card';
+  card.innerHTML='<div class="result-bin">'+returnsEsc(clean)+'</div><div class="result-bin-num" style="font-size:1.2rem;">Is the box intact?</div>';
+  document.getElementById('returnsAsk').style.display='flex';
+}
+async function returnsReceive(condition){
+  const code=returnsCode;if(!code)return;
+  document.getElementById('returnsAsk').style.display='none';
+  const card=document.getElementById('returnsResult');
+  let r,body;
+  try{r=await tpOrgResp('receive_return',{piece_id:code,condition:condition,by:'PathIQ'});body=await r.text();}
+  catch(e){r={ok:false};body=String(e&&e.message||e);}
+  let d=null;try{d=JSON.parse(body);}catch(e){}
+  returnsCode=null;
+  if(!r.ok||!d||!d.ok){
+    const msg=String((d&&d.message)||body||'').replace(/^.*?TP_[A-Z]+:\s*/,'');
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">'+returnsEsc(code)+'</div><div class="result-bin-num" style="font-size:1.1rem;">'+returnsEsc(/unknown action|Unknown action|not allowed/i.test(msg)?'Returns are not switched on for this company yet.':(msg||'Could not record it. Scan again.'))+'</div>';
+    return;
+  }
+  const why=d.last_reason?(RETURN_REASONS[d.last_reason]||d.last_reason):'';
+  if(d.hold){
+    card.className='result-card error';
+    card.innerHTML='<div class="result-bin">ON HOLD</div><div class="result-bin-num" style="font-size:1.1rem;">'+returnsEsc(code)+' is damaged. Put it on the problem shelf.</div>';
+  }else{
+    card.className='result-card success';
+    card.innerHTML='<div class="result-bin">RECEIVED</div><div class="result-bin-num" style="font-size:1.1rem;">'+returnsEsc(code)+(d.replayed?' was already received.':' is back'+(why?' ('+returnsEsc(why)+(d.attempts?', attempt '+d.attempts:'')+')':'')+'. It will go out again.')+'</div>';
+  }
 }
 
 // ── OPEN ROUTES (2026-10) ──
@@ -1826,12 +1891,16 @@ document.getElementById('stowInput').addEventListener('keydown', function(e){
     handleStowScan(v);
   }
 });
+document.getElementById('returnsInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; if(tpBadgeIntercept(v))return; handleReturnsScan(v); }
+});
 document.getElementById('receiveInput').addEventListener('keydown', function(e){
   if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; if(tpBadgeIntercept(v))return; handleReceiveScan(v); }
 });
 document.addEventListener('click', function(){
   if(document.getElementById('scStow').classList.contains('on')) document.getElementById('stowInput').focus();
   if(document.getElementById('scReceive').classList.contains('on')) document.getElementById('receiveInput').focus();
+  if(document.getElementById('scReturns').classList.contains('on')) document.getElementById('returnsInput').focus();
 });
 
 // Signed in: open straight into Stow.
