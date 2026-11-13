@@ -79,6 +79,15 @@ const tries = await Promise.allSettled(open.map((id) => org('assign_piece', { pi
 assert.equal(tries.filter((t) => t.status === 'fulfilled' && t.value.ok).length, 1, 'exactly one assign wins');
 assert.equal(await routesWith('RET-BOX'), 1, 'the box is on exactly one live route');
 console.log(`74: ${SCREENS} simultaneous assigns of one returned box: exactly one route has it`);
+// 75: ten dispatchers start a transfer of the same route's boxes at the same moment: each box is in one transfer
+await one(sqlFile('75_load_scan_and_transfers.sql'));
+const fresh = await org('publish_route', { payload: plan('BRK-1', ['BRK-A', 'BRK-B']) });
+await one(`update public.jobs set driver_name = 'Dana Driver', status = 'in_transit', picked_up_at = now() where id = $1`, [fresh.job.id]);
+const starts = await Promise.allSettled(Array.from({ length: 10 }, () => org('start_transfer', { job_id: fresh.job.id, to_driver: 'Ned NoConsent' })));
+assert.equal(starts.filter((x) => x.status === 'fulfilled').length, 1, 'one transfer wins, the others find the boxes taken');
+assert.equal((await one(`select count(*)::int n from public.transfers`))[0].n, 1);
+console.log('75: 10 simultaneous transfers of the same boxes: exactly one transfer');
+await one(sqlFile('75_load_scan_and_transfers.rollback.sql'));
 await one(sqlFile('74_recovery_rules.rollback.sql')); await one(sqlFile('73_pieces_and_returns.rollback.sql'));
 await one(sqlFile('72_box_by_box_publishing.rollback.sql'));
 assert.equal((await one(`select to_regclass('public.dispatch_attention') r`))[0].r, null);
