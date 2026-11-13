@@ -142,3 +142,34 @@ test('Needs attention: missing boxes, lost boxes, damaged returns and driver pat
     assert.deepStrictEqual(of('mark_found')[0].args, { piece_id: 'O-1-1', note: 'under the seat', by: 'dispatcher' });
   } finally { a.cleanup(); }
 });
+
+test('Needs attention: load problems, a driver who cannot continue, transfers and held boxes, each with its action', async () => {
+  const items = [
+    { id: 'l1', kind: 'load_wrong_route', piece_id: 'X9', ref: 'job-1', detail: { route_title: 'Route RT-1', driver: 'Dana', belongs_to: 'Route RT-7' }, created_at: '2026-11-13T15:00:00Z' },
+    { id: 'c1', kind: 'cant_continue', ref: 'job-2', detail: { route_title: 'Route RT-2', driver: 'Marcus', reason: 'breakdown', note: 'I-75', boxes_left: 6 }, created_at: '2026-11-13T15:00:00Z' },
+    { id: 't1', kind: 'transfer', ref: 'tr-1', detail: { route_title: 'Route RT-2', from_driver: 'Marcus', to_driver: 'Lena', boxes: 6 }, created_at: '2026-11-13T15:00:00Z' },
+    { id: 'h1', kind: 'piece_on_hold', piece_id: 'O-5-1', ref: 'R9', detail: { route_title: 'Route RT-9', reason: 'merchant hold' }, created_at: '2026-11-13T15:00:00Z' },
+    { id: 'd1', kind: 'departure_unverified', ref: 'job-3', detail: { route_title: 'Route RT-3', driver: 'Old App', boxes: 4 }, created_at: '2026-11-13T15:00:00Z' }];
+  const { a, w, of } = app({ attention: { items, stale_files: [] }, resolve_load: { can_depart: true }, drivers: [{ name: 'Lena', status: 'active' }, { name: 'Gone', status: 'removed' }],
+    start_transfer: { ok: true, pieces: ['A', 'B'] }, close_transfer: { ok: true, moved: 4, stayed: 2 } });
+  try {
+    await w.eval('openAttention()');
+    const t = w.document.getElementById('attnBody').textContent;
+    assert.match(t, /Box X9 was scanned into Route RT-1 \(Dana\) but belongs to Route RT-7\. The route cannot leave/);
+    assert.match(t, /Marcus cannot continue Route RT-2: breakdown \(I-75\)\. 6 boxes are still in the van/);
+    assert.match(t, /Transfer of 6 boxes from Marcus to Lena/);
+    assert.match(t, /Box O-5-1 is on hold in Keel \(merchant hold\) and was left off Route RT-9/);
+    assert.match(t, /Route RT-3 left without a box-by-box load scan \(4 boxes, driver Old App\)/);
+    let asked = '';
+    w.prompt = (q) => { asked = q; return 'ok by Sam'; };
+    await w.eval(`attnLoad('job-1','allow_departure')`);
+    assert.deepStrictEqual(of('resolve_load')[0].args, { job_id: 'job-1', action: 'allow_departure', note: 'ok by Sam', by: 'dispatcher' });
+    w.prompt = (q) => { asked = q; return 'Lena'; };
+    await w.eval(`attnTransfer('job-2')`);
+    assert.match(asked, /Which driver takes the boxes\?\nLena$/, 'only active drivers offered');
+    assert.deepStrictEqual(of('start_transfer')[0].args, { job_id: 'job-2', to_driver: 'Lena', reason: 'cannot continue', by: 'dispatcher' });
+    w.prompt = () => 'Lena had to leave';
+    await w.eval(`attnCloseTransfer('tr-1')`);
+    assert.deepStrictEqual(of('close_transfer')[0].args, { transfer_id: 'tr-1', note: 'Lena had to leave' });
+  } finally { a.cleanup(); }
+});

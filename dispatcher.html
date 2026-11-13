@@ -7286,6 +7286,13 @@ function attnWhat(it){
   if(it.kind==='driver_pattern')return '<b>Driver '+attnEsc(d.driver||it.ref)+'</b>: '+attnEsc(d.why||'')+' ('+attnEsc(d.failures)+' not delivered of '+attnEsc(d.attempts)+' in 14 days'
     +(d.by_reason?': '+Object.entries(d.by_reason).map(([k,v])=>attnEsc(k.replace(/_/g,' '))+' '+attnEsc(v)).join(', '):'')+(d.unit_failures?'; '+attnEsc(d.unit_failures)+' at apartment or unit addresses':'')
     +'). For you to look into; nothing is done to the driver automatically.';
+  if(it.kind==='load_wrong_route')return '<b>Box '+attnEsc(it.piece_id)+'</b> was scanned into '+attnEsc(d.route_title||'a route')+' ('+attnEsc(d.driver||'')+') but belongs to '+attnEsc(d.belongs_to||'another route')+'. The route cannot leave until it is handed back or you decide.';
+  if(it.kind==='load_unknown')return '<b>Unknown box '+attnEsc(it.piece_id)+'</b> was scanned into '+attnEsc(d.route_title||'a route')+' ('+attnEsc(d.driver||'')+'). The route cannot leave until it is handed back or you decide.';
+  if(it.kind==='load_missing')return '<b>Box '+attnEsc(it.piece_id)+'</b> was not found when '+attnEsc(d.route_title||'its route')+' was loaded and was taken off the route. Search the bins and the dock; scan it in PathIQ Returns when found.';
+  if(it.kind==='departure_unverified')return '<b>'+attnEsc(d.route_title||'A route')+'</b> left without a box-by-box load scan ('+attnEsc(d.boxes||0)+' boxes, driver '+attnEsc(d.driver||'?')+'). The driver app needs updating.';
+  if(it.kind==='cant_continue')return '<b>'+attnEsc(d.driver||'A driver')+' cannot continue</b> '+attnEsc(d.route_title||'')+': '+attnEsc(String(d.reason||'').replace(/_/g,' '))+(d.note?' ('+attnEsc(d.note)+')':'')+'. '+attnEsc(d.boxes_left||0)+' boxes are still in the van. Send another driver to take them.';
+  if(it.kind==='transfer')return '<b>Transfer</b> of '+attnEsc(d.boxes||0)+' boxes from '+attnEsc(d.from_driver||'?')+' to '+attnEsc(d.to_driver||'?')+' ('+attnEsc(d.route_title||'')+'): the receiving driver scans each box.';
+  if(it.kind==='piece_on_hold')return '<b>Box '+attnEsc(it.piece_id)+'</b> is on hold in Keel ('+attnEsc(d.reason||'hold')+') and was left off '+attnEsc(d.route_title||'a route')+'. It goes out once Keel releases it.';
   return '<b>Keel file '+attnEsc(it.ref)+'</b> was not built: '+attnEsc(d.reason||'no reason given')+'.';
 }
 function renderAttention(){
@@ -7296,7 +7303,10 @@ function renderAttention(){
   attnData.items.forEach(it=>{
     const d=it.detail||{};
     const retry=(d.file_id&&it.kind!=='piece_held'?'<button type="button" onclick="attnRetry(\''+attnEsc(d.file_id)+'\')">Send the file again</button> ':'')
-      +(it.kind==='investigation'||it.kind==='piece_lost'?'<button type="button" onclick="attnFound(\''+attnEsc(it.piece_id)+'\')">Found it</button> ':'');
+      +(it.kind==='investigation'||it.kind==='piece_lost'?'<button type="button" onclick="attnFound(\''+attnEsc(it.piece_id)+'\')">Found it</button> ':'')
+      +(it.kind==='load_wrong_route'||it.kind==='load_unknown'?'<button type="button" onclick="attnLoad(\''+attnEsc(it.job_id||it.ref)+'\',\'allow_departure\')">Let the route leave</button> <button type="button" onclick="attnLoad(\''+attnEsc(it.job_id||it.ref)+'\',\'remove_missing\')">Take missing boxes off and let it leave</button> ':'')
+      +(it.kind==='cant_continue'?'<button type="button" onclick="attnTransfer(\''+attnEsc(it.job_id||it.ref)+'\')">Send another driver</button> ':'')
+      +(it.kind==='transfer'?'<button type="button" onclick="attnCloseTransfer(\''+attnEsc(it.ref)+'\')">Close transfer (the rest stays with the first driver)</button> ':'');
     rows.push('<div class="attn-row" style="padding:12px 0;border-bottom:1px solid var(--border,#e2e8f0);"><div>'+attnWhat(it)+'</div>'+
       '<div style="font-size:.8rem;opacity:.7;margin-top:2px;">'+attnEsc(new Date(it.created_at).toLocaleString())+'</div>'+
       '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">'+retry+'<button type="button" onclick="attnResolve(\''+attnEsc(it.id)+'\')">Close with a note</button></div></div>');
@@ -7310,6 +7320,30 @@ async function attnResolve(id){
   if(!note||!note.trim())return;
   try{const r=await tpOrg('attention_resolve',{id,note:note.trim(),by:'dispatcher'});toast(r&&r.ok?'Closed':'Already closed','ok');}
   catch(e){toast('Could not close: '+String(e&&e.message||e).slice(0,60),'warn');}
+  await loadAttention();
+}
+async function attnLoad(jobId,action){
+  const note=prompt(action==='allow_departure'?'Why may the route leave? (kept with the record)':'Taking the missing boxes off this route; note for the record:');
+  if(!note||!note.trim())return;
+  try{const r=await tpOrg('resolve_load',{job_id:jobId,action,note:note.trim(),by:'dispatcher'});toast(r&&r.can_depart?'The route can leave':'Updated','ok');}
+  catch(e){toast('Could not update: '+String(e&&e.message||e).slice(0,70),'warn');}
+  await loadAttention();
+}
+async function attnTransfer(jobId){
+  let names=[];
+  try{const rows=await tpOrg('drivers',{});names=(Array.isArray(rows)?rows:[]).filter(d=>!d.status||d.status==='active').map(d=>d.name).filter(Boolean);}catch(e){}
+  const to=prompt('Which driver takes the boxes?'+(names.length?'\n'+names.join(', '):''));
+  if(!to||!to.trim())return;
+  try{const r=await tpOrg('start_transfer',{job_id:jobId,to_driver:to.trim(),reason:'cannot continue',by:'dispatcher'});
+    toast(to.trim()+' will scan '+((r&&r.pieces)||[]).length+' boxes into their van','ok');}
+  catch(e){toast('Could not start the transfer: '+String(e&&e.message||e).replace(/^.*?TP_[A-Z]+:\s*/,'').slice(0,90),'warn');}
+  await loadAttention();
+}
+async function attnCloseTransfer(transferId){
+  const note=prompt('Close this transfer: the boxes not scanned stay with the first driver. Note:');
+  if(!note||!note.trim())return;
+  try{const r=await tpOrg('close_transfer',{transfer_id:transferId,note:note.trim()});toast((r&&r.moved||0)+' moved, '+(r&&r.stayed||0)+' stayed','ok');}
+  catch(e){toast('Could not close: '+String(e&&e.message||e).slice(0,70),'warn');}
   await loadAttention();
 }
 async function attnFound(pieceId){
