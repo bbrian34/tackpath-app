@@ -3,11 +3,13 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 
-// Public website copy (index.html), "delivery options" section (2026-10):
+// Public website copy, "delivery options" section (2026-10). Since 2026-11 the full home page is kept in
+// home-full.html while tackpath.com shows a holding page (index.html: the logo and "One clear path." only);
+// these checks protect the full page's copy for when it is republished.
 // eyebrow "DELIVERY OPTIONS", heading "Single deliveries and multi-stop
 // routes." Text only: the section's markup (classes, the line break, the
 // serif accent on the last word) and every other heading stay as they were.
-const HTML = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf-8');
+const HTML = fs.readFileSync(path.join(__dirname, '..', 'home-full.html'), 'utf-8');
 const text = (s) => s.replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 const headings = () => Array.from(HTML.matchAll(/<h([12])[^>]*>([\s\S]*?)<\/h\1>/g)).map((m) => text(m[2]));
 
@@ -43,4 +45,15 @@ test('every other heading on the page is unchanged', () => {
   ]);
   assert.strictEqual(headings().length, 12, 'same number of headings');
   assert.match(HTML, /<title>TackPath \| Warehouse, routes, drivers, dispatch\.<\/title>/, 'title unchanged');
+});
+
+test('the holding page shows only the TackPath logo and "One clear path." with its swoosh', () => {
+  const H = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf-8');
+  const body = H.split('<body>')[1];
+  assert.match(body, /<img class="mark" src="logo\.svg"/, 'the TackPath mark');
+  assert.match(body, /T Ʌ C K P Ʌ T H/, 'the wordmark');
+  assert.match(body, /<h1>One clear <span class="serif">path\.<\/span><\/h1>/, 'the line, accent on "path."');
+  assert.match(H, /\.serif:after\{[^}]*border-top:2px solid #19b7ef/, 'the blue swoosh under "path."');
+  assert.strictEqual((body.match(/<a\b|<button\b|<nav\b|<form\b|<video\b|<h[2-6]\b/g) || []).length, 0, 'nothing else on the page');
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'home-full.html'), 'utf-8'), /<meta name="robots" content="noindex">/, 'the kept page is not indexed');
 });
