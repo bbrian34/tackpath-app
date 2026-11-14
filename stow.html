@@ -1898,7 +1898,8 @@ function renderStowSteps(){
     const c=stageConfirm, more=waitingToStage();
     back.classList.add('staged-mode'); back.classList.remove('stage-mode');
     cont&&cont.classList.add('tall');
-    setText('flipBinNumber','STAGED at '+c.spot);
+    // the spot never splits at its hyphen on the TC56 ("S-" / "01"): it wraps as one piece
+    {const h=document.getElementById('flipBinNumber');if(h)h.innerHTML='STAGED at <span style="white-space:nowrap">'+esc(c.spot)+'</span>';}
     setText('flipBinLoc','BIN '+c.bin+' \u00b7 '+(c.title||'Route'));
     setText('flipBinInstr','Ready for pickup.');
     setText('flipBinStop',more.length?('Still to stage: BIN '+more.join(', BIN ')+'. Scan its BIN, then a STG code.'):'');
