@@ -30,13 +30,14 @@ footer{max-width:1040px;margin:0 auto;padding:0 16px 40px;color:var(--muted);fon
 <header><img src="../logo.svg" alt=""><span>TACKPATH</span></header>
 <main>
   <h1>Keel, warehouse management by TackPath</h1>
-  <p class="lead">Follow merchant inventory from the dock to the customer.</p>
+  <p class="lead">Follow merchant inventory from the dock to the driver.</p>
   <section class="video">
     <h2 id="title">Receiving &amp; Intelligent Putaway</h2>
     <video id="player" controls playsinline preload="metadata" poster="receiving-and-intelligent-putaway.jpg" src="receiving-and-intelligent-putaway.mp4"></video>
     <ol class="list">
       <li><button type="button" data-i="0" aria-current="true">Receiving &amp; Intelligent Putaway</button></li>
       <li><button type="button" data-i="1">Order Picking &amp; Packing</button></li>
+      <li><button type="button" data-i="2">PathIQ Stowing, Staging &amp; Driver Handoff</button></li>
     </ol>
   </section>
 </main>
@@ -45,7 +46,8 @@ footer{max-width:1040px;margin:0 auto;padding:0 16px 40px;color:var(--muted);fon
 (function () {
   var V = [
     { title: 'Receiving & Intelligent Putaway', src: 'receiving-and-intelligent-putaway.mp4', poster: 'receiving-and-intelligent-putaway.jpg' },
-    { title: 'Order Picking & Packing', src: 'order-picking-and-packing.mp4', poster: 'order-picking-and-packing.jpg' }
+    { title: 'Order Picking & Packing', src: 'order-picking-and-packing.mp4', poster: 'order-picking-and-packing.jpg' },
+    { title: 'PathIQ Stowing, Staging & Driver Handoff', src: 'pathiq-stowing-staging-and-driver-handoff.mp4', poster: 'pathiq-stowing-staging-and-driver-handoff.jpg' }
   ];
   var player = document.getElementById('player'), cur = 0, buttons = document.querySelectorAll('ol.list button');
   function show(i, play) {
