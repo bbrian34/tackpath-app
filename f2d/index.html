@@ -20,6 +20,9 @@ h1{font-size:clamp(26px,3.4vw,38px);margin:10px 0 4px;color:var(--navy)}
 .video{margin:0 0 36px}
 h2{font-size:22px;margin:0 0 12px;color:var(--navy)}
 video{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--line);background:var(--card)}
+ol.list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+ol.list button{width:100%;text-align:left;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+ol.list button[aria-current="true"]{border-color:var(--blue)}
 footer{max-width:1040px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:14px}
 </style>
 </head>
@@ -27,12 +30,34 @@ footer{max-width:1040px;margin:0 auto;padding:0 16px 40px;color:var(--muted);fon
 <header><img src="../logo.svg" alt=""><span>TACKPATH</span></header>
 <main>
   <h1>Keel, warehouse management by TackPath</h1>
-  <p class="lead">Follow merchant inventory from the dock to the shelf.</p>
+  <p class="lead">Follow merchant inventory from the dock to the customer.</p>
   <section class="video">
-    <h2>Receiving &amp; Intelligent Putaway</h2>
-    <video controls playsinline preload="metadata" poster="receiving-and-intelligent-putaway.jpg" src="receiving-and-intelligent-putaway.mp4"></video>
+    <h2 id="title">Receiving &amp; Intelligent Putaway</h2>
+    <video id="player" controls playsinline preload="metadata" poster="receiving-and-intelligent-putaway.jpg" src="receiving-and-intelligent-putaway.mp4"></video>
+    <ol class="list">
+      <li><button type="button" data-i="0" aria-current="true">Receiving &amp; Intelligent Putaway</button></li>
+      <li><button type="button" data-i="1">Order Picking &amp; Packing</button></li>
+    </ol>
   </section>
 </main>
+<script>
+// one player: when a presentation ends, the next one starts in the same player
+(function () {
+  var V = [
+    { title: 'Receiving & Intelligent Putaway', src: 'receiving-and-intelligent-putaway.mp4', poster: 'receiving-and-intelligent-putaway.jpg' },
+    { title: 'Order Picking & Packing', src: 'order-picking-and-packing.mp4', poster: 'order-picking-and-packing.jpg' }
+  ];
+  var player = document.getElementById('player'), cur = 0, buttons = document.querySelectorAll('ol.list button');
+  function show(i, play) {
+    cur = i; document.getElementById('title').textContent = V[i].title;
+    player.poster = V[i].poster; player.src = V[i].src;
+    buttons.forEach(function (b) { b.setAttribute('aria-current', String(+b.dataset.i === i)); });
+    if (play) { var p = player.play(); if (p && p.catch) p.catch(function () {}); }
+  }
+  player.addEventListener('ended', function () { if (cur < V.length - 1) show(cur + 1, true); });
+  buttons.forEach(function (b) { b.addEventListener('click', function () { show(+b.dataset.i, true); }); });
+})();
+</script>
 <footer>© TackPath</footer>
 </body>
 </html>
