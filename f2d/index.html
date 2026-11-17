@@ -29,37 +29,12 @@ footer{max-width:1040px;margin:0 auto;padding:0 16px 40px;color:var(--muted);fon
 <body>
 <header><img src="../logo.svg" alt=""><span>TACKPATH</span></header>
 <main>
-  <h1>Keel, warehouse management by TackPath</h1>
-  <p class="lead">Follow merchant inventory from the dock to the driver.</p>
+  <h1>Warehouse management and last-mile delivery for 3PLs</h1>
+  <p class="lead">One system, from the dock to the customer’s door.</p>
   <section class="video">
-    <h2 id="title">Overview</h2>
-    <video id="player" controls playsinline preload="metadata" poster="keel-and-tackpath-overview.jpg" src="keel-and-tackpath-overview.mp4"></video>
-    <ol class="list">
-      <li><button type="button" data-i="0" aria-current="true">Overview</button></li>
-      <li><button type="button" data-i="1">Order Picking &amp; Packing</button></li>
-      <li><button type="button" data-i="2">PathIQ Stowing, Staging &amp; Driver Handoff</button></li>
-    </ol>
+    <video controls playsinline preload="metadata" poster="tackpath-and-keel.jpg" src="tackpath-and-keel.mp4"></video>
   </section>
 </main>
-<script>
-// one player: when a presentation ends, the next one starts in the same player
-(function () {
-  var V = [
-    { title: 'Overview', src: 'keel-and-tackpath-overview.mp4', poster: 'keel-and-tackpath-overview.jpg' },
-    { title: 'Order Picking & Packing', src: 'order-picking-and-packing.mp4', poster: 'order-picking-and-packing.jpg' },
-    { title: 'PathIQ Stowing, Staging & Driver Handoff', src: 'pathiq-stowing-staging-and-driver-handoff.mp4', poster: 'pathiq-stowing-staging-and-driver-handoff.jpg' }
-  ];
-  var player = document.getElementById('player'), cur = 0, buttons = document.querySelectorAll('ol.list button');
-  function show(i, play) {
-    cur = i; document.getElementById('title').textContent = V[i].title;
-    player.poster = V[i].poster; player.src = V[i].src;
-    buttons.forEach(function (b) { b.setAttribute('aria-current', String(+b.dataset.i === i)); });
-    if (play) { var p = player.play(); if (p && p.catch) p.catch(function () {}); }
-  }
-  player.addEventListener('ended', function () { if (cur < V.length - 1) show(cur + 1, true); });
-  buttons.forEach(function (b) { b.addEventListener('click', function () { show(+b.dataset.i, true); }); });
-})();
-</script>
 <footer>© TackPath</footer>
 </body>
 </html>
